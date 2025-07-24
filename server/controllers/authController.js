@@ -43,3 +43,16 @@ export const login = async (req, res) => {
     res.status(500).json({ success: false, message: 'Error del servidor' })
   }
 }
+
+export const getProfile = async (req, res) => {
+    try {
+      // req.user viene del middleware authenticateToken
+      res.json({
+        success: true,
+        message: `Hola ${req.user.usuario}! Estás autenticado`,
+        user: req.user
+      })
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Error del servidor' })
+    }
+  }
