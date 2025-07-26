@@ -1,9 +1,9 @@
 import { pool } from '../config/database.js'
 
 export const User = {
-  // Login con roles y permisos
   findByCredentials: async (usuario, contrasena) => {
-    const [rows] = await pool.execute(`
+    // Primero obtener datos básicos del usuario
+    const userQuery = `
       SELECT 
         u.id,
         u.nombre_completo,
@@ -13,9 +13,32 @@ export const User = {
       FROM usuarios u
       JOIN roles r ON u.rol_id = r.id
       WHERE u.usuario = ? AND u.contrasena = ?
-    `, [usuario, contrasena])
+    `;
     
-    return rows[0]
+    const [userRows] = await pool.execute(userQuery, [usuario, contrasena])
+    
+    if (userRows.length === 0) {
+      return null
+    }
+    
+    const user = userRows[0]
+    
+    // Si es Jefe de Laboratorio, obtener TODOS sus laboratorios
+    if (user.rol_nombre === 'Jefe de Laboratorio') {
+      const labQuery = `
+        SELECT laboratorio_id 
+        FROM jefe_laboratorio 
+        WHERE usuario_id = ?
+      `;
+      
+      const [labRows] = await pool.execute(labQuery, [user.id])
+      user.laboratorio_ids = labRows.map(row => row.laboratorio_id) // ← Array de IDs
+    } else {
+      user.laboratorio_ids = [] // No es jefe, no tiene laboratorios
+    }
+    
+
+    return user
   },
 
   // Obtener permisos del usuario

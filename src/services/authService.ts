@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3000/api/auth'
+import { api } from './api'
 
 export interface LoginData {
   usuario: string
@@ -21,12 +21,15 @@ export interface LoginResponse {
 }
 
 export const authService = {
+  // 🚀 SÚPER SIMPLE: Solo la lógica, sin configuración
   login: async (data: LoginData): Promise<LoginResponse> => {
-    const response = await fetch(`${API_URL}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    })
-    return response.json()
+    const response = await api.post('/auth/login', data)
+    return response.data  // Axios envuelve la respuesta en .data
+  },
+
+  // 🔒 RUTA PROTEGIDA: El token se agrega automáticamente
+  getProfile: async () => {
+    const response = await api.get('/auth/profile')
+    return response.data
   }
 }
