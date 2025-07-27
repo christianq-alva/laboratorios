@@ -15,13 +15,12 @@ export const defineAbilitiesFor = (user) => {
   if (user.rol === 'Jefe de Laboratorio') {
     const labIds = user.laboratorio_ids || [] // ← USAR ARRAY
     
-    console.log('🔍 laboratorio_ids en abilities:', labIds) // ← DEBUG
     
     if (labIds.length > 0) {
       // Para cada laboratorio que maneja
       labIds.forEach(labId => {
         can(['create', 'read', 'update', 'delete'], 'Horario', { laboratorio_id: labId })
-        can(['create', 'read', 'update'], 'Incidencia', { laboratorio_id: labId })
+        can(['create', 'read'], 'Incidencia', { laboratorio_id: labId })
         can(['create', 'read', 'update', 'delete'], 'Equipo', { laboratorio_id: labId })
         can(['create', 'read', 'update'], 'Insumo', { laboratorio_id: labId })
         can(['create', 'read', 'update', 'delete'], 'Reserva', { laboratorio_id: labId })

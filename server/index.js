@@ -5,6 +5,7 @@ import authRoutes from './routes/authRoutes.js'
 import laboratorioRoutes from './routes/laboratorioRoutes.js'
 import horarioRoutes from './routes/horarioRoutes.js'
 import insumoRoutes from './routes/insumoRoutes.js'
+import incidenciaRoutes from './routes/incidenciaRoutes.js'
 
 const app = express()
 const port = 3000
@@ -16,6 +17,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/laboratorios', laboratorioRoutes)
 app.use('/api/horarios', horarioRoutes)
 app.use('/api/insumos', insumoRoutes)
+app.use('/api/incidencias', incidenciaRoutes)
 
 app.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`)
