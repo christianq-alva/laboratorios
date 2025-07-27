@@ -5,7 +5,8 @@ import {
   getHorarios, 
   createHorario, 
   updateHorario,
-  deleteHorario 
+  deleteHorario,
+  verificarDisponibilidad
 } from '../controllers/horarioController.js'
 
 const router = express.Router()
@@ -36,6 +37,13 @@ router.delete('/:id',
   authenticateToken,
   authorize('delete', 'Horario'),
   deleteHorario
+)
+
+// 🔍 VERIFICAR DISPONIBILIDAD
+router.post('/verificar-disponibilidad', 
+  authenticateToken,
+  authorize('read', 'Horario'),
+  verificarDisponibilidad
 )
 
 export default router
