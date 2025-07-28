@@ -6,7 +6,10 @@ import {
   createHorario, 
   updateHorario,
   deleteHorario,
-  verificarDisponibilidad
+  verificarDisponibilidad,
+  getEscuelas,      // ← NUEVO
+  getCiclos,        // ← NUEVO
+  getGrupos         // ← NUEVO
 } from '../controllers/horarioController.js'
 
 const router = express.Router()
@@ -44,6 +47,29 @@ router.post('/verificar-disponibilidad',
   authenticateToken,
   authorize('read', 'Horario'),
   verificarDisponibilidad
+)
+
+// ==================== RUTAS UTILITARIAS ==================== 
+
+// 🏫 OBTENER ESCUELAS
+router.get('/utils/escuelas', 
+  authenticateToken,
+  authorize('read', 'Horario'),
+  getEscuelas
+)
+
+// 📅 OBTENER CICLOS  
+router.get('/utils/ciclos', 
+  authenticateToken,
+  authorize('read', 'Horario'),
+  getCiclos
+)
+
+// 👥 OBTENER GRUPOS (con filtros opcionales)
+router.get('/utils/grupos', 
+  authenticateToken,
+  authorize('read', 'Horario'),
+  getGrupos
 )
 
 export default router

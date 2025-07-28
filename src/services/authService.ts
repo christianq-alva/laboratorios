@@ -10,7 +10,6 @@ export interface User {
   nombre: string
   usuario: string
   rol: string
-  laboratorio_ids?: number[]  // ← AGREGAR: Array de IDs de laboratorios asignados
 }
 
 export interface LoginResponse {
@@ -19,12 +18,6 @@ export interface LoginResponse {
   permisos?: Array<{nombre: string, ruta: string}>
   token?: string
   message?: string
-}
-
-export interface Laboratorio {
-  id: number
-  nombre: string
-  ubicacion: string
 }
 
 export const authService = {
@@ -37,12 +30,6 @@ export const authService = {
   // 🔒 RUTA PROTEGIDA: El token se agrega automáticamente
   getProfile: async () => {
     const response = await api.get('/auth/profile')
-    return response.data
-  },
-
-  // 🏢 OBTENER LABORATORIOS ASIGNADOS AL USUARIO
-  getLaboratorios: async (): Promise<{success: boolean, data: Laboratorio[]}> => {
-    const response = await api.get('/laboratorios')
     return response.data
   }
 }

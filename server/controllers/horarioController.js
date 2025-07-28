@@ -83,11 +83,18 @@ export const getHorarios = async (req, res) => {
           r.fecha_inicio,
           r.fecha_fin,
           r.cantidad_alumnos,
+          r.descripcion,
           l.nombre as laboratorio_nombre,
-          d.nombre as docente_nombre
+          d.nombre as docente_nombre,
+          e.nombre as escuela_nombre,
+          c.nombre as ciclo_nombre,
+          g.nombre as grupo_nombre
         FROM reservas r
         JOIN laboratorios l ON r.laboratorio_id = l.id
         JOIN docentes d ON r.docente_id = d.id
+        JOIN grupos g ON r.grupo_id = g.id
+        JOIN escuelas e ON g.escuela_id = e.id
+        JOIN ciclos c ON g.ciclo_id = c.id
       `
       let params = []
       
@@ -129,13 +136,78 @@ export const getHorarios = async (req, res) => {
       const { 
         laboratorio_id, 
         docente_id, 
+        escuela_id,      // ← NUEVO: Para validación
+        ciclo_id,        // ← NUEVO: Para validación
+        grupo_id,        // ← NUEVO: Para guardar
+        descripcion,     // ← NUEVO: Descripción de la clase
         fecha_inicio, 
         fecha_fin, 
         cantidad_alumnos,
-        insumos = [] // ← NUEVO: Array de insumos a usar
+        insumos = [] // ← Array de insumos a usar
       } = req.body
       
-      console.log('🔍 Insumos recibidos:', insumos)
+      console.log('🔍 Datos recibidos:', { 
+        laboratorio_id, docente_id, escuela_id, ciclo_id, grupo_id, descripcion 
+      })
+      
+      // ✅ VALIDACIÓN 1: Verificar que el grupo pertenece a la escuela y ciclo especificados
+      const [grupoValidacion] = await connection.execute(`
+        SELECT 
+          g.id,
+          g.nombre as grupo_nombre,
+          g.escuela_id,
+          g.ciclo_id,
+          e.nombre as escuela_nombre,
+          c.nombre as ciclo_nombre
+        FROM grupos g
+        JOIN escuelas e ON g.escuela_id = e.id
+        JOIN ciclos c ON g.ciclo_id = c.id
+        WHERE g.id = ? AND g.escuela_id = ? AND g.ciclo_id = ?
+      `, [grupo_id, escuela_id, ciclo_id])
+      
+      if (grupoValidacion.length === 0) {
+        await connection.rollback()
+        return res.status(400).json({
+          success: false,
+          message: `El grupo seleccionado no pertenece a la escuela y ciclo especificados`,
+          detalle: { escuela_id, ciclo_id, grupo_id }
+        })
+      }
+      
+      const grupoInfo = grupoValidacion[0]
+      console.log('✅ Grupo validado:', grupoInfo.grupo_nombre, 'de', grupoInfo.escuela_nombre, '-', grupoInfo.ciclo_nombre)
+      
+      // ✅ VALIDACIÓN 2: Docente debe ser de la misma escuela que el grupo
+      const [docenteValidacion] = await connection.execute(`
+        SELECT 
+          d.id,
+          d.nombre as docente_nombre,
+          d.escuela_id as docente_escuela_id,
+          e.nombre as docente_escuela
+        FROM docentes d
+        JOIN escuelas e ON d.escuela_id = e.id
+        WHERE d.id = ?
+      `, [docente_id])
+      
+      if (docenteValidacion.length === 0) {
+        await connection.rollback()
+        return res.status(400).json({
+          success: false,
+          message: 'Docente no encontrado'
+        })
+      }
+      
+      const docenteInfo = docenteValidacion[0]
+      if (docenteInfo.docente_escuela_id !== escuela_id) {
+        await connection.rollback()
+        return res.status(400).json({
+          success: false,
+          message: `El docente "${docenteInfo.docente_nombre}" es de "${docenteInfo.docente_escuela}" pero el grupo es de "${grupoInfo.escuela_nombre}". Deben ser de la misma escuela.`
+        })
+      }
+      
+      console.log('✅ Docente validado:', docenteInfo.docente_nombre, 'puede enseñar al grupo de', grupoInfo.escuela_nombre)
+      
       console.log('🔍 Verificando cruces de horario...')
       
       // ⚠️ VERIFICAR CRUCES ANTES DE CREAR
@@ -190,9 +262,9 @@ export const getHorarios = async (req, res) => {
       
       // 1. CREAR LA RESERVA
       const [reservaResult] = await connection.execute(`
-        INSERT INTO reservas (laboratorio_id, docente_id, fecha_inicio, fecha_fin, cantidad_alumnos) 
-        VALUES (?, ?, ?, ?, ?)
-      `, [laboratorio_id, docente_id, fecha_inicio, fecha_fin, cantidad_alumnos])
+        INSERT INTO reservas (laboratorio_id, docente_id, grupo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `, [laboratorio_id, docente_id, grupo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos])
       
       const reserva_id = reservaResult.insertId
       console.log('✅ Reserva creada con ID:', reserva_id)
@@ -222,8 +294,14 @@ export const getHorarios = async (req, res) => {
       
       res.json({ 
         success: true, 
-        message: 'Horario creado con insumos',
+        message: 'Horario creado correctamente',
         reserva_id: reserva_id,
+        validaciones: {
+          escuela: grupoInfo.escuela_nombre,
+          ciclo: grupoInfo.ciclo_nombre,
+          grupo: grupoInfo.grupo_nombre,
+          docente: docenteInfo.docente_nombre
+        },
         insumos_procesados: insumos.length
       })
       
@@ -457,3 +535,88 @@ export const getHorarios = async (req, res) => {
       res.status(500).json({ success: false, message: error.message })
     }
   }
+
+// ==================== FUNCIONES UTILITARIAS ==================== 
+
+// 🏫 OBTENER ESCUELAS DISPONIBLES
+export const getEscuelas = async (req, res) => {
+  try {
+    const [escuelas] = await pool.execute(`
+      SELECT id, nombre 
+      FROM escuelas 
+      ORDER BY nombre
+    `)
+    
+    res.json({ 
+      success: true, 
+      data: escuelas 
+    })
+  } catch (error) {
+    console.error('Error en getEscuelas:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+}
+
+// 📅 OBTENER CICLOS DISPONIBLES  
+export const getCiclos = async (req, res) => {
+  try {
+    const [ciclos] = await pool.execute(`
+      SELECT id, nombre 
+      FROM ciclos 
+      ORDER BY nombre
+    `)
+    
+    res.json({ 
+      success: true, 
+      data: ciclos 
+    })
+  } catch (error) {
+    console.error('Error en getCiclos:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+}
+
+// 👥 OBTENER GRUPOS (CON FILTROS OPCIONALES)
+export const getGrupos = async (req, res) => {
+  try {
+    const { escuela_id, ciclo_id } = req.query
+    
+    let query = `
+      SELECT 
+        g.id,
+        g.nombre,
+        g.escuela_id,
+        g.ciclo_id,
+        e.nombre as escuela,
+        c.nombre as ciclo
+      FROM grupos g
+      JOIN escuelas e ON g.escuela_id = e.id
+      JOIN ciclos c ON g.ciclo_id = c.id
+      WHERE 1=1
+    `
+    const params = []
+    
+    if (escuela_id) {
+      query += ' AND g.escuela_id = ?'
+      params.push(escuela_id)
+    }
+    
+    if (ciclo_id) {
+      query += ' AND g.ciclo_id = ?'  
+      params.push(ciclo_id)
+    }
+    
+    query += ' ORDER BY e.nombre, c.nombre, g.nombre'
+    
+    const [grupos] = await pool.execute(query, params)
+    
+    res.json({ 
+      success: true, 
+      data: grupos,
+      filters: { escuela_id, ciclo_id }
+    })
+  } catch (error) {
+    console.error('Error en getGrupos:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+}
