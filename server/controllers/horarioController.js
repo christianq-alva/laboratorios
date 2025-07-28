@@ -324,14 +324,79 @@ export const getHorarios = async (req, res) => {
       const { 
         laboratorio_id, 
         docente_id, 
+        escuela_id,      // ← NUEVO: Para validación
+        ciclo_id,        // ← NUEVO: Para validación
+        grupo_id,        // ← NUEVO: Para guardar
+        descripcion,     // ← NUEVO: Descripción de la clase
         fecha_inicio, 
         fecha_fin, 
         cantidad_alumnos,
-        insumos = [] // ← NUEVO: Insumos actualizados
+        insumos = [] // ← Insumos actualizados
       } = req.body
       
       console.log('🔍 Editando horario:', id)
-      console.log('🔍 Nuevos insumos:', insumos)
+      console.log('🔍 Datos recibidos:', { 
+        laboratorio_id, docente_id, escuela_id, ciclo_id, grupo_id, descripcion 
+      })
+      
+      // ✅ VALIDACIÓN 1: Verificar que el grupo pertenece a la escuela y ciclo especificados
+      const [grupoValidacion] = await connection.execute(`
+        SELECT 
+          g.id,
+          g.nombre as grupo_nombre,
+          g.escuela_id,
+          g.ciclo_id,
+          e.nombre as escuela_nombre,
+          c.nombre as ciclo_nombre
+        FROM grupos g
+        JOIN escuelas e ON g.escuela_id = e.id
+        JOIN ciclos c ON g.ciclo_id = c.id
+        WHERE g.id = ? AND g.escuela_id = ? AND g.ciclo_id = ?
+      `, [grupo_id, escuela_id, ciclo_id])
+      
+      if (grupoValidacion.length === 0) {
+        await connection.rollback()
+        return res.status(400).json({
+          success: false,
+          message: `El grupo seleccionado no pertenece a la escuela y ciclo especificados`,
+          detalle: { escuela_id, ciclo_id, grupo_id }
+        })
+      }
+      
+      const grupoInfo = grupoValidacion[0]
+      console.log('✅ Grupo validado:', grupoInfo.grupo_nombre, 'de', grupoInfo.escuela_nombre, '-', grupoInfo.ciclo_nombre)
+      
+      // ✅ VALIDACIÓN 2: Docente debe ser de la misma escuela que el grupo
+      const [docenteValidacion] = await connection.execute(`
+        SELECT 
+          d.id,
+          d.nombre as docente_nombre,
+          d.escuela_id as docente_escuela_id,
+          e.nombre as docente_escuela
+        FROM docentes d
+        JOIN escuelas e ON d.escuela_id = e.id
+        WHERE d.id = ?
+      `, [docente_id])
+      
+      if (docenteValidacion.length === 0) {
+        await connection.rollback()
+        return res.status(400).json({
+          success: false,
+          message: 'Docente no encontrado'
+        })
+      }
+      
+      const docenteInfo = docenteValidacion[0]
+      if (docenteInfo.docente_escuela_id !== escuela_id) {
+        await connection.rollback()
+        return res.status(400).json({
+          success: false,
+          message: `El docente "${docenteInfo.docente_nombre}" es de "${docenteInfo.docente_escuela}" pero el grupo es de "${grupoInfo.escuela_nombre}". Deben ser de la misma escuela.`
+        })
+      }
+      
+      console.log('✅ Docente validado:', docenteInfo.docente_nombre, 'puede enseñar al grupo de', grupoInfo.escuela_nombre)
+      
       console.log('🔍 Verificando cruces para edición...')
       
       // ⚠️ VERIFICAR CRUCES (excluyendo la reserva actual)
@@ -416,12 +481,12 @@ export const getHorarios = async (req, res) => {
         }
       }
       
-      // 5️⃣ ACTUALIZAR DATOS BÁSICOS DEL HORARIO
+      // 5️⃣ ACTUALIZAR DATOS BÁSICOS DEL HORARIO (ACTUALIZADO)
       await connection.execute(`
         UPDATE reservas 
-        SET laboratorio_id = ?, docente_id = ?, fecha_inicio = ?, fecha_fin = ?, cantidad_alumnos = ?
+        SET laboratorio_id = ?, docente_id = ?, grupo_id = ?, descripcion = ?, fecha_inicio = ?, fecha_fin = ?, cantidad_alumnos = ?
         WHERE id = ?
-      `, [laboratorio_id, docente_id, fecha_inicio, fecha_fin, cantidad_alumnos, id])
+      `, [laboratorio_id, docente_id, grupo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos, id])
       
       // 6️⃣ PROCESAR NUEVOS INSUMOS
       for (const insumo of insumos) {
@@ -446,7 +511,13 @@ export const getHorarios = async (req, res) => {
       
       res.json({ 
         success: true, 
-        message: 'Horario actualizado con insumos',
+        message: 'Horario actualizado correctamente',
+        validaciones: {
+          escuela: grupoInfo.escuela_nombre,
+          ciclo: grupoInfo.ciclo_nombre,
+          grupo: grupoInfo.grupo_nombre,
+          docente: docenteInfo.docente_nombre
+        },
         insumos_anteriores: insumosActuales.length,
         insumos_nuevos: insumos.length
       })
@@ -461,29 +532,65 @@ export const getHorarios = async (req, res) => {
   }
 
   export const deleteHorario = async (req, res) => {
+    const connection = await pool.getConnection()
+    
     try {
+      await connection.beginTransaction()
+      
       const { id } = req.params
       
-      // 🔒 VERIFICACIÓN: Jefe solo puede eliminar horarios de SUS laboratorios
+      console.log('🔍 Eliminando horario ID:', id)
+      
+      // 1️⃣ OBTENER INFORMACIÓN COMPLETA DEL HORARIO
+      const [horarioInfo] = await connection.execute(`
+        SELECT 
+          r.id,
+          r.laboratorio_id,
+          r.docente_id,
+          r.grupo_id,
+          r.descripcion,
+          r.fecha_inicio,
+          r.fecha_fin,
+          r.cantidad_alumnos,
+          l.nombre as laboratorio_nombre,
+          d.nombre as docente_nombre,
+          e.nombre as escuela_nombre,
+          c.nombre as ciclo_nombre,
+          g.nombre as grupo_nombre
+        FROM reservas r
+        JOIN laboratorios l ON r.laboratorio_id = l.id
+        JOIN docentes d ON r.docente_id = d.id
+        JOIN grupos g ON r.grupo_id = g.id
+        JOIN escuelas e ON g.escuela_id = e.id
+        JOIN ciclos c ON g.ciclo_id = c.id
+        WHERE r.id = ?
+      `, [id])
+      
+      if (horarioInfo.length === 0) {
+        await connection.rollback()
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Horario no encontrado' 
+        })
+      }
+      
+      const horario = horarioInfo[0]
+      console.log('📋 Horario encontrado:', {
+        laboratorio: horario.laboratorio_nombre,
+        docente: horario.docente_nombre,
+        escuela: horario.escuela_nombre,
+        grupo: horario.grupo_nombre
+      })
+      
+      // 2️⃣ VERIFICACIÓN DE PERMISOS
       if (req.user.rol === 'Jefe de Laboratorio') {
-        // Paso 1: Obtener el horario existente para ver a qué laboratorio pertenece
-        const [existing] = await pool.execute('SELECT laboratorio_id FROM reservas WHERE id = ?', [id])
-        
-        if (existing.length === 0) {
-          return res.status(404).json({ 
-            success: false, 
-            message: 'Horario no encontrado' 
-          })
-        }
-        
-        const horarioLaboratorioId = existing[0].laboratorio_id
         const labIds = req.user.laboratorio_ids || []
         
-        console.log('🔍 Intentando eliminar horario del lab:', horarioLaboratorioId)
-        console.log('🔍 Usuario puede gestionar labs:', labIds)
+        console.log('🔍 Verificando permisos - Lab del horario:', horario.laboratorio_id)
+        console.log('🔍 Labs permitidos:', labIds)
         
-        // Verificar que el horario pertenece a uno de sus laboratorios
-        if (!labIds.includes(horarioLaboratorioId)) {
+        if (!labIds.includes(horario.laboratorio_id)) {
+          await connection.rollback()
           return res.status(403).json({ 
             success: false, 
             message: `Solo puedes eliminar horarios de tus laboratorios: ${labIds.join(', ')}` 
@@ -491,12 +598,74 @@ export const getHorarios = async (req, res) => {
         }
       }
       
-      await pool.execute('DELETE FROM reservas WHERE id = ?', [id])
+      // 3️⃣ OBTENER INSUMOS USADOS EN ESTE HORARIO
+      const [insumosUsados] = await connection.execute(`
+        SELECT 
+          dri.insumo_id,
+          dri.cantidad_usada,
+          i.nombre as insumo_nombre
+        FROM detalle_reserva_insumos dri
+        JOIN insumos i ON dri.insumo_id = i.id
+        WHERE dri.reserva_id = ?
+      `, [id])
       
-      res.json({ success: true, message: 'Horario eliminado' })
+      console.log('📦 Insumos a devolver:', insumosUsados.length)
+      
+      // 4️⃣ DEVOLVER STOCK DE TODOS LOS INSUMOS
+      for (const insumo of insumosUsados) {
+        console.log(`🔄 Devolviendo ${insumo.cantidad_usada} de ${insumo.insumo_nombre}`)
+        
+        // Devolver stock al inventario
+        await connection.execute(`
+          UPDATE inventario_insumos 
+          SET cantidad = cantidad + ? 
+          WHERE insumo_id = ? AND laboratorio_id = ?
+        `, [insumo.cantidad_usada, insumo.insumo_id, horario.laboratorio_id])
+        
+        // Registrar movimiento de devolución
+        await connection.execute(`
+          INSERT INTO movimientos_insumos 
+          (insumo_id, laboratorio_id, usuario_id, tipo_movimiento, cantidad, reserva_id, observaciones)
+          VALUES (?, ?, ?, 'entrada', ?, ?, 'Devolución por eliminación de horario')
+        `, [insumo.insumo_id, horario.laboratorio_id, req.user.userId, insumo.cantidad_usada, id])
+      }
+      
+      // 5️⃣ ELIMINAR REGISTROS RELACIONADOS
+      await connection.execute('DELETE FROM detalle_reserva_insumos WHERE reserva_id = ?', [id])
+      console.log('✅ Registros de insumos eliminados')
+      
+      // 6️⃣ ELIMINAR EL HORARIO/RESERVA
+      await connection.execute('DELETE FROM reservas WHERE id = ?', [id])
+      console.log('✅ Horario eliminado')
+      
+      await connection.commit()
+      
+      res.json({ 
+        success: true, 
+        message: 'Horario eliminado correctamente',
+        eliminado: {
+          id: horario.id,
+          laboratorio: horario.laboratorio_nombre,
+          docente: horario.docente_nombre,
+          escuela: horario.escuela_nombre,
+          ciclo: horario.ciclo_nombre,
+          grupo: horario.grupo_nombre,
+          descripcion: horario.descripcion,
+          fecha_inicio: horario.fecha_inicio,
+          fecha_fin: horario.fecha_fin
+        },
+        insumos_devueltos: insumosUsados.length
+      })
+      
     } catch (error) {
+      await connection.rollback()
       console.error('Error en deleteHorario:', error)
-      res.status(500).json({ success: false, message: error.message })
+      res.status(500).json({ 
+        success: false, 
+        message: error.message 
+      })
+    } finally {
+      connection.release()
     }
   }
 
