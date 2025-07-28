@@ -1,259 +1,145 @@
-import { useAuth } from '../../context/authContext'
 import { useState, useEffect } from 'react'
-import { authService, type Laboratorio } from '../../services/authService'
+import { Sidebar } from './Sidebar'
+import { Overview } from './sections/Overview'
+import { Laboratorios } from './sections/Laboratorios'
+import { Horarios } from './sections/Horarios'
+import { Insumos } from './sections/Insumos'
+import { Incidencias } from './sections/Incidencias'
+import { Reportes } from './sections/Reportes'
 
 export const Dashboard = () => {
-  const { user, logout } = useAuth()
-  const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [activeSection, setActiveSection] = useState('overview')
+  const [isMobile, setIsMobile] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  // 🔄 CARGAR LABORATORIOS AL MONTAR EL COMPONENTE
+  // Detectar tamaño de pantalla
   useEffect(() => {
-    const fetchLaboratorios = async () => {
-      try {
-        setLoading(true)
-        const response = await authService.getLaboratorios()
-        
-        if (response.success) {
-          setLaboratorios(response.data)
-        } else {
-          setError('Error al cargar laboratorios')
-        }
-      } catch (err) {
-        console.error('Error fetching laboratorios:', err)
-        setError('Error de conexión')
-      } finally {
-        setLoading(false)
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+      if (window.innerWidth >= 768) {
+        setSidebarOpen(false)
       }
     }
-
-    fetchLaboratorios()
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    
+    return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
+  const renderSection = () => {
+    switch (activeSection) {
+      case 'overview':
+        return <Overview />
+      case 'laboratorios':
+        return <Laboratorios />
+      case 'horarios':
+        return <Horarios />
+      case 'insumos':
+        return <Insumos />
+      case 'incidencias':
+        return <Incidencias />
+      case 'reportes':
+        return <Reportes />
+      default:
+        return <Overview />
+    }
+  }
+
+  const handleSectionChange = (section: string) => {
+    setActiveSection(section)
+    if (isMobile) {
+      setSidebarOpen(false)
+    }
+  }
+
   return (
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-      {/* 👤 HEADER CON INFO DEL USUARIO */}
-      <div style={{ 
-        backgroundColor: '#f8f9fa', 
-        padding: '20px', 
-        borderRadius: '8px', 
-        marginBottom: '20px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        <div>
-          <h1 style={{ margin: '0 0 10px 0', color: '#333' }}>Dashboard</h1>
-          <p style={{ margin: '0', fontSize: '18px' }}>
-            Bienvenido, <strong>{user?.nombre}</strong>
-          </p>
-          <p style={{ margin: '5px 0 0 0', color: '#666' }}>
-            Rol: <span style={{ 
-              backgroundColor: user?.rol === 'Administrador' ? '#dc3545' : '#28a745', 
-              color: 'white', 
-              padding: '4px 8px', 
-              borderRadius: '4px',
-              fontSize: '14px'
-            }}>
-              {user?.rol}
-            </span>
-          </p>
-        </div>
-        
-        <button 
-          onClick={logout}
-          style={{ 
-            padding: '10px 20px', 
-            backgroundColor: '#dc3545', 
-            color: 'white', 
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '14px'
+    <div style={{ minHeight: '100vh', overflow: 'visible' }}>
+      {/* Overlay móvil */}
+      {isMobile && sidebarOpen && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 999
           }}
-        >
-          Cerrar Sesión
-        </button>
-      </div>
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-      {/* 🏢 SECCIÓN DE LABORATORIOS ASIGNADOS */}
-      <div style={{ marginBottom: '20px' }}>
-        <h2 style={{ color: '#333', marginBottom: '15px' }}>
-          {user?.rol === 'Administrador' ? 'Todos los Laboratorios' : 'Mis Laboratorios Asignados'}
-        </h2>
-        
-        {loading ? (
-          <div style={{ 
-            padding: '40px', 
-            textAlign: 'center', 
-            backgroundColor: '#f8f9fa',
-            borderRadius: '8px'
-          }}>
-            <p>Cargando laboratorios...</p>
-          </div>
-        ) : error ? (
-          <div style={{ 
-            padding: '20px', 
-            backgroundColor: '#f8d7da', 
-            color: '#721c24',
-            borderRadius: '8px',
-            border: '1px solid #f5c6cb'
-          }}>
-            <p>❌ {error}</p>
-          </div>
-        ) : laboratorios.length === 0 ? (
-          <div style={{ 
-            padding: '40px', 
-            textAlign: 'center', 
-            backgroundColor: '#fff3cd',
-            borderRadius: '8px',
-            border: '1px solid #ffeaa7'
-          }}>
-            <p>📭 No tienes laboratorios asignados</p>
-          </div>
-        ) : (
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
-            gap: '20px' 
-          }}>
-            {laboratorios.map((lab) => (
-              <div 
-                key={lab.id}
-                style={{
-                  backgroundColor: 'white',
-                  border: '1px solid #dee2e6',
-                  borderRadius: '8px',
-                  padding: '20px',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                  transition: 'transform 0.2s',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'
-                }}
-              >
-                <div style={{ marginBottom: '10px' }}>
-                  <h3 style={{ 
-                    margin: '0 0 8px 0', 
-                    color: '#495057',
-                    fontSize: '18px'
-                  }}>
-                    🧪 {lab.nombre}
-                  </h3>
-                  <p style={{ 
-                    margin: '0', 
-                    color: '#6c757d',
-                    fontSize: '14px'
-                  }}>
-                    📍 {lab.ubicacion}
-                  </p>
-                </div>
-                
-                <div style={{ 
-                  display: 'flex', 
-                  gap: '10px', 
-                  marginTop: '15px' 
-                }}>
-                  <button style={{
-                    padding: '6px 12px',
-                    backgroundColor: '#007bff',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    cursor: 'pointer'
-                  }}>
-                    Ver Horarios
-                  </button>
-                  <button style={{
-                    padding: '6px 12px',
-                    backgroundColor: '#28a745',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    cursor: 'pointer'
-                  }}>
-                    Ver Insumos
-                  </button>
-                  <button style={{
-                    padding: '6px 12px',
-                    backgroundColor: '#ffc107',
-                    color: '#212529',
-                    border: 'none',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    cursor: 'pointer'
-                  }}>
-                    Incidencias
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* 📊 SECCIÓN DE ACCIONES RÁPIDAS */}
-      <div>
-        <h2 style={{ color: '#333', marginBottom: '15px' }}>Acciones Rápidas</h2>
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-          gap: '15px' 
+      {/* Header móvil */}
+      {isMobile && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '60px',
+          backgroundColor: '#2c3e50',
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 20px',
+          zIndex: 998,
+          boxSizing: 'border-box'
         }}>
-          <button style={{
-            padding: '15px',
-            backgroundColor: '#007bff',
+          <button
+            onClick={() => setSidebarOpen(true)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'white',
+              fontSize: '24px',
+              cursor: 'pointer',
+              padding: '8px'
+            }}
+          >
+            ☰
+          </button>
+          <h1 style={{
             color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '14px'
+            margin: '0 0 0 15px',
+            fontSize: '18px',
+            fontWeight: 'bold'
           }}>
-            📅 Crear Horario
-          </button>
-          <button style={{
-            padding: '15px',
-            backgroundColor: '#28a745',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}>
-            📦 Gestionar Insumos
-          </button>
-          <button style={{
-            padding: '15px',
-            backgroundColor: '#ffc107',
-            color: '#212529',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}>
-            ⚠️ Reportar Incidencia
-          </button>
-          <button style={{
-            padding: '15px',
-            backgroundColor: '#6f42c1',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}>
-            📊 Ver Reportes
-          </button>
+            🎯 Sistema de Laboratorios
+          </h1>
         </div>
+      )}
+
+      {/* Sidebar */}
+      <div style={{ 
+        position: 'fixed',
+        left: isMobile ? (sidebarOpen ? '0' : '-250px') : '0',
+        top: 0,
+        width: '250px',
+        height: '100vh',
+        zIndex: 1000,
+        transition: 'left 0.3s ease'
+      }}>
+        <Sidebar 
+          activeSection={activeSection} 
+          onSectionChange={handleSectionChange} 
+        />
+      </div>
+      
+      {/* Contenido principal - OCUPA TODO EL ESPACIO */}
+      <div style={{
+        marginLeft: isMobile ? '0' : '250px',
+        paddingTop: isMobile ? '60px' : '0',
+        width: isMobile ? '100%' : 'calc(100vw - 250px)',
+        minHeight: '100vh',
+        backgroundColor: '#ffffff',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        padding: '0',
+        boxSizing: 'border-box',
+        position: 'relative'
+      }}>
+        {renderSection()}
       </div>
     </div>
   )
