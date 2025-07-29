@@ -13,6 +13,13 @@ import {
 
 const router = express.Router()
 
+// 🏫 OBTENER ESCUELAS (para el selector) - ANTES de las rutas dinámicas
+router.get('/utils/escuelas', 
+  authenticateToken,
+  authorize('read', 'Docente'),
+  getEscuelas
+)
+
 // 📋 LISTAR DOCENTES
 router.get('/', 
   authenticateToken,
@@ -34,7 +41,7 @@ router.post('/',
   createDocente
 )
 
-// ✏️ EDITAR DOCENTE
+// ✏️ ACTUALIZAR DOCENTE
 router.put('/:id', 
   authenticateToken,
   authorize('update', 'Docente'),
@@ -53,13 +60,6 @@ router.get('/:id/horarios',
   authenticateToken,
   authorize('read', 'Docente'),
   getDocenteHorarios
-)
-
-// 🏫 OBTENER ESCUELAS (para el selector)
-router.get('/utils/escuelas', 
-  authenticateToken,
-  authorize('read', 'Docente'),
-  getEscuelas
 )
 
 export default router 

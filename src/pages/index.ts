@@ -1,0 +1,6 @@
+export { Dashboard } from './Dashboard'
+export { Laboratorios } from './Laboratorios'
+export { Docentes } from './Docentes'
+export { Horarios } from './Horarios'
+export { Insumos } from './Insumos'
+export { Incidencias } from './Incidencias' 
