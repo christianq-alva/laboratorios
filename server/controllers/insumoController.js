@@ -3,24 +3,60 @@ import { Insumo } from '../models/Insumo.js'
 
 export const getInsumos = async (req, res) => {
   try {
+    const { laboratorio_id } = req.query // Obtener el laboratorio específico de la consulta
+    
+    console.log('🔍 getInsumos - Parámetros:', { 
+      laboratorio_id, 
+      user_role: req.user.rol, 
+      user_laboratorio_ids: req.user.laboratorio_ids 
+    })
+    
     let insumos = []
     
-    if (req.user.rol === 'Jefe de Laboratorio') {
-      // Solo insumos de sus laboratorios
-      for (const labId of req.user.laboratorio_ids) {
-        const insumosLab = await Insumo.getByLaboratorio(labId)
-        insumos = [...insumos, ...insumosLab]
+    // Si se especifica un laboratorio específico
+    if (laboratorio_id) {
+      const labId = parseInt(laboratorio_id)
+      
+      // Verificar permisos: Admin puede ver cualquier lab, Jefe solo sus asignados
+      if (req.user.rol === 'Administrador' || req.user.laboratorio_ids.includes(labId)) {
+        console.log('✅ Usuario autorizado para ver insumos del laboratorio:', labId)
+        insumos = await Insumo.getByLaboratorio(labId)
+        console.log('📦 Insumos encontrados:', insumos.length)
+      } else {
+        console.log('❌ Usuario no autorizado para ver insumos del laboratorio:', labId)
+        return res.status(403).json({ 
+          success: false, 
+          message: 'No tienes permisos para ver los insumos de este laboratorio' 
+        })
       }
-    } else if (req.user.rol === 'Administrador') {
-      // Todos los insumos (necesitaría consulta diferente)
-      const [rows] = await pool.execute('SELECT * FROM insumos ORDER BY nombre')
-      insumos = rows
+    } else {
+      // Sin laboratorio específico, devolver todos según rol
+      if (req.user.rol === 'Jefe de Laboratorio') {
+        // Solo insumos de sus laboratorios
+        for (const labId of req.user.laboratorio_ids) {
+          const insumosLab = await Insumo.getByLaboratorio(labId)
+          insumos = [...insumos, ...insumosLab]
+        }
+      } else if (req.user.rol === 'Administrador') {
+        // Todos los insumos con información de stock
+        const [rows] = await pool.execute(`
+          SELECT i.*, 
+                 GROUP_CONCAT(CONCAT(l.nombre, ':', COALESCE(inv.stock_actual, 0)) SEPARATOR '; ') as stock_por_laboratorio
+          FROM insumos i
+          LEFT JOIN inventario_insumos inv ON i.id = inv.insumo_id
+          LEFT JOIN laboratorios l ON inv.laboratorio_id = l.id
+          GROUP BY i.id
+          ORDER BY i.nombre
+        `)
+        insumos = rows
+      }
     }
     
     res.json({ 
       success: true, 
       data: insumos,
-      laboratorios_asignados: req.user.laboratorio_ids 
+      laboratorio_filtrado: laboratorio_id || null,
+      total_insumos: insumos.length
     })
   } catch (error) {
     console.error('Error en getInsumos:', error)

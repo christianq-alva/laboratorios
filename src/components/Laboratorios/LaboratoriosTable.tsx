@@ -25,7 +25,7 @@ import {
   Delete,
   School,
   LocationOn,
-  People,
+  AccountBalance,
 } from '@mui/icons-material'
 import { laboratorioService } from '../../services/laboratorioService'
 import type { Laboratorio } from '../../services/laboratorioService'
@@ -140,7 +140,8 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
           <TableRow sx={{ backgroundColor: 'grey.50' }}>
             <TableCell sx={{ fontWeight: 600 }}>Laboratorio</TableCell>
             <TableCell sx={{ fontWeight: 600 }}>Ubicación</TableCell>
-            <TableCell sx={{ fontWeight: 600 }}>Capacidad</TableCell>
+            <TableCell sx={{ fontWeight: 600 }}>Piso</TableCell>
+            <TableCell sx={{ fontWeight: 600 }}>Escuela</TableCell>
             <TableCell sx={{ fontWeight: 600 }}>Estado</TableCell>
             <TableCell align="center" sx={{ fontWeight: 600 }}>Acciones</TableCell>
           </TableRow>
@@ -150,16 +151,11 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
             <TableRow key={lab.id} hover>
               {/* Nombre */}
               <TableCell>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <School color="primary" />
-                  <Box>
-                    <Typography variant="body1" fontWeight={500}>
-                      {lab.nombre}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      ID: {lab.id}
-                    </Typography>
-                  </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <School fontSize="small" color="primary" />
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    {lab.nombre}
+                  </Typography>
                 </Box>
               </TableCell>
 
@@ -167,18 +163,23 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
               <TableCell>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <LocationOn fontSize="small" color="action" />
-                  <Typography variant="body2">
-                    {lab.ubicacion}
-                  </Typography>
+                  <Typography variant="body2">{lab.ubicacion}</Typography>
                 </Box>
               </TableCell>
 
-              {/* Capacidad */}
+              {/* Piso */}
+              <TableCell>
+                <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.secondary' }}>
+                  {lab.piso}
+                </Typography>
+              </TableCell>
+
+              {/* Escuela */}
               <TableCell>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <People fontSize="small" color="action" />
+                  <AccountBalance fontSize="small" color="action" />
                   <Typography variant="body2">
-                    {lab.capacidad} estudiantes
+                    {lab.escuela || 'Escuela no asignada'}
                   </Typography>
                 </Box>
               </TableCell>
@@ -188,8 +189,8 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
                 <Chip 
                   label="Activo" 
                   color="success" 
-                  size="small"
-                  variant="outlined"
+                  size="small" 
+                  variant="outlined" 
                 />
               </TableCell>
 
@@ -197,8 +198,9 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
               <TableCell align="center">
                 <Tooltip title="Más opciones">
                   <IconButton
-                    onClick={(e) => handleMenuClick(e, lab)}
                     size="small"
+                    onClick={(e) => handleMenuClick(e, lab)}
+                    sx={{ color: 'grey.600' }}
                   >
                     <MoreVert />
                   </IconButton>

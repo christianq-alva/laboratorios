@@ -38,7 +38,6 @@ export const dashboardService = {
     try {
       console.log('🔍 Cargando estadísticas del dashboard desde endpoint optimizado...')
 
-      // ✅ RUTA CORREGIDA: sin /api/ porque baseURL ya lo incluye
       const response = await api.get('/dashboard/stats')
       
       if (response.data.success) {
@@ -73,25 +72,6 @@ export const dashboardService = {
       return {
         success: false,
         message: message
-      }
-    }
-  },
-
-  // Función de debug temporal
-  debug: async () => {
-    try {
-      console.log('🔧 Ejecutando debug del dashboard...')
-      
-      // ✅ RUTA CORREGIDA: sin /api/ porque baseURL ya lo incluye
-      const response = await api.get('/dashboard/debug')
-      console.log('🔧 Resultado del debug:', response.data)
-      return response.data
-    } catch (error: any) {
-      console.error('❌ Error en debug:', error)
-      return { 
-        success: false, 
-        message: error.response?.data?.message || error.message,
-        error: error.response?.data
       }
     }
   }

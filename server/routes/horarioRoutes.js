@@ -9,7 +9,8 @@ import {
   verificarDisponibilidad,
   getEscuelas,      // ← NUEVO
   getCiclos,        // ← NUEVO
-  getGrupos         // ← NUEVO
+  getGrupos,        // ← NUEVO
+  debugHorarios     // ← DEBUG
 } from '../controllers/horarioController.js'
 
 const router = express.Router()
@@ -70,6 +71,12 @@ router.get('/utils/grupos',
   authenticateToken,
   authorize('read', 'Horario'),
   getGrupos
+)
+
+// 🔍 DEBUG: VERIFICAR TODOS LOS REGISTROS
+router.get('/debug', 
+  authenticateToken,
+  debugHorarios
 )
 
 export default router

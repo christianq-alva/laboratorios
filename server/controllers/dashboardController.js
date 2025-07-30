@@ -125,49 +125,4 @@ export const getDashboardStats = async (req, res) => {
       message: 'Error al cargar estadísticas del dashboard: ' + error.message
     })
   }
-}
-
-// Endpoint temporal para debug
-export const debugDashboard = async (req, res) => {
-  try {
-    console.log('🔧 Debug del dashboard - verificando conexión...')
-    
-    // Test de conexión básica
-    const [testResult] = await pool.execute('SELECT 1 as test')
-    console.log('✅ Conexión OK:', testResult)
-
-    // Verificar tablas existentes
-    const [tablesResult] = await pool.execute('SHOW TABLES')
-    console.log('📋 Tablas disponibles:', tablesResult)
-
-    // Verificar estructura básica
-    const stats = {}
-
-    // Solo verificar tablas básicas
-    for (const table of ['laboratorios', 'docentes', 'reservas', 'insumos']) {
-      try {
-        const [result] = await pool.execute(`SELECT COUNT(*) as count FROM ${table}`)
-        stats[table] = result[0].count
-        console.log(`✅ ${table}: ${result[0].count} registros`)
-      } catch (err) {
-        stats[table] = `Error: ${err.message}`
-        console.log(`❌ ${table}: ${err.message}`)
-      }
-    }
-
-    res.json({
-      success: true,
-      connection: 'OK',
-      tables: tablesResult,
-      stats: stats
-    })
-
-  } catch (error) {
-    console.error('❌ Error en debug:', error)
-    res.status(500).json({
-      success: false,
-      message: error.message,
-      stack: error.stack
-    })
-  }
 } 

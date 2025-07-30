@@ -1,8 +1,20 @@
 import { pool } from '../config/database.js'
 import { Insumo } from '../models/Insumo.js'
 
+// Función para convertir fecha ISO a formato MySQL
+const convertirFechaParaMySQL = (fechaISO) => {
+  if (!fechaISO) return null
+  // Convertir ISO string a formato MySQL (YYYY-MM-DD HH:MM:SS)
+  const fecha = new Date(fechaISO)
+  return fecha.toISOString().slice(0, 19).replace('T', ' ')
+}
+
 // 🚫 FUNCIÓN PARA VERIFICAR CRUCES DE HORARIOS
 const verificarCruceHorarios = async (connection, laboratorio_id, docente_id, fecha_inicio, fecha_fin, reserva_id = null) => {
+  
+  // ✅ CONVERTIR FECHAS A FORMATO MYSQL
+  const fechaInicioMySQL = convertirFechaParaMySQL(fecha_inicio)
+  const fechaFinMySQL = convertirFechaParaMySQL(fecha_fin)
   
   // 🏢 VERIFICAR CRUCE DE LABORATORIO
   const queryLab = `
@@ -24,9 +36,9 @@ const verificarCruceHorarios = async (connection, laboratorio_id, docente_id, fe
   
   const [cruceLabRows] = await connection.execute(queryLab, [
     laboratorio_id, reserva_id,
-    fecha_inicio, fecha_inicio,
-    fecha_fin, fecha_fin, 
-    fecha_inicio, fecha_fin
+    fechaInicioMySQL, fechaInicioMySQL,
+    fechaFinMySQL, fechaFinMySQL, 
+    fechaInicioMySQL, fechaFinMySQL
   ])
   
   if (cruceLabRows.length > 0) {
@@ -58,9 +70,9 @@ const verificarCruceHorarios = async (connection, laboratorio_id, docente_id, fe
   
   const [cruceDocenteRows] = await connection.execute(queryDocente, [
     docente_id, reserva_id,
-    fecha_inicio, fecha_inicio,
-    fecha_fin, fecha_fin,
-    fecha_inicio, fecha_fin
+    fechaInicioMySQL, fechaInicioMySQL,
+    fechaFinMySQL, fechaFinMySQL,
+    fechaInicioMySQL, fechaFinMySQL
   ])
   
   if (cruceDocenteRows.length > 0) {
@@ -77,6 +89,12 @@ const verificarCruceHorarios = async (connection, laboratorio_id, docente_id, fe
 
 export const getHorarios = async (req, res) => {
     try {
+      console.log('🔍 getHorarios - Usuario:', {
+        rol: req.user.rol,
+        userId: req.user.userId,
+        laboratorio_ids: req.user.laboratorio_ids
+      })
+
       let query = `
         SELECT 
           r.id,
@@ -84,42 +102,115 @@ export const getHorarios = async (req, res) => {
           r.fecha_fin,
           r.cantidad_alumnos,
           r.descripcion,
-          l.nombre as laboratorio_nombre,
-          d.nombre as docente_nombre,
-          e.nombre as escuela_nombre,
-          c.nombre as ciclo_nombre,
-          g.nombre as grupo_nombre
+          l.nombre as laboratorio,
+          d.nombre as docente,
+          e.nombre as escuela,
+          c.nombre as ciclo,
+          g.nombre as grupo
         FROM reservas r
-        JOIN laboratorios l ON r.laboratorio_id = l.id
-        JOIN docentes d ON r.docente_id = d.id
-        JOIN grupos g ON r.grupo_id = g.id
-        JOIN escuelas e ON g.escuela_id = e.id
-        JOIN ciclos c ON g.ciclo_id = c.id
+        LEFT JOIN laboratorios l ON r.laboratorio_id = l.id
+        LEFT JOIN docentes d ON r.docente_id = d.id
+        LEFT JOIN grupos g ON r.grupo_id = g.id
+        LEFT JOIN escuelas e ON g.escuela_id = e.id
+        LEFT JOIN ciclos c ON g.ciclo_id = c.id
       `
       let params = []
       
       // 🟡 JEFE DE LAB: Solo horarios de SUS laboratorios
       if (req.user.rol === 'Jefe de Laboratorio') {
         const labIds = req.user.laboratorio_ids
+        console.log('🔍 Jefe de Laboratorio - Laboratorios asignados:', labIds)
+        
         if (labIds && labIds.length > 0) {
           const placeholders = labIds.map(() => '?').join(',')
           query += ` WHERE r.laboratorio_id IN (${placeholders})`
           params = labIds
+          console.log('🔍 Query con filtro de laboratorios:', query)
         } else {
           // No tiene laboratorios asignados
           query += ' WHERE 1 = 0' // No mostrar nada
+          console.log('⚠️ Jefe de Laboratorio sin laboratorios asignados')
         }
+      } else {
+        console.log('🔍 Administrador - Mostrando todos los horarios')
       }
       
       query += ' ORDER BY r.fecha_inicio DESC'
       
+      console.log('🔍 Query final:', query)
+      console.log('🔍 Parámetros:', params)
+      
       const [horarios] = await pool.execute(query, params)
+      console.log('🔍 Horarios encontrados (sin insumos):', horarios.length)
+      
+      // 🔍 DEBUG: Verificar registros con datos faltantes
+      const registrosConNulls = horarios.filter(h => 
+        !h.laboratorio || !h.docente || !h.grupo || !h.escuela || !h.ciclo
+      )
+      
+      if (registrosConNulls.length > 0) {
+        console.log('⚠️ Registros con datos faltantes:', registrosConNulls.length)
+        console.log('🔍 Primer registro con datos faltantes:', {
+          id: registrosConNulls[0].id,
+          laboratorio: registrosConNulls[0].laboratorio,
+          docente: registrosConNulls[0].docente,
+          grupo: registrosConNulls[0].grupo,
+          escuela: registrosConNulls[0].escuela,
+          ciclo: registrosConNulls[0].ciclo
+        })
+      }
+      
+      // 🔍 DEBUG: Verificar total de registros en la tabla
+      const [totalRegistros] = await pool.execute('SELECT COUNT(*) as total FROM reservas')
+      console.log('🔍 Total de registros en tabla reservas:', totalRegistros[0].total)
+      
+      if (horarios.length > 0) {
+        console.log('🔍 Primer horario encontrado:', {
+          id: horarios[0].id,
+          laboratorio: horarios[0].laboratorio,
+          docente: horarios[0].docente,
+          fecha_inicio: horarios[0].fecha_inicio
+        })
+      }
+      
+      // 🔍 OBTENER INSUMOS PARA CADA HORARIO
+      const horariosConInsumos = await Promise.all(
+        horarios.map(async (horario) => {
+          const [insumos] = await pool.execute(`
+            SELECT 
+              dri.insumo_id as id,
+              i.nombre,
+              dri.cantidad_usada
+            FROM detalle_reserva_insumos dri
+            JOIN insumos i ON dri.insumo_id = i.id
+            WHERE dri.reserva_id = ?
+          `, [horario.id])
+          
+          return {
+            ...horario,
+            insumos: insumos
+          }
+        })
+      )
       
       res.json({ 
         success: true, 
-        data: horarios,
+        data: horariosConInsumos,
         user_role: req.user.rol,
         laboratorios_asignados: req.user.laboratorio_ids // ← Para debug
+      })
+      
+      console.log('📋 Horarios enviados:', {
+        total: horariosConInsumos.length,
+        primer_horario: horariosConInsumos[0] ? {
+          id: horariosConInsumos[0].id,
+          laboratorio: horariosConInsumos[0].laboratorio,
+          docente: horariosConInsumos[0].docente,
+          grupo: horariosConInsumos[0].grupo,
+          escuela: horariosConInsumos[0].escuela,
+          ciclo: horariosConInsumos[0].ciclo,
+          insumos_count: horariosConInsumos[0].insumos?.length || 0
+        } : null
       })
     } catch (error) {
       console.error('Error en getHorarios:', error)
@@ -136,21 +227,38 @@ export const getHorarios = async (req, res) => {
       const { 
         laboratorio_id, 
         docente_id, 
-        escuela_id,      // ← NUEVO: Para validación
-        ciclo_id,        // ← NUEVO: Para validación
-        grupo_id,        // ← NUEVO: Para guardar
-        descripcion,     // ← NUEVO: Descripción de la clase
+        grupo_id,        // ← Para guardar
+        descripcion,     // ← Descripción de la clase
         fecha_inicio, 
         fecha_fin, 
-        cantidad_alumnos,
+        cantidad_alumnos = 1, // ← Valor por defecto
         insumos = [] // ← Array de insumos a usar
       } = req.body
       
       console.log('🔍 Datos recibidos:', { 
-        laboratorio_id, docente_id, escuela_id, ciclo_id, grupo_id, descripcion 
+        laboratorio_id, docente_id, grupo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos
       })
+
+      // ✅ VALIDACIÓN 0: Verificar que no hay valores undefined
+      if (!laboratorio_id || !docente_id || !grupo_id || !descripcion || !fecha_inicio || !fecha_fin) {
+        return res.status(400).json({
+          success: false,
+          message: 'Todos los campos son requeridos: laboratorio_id, docente_id, grupo_id, descripcion, fecha_inicio, fecha_fin'
+        })
+      }
+
+      // ✅ CONVERTIR FECHAS A FORMATO MYSQL
+      const fechaInicioMySQL = convertirFechaParaMySQL(fecha_inicio)
+      const fechaFinMySQL = convertirFechaParaMySQL(fecha_fin)
       
-      // ✅ VALIDACIÓN 1: Verificar que el grupo pertenece a la escuela y ciclo especificados
+      console.log('📅 Fechas convertidas:', { 
+        original_inicio: fecha_inicio, 
+        mysql_inicio: fechaInicioMySQL,
+        original_fin: fecha_fin, 
+        mysql_fin: fechaFinMySQL
+      })
+
+      // ✅ VALIDACIÓN 1: Verificar que el grupo existe y obtener su información
       const [grupoValidacion] = await connection.execute(`
         SELECT 
           g.id,
@@ -162,20 +270,20 @@ export const getHorarios = async (req, res) => {
         FROM grupos g
         JOIN escuelas e ON g.escuela_id = e.id
         JOIN ciclos c ON g.ciclo_id = c.id
-        WHERE g.id = ? AND g.escuela_id = ? AND g.ciclo_id = ?
-      `, [grupo_id, escuela_id, ciclo_id])
+        WHERE g.id = ?
+      `, [grupo_id])
       
       if (grupoValidacion.length === 0) {
         await connection.rollback()
         return res.status(400).json({
           success: false,
-          message: `El grupo seleccionado no pertenece a la escuela y ciclo especificados`,
-          detalle: { escuela_id, ciclo_id, grupo_id }
+          message: 'El grupo seleccionado no existe o no está válida su configuración'
         })
       }
-      
+
+      // Extraer información del grupo validado
       const grupoInfo = grupoValidacion[0]
-      console.log('✅ Grupo validado:', grupoInfo.grupo_nombre, 'de', grupoInfo.escuela_nombre, '-', grupoInfo.ciclo_nombre)
+      console.log('✅ Grupo validado:', grupoInfo)
       
       // ✅ VALIDACIÓN 2: Docente debe ser de la misma escuela que el grupo
       const [docenteValidacion] = await connection.execute(`
@@ -198,7 +306,7 @@ export const getHorarios = async (req, res) => {
       }
       
       const docenteInfo = docenteValidacion[0]
-      if (docenteInfo.docente_escuela_id !== escuela_id) {
+      if (docenteInfo.docente_escuela_id !== grupoInfo.escuela_id) {
         await connection.rollback()
         return res.status(400).json({
           success: false,
@@ -264,7 +372,7 @@ export const getHorarios = async (req, res) => {
       const [reservaResult] = await connection.execute(`
         INSERT INTO reservas (laboratorio_id, docente_id, grupo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos) 
         VALUES (?, ?, ?, ?, ?, ?, ?)
-      `, [laboratorio_id, docente_id, grupo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos])
+      `, [laboratorio_id, docente_id, grupo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos])
       
       const reserva_id = reservaResult.insertId
       console.log('✅ Reserva creada con ID:', reserva_id)
@@ -324,22 +432,39 @@ export const getHorarios = async (req, res) => {
       const { 
         laboratorio_id, 
         docente_id, 
-        escuela_id,      // ← NUEVO: Para validación
-        ciclo_id,        // ← NUEVO: Para validación
-        grupo_id,        // ← NUEVO: Para guardar
-        descripcion,     // ← NUEVO: Descripción de la clase
+        grupo_id,        // ← Para guardar
+        descripcion,     // ← Descripción de la clase
         fecha_inicio, 
         fecha_fin, 
-        cantidad_alumnos,
+        cantidad_alumnos = 1, // ← Valor por defecto
         insumos = [] // ← Insumos actualizados
       } = req.body
       
       console.log('🔍 Editando horario:', id)
       console.log('🔍 Datos recibidos:', { 
-        laboratorio_id, docente_id, escuela_id, ciclo_id, grupo_id, descripcion 
+        laboratorio_id, docente_id, grupo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos
       })
+
+      // ✅ VALIDACIÓN 0: Verificar que no hay valores undefined
+      if (!laboratorio_id || !docente_id || !grupo_id || !descripcion || !fecha_inicio || !fecha_fin) {
+        return res.status(400).json({
+          success: false,
+          message: 'Todos los campos son requeridos: laboratorio_id, docente_id, grupo_id, descripcion, fecha_inicio, fecha_fin'
+        })
+      }
+
+      // ✅ CONVERTIR FECHAS A FORMATO MYSQL
+      const fechaInicioMySQL = convertirFechaParaMySQL(fecha_inicio)
+      const fechaFinMySQL = convertirFechaParaMySQL(fecha_fin)
       
-      // ✅ VALIDACIÓN 1: Verificar que el grupo pertenece a la escuela y ciclo especificados
+      console.log(' Fechas convertidas para edición:', { 
+        original_inicio: fecha_inicio, 
+        mysql_inicio: fechaInicioMySQL,
+        original_fin: fecha_fin, 
+        mysql_fin: fechaFinMySQL
+      })
+
+      // ✅ VALIDACIÓN 1: Verificar que el grupo existe y obtener su información
       const [grupoValidacion] = await connection.execute(`
         SELECT 
           g.id,
@@ -351,20 +476,20 @@ export const getHorarios = async (req, res) => {
         FROM grupos g
         JOIN escuelas e ON g.escuela_id = e.id
         JOIN ciclos c ON g.ciclo_id = c.id
-        WHERE g.id = ? AND g.escuela_id = ? AND g.ciclo_id = ?
-      `, [grupo_id, escuela_id, ciclo_id])
+        WHERE g.id = ?
+      `, [grupo_id])
       
       if (grupoValidacion.length === 0) {
         await connection.rollback()
         return res.status(400).json({
           success: false,
-          message: `El grupo seleccionado no pertenece a la escuela y ciclo especificados`,
-          detalle: { escuela_id, ciclo_id, grupo_id }
+          message: 'El grupo seleccionado no existe o no está válida su configuración'
         })
       }
-      
+
+      // Extraer información del grupo validado
       const grupoInfo = grupoValidacion[0]
-      console.log('✅ Grupo validado:', grupoInfo.grupo_nombre, 'de', grupoInfo.escuela_nombre, '-', grupoInfo.ciclo_nombre)
+      console.log('✅ Grupo validado:', grupoInfo)
       
       // ✅ VALIDACIÓN 2: Docente debe ser de la misma escuela que el grupo
       const [docenteValidacion] = await connection.execute(`
@@ -387,7 +512,7 @@ export const getHorarios = async (req, res) => {
       }
       
       const docenteInfo = docenteValidacion[0]
-      if (docenteInfo.docente_escuela_id !== escuela_id) {
+      if (docenteInfo.docente_escuela_id !== grupoInfo.escuela_id) {
         await connection.rollback()
         return res.status(400).json({
           success: false,
@@ -397,7 +522,7 @@ export const getHorarios = async (req, res) => {
       
       console.log('✅ Docente validado:', docenteInfo.docente_nombre, 'puede enseñar al grupo de', grupoInfo.escuela_nombre)
       
-      console.log('🔍 Verificando cruces para edición...')
+      console.log(' Verificando cruces para edición...')
       
       // ⚠️ VERIFICAR CRUCES (excluyendo la reserva actual)
       const cruce = await verificarCruceHorarios(
@@ -486,7 +611,7 @@ export const getHorarios = async (req, res) => {
         UPDATE reservas 
         SET laboratorio_id = ?, docente_id = ?, grupo_id = ?, descripcion = ?, fecha_inicio = ?, fecha_fin = ?, cantidad_alumnos = ?
         WHERE id = ?
-      `, [laboratorio_id, docente_id, grupo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos, id])
+      `, [laboratorio_id, docente_id, grupo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, id])
       
       // 6️⃣ PROCESAR NUEVOS INSUMOS
       for (const insumo of insumos) {
@@ -701,6 +826,91 @@ export const getHorarios = async (req, res) => {
       }
     } catch (error) {
       console.error('Error en verificarDisponibilidad:', error)
+      res.status(500).json({ success: false, message: error.message })
+    }
+  }
+
+  // 🔍 FUNCIÓN DE DEBUG TEMPORAL
+  export const debugHorarios = async (req, res) => {
+    try {
+      console.log('🔍 DEBUG: Verificando todos los registros...')
+      
+      // 1. Total de registros en reservas
+      const [totalReservas] = await pool.execute('SELECT COUNT(*) as total FROM reservas')
+      
+      // 2. Todos los registros sin filtros
+      const [todasReservas] = await pool.execute(`
+        SELECT 
+          r.id,
+          r.laboratorio_id,
+          r.docente_id,
+          r.grupo_id,
+          r.descripcion,
+          r.fecha_inicio,
+          r.fecha_fin,
+          r.cantidad_alumnos
+        FROM reservas r
+        ORDER BY r.fecha_inicio DESC
+      `)
+      
+      // 3. Verificar JOINs con LEFT JOIN
+      const [reservasConJoins] = await pool.execute(`
+        SELECT 
+          r.id,
+          l.nombre as laboratorio,
+          d.nombre as docente,
+          g.nombre as grupo,
+          e.nombre as escuela,
+          c.nombre as ciclo
+        FROM reservas r
+        LEFT JOIN laboratorios l ON r.laboratorio_id = l.id
+        LEFT JOIN docentes d ON r.docente_id = d.id
+        LEFT JOIN grupos g ON r.grupo_id = g.id
+        LEFT JOIN escuelas e ON g.escuela_id = e.id
+        LEFT JOIN ciclos c ON g.ciclo_id = c.id
+        ORDER BY r.fecha_inicio DESC
+      `)
+      
+      // 4. Verificar registros huérfanos
+      const registrosHuerfanos = reservasConJoins.filter(r => 
+        !r.laboratorio || !r.docente || !r.grupo || !r.escuela || !r.ciclo
+      )
+      
+      // 5. Verificar IDs que no existen
+      const [laboratoriosExistentes] = await pool.execute('SELECT id FROM laboratorios')
+      const [docentesExistentes] = await pool.execute('SELECT id FROM docentes')
+      const [gruposExistentes] = await pool.execute('SELECT id FROM grupos')
+      
+      const idsLaboratorios = laboratoriosExistentes.map(l => l.id)
+      const idsDocentes = docentesExistentes.map(d => d.id)
+      const idsGrupos = gruposExistentes.map(g => g.id)
+      
+      const registrosConIdsInvalidos = todasReservas.filter(r => 
+        !idsLaboratorios.includes(r.laboratorio_id) ||
+        !idsDocentes.includes(r.docente_id) ||
+        !idsGrupos.includes(r.grupo_id)
+      )
+      
+      res.json({
+        success: true,
+        debug_info: {
+          total_reservas: totalReservas[0].total,
+          reservas_sin_joins: todasReservas.length,
+          reservas_con_joins: reservasConJoins.length,
+          registros_huerfanos: registrosHuerfanos.length,
+          registros_con_ids_invalidos: registrosConIdsInvalidos.length,
+          todas_reservas: todasReservas,
+          reservas_con_joins_detalle: reservasConJoins,
+          registros_huerfanos_detalle: registrosHuerfanos,
+          registros_con_ids_invalidos_detalle: registrosConIdsInvalidos,
+          ids_laboratorios: idsLaboratorios,
+          ids_docentes: idsDocentes,
+          ids_grupos: idsGrupos
+        }
+      })
+      
+    } catch (error) {
+      console.error('Error en debugHorarios:', error)
       res.status(500).json({ success: false, message: error.message })
     }
   }
