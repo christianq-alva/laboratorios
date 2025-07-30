@@ -32,6 +32,7 @@ import {
   AccessTime,
   Inventory,
   Group,
+  Visibility,
 } from '@mui/icons-material'
 import { horarioService } from '../../services/horarioService'
 import type { Horario } from '../../services/horarioService'
@@ -39,6 +40,7 @@ import type { Horario } from '../../services/horarioService'
 interface HorariosTableProps {
   onEdit: (horario: Horario) => void
   onDelete: (horario: Horario) => void
+  onView?: (horario: Horario) => void
   refresh: boolean
   onRefreshComplete: () => void
 }
@@ -46,6 +48,7 @@ interface HorariosTableProps {
 export const HorariosTable: React.FC<HorariosTableProps> = ({
   onEdit,
   onDelete,
+  onView,
   refresh,
   onRefreshComplete,
 }) => {
@@ -124,6 +127,13 @@ export const HorariosTable: React.FC<HorariosTableProps> = ({
   const handleDelete = () => {
     if (selectedHorario) {
       onDelete(selectedHorario)
+    }
+    handleMenuClose()
+  }
+
+  const handleView = () => {
+    if (selectedHorario && onView) {
+      onView(selectedHorario)
     }
     handleMenuClose()
   }
@@ -285,7 +295,8 @@ export const HorariosTable: React.FC<HorariosTableProps> = ({
                           label="Ver" 
                           size="small" 
                           variant="outlined"
-                          sx={{ cursor: 'pointer' }}
+                          sx={{ cursor: onView ? 'pointer' : 'default' }}
+                          onClick={onView ? () => onView(horario) : undefined}
                         />
                       </Badge>
                     </Box>
@@ -329,6 +340,15 @@ export const HorariosTable: React.FC<HorariosTableProps> = ({
           sx: { boxShadow: 3, borderRadius: 2 }
         }}
       >
+        {onView && (
+          <MenuItem onClick={handleView}>
+            <ListItemIcon>
+              <Visibility fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Ver detalles</ListItemText>
+          </MenuItem>
+        )}
+        
         <MenuItem onClick={handleEdit}>
           <ListItemIcon>
             <Edit fontSize="small" />

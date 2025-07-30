@@ -3,6 +3,7 @@ import { authenticateToken } from '../middleware/auth.js'
 import { authorize, authorizeResource } from '../middleware/authorize.js'
 import { 
   getHorarios, 
+  getHorario,
   createHorario, 
   updateHorario,
   deleteHorario,
@@ -20,6 +21,13 @@ router.get('/',
   authenticateToken,
   authorize('read', 'Horario'),
   getHorarios
+)
+
+// 🔍 OBTENER HORARIO ESPECÍFICO
+router.get('/:id', 
+  authenticateToken,
+  authorize('read', 'Horario'),
+  getHorario
 )
 
 // ➕ CREAR HORARIO

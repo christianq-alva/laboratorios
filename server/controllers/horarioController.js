@@ -217,6 +217,101 @@ export const getHorarios = async (req, res) => {
       res.status(500).json({ success: false, message: error.message })
     }
   }
+
+  // Obtener un horario específico por ID
+  export const getHorario = async (req, res) => {
+    try {
+      const { id } = req.params
+      
+      console.log('🔍 getHorario - Buscando horario ID:', id, 'para usuario:', req.user.usuario)
+      
+      let query = `
+        SELECT 
+          r.id,
+          r.laboratorio_id,
+          r.docente_id,
+          r.grupo_id,
+          r.descripcion,
+          r.fecha_inicio,
+          r.fecha_fin,
+          r.cantidad_alumnos,
+          l.nombre as laboratorio,
+          d.nombre as docente,
+          g.nombre as grupo,
+          e.nombre as escuela,
+          c.nombre as ciclo
+        FROM reservas r
+        JOIN laboratorios l ON r.laboratorio_id = l.id
+        JOIN docentes d ON r.docente_id = d.id
+        JOIN grupos g ON r.grupo_id = g.id
+        JOIN escuelas e ON g.escuela_id = e.id
+        JOIN ciclos c ON g.ciclo_id = c.id
+        WHERE r.id = ?
+      `
+      let params = [id]
+      
+      // 🟡 JEFE DE LAB: Solo horarios de SUS laboratorios
+      if (req.user.rol === 'Jefe de Laboratorio') {
+        const labIds = req.user.laboratorio_ids || []
+        if (labIds.length > 0) {
+          const placeholders = labIds.map(() => '?').join(',')
+          query += ` AND r.laboratorio_id IN (${placeholders})`
+          params = [id, ...labIds]
+        } else {
+          query += ' AND 1 = 0' // No mostrar nada
+        }
+      }
+      // 🔴 ADMIN: Ve todos los horarios
+      
+      const [horarios] = await pool.execute(query, params)
+      
+      if (horarios.length === 0) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Horario no encontrado o sin permisos para verlo' 
+        })
+      }
+      
+      const horario = horarios[0]
+      
+      // 🔍 OBTENER INSUMOS DEL HORARIO
+      const [insumos] = await pool.execute(`
+        SELECT 
+          dri.insumo_id as id,
+          i.nombre,
+          i.descripcion,
+          i.unidad_medida,
+          dri.cantidad_usada
+        FROM detalle_reserva_insumos dri
+        JOIN insumos i ON dri.insumo_id = i.id
+        WHERE dri.reserva_id = ?
+        ORDER BY i.nombre
+      `, [id])
+      
+      const horarioConInsumos = {
+        ...horario,
+        insumos: insumos
+      }
+      
+      console.log('📋 Horario encontrado:', {
+        id: horarioConInsumos.id,
+        laboratorio: horarioConInsumos.laboratorio,
+        docente: horarioConInsumos.docente,
+        grupo: horarioConInsumos.grupo,
+        escuela: horarioConInsumos.escuela,
+        ciclo: horarioConInsumos.ciclo,
+        insumos_count: horarioConInsumos.insumos?.length || 0
+      })
+      
+      res.json({ 
+        success: true, 
+        data: horarioConInsumos
+      })
+    } catch (error) {
+      console.error('Error en getHorario:', error)
+      res.status(500).json({ success: false, message: error.message })
+    }
+  }
   
   export const createHorario = async (req, res) => {
     const connection = await pool.getConnection()

@@ -16,6 +16,7 @@ import {
 import { Add, Schedule, Warning } from '@mui/icons-material'
 import { HorariosTable } from '../components/Horarios/HorariosTable'
 import { HorarioFormSimple as HorarioForm } from '../components/Horarios/HorarioFormSimple'
+import { HorarioDetalle } from '../components/Horarios/HorarioDetalle'
 import { horarioService } from '../services/horarioService'
 import type { Horario } from '../services/horarioService'
 
@@ -23,7 +24,9 @@ export const Horarios: React.FC = () => {
   // Estados para formulario y eliminación
   const [formOpen, setFormOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [detalleOpen, setDetalleOpen] = useState(false)
   const [selectedHorario, setSelectedHorario] = useState<Horario | null>(null)
+  const [selectedHorarioId, setSelectedHorarioId] = useState<number | null>(null)
   const [refresh, setRefresh] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
   
@@ -60,6 +63,18 @@ export const Horarios: React.FC = () => {
       message: selectedHorario ? 'Horario actualizado correctamente' : 'Horario creado correctamente',
       severity: 'success'
     })
+  }
+
+  // Función para ver detalles del horario
+  const handleViewHorario = (horario: Horario) => {
+    setSelectedHorarioId(horario.id)
+    setDetalleOpen(true)
+  }
+
+  // Función para cerrar detalles
+  const handleDetalleClose = () => {
+    setDetalleOpen(false)
+    setSelectedHorarioId(null)
   }
 
   // Función para confirmar eliminación
@@ -201,6 +216,7 @@ ${info.registros_con_ids_invalidos > 0 ? `⚠️ HAY ${info.registros_con_ids_in
           <HorariosTable 
             onEdit={handleEditHorario}
             onDelete={handleDeleteHorario}
+            onView={handleViewHorario}
             refresh={refresh}
             onRefreshComplete={handleRefreshComplete}
           />
@@ -213,6 +229,13 @@ ${info.registros_con_ids_invalidos > 0 ? `⚠️ HAY ${info.registros_con_ids_in
         onClose={handleFormClose}
         onSuccess={handleFormSuccess}
         horario={selectedHorario}
+      />
+
+      {/* Diálogo de detalles */}
+      <HorarioDetalle
+        open={detalleOpen}
+        onClose={handleDetalleClose}
+        horarioId={selectedHorarioId}
       />
 
       {/* Diálogo de eliminación */}

@@ -307,14 +307,22 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
           horario_id: horario?.id
         })
         
-        if (result.success) {
-          setConflictos(result.conflictos || [])
+        if (result.disponible) {
+          setConflictos([])
+          setError(null)
         } else {
-          setError(result.message || 'Error al verificar disponibilidad')
+          // Convertir el resultado del backend al formato esperado por el frontend
+          const conflicto: ConflictoHorario = {
+            tipo: result.tipo_conflicto || 'laboratorio',
+            mensaje: result.motivo || 'Conflicto de horario',
+            horario_conflicto: result.conflicto_detalle
+          }
+          setConflictos([conflicto])
+          setError(result.motivo || 'Conflicto de horario')
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error verificando disponibilidad:', err)
-        setError('Error al verificar disponibilidad')
+        setError(err.message || 'Error al verificar disponibilidad')
       }
     }
   }
@@ -634,6 +642,20 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
               {/* Verificación de disponibilidad */}
               {formData.fecha_inicio && formData.fecha_fin && formData.laboratorio_id && formData.docente_id && (
                 <Box sx={{ mt: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                      Verificación de Disponibilidad
+                    </Typography>
+                    <Button 
+                      size="small" 
+                      variant="outlined" 
+                      onClick={verificarDisponibilidad}
+                      disabled={!formData.laboratorio_id || !formData.docente_id || !formData.fecha_inicio || !formData.fecha_fin}
+                    >
+                      Verificar Ahora
+                    </Button>
+                  </Box>
+                  
                   {conflictos.length === 0 ? (
                     <Alert severity="success" icon={<CheckCircle />}>
                       ✅ El laboratorio y docente están disponibles en el horario seleccionado
@@ -644,9 +666,19 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                         <strong>Se encontraron conflictos de horario:</strong>
                       </Typography>
                       {conflictos.map((conflicto, index) => (
-                        <Typography key={index} variant="body2" sx={{ ml: 2 }}>
-                          • {conflicto.mensaje}
-                        </Typography>
+                        <Box key={index} sx={{ ml: 2, mb: 1 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 500, color: 'error.main' }}>
+                            • {conflicto.tipo === 'laboratorio' ? '🚫 Laboratorio ocupado' : '👨‍🏫 Docente ocupado'}
+                          </Typography>
+                          <Typography variant="body2" sx={{ ml: 2, color: 'text.secondary' }}>
+                            {conflicto.mensaje}
+                          </Typography>
+                          {conflicto.horario_conflicto && (
+                            <Typography variant="caption" sx={{ ml: 2, color: 'text.secondary', display: 'block' }}>
+                              Conflicto: {conflicto.horario_conflicto.fecha_inicio} - {conflicto.horario_conflicto.fecha_fin}
+                            </Typography>
+                          )}
+                        </Box>
                       ))}
                     </Alert>
                   )}

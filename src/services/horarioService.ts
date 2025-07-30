@@ -23,6 +23,8 @@ export interface InsumoHorario {
   nombre: string
   cantidad_usada: number
   stock_disponible?: number
+  descripcion?: string
+  unidad_medida?: string
 }
 
 export interface CreateHorarioData {
@@ -104,8 +106,13 @@ export const horarioService = {
   },
 
   getById: async (id: number) => {
-    const response = await api.get(`/horarios/${id}`)
-    return response.data
+    try {
+      const response = await api.get(`/horarios/${id}`)
+      return response.data
+    } catch (error: any) {
+      console.error('Error al obtener horario:', error)
+      throw new Error(error.response?.data?.message || 'Error al obtener horario')
+    }
   },
 
   create: async (data: CreateHorarioData) => {
@@ -124,7 +131,13 @@ export const horarioService = {
   },
 
   // Verificación de disponibilidad
-  verificarDisponibilidad: async (data: VerificarDisponibilidadData): Promise<{ success: boolean; conflictos?: ConflictoHorario[]; message?: string }> => {
+  verificarDisponibilidad: async (data: VerificarDisponibilidadData): Promise<{
+    disponible: boolean
+    motivo?: string
+    tipo_conflicto?: 'laboratorio' | 'docente'
+    conflicto_detalle?: any
+    mensaje?: string
+  }> => {
     const response = await api.post('/horarios/verificar-disponibilidad', data)
     return response.data
   },
