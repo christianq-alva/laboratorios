@@ -31,6 +31,8 @@ import {
 } from '@mui/icons-material'
 import { useAuth } from '../context/authContext'
 import { dashboardService } from '../services/dashboardService'
+import { CalendarView } from '../components/Dashboard/CalendarView'
+import { HorarioFormSimple } from '../components/Horarios/HorarioFormSimple'
 import type { DashboardStats } from '../services/dashboardService'
 
 export const Dashboard: React.FC = () => {
@@ -38,6 +40,7 @@ export const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [horarioFormOpen, setHorarioFormOpen] = useState(false)
 
   const fetchStats = async () => {
     try {
@@ -57,6 +60,19 @@ export const Dashboard: React.FC = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleNewHorario = () => {
+    setHorarioFormOpen(true)
+  }
+
+  const handleHorarioFormClose = () => {
+    setHorarioFormOpen(false)
+  }
+
+  const handleHorarioFormSuccess = () => {
+    setHorarioFormOpen(false)
+    fetchStats() // Recargar estadísticas después de crear horario
   }
 
   useEffect(() => {
@@ -126,79 +142,50 @@ export const Dashboard: React.FC = () => {
         </Typography>
       </Box>
 
-      {/* Estadísticas principales */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 3, mb: 4 }}>
-        {/* Laboratorios */}
-        <Card sx={{ borderRadius: 2, boxShadow: 2 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-              <Avatar sx={{ bgcolor: 'primary.main', color: 'white' }}>
-                <School />
-              </Avatar>
-              <Chip label="Laboratorios" variant="outlined" />
-            </Box>
-            <Typography variant="h3" component="div" sx={{ fontWeight: 700, mb: 1 }}>
-              {stats.laboratorios.total}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Laboratorios registrados
-            </Typography>
-          </CardContent>
-        </Card>
+      {/* Estadísticas principales - Versión compacta */}
+      <Box sx={{ 
+        display: 'flex', 
+        gap: 2, 
+        mb: 3, 
+        flexWrap: 'wrap',
+        justifyContent: 'center'
+      }}>
+        <Chip
+          icon={<School />}
+          label={`${stats.laboratorios.total} Laboratorios`}
+          color="primary"
+          variant="outlined"
+          sx={{ px: 2, py: 1 }}
+        />
+        <Chip
+          icon={<Person />}
+          label={`${stats.docentes.total} Docentes`}
+          color="success"
+          variant="outlined"
+          sx={{ px: 2, py: 1 }}
+        />
+        <Chip
+          icon={<Schedule />}
+          label={`${stats.horarios.total} Horarios`}
+          color="warning"
+          variant="outlined"
+          sx={{ px: 2, py: 1 }}
+        />
+        <Chip
+          icon={<Inventory />}
+          label={`${stats.insumos.total} Insumos`}
+          color="info"
+          variant="outlined"
+          sx={{ px: 2, py: 1 }}
+        />
+      </Box>
 
-        {/* Docentes */}
-        <Card sx={{ borderRadius: 2, boxShadow: 2 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-              <Avatar sx={{ bgcolor: 'success.main', color: 'white' }}>
-                <Person />
-              </Avatar>
-              <Chip label="Docentes" variant="outlined" />
-            </Box>
-            <Typography variant="h3" component="div" sx={{ fontWeight: 700, mb: 1 }}>
-              {stats.docentes.total}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Docentes registrados
-            </Typography>
-          </CardContent>
-        </Card>
-
-        {/* Horarios */}
-        <Card sx={{ borderRadius: 2, boxShadow: 2 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-              <Avatar sx={{ bgcolor: 'warning.main', color: 'white' }}>
-                <Schedule />
-              </Avatar>
-              <Chip label="Horarios" variant="outlined" />
-            </Box>
-            <Typography variant="h3" component="div" sx={{ fontWeight: 700, mb: 1 }}>
-              {stats.horarios.total}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Reservas programadas
-            </Typography>
-          </CardContent>
-        </Card>
-
-        {/* Insumos */}
-        <Card sx={{ borderRadius: 2, boxShadow: 2 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-              <Avatar sx={{ bgcolor: 'info.main', color: 'white' }}>
-                <Inventory />
-              </Avatar>
-              <Chip label="Insumos" variant="outlined" />
-            </Box>
-            <Typography variant="h3" component="div" sx={{ fontWeight: 700, mb: 1 }}>
-              {stats.insumos.total}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Insumos en catálogo
-            </Typography>
-          </CardContent>
-        </Card>
+      {/* Calendario de Horarios */}
+      <Box sx={{ mb: 4 }}>
+        <CalendarView 
+          onRefresh={fetchStats} 
+          onNewHorario={handleNewHorario}
+        />
       </Box>
 
       {/* Detalles adicionales */}
@@ -287,6 +274,13 @@ export const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
       </Box>
+
+      {/* Formulario de nuevo horario */}
+      <HorarioFormSimple
+        open={horarioFormOpen}
+        onClose={handleHorarioFormClose}
+        onSuccess={handleHorarioFormSuccess}
+      />
     </Box>
   )
 } 

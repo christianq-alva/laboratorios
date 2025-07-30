@@ -41,7 +41,7 @@ export const getInsumos = async (req, res) => {
         // Todos los insumos con información de stock
         const [rows] = await pool.execute(`
           SELECT i.*, 
-                 GROUP_CONCAT(CONCAT(l.nombre, ':', COALESCE(inv.stock_actual, 0)) SEPARATOR '; ') as stock_por_laboratorio
+                 GROUP_CONCAT(CONCAT(l.nombre, ':', COALESCE(inv.cantidad, 0)) SEPARATOR '; ') as stock_por_laboratorio
           FROM insumos i
           LEFT JOIN inventario_insumos inv ON i.id = inv.insumo_id
           LEFT JOIN laboratorios l ON inv.laboratorio_id = l.id
@@ -139,4 +139,91 @@ export const createInsumo = async (req, res) => {
     }
   }
 
-// Otros métodos (update, delete) similar al patrón de horarios...
+// Obtener actividad de movimientos de insumos
+export const getActividadInsumos = async (req, res) => {
+  try {
+    const { laboratorio_id, fecha_inicio, fecha_fin, tipo_movimiento } = req.query
+    
+    console.log('🔍 getActividadInsumos - Parámetros:', { 
+      laboratorio_id, 
+      fecha_inicio, 
+      fecha_fin, 
+      tipo_movimiento,
+      user_role: req.user.rol, 
+      user_laboratorio_ids: req.user.laboratorio_ids 
+    })
+    
+    let query = `
+      SELECT 
+        m.id,
+        m.fecha_movimiento,
+        m.tipo_movimiento,
+        m.cantidad,
+        m.observaciones,
+        i.nombre as insumo_nombre,
+        i.unidad_medida,
+        l.nombre as laboratorio_nombre,
+        u.nombre_completo as usuario_nombre,
+        rol.nombre as usuario_rol,
+        r.descripcion as reserva_descripcion,
+        r.fecha_inicio as reserva_fecha_inicio,
+        r.fecha_fin as reserva_fecha_fin
+      FROM movimientos_insumos m
+      INNER JOIN insumos i ON m.insumo_id = i.id
+      INNER JOIN laboratorios l ON m.laboratorio_id = l.id
+      INNER JOIN usuarios u ON m.usuario_id = u.id
+      INNER JOIN roles rol ON u.rol_id = rol.id
+      LEFT JOIN reservas r ON m.reserva_id = r.id
+      WHERE 1=1
+    `
+    
+    const params = []
+    
+    // Filtros según permisos del usuario
+    if (req.user.rol === 'Jefe de Laboratorio') {
+      query += ` AND m.laboratorio_id IN (${req.user.laboratorio_ids.join(',')})`
+    }
+    
+    // Filtros opcionales
+    if (laboratorio_id) {
+      query += ` AND m.laboratorio_id = ?`
+      params.push(laboratorio_id)
+    }
+    
+    if (fecha_inicio) {
+      query += ` AND DATE(m.fecha_movimiento) >= ?`
+      params.push(fecha_inicio)
+    }
+    
+    if (fecha_fin) {
+      query += ` AND DATE(m.fecha_movimiento) <= ?`
+      params.push(fecha_fin)
+    }
+    
+    if (tipo_movimiento) {
+      query += ` AND m.tipo_movimiento = ?`
+      params.push(tipo_movimiento)
+    }
+    
+    query += ` ORDER BY m.fecha_movimiento DESC LIMIT 100`
+    
+    const [rows] = await pool.execute(query, params)
+    
+    console.log('📊 Actividad encontrada:', rows.length)
+    
+    res.json({ 
+      success: true, 
+      data: rows,
+      total_movimientos: rows.length,
+      filtros_aplicados: {
+        laboratorio_id: laboratorio_id || null,
+        fecha_inicio: fecha_inicio || null,
+        fecha_fin: fecha_fin || null,
+        tipo_movimiento: tipo_movimiento || null
+      }
+    })
+  } catch (error) {
+    console.error('Error en getActividadInsumos:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+}

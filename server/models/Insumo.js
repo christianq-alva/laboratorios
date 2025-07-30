@@ -11,7 +11,7 @@ export const Insumo = {
         i.nombre,
         i.descripcion,
         i.unidad_medida,
-        COALESCE(inv.stock_actual, 0) as stock_disponible
+        COALESCE(inv.cantidad, 0) as stock_disponible
       FROM insumos i
       LEFT JOIN inventario_insumos inv ON i.id = inv.insumo_id AND inv.laboratorio_id = ?
       ORDER BY i.nombre
@@ -26,12 +26,12 @@ export const Insumo = {
   // Verificar stock disponible
   checkStock: async (insumo_id, laboratorio_id, cantidad_requerida) => {
     const [rows] = await pool.execute(`
-      SELECT stock_actual 
+      SELECT cantidad 
       FROM inventario_insumos 
       WHERE insumo_id = ? AND laboratorio_id = ?
     `, [insumo_id, laboratorio_id])
     
-    const stock_actual = rows[0]?.stock_actual || 0
+    const stock_actual = rows[0]?.cantidad || 0
     return stock_actual >= cantidad_requerida
   },
 
@@ -40,7 +40,7 @@ export const Insumo = {
     // Actualizar inventario
     await connection.execute(`
       UPDATE inventario_insumos 
-      SET stock_actual = stock_actual - ? 
+      SET cantidad = cantidad - ? 
       WHERE insumo_id = ? AND laboratorio_id = ?
     `, [cantidad, insumo_id, laboratorio_id])
     
