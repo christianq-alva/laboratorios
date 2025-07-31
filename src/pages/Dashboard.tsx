@@ -31,7 +31,6 @@ import { useAuth } from '../context/authContext'
 import { dashboardService } from '../services/dashboardService'
 import { CalendarView } from '../components/Dashboard/CalendarView'
 import { HorarioFormSimple } from '../components/Horarios/HorarioFormSimple'
-import { ConnectionTest } from '../components/ConnectionTest'
 import type { DashboardStats } from '../services/dashboardService'
 
 export const Dashboard: React.FC = () => {
@@ -280,9 +279,6 @@ export const Dashboard: React.FC = () => {
         onClose={handleHorarioFormClose}
         onSuccess={handleHorarioFormSuccess}
       />
-
-      {/* Componente de prueba de conexión - TEMPORAL */}
-      <ConnectionTest />
     </Box>
   )
 } 
