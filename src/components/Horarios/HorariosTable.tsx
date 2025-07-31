@@ -26,7 +26,6 @@ import {
   Delete,
   Schedule,
   Person,
-  School,
   LocationOn,
   CalendarMonth,
   AccessTime,

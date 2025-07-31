@@ -27,7 +27,7 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 }
 
 function App() {
-  const { user } = useAuth()
+  const { user: _user } = useAuth()
 
   return (
     <ThemeProvider theme={theme}>

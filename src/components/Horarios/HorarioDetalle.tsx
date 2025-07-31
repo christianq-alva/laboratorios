@@ -27,9 +27,7 @@ import {
   Group,
   Inventory,
   CalendarToday,
-  AccessTime,
-  People,
-  Description
+  People
 } from '@mui/icons-material'
 import { horarioService, type Horario } from '../../services/horarioService'
 import dayjs from 'dayjs'
@@ -83,11 +81,6 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
     setHorario(null)
     setError(null)
     onClose()
-  }
-
-  // Función para formatear fecha
-  const formatFecha = (fecha: string) => {
-    return dayjs(fecha).format('DD/MM/YYYY')
   }
 
   // Función para formatear hora

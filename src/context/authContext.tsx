@@ -1,10 +1,10 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, type ReactNode, useEffect } from 'react'
-import { authService, type User, type LoginData } from '../services/authService'
+import { authService, type User, type LoginRequest } from '../services/authService'
 
 interface AuthContextType {
   user: User | null
-  login: (data: LoginData) => Promise<{success: boolean, message?: string}>
+  login: (data: LoginRequest) => Promise<{success: boolean, message?: string}>
   logout: () => void
   loading: boolean
   token: string | null
@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [])
 
-  const login = async (data: LoginData) => {
+  const login = async (data: LoginRequest) => {
     setLoading(true)
     try {
       const response = await authService.login(data)

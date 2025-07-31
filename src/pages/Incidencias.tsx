@@ -4,7 +4,7 @@ import { Add, ReportProblem } from '@mui/icons-material'
 import { IncidenciasTable } from '../components/Incidencias/IncidenciasTable'
 import { IncidenciaForm } from '../components/Incidencias/IncidenciaForm'
 import { IncidenciaDetalleDialog } from '../components/Incidencias/IncidenciaDetalle'
-import { incidenciaService, type Incidencia } from '../services/incidenciaService'
+import { type Incidencia } from '../services/incidenciaService'
 
 export const Incidencias: React.FC = () => {
   // Estados para el formulario

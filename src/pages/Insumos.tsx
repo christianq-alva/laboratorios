@@ -17,7 +17,6 @@ import { Add, Warning, History } from '@mui/icons-material'
 import { InsumosTable } from '../components/Insumos/InsumosTable'
 import { InsumoForm } from '../components/Insumos/InsumoForm'
 import { ActividadInsumos } from '../components/Insumos/ActividadInsumos'
-import { insumoService } from '../services/insumoService'
 import type { Insumo } from '../services/insumoService'
 
 export const Insumos: React.FC = () => {

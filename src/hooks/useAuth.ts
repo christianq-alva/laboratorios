@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { authService, type User, type LoginData } from '../services/authService'
+import { authService, type User, type LoginRequest } from '../services/authService'
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const login = async (data: LoginData) => {
+  const login = async (data: LoginRequest) => {
     setLoading(true)
     try {
       const response = await authService.login(data)

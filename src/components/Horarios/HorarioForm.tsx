@@ -15,9 +15,6 @@ import {
   InputLabel,
   Select,
   Typography,
-  Divider,
-  Grid,
-  Chip,
   Paper,
   List,
   ListItem,
@@ -26,9 +23,6 @@ import {
   Stepper,
   Step,
   StepLabel,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
 } from '@mui/material'
 import {
   Close,
@@ -42,7 +36,6 @@ import {
   Remove,
   Warning,
   CheckCircle,
-  ExpandMore,
 } from '@mui/icons-material'
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
 import { horarioService } from '../../services/horarioService'
@@ -105,10 +98,11 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [conflictos, setConflictos] = useState<ConflictoHorario[]>([])
   const [verificandoDisponibilidad, setVerificandoDisponibilidad] = useState(false)
+  const [conflictos, setConflictos] = useState<ConflictoHorario[]>([])
 
-  const isEditing = Boolean(horario)
+  // Estados de edición
+  const isEditing = !!horario
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -116,142 +110,95 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
       loadInitialData()
       if (horario) {
         loadHorarioData(horario)
-      } else {
-        resetForm()
       }
     }
-  }, [horario, open])
+  }, [open, horario])
 
   const loadInitialData = async () => {
     try {
       setLoadingData(true)
-      
-      const [labsResult, docentesResult, escuelasResult, ciclosResult] = await Promise.all([
+      const [laboratoriosData, docentesData, escuelasData] = await Promise.all([
         laboratorioService.getAll(),
         horarioService.getDocentes(),
-        horarioService.getEscuelas(),
-        horarioService.getCiclos()
+        horarioService.getEscuelas()
       ])
-
-      if (labsResult.success) setLaboratorios(labsResult.data || [])
-      if (docentesResult.success) setDocentes(docentesResult.data || [])
-      if (escuelasResult.success) setEscuelas(escuelasResult.data || [])
-      if (ciclosResult.success) setCiclos(ciclosResult.data || [])
-
-      // Cargar todos los grupos inicialmente para facilitar la selección
-      const gruposResult = await horarioService.getGrupos()
-      if (gruposResult.success) {
-        setGrupos(gruposResult.data || [])
-      }
-
-    } catch (err) {
-      console.error('Error loading initial data:', err)
-      setError('Error al cargar datos iniciales')
+      
+      setLaboratorios(laboratoriosData)
+      setDocentes(docentesData)
+      setEscuelas(escuelasData)
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar datos')
     } finally {
       setLoadingData(false)
     }
   }
 
   const loadHorarioData = async (horarioData: Horario) => {
-    setFormData({
-      laboratorio_id: horarioData.laboratorio_id,
-      docente_id: horarioData.docente_id,
-      grupo_id: horarioData.grupo_id,
-      descripcion: horarioData.descripcion,
-      fecha_inicio: horarioData.fecha_inicio,
-      fecha_fin: horarioData.fecha_fin,
-      insumos: horarioData.insumos?.map(i => ({
-        insumo_id: i.id,
-        cantidad: i.cantidad_usada
-      })) || []
-    })
-
-    // Si estamos editando, encontrar la escuela y ciclo del grupo seleccionado
-    if (horarioData.grupo_id) {
-      try {
-        const gruposResult = await horarioService.getGrupos()
-        if (gruposResult.success) {
-          const grupos = gruposResult.data || []
-          setGrupos(grupos)
-          
-          const grupoSeleccionado = grupos.find((g: Grupo) => g.id === horarioData.grupo_id)
-          if (grupoSeleccionado) {
-            setSelectedEscuela(grupoSeleccionado.escuela_id)
-            setSelectedCiclo(grupoSeleccionado.ciclo_id)
-          }
-        }
-      } catch (err) {
-        console.error('Error loading grupo data for editing:', err)
+    try {
+      setLoadingData(true)
+      
+      // Cargar datos relacionados
+      const [escuelasData, ciclosData] = await Promise.all([
+        horarioService.getEscuelas(),
+        horarioService.getCiclos()
+      ])
+      
+      setEscuelas(escuelasData)
+      setCiclos(ciclosData)
+      
+      // Establecer valores del formulario
+      setFormData({
+        laboratorio_id: horarioData.laboratorio_id,
+        docente_id: horarioData.docente_id,
+        grupo_id: horarioData.grupo_id,
+        descripcion: horarioData.descripcion,
+        fecha_inicio: horarioData.fecha_inicio,
+        fecha_fin: horarioData.fecha_fin,
+        insumos: []
+      })
+      
+             // Cargar datos en cascada
+       if (horarioData.escuela) {
+         const escuela = escuelasData.find((e: Escuela) => e.nombre === horarioData.escuela)
+         if (escuela) {
+           setSelectedEscuela(escuela.id)
+           await handleEscuelaChange(escuela.id)
+         }
+       }
+       
+       if (horarioData.ciclo) {
+         const ciclo = ciclosData.find((c: Ciclo) => c.nombre === horarioData.ciclo)
+         if (ciclo) {
+           setSelectedCiclo(ciclo.id)
+           await handleCicloChange(ciclo.id)
+         }
+       }
+      
+      // Cargar insumos del laboratorio
+      if (horarioData.laboratorio_id) {
+        await handleLaboratorioChange(horarioData.laboratorio_id)
       }
-    }
-
-    // Cargar insumos seleccionados
-    if (horarioData.insumos) {
-      setInsumosSeleccionados(horarioData.insumos.map(i => ({
-        insumo_id: i.id,
-        nombre: i.nombre,
-        cantidad: i.cantidad_usada,
-        stock_disponible: i.stock_disponible || 0
-      })))
-    }
-
-    // Cargar insumos del laboratorio si ya está seleccionado
-    if (horarioData.laboratorio_id) {
-      try {
-        const result = await horarioService.getInsumosByLaboratorio(horarioData.laboratorio_id)
-        if (result.success) {
-          setInsumosDisponibles(result.data || [])
-        }
-      } catch (err) {
-        console.error('Error loading insumos for editing:', err)
-      }
+      
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar datos del horario')
+    } finally {
+      setLoadingData(false)
     }
   }
 
-  const resetForm = () => {
-    setActiveStep(0)
-    setFormData({
-      laboratorio_id: 0,
-      docente_id: 0,
-      grupo_id: 0,
-      descripcion: '',
-      fecha_inicio: '',
-      fecha_fin: '',
-      insumos: []
-    })
-    setSelectedEscuela(0)
-    setSelectedCiclo(0)
-    setInsumosSeleccionados([])
-    setConflictos([])
-    setError(null)
-  }
-
-  // Manejo de cambios en escuela/ciclo/grupo
+  // Manejo de selección en cascada
   const handleEscuelaChange = async (escuela_id: number) => {
     setSelectedEscuela(escuela_id)
     setSelectedCiclo(0)
     setFormData(prev => ({ ...prev, grupo_id: 0 }))
+    setGrupos([])
     
     if (escuela_id > 0) {
       try {
-        const result = await horarioService.getGrupos(escuela_id)
-        if (result.success) {
-          setGrupos(result.data || [])
-        }
-      } catch (err) {
-        console.error('Error loading grupos:', err)
-        setGrupos([])
-      }
-    } else {
-      // Si no hay escuela seleccionada, mostrar todos los grupos
-      try {
-        const result = await horarioService.getGrupos()
-        if (result.success) {
-          setGrupos(result.data || [])
-        }
-      } catch (err) {
-        console.error('Error loading all grupos:', err)
-        setGrupos([])
+        const ciclosData = await horarioService.getCiclos()
+        setCiclos(ciclosData)
+      } catch (err: any) {
+        setError(err.message || 'Error al cargar ciclos')
       }
     }
   }
@@ -260,83 +207,62 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
     setSelectedCiclo(ciclo_id)
     setFormData(prev => ({ ...prev, grupo_id: 0 }))
     
-    if (selectedEscuela > 0 && ciclo_id > 0) {
+    if (ciclo_id > 0 && selectedEscuela > 0) {
       try {
-        const result = await horarioService.getGrupos(selectedEscuela, ciclo_id)
-        if (result.success) {
-          setGrupos(result.data || [])
-        }
-      } catch (err) {
-        console.error('Error loading grupos:', err)
-        setGrupos([])
-      }
-    } else if (selectedEscuela > 0) {
-      // Si hay escuela pero no ciclo, cargar grupos de esa escuela
-      try {
-        const result = await horarioService.getGrupos(selectedEscuela)
-        if (result.success) {
-          setGrupos(result.data || [])
-        }
-      } catch (err) {
-        console.error('Error loading grupos by escuela:', err)
-        setGrupos([])
-      }
-    } else {
-      // Si no hay escuela, mostrar todos los grupos
-      try {
-        const result = await horarioService.getGrupos()
-        if (result.success) {
-          setGrupos(result.data || [])
-        }
-      } catch (err) {
-        console.error('Error loading all grupos:', err)
-        setGrupos([])
+        const gruposData = await horarioService.getGrupos(selectedEscuela, ciclo_id)
+        setGrupos(gruposData)
+      } catch (err: any) {
+        setError(err.message || 'Error al cargar grupos')
       }
     }
   }
 
-  // Cargar insumos cuando se selecciona laboratorio
   const handleLaboratorioChange = async (laboratorio_id: number) => {
     setFormData(prev => ({ ...prev, laboratorio_id }))
+    setInsumosSeleccionados([])
     
     if (laboratorio_id > 0) {
       try {
-        const result = await horarioService.getInsumosByLaboratorio(laboratorio_id)
-        if (result.success) {
-          setInsumosDisponibles(result.data || [])
-        }
-      } catch (err) {
-        console.error('Error loading insumos:', err)
+        const insumosData = await horarioService.getInsumosByLaboratorio(laboratorio_id)
+        setInsumosDisponibles(insumosData)
+      } catch (err: any) {
+        console.error('Error al cargar insumos:', err)
       }
-    } else {
-      setInsumosDisponibles([])
     }
   }
 
-  // Verificar disponibilidad de horario
+  // Verificación de disponibilidad
   const verificarDisponibilidad = async () => {
-    if (formData.laboratorio_id && formData.docente_id && formData.fecha_inicio && formData.fecha_fin) {
-      try {
-        setVerificandoDisponibilidad(true)
-        const result = await horarioService.verificarDisponibilidad({
-          laboratorio_id: formData.laboratorio_id,
-          docente_id: formData.docente_id,
-          fecha_inicio: formData.fecha_inicio,
-          fecha_fin: formData.fecha_fin,
-          horario_id: horario?.id
-        })
-        
-        if (result.success) {
-          setConflictos(result.conflictos || [])
-        } else {
-          setError(result.message || 'Error al verificar disponibilidad')
-        }
-      } catch (err) {
-        console.error('Error verificando disponibilidad:', err)
-        setError('Error al verificar disponibilidad')
-      } finally {
-        setVerificandoDisponibilidad(false)
+    if (!formData.laboratorio_id || !formData.docente_id || !formData.fecha_inicio || !formData.fecha_fin) {
+      return
+    }
+
+    try {
+      setVerificandoDisponibilidad(true)
+      setError(null)
+      
+      const result = await horarioService.verificarDisponibilidad({
+        laboratorio_id: formData.laboratorio_id,
+        docente_id: formData.docente_id,
+        fecha_inicio: formData.fecha_inicio,
+        fecha_fin: formData.fecha_fin,
+        horario_id: horario?.id
+      })
+      
+      if (result.disponible) {
+        setConflictos([])
+      } else {
+        setConflictos([{
+          tipo: result.tipo_conflicto || 'laboratorio',
+          mensaje: result.motivo || 'Conflicto de disponibilidad',
+          horario_conflicto: result.conflicto_detalle
+        }])
       }
+    } catch (err) {
+      console.error('Error verificando disponibilidad:', err)
+      setError('Error al verificar disponibilidad')
+    } finally {
+      setVerificandoDisponibilidad(false)
     }
   }
 
@@ -403,11 +329,11 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
         result = await horarioService.create(finalData)
       }
 
-      if (result.success) {
+      if (result.id) {
         onSuccess()
         onClose()
       } else {
-        setError(result.message || 'Error al guardar el horario')
+        setError('Error al guardar el horario')
       }
     } catch (err: any) {
       setError(err.message || 'Error de conexión')
@@ -425,15 +351,13 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
   const canProceedToNext = () => {
     switch (activeStep) {
       case 0:
-        return formData.laboratorio_id > 0 && formData.docente_id > 0 && formData.grupo_id > 0 && formData.descripcion.trim()
+        return formData.laboratorio_id > 0 && formData.docente_id > 0 && formData.grupo_id > 0
       case 1:
         return formData.fecha_inicio && formData.fecha_fin
       case 2:
         return true // Los insumos son opcionales
-      case 3:
-        return conflictos.length === 0
       default:
-        return false
+        return true
     }
   }
 
@@ -441,121 +365,127 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
     switch (activeStep) {
       case 0:
         return (
-          <Grid container spacing={3}>
-            {/* Laboratorio */}
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Laboratorio</InputLabel>
-                <Select
-                  value={formData.laboratorio_id}
-                  label="Laboratorio"
-                  onChange={(e) => handleLaboratorioChange(e.target.value as number)}
-                  disabled={loadingData}
-                >
-                  <MenuItem value={0} disabled>Seleccionar laboratorio</MenuItem>
-                  {laboratorios.map((lab) => (
-                    <MenuItem key={lab.id} value={lab.id}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <LocationOn fontSize="small" />
-                        {lab.nombre} - {lab.ubicacion}
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {/* Laboratorio y Docente */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+              {/* Laboratorio */}
+              <Box>
+                <FormControl fullWidth>
+                  <InputLabel>Laboratorio</InputLabel>
+                  <Select
+                    value={formData.laboratorio_id}
+                    label="Laboratorio"
+                    onChange={(e) => handleLaboratorioChange(e.target.value as number)}
+                    disabled={loadingData}
+                  >
+                    <MenuItem value={0} disabled>Seleccionar laboratorio</MenuItem>
+                    {laboratorios.map((lab) => (
+                      <MenuItem key={lab.id} value={lab.id}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <LocationOn fontSize="small" />
+                          {lab.nombre} - {lab.ubicacion}
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
 
-            {/* Docente */}
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Docente</InputLabel>
-                <Select
-                  value={formData.docente_id}
-                  label="Docente"
-                  onChange={(e) => setFormData(prev => ({ ...prev, docente_id: e.target.value as number }))}
-                  disabled={loadingData}
-                >
-                  <MenuItem value={0} disabled>Seleccionar docente</MenuItem>
-                  {docentes.map((docente) => (
-                    <MenuItem key={docente.id} value={docente.id}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Person fontSize="small" />
-                        {docente.nombre}
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+              {/* Docente */}
+              <Box>
+                <FormControl fullWidth>
+                  <InputLabel>Docente</InputLabel>
+                  <Select
+                    value={formData.docente_id}
+                    label="Docente"
+                    onChange={(e) => setFormData(prev => ({ ...prev, docente_id: e.target.value as number }))}
+                    disabled={loadingData}
+                  >
+                    <MenuItem value={0} disabled>Seleccionar docente</MenuItem>
+                    {docentes.map((docente) => (
+                      <MenuItem key={docente.id} value={docente.id}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Person fontSize="small" />
+                          {docente.nombre}
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            </Box>
 
-            {/* Escuela */}
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
-                <InputLabel>Escuela</InputLabel>
-                <Select
-                  value={selectedEscuela}
-                  label="Escuela"
-                  onChange={(e) => handleEscuelaChange(e.target.value as number)}
-                  disabled={loadingData}
-                >
-                  <MenuItem value={0} disabled>Seleccionar escuela</MenuItem>
-                  {escuelas.map((escuela) => (
-                    <MenuItem key={escuela.id} value={escuela.id}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <School fontSize="small" />
-                        {escuela.nombre}
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+            {/* Escuela, Ciclo, Grupo */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
+              {/* Escuela */}
+              <Box>
+                <FormControl fullWidth>
+                  <InputLabel>Escuela</InputLabel>
+                  <Select
+                    value={selectedEscuela}
+                    label="Escuela"
+                    onChange={(e) => handleEscuelaChange(e.target.value as number)}
+                    disabled={loadingData}
+                  >
+                    <MenuItem value={0} disabled>Seleccionar escuela</MenuItem>
+                    {escuelas.map((escuela) => (
+                      <MenuItem key={escuela.id} value={escuela.id}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <School fontSize="small" />
+                          {escuela.nombre}
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
 
-            {/* Ciclo */}
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
-                <InputLabel>Ciclo</InputLabel>
-                <Select
-                  value={selectedCiclo}
-                  label="Ciclo"
-                  onChange={(e) => handleCicloChange(e.target.value as number)}
-                  disabled={loadingData || selectedEscuela === 0}
-                >
-                  <MenuItem value={0} disabled>Seleccionar ciclo</MenuItem>
-                  {ciclos.map((ciclo) => (
-                    <MenuItem key={ciclo.id} value={ciclo.id}>
-                      {ciclo.nombre}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+              {/* Ciclo */}
+              <Box>
+                <FormControl fullWidth>
+                  <InputLabel>Ciclo</InputLabel>
+                  <Select
+                    value={selectedCiclo}
+                    label="Ciclo"
+                    onChange={(e) => handleCicloChange(e.target.value as number)}
+                    disabled={loadingData || selectedEscuela === 0}
+                  >
+                    <MenuItem value={0} disabled>Seleccionar ciclo</MenuItem>
+                    {ciclos.map((ciclo) => (
+                      <MenuItem key={ciclo.id} value={ciclo.id}>
+                        {ciclo.nombre}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
 
-            {/* Grupo */}
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
-                <InputLabel>Grupo</InputLabel>
-                <Select
-                  value={formData.grupo_id}
-                  label="Grupo"
-                  onChange={(e) => setFormData(prev => ({ ...prev, grupo_id: e.target.value as number }))}
-                  disabled={loadingData || grupos.length === 0}
-                >
-                  <MenuItem value={0} disabled>Seleccionar grupo</MenuItem>
-                  {grupos.map((grupo) => (
-                    <MenuItem key={grupo.id} value={grupo.id}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Group fontSize="small" />
-                        {grupo.nombre}
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+              {/* Grupo */}
+              <Box>
+                <FormControl fullWidth>
+                  <InputLabel>Grupo</InputLabel>
+                  <Select
+                    value={formData.grupo_id}
+                    label="Grupo"
+                    onChange={(e) => setFormData(prev => ({ ...prev, grupo_id: e.target.value as number }))}
+                    disabled={loadingData || grupos.length === 0}
+                  >
+                    <MenuItem value={0} disabled>Seleccionar grupo</MenuItem>
+                    {grupos.map((grupo) => (
+                      <MenuItem key={grupo.id} value={grupo.id}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Group fontSize="small" />
+                          {grupo.nombre}
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            </Box>
 
             {/* Descripción */}
-            <Grid item xs={12}>
+            <Box>
               <TextField
                 fullWidth
                 multiline
@@ -565,14 +495,14 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
                 onChange={(e) => setFormData(prev => ({ ...prev, descripcion: e.target.value }))}
                 placeholder="Describe la actividad o clase que se realizará..."
               />
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
         )
 
       case 1:
         return (
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <Box>
               <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Schedule />
                 Programación de Fechas y Horas
@@ -580,47 +510,49 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                 Selecciona el rango de fecha y hora para la reserva del laboratorio
               </Typography>
-            </Grid>
+            </Box>
 
-            <Grid item xs={12} md={6}>
-              <DateTimePicker
-                label="Fecha y hora de inicio"
-                value={formData.fecha_inicio ? new Date(formData.fecha_inicio) : null}
-                onChange={(date) => setFormData(prev => ({ 
-                  ...prev, 
-                  fecha_inicio: date ? date.toISOString() : '' 
-                }))}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                    required: true
-                  }
-                }}
-                minDateTime={new Date()}
-              />
-            </Grid>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+              <Box>
+                <DateTimePicker
+                  label="Fecha y hora de inicio"
+                  value={formData.fecha_inicio ? new Date(formData.fecha_inicio) : null}
+                  onChange={(date) => setFormData(prev => ({ 
+                    ...prev, 
+                    fecha_inicio: date ? date.toISOString() : '' 
+                  }))}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      required: true
+                    }
+                  }}
+                  minDateTime={new Date()}
+                />
+              </Box>
 
-            <Grid item xs={12} md={6}>
-              <DateTimePicker
-                label="Fecha y hora de fin"
-                value={formData.fecha_fin ? new Date(formData.fecha_fin) : null}
-                onChange={(date) => setFormData(prev => ({ 
-                  ...prev, 
-                  fecha_fin: date ? date.toISOString() : '' 
-                }))}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                    required: true
-                  }
-                }}
-                minDateTime={formData.fecha_inicio ? new Date(formData.fecha_inicio) : new Date()}
-              />
-            </Grid>
+              <Box>
+                <DateTimePicker
+                  label="Fecha y hora de fin"
+                  value={formData.fecha_fin ? new Date(formData.fecha_fin) : null}
+                  onChange={(date) => setFormData(prev => ({ 
+                    ...prev, 
+                    fecha_fin: date ? date.toISOString() : '' 
+                  }))}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      required: true
+                    }
+                  }}
+                  minDateTime={formData.fecha_inicio ? new Date(formData.fecha_inicio) : new Date()}
+                />
+              </Box>
+            </Box>
 
             {/* Verificación de disponibilidad */}
             {formData.fecha_inicio && formData.fecha_fin && (
-              <Grid item xs={12}>
+              <Box>
                 <Paper sx={{ p: 2, mt: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                     <Typography variant="subtitle1">
@@ -648,15 +580,15 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
                     </Alert>
                   )}
                 </Paper>
-              </Grid>
+              </Box>
             )}
-          </Grid>
+          </Box>
         )
 
       case 2:
         return (
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <Box>
               <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Inventory />
                 Selección de Insumos (Opcional)
@@ -664,86 +596,91 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                 Selecciona los insumos que se utilizarán durante la clase
               </Typography>
-            </Grid>
+            </Box>
 
-            {/* Insumos disponibles */}
-            <Grid item xs={12} md={6}>
-              <Typography variant="subtitle1" gutterBottom>
-                Insumos Disponibles
-              </Typography>
-              <Paper sx={{ maxHeight: 300, overflow: 'auto' }}>
-                <List dense>
-                  {insumosDisponibles.map((insumo) => (
-                    <ListItem 
-                      key={insumo.id}
-                      button
-                      onClick={() => agregarInsumo(insumo)}
-                      disabled={insumosSeleccionados.some(i => i.insumo_id === insumo.id)}
-                    >
-                      <ListItemText
-                        primary={insumo.nombre}
-                        secondary={`Stock disponible: ${insumo.stock_disponible || 0}`}
-                      />
-                      <ListItemSecondaryAction>
-                        <IconButton
-                          edge="end"
-                          onClick={() => agregarInsumo(insumo)}
-                          disabled={insumosSeleccionados.some(i => i.insumo_id === insumo.id)}
-                        >
-                          <Add />
-                        </IconButton>
-                      </ListItemSecondaryAction>
-                    </ListItem>
-                  ))}
-                </List>
-              </Paper>
-            </Grid>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+              {/* Insumos disponibles */}
+              <Box>
+                <Typography variant="subtitle1" gutterBottom>
+                  Insumos Disponibles
+                </Typography>
+                <Paper sx={{ maxHeight: 300, overflow: 'auto' }}>
+                  <List dense>
+                    {insumosDisponibles.map((insumo) => (
+                      <ListItem 
+                        key={insumo.id}
+                        onClick={() => agregarInsumo(insumo)}
+                        sx={{ 
+                          cursor: 'pointer',
+                          opacity: insumosSeleccionados.some(i => i.insumo_id === insumo.id) ? 0.5 : 1,
+                          pointerEvents: insumosSeleccionados.some(i => i.insumo_id === insumo.id) ? 'none' : 'auto'
+                        }}
+                      >
+                        <ListItemText
+                          primary={insumo.nombre}
+                          secondary={`Stock disponible: ${insumo.stock_disponible || 0}`}
+                        />
+                        <ListItemSecondaryAction>
+                          <IconButton
+                            edge="end"
+                            onClick={() => agregarInsumo(insumo)}
+                            disabled={insumosSeleccionados.some(i => i.insumo_id === insumo.id)}
+                          >
+                            <Add />
+                          </IconButton>
+                        </ListItemSecondaryAction>
+                      </ListItem>
+                    ))}
+                  </List>
+                </Paper>
+              </Box>
 
-            {/* Insumos seleccionados */}
-            <Grid item xs={12} md={6}>
-              <Typography variant="subtitle1" gutterBottom>
-                Insumos Seleccionados ({insumosSeleccionados.length})
-              </Typography>
-              <Paper sx={{ maxHeight: 300, overflow: 'auto' }}>
-                <List dense>
-                  {insumosSeleccionados.map((insumo) => (
-                    <ListItem key={insumo.insumo_id}>
-                      <ListItemText
-                        primary={insumo.nombre}
-                        secondary={`Stock: ${insumo.stock_disponible}`}
-                      />
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <IconButton
-                          size="small"
-                          onClick={() => actualizarCantidadInsumo(insumo.insumo_id, insumo.cantidad - 1)}
-                        >
-                          <Remove />
-                        </IconButton>
-                        <Typography variant="body2" sx={{ minWidth: 30, textAlign: 'center' }}>
-                          {insumo.cantidad}
-                        </Typography>
-                        <IconButton
-                          size="small"
-                          onClick={() => actualizarCantidadInsumo(insumo.insumo_id, insumo.cantidad + 1)}
-                          disabled={insumo.cantidad >= insumo.stock_disponible}
-                        >
-                          <Add />
-                        </IconButton>
-                      </Box>
-                    </ListItem>
-                  ))}
-                  {insumosSeleccionados.length === 0 && (
-                    <ListItem>
-                      <ListItemText 
-                        primary="No hay insumos seleccionados"
-                        secondary="Los insumos son opcionales para crear un horario"
-                      />
-                    </ListItem>
-                  )}
-                </List>
-              </Paper>
-            </Grid>
-          </Grid>
+              {/* Insumos seleccionados */}
+              <Box>
+                <Typography variant="subtitle1" gutterBottom>
+                  Insumos Seleccionados ({insumosSeleccionados.length})
+                </Typography>
+                <Paper sx={{ maxHeight: 300, overflow: 'auto' }}>
+                  <List dense>
+                    {insumosSeleccionados.map((insumo) => (
+                      <ListItem key={insumo.insumo_id}>
+                        <ListItemText
+                          primary={insumo.nombre}
+                          secondary={`Stock: ${insumo.stock_disponible}`}
+                        />
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <IconButton
+                            size="small"
+                            onClick={() => actualizarCantidadInsumo(insumo.insumo_id, insumo.cantidad - 1)}
+                          >
+                            <Remove />
+                          </IconButton>
+                          <Typography variant="body2" sx={{ minWidth: 30, textAlign: 'center' }}>
+                            {insumo.cantidad}
+                          </Typography>
+                          <IconButton
+                            size="small"
+                            onClick={() => actualizarCantidadInsumo(insumo.insumo_id, insumo.cantidad + 1)}
+                            disabled={insumo.cantidad >= insumo.stock_disponible}
+                          >
+                            <Add />
+                          </IconButton>
+                        </Box>
+                      </ListItem>
+                    ))}
+                    {insumosSeleccionados.length === 0 && (
+                      <ListItem>
+                        <ListItemText 
+                          primary="No hay insumos seleccionados"
+                          secondary="Los insumos son opcionales para crear un horario"
+                        />
+                      </ListItem>
+                    )}
+                  </List>
+                </Paper>
+              </Box>
+            </Box>
+          </Box>
         )
 
       case 3:
@@ -756,8 +693,8 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
               Revisa los datos antes de {isEditing ? 'actualizar' : 'crear'} el horario
             </Typography>
 
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+              <Box>
                 <Paper sx={{ p: 2 }}>
                   <Typography variant="subtitle1" gutterBottom>Información Básica</Typography>
                   <Box sx={{ mb: 1 }}>
@@ -772,51 +709,51 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
                     <Typography variant="body2" color="text.secondary">Grupo:</Typography>
                     <Typography variant="body1">{grupos.find(g => g.id === formData.grupo_id)?.nombre}</Typography>
                   </Box>
-                  <Box>
+                  <Box sx={{ mb: 1 }}>
                     <Typography variant="body2" color="text.secondary">Descripción:</Typography>
-                    <Typography variant="body1">{formData.descripcion}</Typography>
+                    <Typography variant="body1">{formData.descripcion || 'Sin descripción'}</Typography>
                   </Box>
                 </Paper>
-              </Grid>
+              </Box>
 
-              <Grid item xs={12} md={6}>
+              <Box>
                 <Paper sx={{ p: 2 }}>
                   <Typography variant="subtitle1" gutterBottom>Horario</Typography>
                   <Box sx={{ mb: 1 }}>
                     <Typography variant="body2" color="text.secondary">Inicio:</Typography>
                     <Typography variant="body1">
-                      {formData.fecha_inicio ? new Date(formData.fecha_inicio).toLocaleString('es-ES') : ''}
+                      {formData.fecha_inicio ? new Date(formData.fecha_inicio).toLocaleString() : 'No definido'}
                     </Typography>
                   </Box>
-                  <Box>
+                  <Box sx={{ mb: 1 }}>
                     <Typography variant="body2" color="text.secondary">Fin:</Typography>
                     <Typography variant="body1">
-                      {formData.fecha_fin ? new Date(formData.fecha_fin).toLocaleString('es-ES') : ''}
+                      {formData.fecha_fin ? new Date(formData.fecha_fin).toLocaleString() : 'No definido'}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ mb: 1 }}>
+                    <Typography variant="body2" color="text.secondary">Insumos:</Typography>
+                    <Typography variant="body1">
+                      {insumosSeleccionados.length > 0 
+                        ? `${insumosSeleccionados.length} insumo(s) seleccionado(s)`
+                        : 'Sin insumos'
+                      }
                     </Typography>
                   </Box>
                 </Paper>
-              </Grid>
+              </Box>
+            </Box>
 
-              {insumosSeleccionados.length > 0 && (
-                <Grid item xs={12}>
-                  <Paper sx={{ p: 2 }}>
-                    <Typography variant="subtitle1" gutterBottom>
-                      Insumos Seleccionados ({insumosSeleccionados.length})
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                      {insumosSeleccionados.map((insumo) => (
-                        <Chip
-                          key={insumo.insumo_id}
-                          label={`${insumo.nombre} (${insumo.cantidad})`}
-                          variant="outlined"
-                          size="small"
-                        />
-                      ))}
-                    </Box>
-                  </Paper>
-                </Grid>
-              )}
-            </Grid>
+            {/* Conflictos */}
+            {conflictos.length > 0 && (
+              <Box sx={{ mt: 2 }}>
+                <Alert severity="warning">
+                  <Typography variant="body2">
+                    <strong>⚠️ Advertencia:</strong> Hay conflictos de disponibilidad que deben resolverse antes de continuar.
+                  </Typography>
+                </Alert>
+              </Box>
+            )}
           </Box>
         )
 
@@ -828,96 +765,61 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
   return (
     <Dialog 
       open={open} 
-      onClose={handleClose} 
-      maxWidth="lg" 
+      onClose={handleClose}
+      maxWidth="md"
       fullWidth
-      PaperProps={{ sx: { borderRadius: 2, minHeight: '80vh' } }}
     >
-      <DialogTitle sx={{ pb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>
-            {isEditing ? 'Editar Horario' : 'Nuevo Horario'}
-          </Typography>
-          <IconButton onClick={handleClose} disabled={loading} sx={{ color: 'grey.500' }}>
-            <Close />
-          </IconButton>
-        </Box>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Typography variant="h6">
+          {isEditing ? 'Editar Horario' : 'Nuevo Horario'}
+        </Typography>
+        <IconButton onClick={handleClose} disabled={loading}>
+          <Close />
+        </IconButton>
       </DialogTitle>
 
       <DialogContent>
-        {loadingData ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <CircularProgress />
-            <Typography variant="body2" sx={{ ml: 2 }}>
-              Cargando datos...
-            </Typography>
-          </Box>
-        ) : (
-          <>
-            {/* Stepper */}
-            <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
-              {steps.map((label) => (
-                <Step key={label}>
-                  <StepLabel>{label}</StepLabel>
-                </Step>
-              ))}
-            </Stepper>
-
-            {/* Error general */}
-            {error && (
-              <Alert severity="error" sx={{ mb: 3 }}>
-                {error}
-              </Alert>
-            )}
-
-            {/* Contenido del paso actual */}
-            {renderStepContent()}
-          </>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
         )}
+
+        <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
+          {steps.map((label) => (
+            <Step key={label}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+
+        {renderStepContent()}
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, pb: 3 }}>
-        <Button
-          onClick={handleClose}
-          disabled={loading}
-          variant="outlined"
-          sx={{ borderRadius: 2 }}
+      <DialogActions sx={{ p: 3, pt: 1 }}>
+        <Button 
+          onClick={handleBack} 
+          disabled={activeStep === 0 || loading}
         >
-          Cancelar
+          Atrás
         </Button>
         
-        {activeStep > 0 && (
+        {activeStep === steps.length - 1 ? (
           <Button
-            onClick={handleBack}
-            disabled={loading}
-            variant="outlined"
-            sx={{ borderRadius: 2 }}
-          >
-            Anterior
-          </Button>
-        )}
-        
-        {activeStep < steps.length - 1 ? (
-          <Button
-            onClick={handleNext}
-            disabled={loading || !canProceedToNext()}
             variant="contained"
-            sx={{ borderRadius: 2, px: 3 }}
+            onClick={handleSubmit}
+            disabled={loading || conflictos.length > 0}
+            startIcon={loading ? <CircularProgress size={20} /> : null}
           >
-            Siguiente
+            {loading ? 'Guardando...' : (isEditing ? 'Actualizar' : 'Crear')}
           </Button>
         ) : (
           <Button
-            onClick={handleSubmit}
-            disabled={loading || !canProceedToNext()}
             variant="contained"
-            sx={{ borderRadius: 2, px: 3 }}
+            onClick={handleNext}
+            disabled={!canProceedToNext() || loading}
           >
-            {loading ? (
-              <CircularProgress size={20} color="inherit" />
-            ) : (
-              isEditing ? 'Actualizar Horario' : 'Crear Horario'
-            )}
+            Siguiente
           </Button>
         )}
       </DialogActions>

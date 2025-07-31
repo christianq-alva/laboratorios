@@ -26,8 +26,7 @@ import {
   Inventory,
   ReportProblem,
   Settings,
-  Logout,
-  ChevronLeft,
+  Logout
 } from '@mui/icons-material'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/authContext'

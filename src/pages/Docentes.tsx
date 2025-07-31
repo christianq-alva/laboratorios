@@ -13,7 +13,7 @@ import {
   DialogActions,
   CircularProgress,
 } from '@mui/material'
-import { Add, Person, Warning } from '@mui/icons-material'
+import { Add, Warning } from '@mui/icons-material'
 import { DocentesTable } from '../components/Docentes/DocentesTable'
 import { DocenteForm } from '../components/Docentes/DocenteForm'
 import { docenteService } from '../services/docenteService'

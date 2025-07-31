@@ -13,7 +13,7 @@ import {
   DialogActions,
   CircularProgress
 } from '@mui/material'
-import { Add, Person, Warning } from '@mui/icons-material'
+import { Add, Warning } from '@mui/icons-material'
 import { LaboratoriosTable } from '../components/Laboratorios/LaboratoriosTable'
 import { LaboratorioForm } from '../components/Laboratorios/LaboratorioForm'
 import { laboratorioService } from '../services/laboratorioService'

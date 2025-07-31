@@ -26,10 +26,7 @@ import {
   Today,
   Schedule,
   Person,
-  LocationOn,
-  School,
   Group,
-  Inventory,
   Close,
   Add
 } from '@mui/icons-material'
@@ -62,7 +59,7 @@ interface HorarioEvent {
   }>
 }
 
-export const CalendarView: React.FC<CalendarViewProps> = ({ onRefresh, onNewHorario }) => {
+export const CalendarView: React.FC<CalendarViewProps> = ({ onNewHorario }) => {
   const [currentDate, setCurrentDate] = useState<Dayjs>(dayjs())
   const [horarios, setHorarios] = useState<HorarioEvent[]>([])
   const [loading, setLoading] = useState(false)
@@ -72,7 +69,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onRefresh, onNewHora
   const [dialogOpen, setDialogOpen] = useState(false)
 
   // Cargar horarios del mes actual
-  const loadHorarios = async (date: Dayjs) => {
+  const loadHorarios = async (_date: Dayjs) => {
     try {
       setLoading(true)
       setError(null)

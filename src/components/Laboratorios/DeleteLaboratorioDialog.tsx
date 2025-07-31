@@ -105,7 +105,7 @@ export const DeleteLaboratorioDialog: React.FC<DeleteLaboratorioDialogProps> = (
             <strong>Ubicación:</strong> {laboratorio.ubicacion}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            <strong>Capacidad:</strong> {laboratorio.capacidad} estudiantes
+            <strong>Piso:</strong> {laboratorio.piso}
           </Typography>
         </Box>
 
