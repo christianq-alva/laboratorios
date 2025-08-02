@@ -1,31 +1,8 @@
 import mysql from 'mysql2/promise'
-import dotenv from 'dotenv'
+import { dbConfig, showConfig } from './config.js'
 
-// Cargar variables de entorno
-dotenv.config()
-
-const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT) || 31787,
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'laboratorios',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  acquireTimeout: 60000,
-  timeout: 60000,
-  reconnect: true,
-  ssl: false // Railway interno no necesita SSL
-}
-
-console.log('🔧 Configuración de BD:', {
-  host: dbConfig.host,
-  port: dbConfig.port,
-  user: dbConfig.user,
-  database: dbConfig.database,
-  password: dbConfig.password ? '***oculta***' : 'sin_password'
-})
+// Mostrar configuración al iniciar
+showConfig()
 
 export const pool = mysql.createPool(dbConfig)
 
@@ -37,13 +14,13 @@ export const testConnection = async () => {
     // Probar una consulta simple
     const [rows] = await connection.execute('SELECT 1 as test')
     
-    console.log('✅ Conectado a MySQL Railway - Host:', dbConfig.host)
+    console.log('✅ Conectado a MySQL en la nube - Host:', dbConfig.host)
     console.log('✅ Base de datos:', dbConfig.database)
     console.log('✅ Test query exitoso:', rows[0])
     
     connection.release()
   } catch (error) {
-    console.error('❌ Error conectando a MySQL Railway:')
+    console.error('❌ Error conectando a MySQL en la nube:')
     console.error('   Host:', dbConfig.host)
     console.error('   Port:', dbConfig.port)
     console.error('   Database:', dbConfig.database)
@@ -56,6 +33,20 @@ export const testConnection = async () => {
     }
     if (error.errno) {
       console.error('   Errno:', error.errno)
+    }
+    
+    // Sugerencias de solución según el error
+    if (error.code === 'ECONNREFUSED') {
+      console.error('💡 Sugerencia: Verifica que las credenciales sean correctas')
+    }
+    if (error.code === 'ER_ACCESS_DENIED_ERROR') {
+      console.error('💡 Sugerencia: Verifica usuario y contraseña de la base de datos')
+    }
+    if (error.code === 'ENOTFOUND') {
+      console.error('💡 Sugerencia: Verifica que el host sea correcto')
+    }
+    if (error.code === 'ETIMEDOUT') {
+      console.error('💡 Sugerencia: Verifica la conectividad de red')
     }
   }
 }

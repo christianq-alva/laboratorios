@@ -1,6 +1,5 @@
 import jwt from 'jsonwebtoken'
-
-const JWT_SECRET = 'mi_clave_super_secreta_123'
+import { JWT_SECRET } from '../config/config.js'
 
 export const authenticateToken = (req, res, next) => {
   // 🔍 BUSCAR EL TOKEN EN LOS HEADERS
