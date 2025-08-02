@@ -1,5 +1,7 @@
 import express from 'express'
 import cors from 'cors'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import { testConnection } from './config/database.js'
 import { PORT, NODE_ENV, JWT_SECRET } from './config/config.js'
 import authRoutes from './routes/authRoutes.js'
@@ -9,6 +11,9 @@ import insumoRoutes from './routes/insumoRoutes.js'
 import incidenciaRoutes from './routes/incidenciaRoutes.js'
 import docenteRoutes from './routes/docenteRoutes.js'
 import dashboardRoutes from './routes/dashboardRoutes.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const app = express()
 
@@ -43,6 +48,14 @@ app.use('/api/horarios', horarioRoutes)
 app.use('/api/insumos', insumoRoutes)
 app.use('/api/incidencias', incidenciaRoutes)
 app.use('/api/docentes', docenteRoutes)
+
+// Servir archivos estáticos del frontend en producción
+if (NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../dist')))
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../dist/index.html'))
+  })
+}
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`)
