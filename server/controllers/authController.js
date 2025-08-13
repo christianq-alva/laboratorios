@@ -2,7 +2,7 @@ import { User } from '../models/User.js'
 import jwt from 'jsonwebtoken'
 
 // Clave secreta (en producción va en variables de entorno)
-const JWT_SECRET = 'mi_clave_super_secreta_123'
+const JWT_SECRET = process.env.JWT_SECRET || 'mi_clave_super_secreta_123'
 
 export const login = async (req, res) => {
     try {

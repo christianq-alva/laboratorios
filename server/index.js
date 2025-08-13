@@ -19,7 +19,22 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 app.use(express.json())
-app.use(cors())
+
+// CORS dinámico por allowlist (CORS_ORIGIN coma-separado)
+const defaultAllow = ['http://localhost:5173', 'http://localhost:3000']
+const allowList = (process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : defaultAllow)
+  .map(s => s.trim())
+  .filter(Boolean)
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true) // healthchecks/curl
+    return allowList.length === 0 || allowList.includes(origin)
+      ? callback(null, true)
+      : callback(new Error('Not allowed by CORS'))
+  },
+  credentials: true
+}))
 
 // Healthcheck para Railway
 app.get('/health', (req, res) => {
