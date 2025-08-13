@@ -20,21 +20,27 @@ const __dirname = path.dirname(__filename)
 
 app.use(express.json())
 
-// CORS dinámico por allowlist (CORS_ORIGIN coma-separado)
-const defaultAllow = ['http://localhost:5173', 'http://localhost:3000']
-const allowList = (process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : defaultAllow)
+// CORS dinámico por allowlist solo para rutas /api
+const allowList = (process.env.CORS_ORIGIN || '')
+  .split(',')
   .map(s => s.trim())
   .filter(Boolean)
 
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true) // healthchecks/curl
-    return allowList.length === 0 || allowList.includes(origin)
-      ? callback(null, true)
-      : callback(new Error('Not allowed by CORS'))
+    if (!origin) return callback(null, true) // healthchecks/curl/same-origin sin header
+    if (allowList.length === 0) return callback(null, true) // sin allowlist => permitir todo
+    if (allowList.includes(origin)) return callback(null, true)
+    // tolerar variantes sin slash final
+    const isAllowed = allowList.some(allowed => origin.startsWith(allowed.replace(/\/$/, '')))
+    return isAllowed ? callback(null, true) : callback(new Error('Not allowed by CORS'))
   },
   credentials: true
-}))
+}
+
+app.use('/api', cors(corsOptions))
+// Express 5 no soporta comodines tipo '*' en rutas; usar RegExp
+app.options(/^\/api\/.*$/, cors(corsOptions))
 
 // Healthcheck para Railway
 app.get('/health', (req, res) => {
