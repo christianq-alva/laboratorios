@@ -37,7 +37,8 @@ app.use('/api/docentes', docenteRoutes)
 // Servir frontend en producción
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../dist')))
-  app.get('*', (req, res) => {
+  // Usar RegExp en Express 5 para catch-all (excepto /api)
+  app.get(/^\/(?!api).*/, (req, res) => {
     res.sendFile(path.join(__dirname, '../dist/index.html'))
   })
 }
