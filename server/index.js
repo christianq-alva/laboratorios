@@ -30,6 +30,11 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() })
 })
 
+// Health de API (misma-origin)
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', scope: 'api', timestamp: new Date().toISOString() })
+})
+
 app.use('/api/auth', authRoutes)
 app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/laboratorios', laboratorioRoutes)
