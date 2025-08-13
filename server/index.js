@@ -20,27 +20,10 @@ const __dirname = path.dirname(__filename)
 
 app.use(express.json())
 
-// CORS dinámico por allowlist solo para rutas /api
-const allowList = (process.env.CORS_ORIGIN || '')
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean)
-
-const corsOptions = {
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true) // healthchecks/curl/same-origin sin header
-    if (allowList.length === 0) return callback(null, true) // sin allowlist => permitir todo
-    if (allowList.includes(origin)) return callback(null, true)
-    // tolerar variantes sin slash final
-    const isAllowed = allowList.some(allowed => origin.startsWith(allowed.replace(/\/$/, '')))
-    return isAllowed ? callback(null, true) : callback(new Error('Not allowed by CORS'))
-  },
-  credentials: true
-}
-
-app.use('/api', cors(corsOptions))
-// Express 5 no soporta comodines tipo '*' en rutas; usar RegExp
-app.options(/^\/api\/.*$/, cors(corsOptions))
+// CORS abierto solo para rutas /api (full-stack mismo dominio)
+app.use('/api', cors({ origin: true, credentials: true }))
+// Preflight para cualquier ruta /api en Express 5
+app.options(/^\/api\/.*$/, cors({ origin: true, credentials: true }))
 
 // Healthcheck para Railway
 app.get('/health', (req, res) => {
