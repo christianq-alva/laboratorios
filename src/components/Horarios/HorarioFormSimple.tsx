@@ -412,7 +412,42 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       }
     } catch (err: any) {
       console.error('❌ Error al enviar horario:', err)
-      setError(err.message || 'Error de conexión')
+      
+      // Mostrar información detallada del error
+      let errorMessage = 'Error de conexión'
+      
+      if (err.response) {
+        // Error de respuesta del servidor
+        const status = err.response.status
+        const data = err.response.data
+        
+        console.log('🚨 Error detallado:', {
+          status,
+          data,
+          message: data?.message,
+          url: err.config?.url
+        })
+        
+        if (status === 400) {
+          errorMessage = data?.message || 'Datos inválidos. Verifica que todos los campos sean correctos.'
+        } else if (status === 401) {
+          errorMessage = 'Sesión expirada. Por favor, inicia sesión nuevamente.'
+        } else if (status === 403) {
+          errorMessage = 'No tienes permisos para realizar esta acción.'
+        } else if (status === 409) {
+          errorMessage = data?.message || 'Conflicto de horario.'
+        } else {
+          errorMessage = data?.message || `Error del servidor (${status})`
+        }
+      } else if (err.request) {
+        // Error de red
+        errorMessage = 'Error de conexión. Verifica tu conexión a internet.'
+      } else {
+        // Otro tipo de error
+        errorMessage = err.message || 'Error inesperado'
+      }
+      
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
