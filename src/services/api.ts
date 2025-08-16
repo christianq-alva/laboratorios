@@ -28,6 +28,14 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    console.log('🚨 Error en API:', {
+      status: error.response?.status,
+      message: error.response?.data?.message,
+      data: error.response?.data,
+      url: error.config?.url,
+      method: error.config?.method
+    })
+    
     if (error.response?.status === 401) {
       console.log('❌ Token expirado, limpiando sesión')
       localStorage.removeItem('token')

@@ -116,8 +116,20 @@ export const horarioService = {
   },
 
   create: async (data: CreateHorarioData) => {
-    const response = await api.post('/horarios', data)
-    return response.data
+    try {
+      console.log('📤 Enviando datos a /horarios:', data)
+      const response = await api.post('/horarios', data)
+      console.log('✅ Respuesta exitosa:', response.data)
+      return response.data
+    } catch (error: any) {
+      console.error('❌ Error en create horario:', {
+        status: error.response?.status,
+        message: error.response?.data?.message,
+        data: error.response?.data,
+        sentData: data
+      })
+      throw error
+    }
   },
 
   update: async (id: number, data: UpdateHorarioData) => {
