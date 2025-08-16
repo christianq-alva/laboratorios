@@ -380,7 +380,7 @@ export const getHorarios = async (req, res) => {
       const grupoInfo = grupoValidacion[0]
       console.log('✅ Grupo validado:', grupoInfo)
       
-      // ✅ VALIDACIÓN 2: Docente debe ser de la misma escuela que el grupo
+      // ✅ VALIDACIÓN 2: Verificar que el docente existe (sin restricción de escuela)
       const [docenteValidacion] = await connection.execute(`
         SELECT 
           d.id,
@@ -401,15 +401,7 @@ export const getHorarios = async (req, res) => {
       }
       
       const docenteInfo = docenteValidacion[0]
-      if (docenteInfo.docente_escuela_id !== grupoInfo.escuela_id) {
-        await connection.rollback()
-        return res.status(400).json({
-          success: false,
-          message: `El docente "${docenteInfo.docente_nombre}" es de "${docenteInfo.docente_escuela}" pero el grupo es de "${grupoInfo.escuela_nombre}". Deben ser de la misma escuela.`
-        })
-      }
-      
-      console.log('✅ Docente validado:', docenteInfo.docente_nombre, 'puede enseñar al grupo de', grupoInfo.escuela_nombre)
+      console.log('✅ Docente validado:', docenteInfo.docente_nombre, 'de', docenteInfo.docente_escuela, 'puede enseñar al grupo de', grupoInfo.escuela_nombre)
       
       console.log('🔍 Verificando cruces de horario...')
       
@@ -586,7 +578,7 @@ export const getHorarios = async (req, res) => {
       const grupoInfo = grupoValidacion[0]
       console.log('✅ Grupo validado:', grupoInfo)
       
-      // ✅ VALIDACIÓN 2: Docente debe ser de la misma escuela que el grupo
+      // ✅ VALIDACIÓN 2: Verificar que el docente existe (sin restricción de escuela)
       const [docenteValidacion] = await connection.execute(`
         SELECT 
           d.id,
@@ -607,15 +599,7 @@ export const getHorarios = async (req, res) => {
       }
       
       const docenteInfo = docenteValidacion[0]
-      if (docenteInfo.docente_escuela_id !== grupoInfo.escuela_id) {
-        await connection.rollback()
-        return res.status(400).json({
-          success: false,
-          message: `El docente "${docenteInfo.docente_nombre}" es de "${docenteInfo.docente_escuela}" pero el grupo es de "${grupoInfo.escuela_nombre}". Deben ser de la misma escuela.`
-        })
-      }
-      
-      console.log('✅ Docente validado:', docenteInfo.docente_nombre, 'puede enseñar al grupo de', grupoInfo.escuela_nombre)
+      console.log('✅ Docente validado:', docenteInfo.docente_nombre, 'de', docenteInfo.docente_escuela, 'puede enseñar al grupo de', grupoInfo.escuela_nombre)
       
       console.log(' Verificando cruces para edición...')
       
