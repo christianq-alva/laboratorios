@@ -1,8 +1,9 @@
 import axios from 'axios'
+import { config } from '../config/environment'
 
 // 🏗️ CREAR INSTANCIA BASE DE AXIOS
 export const api = axios.create({
-  baseURL: 'http://localhost:3000/api',
+  baseURL: config.apiUrl,
   headers: {
     'Content-Type': 'application/json'
   }
