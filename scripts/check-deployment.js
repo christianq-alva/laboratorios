@@ -1,14 +1,12 @@
 #!/usr/bin/env node
 
-import { config } from '../src/config/environment.js'
-
 console.log('🔍 Verificando configuración de despliegue...')
 console.log('')
 
 console.log('📋 Configuración actual:')
-console.log(`   API URL: ${config.apiUrl}`)
-console.log(`   Base URL: ${config.baseUrl}`)
-console.log(`   Environment: ${config.isDevelopment ? 'Development' : 'Production'}`)
+console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`)
+console.log(`   API URL: ${process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:3000/api'}`)
+console.log(`   Base URL: ${process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5173'}`)
 console.log('')
 
 console.log('🔧 Variables de entorno:')
@@ -19,7 +17,7 @@ console.log(`   DB_NAME: ${process.env.DB_NAME || 'not set'}`)
 console.log(`   JWT_SECRET: ${process.env.JWT_SECRET ? 'set' : 'not set'}`)
 console.log('')
 
-if (config.isProduction) {
+if (process.env.NODE_ENV === 'production') {
   console.log('✅ Configuración de producción detectada')
   console.log('✅ API apuntará a /api (mismo dominio)')
 } else {
