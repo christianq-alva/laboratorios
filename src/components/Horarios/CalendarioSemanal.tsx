@@ -14,8 +14,6 @@ import {
   Collapse,
   Alert,
   CircularProgress,
-  Card,
-  CardContent,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -30,16 +28,11 @@ import {
   Edit,
   Delete,
   Visibility,
-  ChevronLeft,
-  ChevronRight,
-  Today,
   FilterList,
   Search,
-  ExpandMore,
-  ExpandLess,
 } from '@mui/icons-material'
 import { horarioService, type Horario } from '../../services/horarioService'
-import dayjs, { Dayjs } from 'dayjs'
+import dayjs from 'dayjs'
 import 'dayjs/locale/es'
 import isoWeek from 'dayjs/plugin/isoWeek'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
@@ -104,57 +97,7 @@ const getColorByTipo = (descripcion: string | null | undefined): string => {
   return '#95a5a6' // Gris por defecto
 }
 
-// Estilos personalizados para el calendario
-const calendarStyles = {
-  '.rbc-calendar': {
-    fontFamily: 'Roboto, sans-serif',
-  },
-  '.rbc-header': {
-    backgroundColor: '#f5f5f5',
-    fontWeight: 'bold',
-    padding: '10px 5px',
-    borderBottom: '2px solid #ddd',
-  },
-  '.rbc-time-header': {
-    borderBottom: '2px solid #ddd',
-  },
-  '.rbc-time-content': {
-    borderTop: '1px solid #ddd',
-  },
-  '.rbc-time-slot': {
-    borderTop: '1px solid #f0f0f0',
-  },
-  '.rbc-event': {
-    borderRadius: '4px',
-    padding: '2px 5px',
-    fontSize: '12px',
-    fontWeight: 'bold',
-    border: 'none',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-  },
-  '.rbc-event:hover': {
-    opacity: 0.8,
-    transform: 'scale(1.02)',
-    transition: 'all 0.2s ease',
-  },
-  '.rbc-today': {
-    backgroundColor: '#e3f2fd',
-  },
-  '.rbc-off-range-bg': {
-    backgroundColor: '#fafafa',
-  },
-  '.rbc-time-view .rbc-header': {
-    borderBottom: '2px solid #ddd',
-  },
-  '.rbc-time-view .rbc-time-gutter': {
-    backgroundColor: '#f9f9f9',
-    borderRight: '1px solid #ddd',
-  },
-  '.rbc-time-view .rbc-time-header-gutter': {
-    backgroundColor: '#f9f9f9',
-    borderRight: '1px solid #ddd',
-  },
-}
+
 
 export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
   onEdit,
