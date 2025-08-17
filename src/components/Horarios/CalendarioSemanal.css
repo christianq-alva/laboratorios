@@ -1,0 +1,666 @@
+/* Estilos personalizados para React Big Calendar */
+
+.rbc-calendar {
+  font-family: 'Roboto', sans-serif !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.rbc-calendar .rbc-time-view {
+  flex: 1 !important;
+  min-height: 0 !important;
+}
+
+.rbc-calendar .rbc-time-content {
+  flex: 1 !important;
+  min-height: 0 !important;
+}
+
+.rbc-header {
+  background-color: #f5f5f5 !important;
+  font-weight: bold !important;
+  padding: 10px 5px !important;
+  border-bottom: 2px solid #ddd !important;
+  text-align: center !important;
+}
+
+.rbc-time-header {
+  border-bottom: 2px solid #ddd !important;
+}
+
+.rbc-time-content {
+  border-top: 1px solid #ddd !important;
+}
+
+.rbc-time-slot {
+  border-top: 1px solid #f0f0f0 !important;
+}
+
+.rbc-event {
+  border-radius: 4px !important;
+  padding: 2px 5px !important;
+  font-size: 11px !important;
+  font-weight: bold !important;
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.rbc-event:hover {
+  opacity: 0.8 !important;
+  transform: scale(1.02) !important;
+}
+
+.rbc-today {
+  background-color: #e3f2fd !important;
+}
+
+.rbc-off-range-bg {
+  background-color: #fafafa !important;
+}
+
+.rbc-time-view .rbc-header {
+  border-bottom: 2px solid #ddd !important;
+}
+
+.rbc-time-view .rbc-time-gutter {
+  background-color: #f9f9f9 !important;
+  border-right: 1px solid #ddd !important;
+}
+
+.rbc-time-view .rbc-time-header-gutter {
+  background-color: #f9f9f9 !important;
+  border-right: 1px solid #ddd !important;
+}
+
+.rbc-time-view .rbc-time-content {
+  border-top: 1px solid #ddd !important;
+}
+
+.rbc-time-view .rbc-time-header-content {
+  border-left: 1px solid #ddd !important;
+  display: flex !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+.rbc-time-view .rbc-time-header-content .rbc-header {
+  flex: 1 !important;
+  min-width: 0 !important; /* Permitir que se expanda */
+  text-align: center !important;
+}
+
+.rbc-time-view .rbc-timeslot-group {
+  border-bottom: 1px solid #f0f0f0 !important;
+}
+
+.rbc-time-view .rbc-time-slot {
+  border-top: 1px solid #f0f0f0 !important;
+}
+
+.rbc-time-view .rbc-day-slot .rbc-time-slot {
+  border-top: 1px solid #f0f0f0 !important;
+}
+
+.rbc-time-view .rbc-current-time-indicator {
+  background-color: #ff6b6b !important;
+  height: 2px !important;
+}
+
+.rbc-time-view .rbc-current-time-indicator::before {
+  background-color: #ff6b6b !important;
+  border-radius: 50% !important;
+}
+
+/* Estilos para hacer las horas más grandes y visibles */
+.rbc-time-view .rbc-time-gutter .rbc-timeslot-group {
+  font-size: 16px !important;
+  font-weight: bold !important;
+  color: #333 !important;
+  padding: 8px 12px !important;
+  background-color: #f5f5f5 !important;
+  border-right: 2px solid #ddd !important;
+}
+
+.rbc-time-view .rbc-time-gutter .rbc-timeslot-group .rbc-label {
+  font-size: 16px !important;
+  font-weight: bold !important;
+  color: #1976d2 !important;
+  text-align: center !important;
+  padding: 4px 0 !important;
+  background-color: #e3f2fd !important;
+  border-radius: 4px !important;
+  margin: 2px 4px !important;
+}
+
+.rbc-time-view .rbc-time-gutter .rbc-timeslot-group .rbc-timeslot {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #555 !important;
+  padding: 6px 8px !important;
+  text-align: center !important;
+  border-bottom: 1px solid #e0e0e0 !important;
+  background-color: #fafafa !important;
+}
+
+/* Estilos para la barra de herramientas */
+.rbc-toolbar {
+  margin-bottom: 20px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+}
+
+.rbc-btn-group {
+  display: flex !important;
+  gap: 5px !important;
+}
+
+.rbc-toolbar button {
+  background-color: #fff !important;
+  border: 1px solid #ddd !important;
+  color: #333 !important;
+  padding: 8px 16px !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  font-size: 14px !important;
+  min-width: 80px !important;
+}
+
+.rbc-toolbar button:hover {
+  background-color: #f5f5f5 !important;
+  border-color: #999 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+.rbc-toolbar button.rbc-active {
+  background-color: #1976d2 !important;
+  border-color: #1976d2 !important;
+  color: white !important;
+}
+
+.rbc-toolbar button:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+.rbc-toolbar-label {
+  font-size: 18px !important;
+  font-weight: bold !important;
+  color: #333 !important;
+  margin: 0 !important;
+}
+
+/* Estilos para eventos personalizados */
+.rbc-event-content {
+  font-size: 11px !important;
+  font-weight: bold !important;
+  line-height: 1.2 !important;
+}
+
+.rbc-event-label {
+  font-size: 10px !important;
+  font-weight: bold !important;
+}
+
+/* Elementos del calendario que se adaptan al contenedor */
+.rbc-time-view .rbc-time-header {
+  width: 100% !important;
+  min-width: 100% !important;
+}
+
+.rbc-time-view .rbc-time-content {
+  width: 100% !important;
+  min-width: 100% !important;
+}
+
+.rbc-time-view .rbc-day-slot {
+  width: 100% !important;
+  min-width: 100% !important;
+}
+
+.rbc-time-view .rbc-day-slot .rbc-timeslot-group {
+  width: 100% !important;
+  min-width: 100% !important;
+}
+
+/* Configuración de box-sizing para todos los elementos */
+.rbc-calendar * {
+  box-sizing: border-box !important;
+}
+
+/* Distribución flexible de columnas */
+.rbc-time-view .rbc-time-header-content .rbc-header {
+  flex: 1 !important;
+  min-width: 0 !important; /* Permitir que se expanda completamente */
+  max-width: none !important;
+}
+
+.rbc-time-view .rbc-day-slot .rbc-timeslot-group {
+  flex: 1 !important;
+  min-width: 0 !important; /* Permitir que se expanda completamente */
+  max-width: none !important;
+}
+
+/* Mejorar la responsividad del scroll */
+.rbc-calendar {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+}
+
+.rbc-time-view {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .rbc-time-view {
+    min-width: 700px !important;
+  }
+  
+  .rbc-time-view .rbc-time-header-content .rbc-header {
+    min-width: 100px !important;
+    font-size: 12px !important;
+  }
+  
+  .rbc-time-view .rbc-day-slot .rbc-timeslot-group {
+    min-width: 100px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .rbc-toolbar {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+  
+  .rbc-toolbar button {
+    font-size: 12px !important;
+    padding: 6px 12px !important;
+    min-width: 60px !important;
+  }
+  
+  .rbc-toolbar-label {
+    font-size: 16px !important;
+  }
+  
+  .rbc-btn-group {
+    justify-content: center !important;
+  }
+  
+  /* Hacer las horas aún más grandes en móvil */
+  .rbc-time-view .rbc-time-gutter .rbc-timeslot-group .rbc-label {
+    font-size: 18px !important;
+    padding: 6px 0 !important;
+  }
+  
+  .rbc-time-view .rbc-time-gutter .rbc-timeslot-group .rbc-timeslot {
+    font-size: 16px !important;
+    padding: 8px 6px !important;
+  }
+  
+  /* Ajustes para móvil */
+  .rbc-time-view {
+    min-width: 600px !important;
+  }
+  
+  .rbc-time-view .rbc-time-header-content .rbc-header {
+    min-width: 80px !important;
+    font-size: 11px !important;
+    padding: 5px 2px !important;
+  }
+  
+  .rbc-time-view .rbc-day-slot .rbc-timeslot-group {
+    min-width: 80px !important;
+  }
+  
+  /* Reducir el ancho de la columna de horas en móvil */
+  .rbc-time-view .rbc-time-gutter {
+    min-width: 80px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .rbc-time-view {
+    min-width: 500px !important;
+  }
+  
+  .rbc-time-view .rbc-time-header-content .rbc-header {
+    min-width: 70px !important;
+    font-size: 10px !important;
+    padding: 3px 1px !important;
+  }
+  
+  .rbc-time-view .rbc-day-slot .rbc-timeslot-group {
+    min-width: 70px !important;
+  }
+  
+  .rbc-time-view .rbc-time-gutter {
+    min-width: 60px !important;
+  }
+  
+  .rbc-time-view .rbc-time-gutter .rbc-timeslot-group .rbc-label {
+    font-size: 14px !important;
+  }
+  
+  .rbc-time-view .rbc-time-gutter .rbc-timeslot-group .rbc-timeslot {
+    font-size: 12px !important;
+  }
+}
+
+/* Estilos adicionales para mejorar la navegación */
+.rbc-toolbar .rbc-btn-group button {
+  margin-right: 2px !important;
+}
+
+.rbc-toolbar .rbc-btn-group button:last-child {
+  margin-right: 0 !important;
+}
+
+.rbc-toolbar .rbc-btn-group button:first-child {
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+.rbc-toolbar .rbc-btn-group button:last-child {
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
+.rbc-toolbar .rbc-btn-group button:not(:first-child):not(:last-child) {
+  border-radius: 0 !important;
+}
+
+/* Asegurar que la barra de herramientas sea visible */
+.rbc-calendar .rbc-toolbar {
+  background-color: #fafafa !important;
+  padding: 15px !important;
+  border-radius: 8px 8px 0 0 !important;
+  border-bottom: 1px solid #ddd !important;
+}
+
+/* Estilos específicos para hacer las horas más prominentes */
+.rbc-time-view .rbc-time-gutter {
+  min-width: 120px !important;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%) !important;
+}
+
+/* Hacer que el calendario ocupe todo el ancho disponible */
+.rbc-calendar {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.rbc-time-view {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.rbc-time-view .rbc-time-header {
+  width: 100% !important;
+}
+
+.rbc-time-view .rbc-time-content {
+  width: 100% !important;
+}
+
+.rbc-time-view .rbc-time-header-content {
+  width: 100% !important;
+}
+
+.rbc-time-view .rbc-day-slot {
+  width: 100% !important;
+}
+
+/* Asegurar que las columnas de días se distribuyan uniformemente */
+.rbc-time-view .rbc-time-header-content .rbc-header {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.rbc-time-view .rbc-day-slot .rbc-timeslot-group {
+  width: 100% !important;
+}
+
+/* Mejorar el uso del espacio vertical */
+.rbc-time-view {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.rbc-time-view .rbc-time-header {
+  flex-shrink: 0 !important;
+}
+
+.rbc-time-view .rbc-time-content {
+  flex: 1 !important;
+  overflow: auto !important;
+}
+
+.rbc-time-view .rbc-day-slot {
+  min-height: 60px !important;
+}
+
+/* Asegurar que el contenido del calendario ocupe todo el espacio disponible */
+.rbc-calendar .rbc-time-view .rbc-time-content {
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  width: 100% !important;
+}
+
+/* Forzar que el calendario ocupe todo el ancho disponible */
+.rbc-calendar,
+.rbc-calendar * {
+  box-sizing: border-box !important;
+}
+
+.rbc-time-view .rbc-time-header-content {
+  display: flex !important;
+  width: 100% !important;
+}
+
+.rbc-time-view .rbc-time-header-content .rbc-header {
+  flex: 1 !important;
+  text-align: center !important;
+  padding: 10px 5px !important;
+  border-right: 1px solid #ddd !important;
+}
+
+.rbc-time-view .rbc-time-header-content .rbc-header:last-child {
+  border-right: none !important;
+}
+
+.rbc-time-view .rbc-day-slot {
+  display: flex !important;
+  width: 100% !important;
+}
+
+.rbc-time-view .rbc-day-slot .rbc-timeslot-group {
+  flex: 1 !important;
+  border-right: 1px solid #f0f0f0 !important;
+}
+
+.rbc-time-view .rbc-day-slot .rbc-timeslot-group:last-child {
+  border-right: none !important;
+}
+
+.rbc-time-view .rbc-time-gutter .rbc-timeslot-group {
+  border-bottom: 2px solid #ddd !important;
+}
+
+.rbc-time-view .rbc-time-gutter .rbc-timeslot-group:last-child {
+  border-bottom: none !important;
+}
+
+/* Efecto hover en las horas */
+.rbc-time-view .rbc-time-gutter .rbc-timeslot:hover {
+  background-color: #e3f2fd !important;
+  color: #1976d2 !important;
+  font-weight: bold !important;
+  transform: scale(1.05) !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Asegurar que no haya restricciones de ancho */
+.rbc-calendar,
+.rbc-time-view,
+.rbc-time-header,
+.rbc-time-content,
+.rbc-time-header-content,
+.rbc-day-slot {
+  max-width: none !important;
+  min-width: 0 !important;
+}
+
+/* Forzar que las columnas ocupen todo el ancho disponible */
+.rbc-time-view .rbc-time-header-content {
+  table-layout: fixed !important;
+  width: 100% !important;
+}
+
+.rbc-time-view .rbc-time-content {
+  table-layout: fixed !important;
+  width: 100% !important;
+}
+
+/* Asegurar que los eventos se distribuyan correctamente */
+.rbc-event {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* Mejorar la responsividad general */
+.rbc-calendar {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
+
+/* Asegurar que el scroll horizontal funcione correctamente */
+.rbc-time-view {
+  overflow-x: auto !important;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 1200px) {
+  .rbc-time-view {
+    min-width: 700px !important;
+  }
+  
+  .rbc-time-view .rbc-time-header-content .rbc-header {
+    min-width: 90px !important;
+    font-size: 12px !important;
+  }
+  
+  .rbc-event {
+    font-size: 10px !important;
+    padding: 1px 3px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .rbc-time-view {
+    min-width: 600px !important;
+  }
+  
+  .rbc-time-view .rbc-time-header-content .rbc-header {
+    min-width: 80px !important;
+    font-size: 11px !important;
+  }
+  
+  .rbc-calendar {
+    -webkit-overflow-scrolling: touch !important;
+  }
+  
+  .rbc-event {
+    font-size: 9px !important;
+    padding: 1px 2px !important;
+  }
+  
+  .rbc-event-content {
+    font-size: 9px !important;
+    line-height: 1.1 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .rbc-time-view {
+    min-width: 500px !important;
+  }
+  
+  .rbc-time-view .rbc-time-header-content .rbc-header {
+    min-width: 70px !important;
+    font-size: 10px !important;
+  }
+  
+  .rbc-event {
+    font-size: 8px !important;
+    padding: 1px 1px !important;
+  }
+}
+
+/* Calendario responsivo que se adapta al contenedor */
+.rbc-calendar {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow-x: auto !important;
+  flex: 1 !important;
+}
+
+.rbc-time-view {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-width: 800px !important; /* Ancho base para desktop */
+  flex: 1 !important;
+}
+
+.rbc-time-view .rbc-time-header {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.rbc-time-view .rbc-time-content {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.rbc-time-view .rbc-time-header-content {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+}
+
+.rbc-time-view .rbc-day-slot {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+}
+
+/* Eliminar cualquier padding o margin que pueda estar causando el espacio */
+.rbc-calendar * {
+  box-sizing: border-box !important;
+}
+
+.rbc-time-view .rbc-time-header-content .rbc-header {
+  flex: 1 !important;
+  min-width: 100px !important; /* Ancho mínimo por día */
+  text-align: center !important;
+}
+
+.rbc-time-view .rbc-day-slot .rbc-timeslot-group {
+  flex: 1 !important;
+  min-width: 0 !important; /* Permitir que se expanda */
+}

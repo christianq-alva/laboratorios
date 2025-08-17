@@ -11,10 +11,13 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  CircularProgress
+  CircularProgress,
+  ToggleButtonGroup,
+  ToggleButton
 } from '@mui/material'
-import { Add, Schedule, Warning } from '@mui/icons-material'
+import { Add, Schedule, Warning, ViewList, CalendarMonth } from '@mui/icons-material'
 import { HorariosTable } from '../components/Horarios/HorariosTable'
+import { CalendarioSemanal } from '../components/Horarios/CalendarioSemanal'
 import { HorarioFormSimple as HorarioForm } from '../components/Horarios/HorarioFormSimple'
 import { HorarioDetalle } from '../components/Horarios/HorarioDetalle'
 import { horarioService } from '../services/horarioService'
@@ -29,6 +32,9 @@ export const Horarios: React.FC = () => {
   const [selectedHorarioId, setSelectedHorarioId] = useState<number | null>(null)
   const [refresh, setRefresh] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  
+  // Estado para alternar entre vista de tabla y calendario
+  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('calendar')
   
   // Estados para notificaciones
   const [snackbar, setSnackbar] = useState({
@@ -148,9 +154,9 @@ export const Horarios: React.FC = () => {
   }
 
   return (
-    <Box>
-      {/* Encabezado */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+    <Box sx={{ width: '100%', maxWidth: '100%', padding: 0, margin: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
+              {/* Encabezado */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, px: 3, pt: 3 }}>
         <Box>
           <Typography variant="h4" component="h1" sx={{ fontWeight: 600, mb: 1 }}>
             Horarios
@@ -159,15 +165,37 @@ export const Horarios: React.FC = () => {
             Gestiona las reservas de laboratorios y asignación de docentes
           </Typography>
         </Box>
-        <Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {/* Selector de vista */}
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={(_, newViewMode) => {
+              if (newViewMode !== null) {
+                setViewMode(newViewMode)
+              }
+            }}
+            size="small"
+          >
+            <ToggleButton value="calendar" aria-label="vista calendario">
+              <CalendarMonth fontSize="small" />
+              Calendario
+            </ToggleButton>
+            <ToggleButton value="table" aria-label="vista tabla">
+              <ViewList fontSize="small" />
+              Tabla
+            </ToggleButton>
+          </ToggleButtonGroup>
+          
           <Button
             variant="contained"
             startIcon={<Add />}
             onClick={handleNewHorario}
-            sx={{ borderRadius: 2, px: 3, mr: 2 }}
+            sx={{ borderRadius: 2, px: 3 }}
           >
             Nuevo Horario
           </Button>
+          
           <Button
             variant="outlined"
             onClick={async () => {
@@ -210,18 +238,29 @@ ${info.registros_con_ids_invalidos > 0 ? `⚠️ HAY ${info.registros_con_ids_in
         </Box>
       </Box>
 
-      {/* Tabla de horarios */}
-      <Card>
-        <CardContent sx={{ p: 0 }}>
-          <HorariosTable 
-            onEdit={handleEditHorario}
-            onDelete={handleDeleteHorario}
-            onView={handleViewHorario}
-            refresh={refresh}
-            onRefreshComplete={handleRefreshComplete}
-          />
-        </CardContent>
-      </Card>
+      {/* Contenido según el modo de vista */}
+      {viewMode === 'calendar' ? (
+        <CalendarioSemanal
+          onEdit={handleEditHorario}
+          onDelete={handleDeleteHorario}
+          onView={handleViewHorario}
+          onNewHorario={handleNewHorario}
+          refresh={refresh}
+          onRefreshComplete={handleRefreshComplete}
+        />
+      ) : (
+        <Card>
+          <CardContent sx={{ p: 0 }}>
+            <HorariosTable 
+              onEdit={handleEditHorario}
+              onDelete={handleDeleteHorario}
+              onView={handleViewHorario}
+              refresh={refresh}
+              onRefreshComplete={handleRefreshComplete}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Formulario de horario */}
       <HorarioForm 

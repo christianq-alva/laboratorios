@@ -223,7 +223,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           ModalProps={{ keepMounted: true }}
           sx={{
             display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: DRAWER_WIDTH },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
+              width: DRAWER_WIDTH,
+              borderRight: '1px solid #e0e0e0'
+            },
           }}
         >
           {drawer}
@@ -234,7 +238,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           variant="permanent"
           sx={{
             display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: DRAWER_WIDTH },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
+              width: DRAWER_WIDTH,
+              borderRight: '1px solid #e0e0e0'
+            },
           }}
           open
         >
@@ -247,11 +255,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: 0,
+          px: { sm: 2 }, // Padding horizontal para separación en ambos lados
           width: { sm: `calc(100% - ${DRAWER_WIDTH}px)` },
           mt: 8,
           backgroundColor: 'background.default',
-          minHeight: '100vh'
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column'
         }}
       >
         {children}
