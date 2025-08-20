@@ -50,9 +50,19 @@ const verificarCruceHorarios = async (connection, laboratorio_id, docente_id, fe
       r.id,
       r.fecha_inicio,
       r.fecha_fin,
-      d.nombre as docente
+      r.descripcion,
+      d.nombre as docente,
+      l.nombre as laboratorio,
+      l.ubicacion as laboratorio_ubicacion,
+      g.nombre as grupo,
+      e.nombre as escuela,
+      c.nombre as ciclo
     FROM reservas r
     JOIN docentes d ON r.docente_id = d.id
+    JOIN laboratorios l ON r.laboratorio_id = l.id
+    LEFT JOIN grupos g ON r.grupo_id = g.id
+    LEFT JOIN escuelas e ON g.escuela_id = e.id
+    LEFT JOIN ciclos c ON g.ciclo_id = c.id
     WHERE r.laboratorio_id = ?
       AND r.id != COALESCE(?, 0)
       AND (
@@ -73,7 +83,19 @@ const verificarCruceHorarios = async (connection, laboratorio_id, docente_id, fe
     const cruce = cruceLabRows[0]
     return {
       tipo: 'laboratorio',
-      mensaje: `El laboratorio ya está ocupado de ${cruce.fecha_inicio} a ${cruce.fecha_fin} por ${cruce.docente}`,
+      mensaje: `El laboratorio ${cruce.laboratorio} (${cruce.laboratorio_ubicacion}) ya está ocupado`,
+      detalles: {
+        laboratorio: cruce.laboratorio,
+        ubicacion: cruce.laboratorio_ubicacion,
+        docente: cruce.docente,
+        grupo: cruce.grupo,
+        escuela: cruce.escuela,
+        ciclo: cruce.ciclo,
+        descripcion: cruce.descripcion,
+        fecha_inicio: cruce.fecha_inicio,
+        fecha_fin: cruce.fecha_fin,
+        horario_id: cruce.id
+      },
       conflicto: cruce
     }
   }
@@ -84,9 +106,19 @@ const verificarCruceHorarios = async (connection, laboratorio_id, docente_id, fe
       r.id,
       r.fecha_inicio,
       r.fecha_fin,
-      l.nombre as laboratorio
+      r.descripcion,
+      l.nombre as laboratorio,
+      l.ubicacion as laboratorio_ubicacion,
+      d.nombre as docente,
+      g.nombre as grupo,
+      e.nombre as escuela,
+      c.nombre as ciclo
     FROM reservas r
     JOIN laboratorios l ON r.laboratorio_id = l.id
+    JOIN docentes d ON r.docente_id = d.id
+    LEFT JOIN grupos g ON r.grupo_id = g.id
+    LEFT JOIN escuelas e ON g.escuela_id = e.id
+    LEFT JOIN ciclos c ON g.ciclo_id = c.id
     WHERE r.docente_id = ?
       AND r.id != COALESCE(?, 0)
       AND (
@@ -107,7 +139,19 @@ const verificarCruceHorarios = async (connection, laboratorio_id, docente_id, fe
     const cruce = cruceDocenteRows[0]
     return {
       tipo: 'docente', 
-      mensaje: `El docente ya tiene clase de ${cruce.fecha_inicio} a ${cruce.fecha_fin} en ${cruce.laboratorio}`,
+      mensaje: `El docente ${cruce.docente} ya tiene una clase programada`,
+      detalles: {
+        laboratorio: cruce.laboratorio,
+        ubicacion: cruce.laboratorio_ubicacion,
+        docente: cruce.docente,
+        grupo: cruce.grupo,
+        escuela: cruce.escuela,
+        ciclo: cruce.ciclo,
+        descripcion: cruce.descripcion,
+        fecha_inicio: cruce.fecha_inicio,
+        fecha_fin: cruce.fecha_fin,
+        horario_id: cruce.id
+      },
       conflicto: cruce
     }
   }
@@ -130,6 +174,7 @@ export const getHorarios = async (req, res) => {
           r.fecha_fin,
           r.cantidad_alumnos,
           r.descripcion,
+          r.color,
           l.nombre as laboratorio,
           d.nombre as docente,
           e.nombre as escuela,
@@ -355,6 +400,7 @@ export const getHorarios = async (req, res) => {
         fecha_inicio, 
         fecha_fin, 
         cantidad_alumnos = 1, // ← Valor por defecto
+        color = '#4ecdc4', // ← Color del horario
         insumos = [] // ← Array de insumos a usar
       } = req.body
       
@@ -485,9 +531,9 @@ export const getHorarios = async (req, res) => {
       
       // 1. CREAR LA RESERVA
       const [reservaResult] = await connection.execute(`
-        INSERT INTO reservas (laboratorio_id, docente_id, grupo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos) 
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `, [laboratorio_id, docente_id, grupo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos])
+        INSERT INTO reservas (laboratorio_id, docente_id, grupo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos, color) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `, [laboratorio_id, docente_id, grupo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color])
       
       const reserva_id = reservaResult.insertId
       console.log('✅ Reserva creada con ID:', reserva_id)
@@ -552,6 +598,7 @@ export const getHorarios = async (req, res) => {
         fecha_inicio, 
         fecha_fin, 
         cantidad_alumnos = 1, // ← Valor por defecto
+        color = '#4ecdc4', // ← Color del horario
         insumos = [] // ← Insumos actualizados
       } = req.body
       
@@ -716,9 +763,9 @@ export const getHorarios = async (req, res) => {
       // 5️⃣ ACTUALIZAR DATOS BÁSICOS DEL HORARIO (ACTUALIZADO)
       await connection.execute(`
         UPDATE reservas 
-        SET laboratorio_id = ?, docente_id = ?, grupo_id = ?, descripcion = ?, fecha_inicio = ?, fecha_fin = ?, cantidad_alumnos = ?
+        SET laboratorio_id = ?, docente_id = ?, grupo_id = ?, descripcion = ?, fecha_inicio = ?, fecha_fin = ?, cantidad_alumnos = ?, color = ?
         WHERE id = ?
-      `, [laboratorio_id, docente_id, grupo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, id])
+      `, [laboratorio_id, docente_id, grupo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, id])
       
       // 6️⃣ PROCESAR NUEVOS INSUMOS
       for (const insumo of insumos) {

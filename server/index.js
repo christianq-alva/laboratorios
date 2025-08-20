@@ -10,6 +10,7 @@ import insumoRoutes from './routes/insumoRoutes.js'
 import incidenciaRoutes from './routes/incidenciaRoutes.js'
 import docenteRoutes from './routes/docenteRoutes.js'
 import dashboardRoutes from './routes/dashboardRoutes.js'
+import shareRoutes from './routes/shareRoutes.js'
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -42,6 +43,7 @@ app.use('/api/horarios', horarioRoutes)
 app.use('/api/insumos', insumoRoutes)
 app.use('/api/incidencias', incidenciaRoutes)
 app.use('/api/docentes', docenteRoutes)
+app.use('/api/share', shareRoutes)
 
 // Servir frontend en producción
 if (process.env.NODE_ENV === 'production') {
@@ -50,6 +52,9 @@ if (process.env.NODE_ENV === 'production') {
   app.get(/^\/(?!api).*/, (req, res) => {
     res.sendFile(path.join(__dirname, '../dist/index.html'))
   })
+} else {
+  // En desarrollo, solo servir el catch-all para rutas que no sean API
+  // Las rutas públicas del frontend son manejadas por Vite
 }
 
 app.listen(port, () => {

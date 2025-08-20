@@ -10,6 +10,7 @@ export interface Horario {
   fecha_inicio: string
   fecha_fin: string
   cantidad_alumnos?: number
+  color?: string
   laboratorio?: string
   docente?: string
   escuela?: string
@@ -35,6 +36,7 @@ export interface CreateHorarioData {
   fecha_inicio: string
   fecha_fin: string
   cantidad_alumnos?: number
+  color?: string
   insumos: Array<{
     insumo_id: number
     cantidad: number
@@ -81,6 +83,18 @@ export interface Insumo {
 export interface ConflictoHorario {
   tipo: 'laboratorio' | 'docente'
   mensaje: string
+  detalles?: {
+    laboratorio: string
+    ubicacion: string
+    docente: string
+    grupo?: string
+    escuela?: string
+    ciclo?: string
+    descripcion?: string
+    fecha_inicio: string
+    fecha_fin: string
+    horario_id: number
+  }
   horario_conflicto?: {
     id: number
     fecha_inicio: string

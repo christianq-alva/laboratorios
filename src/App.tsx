@@ -13,6 +13,7 @@ import {
   Insumos,
   Incidencias,
 } from './pages'
+import { HorarioPublico } from './components/Public/HorarioPublico'
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -42,6 +43,12 @@ function App() {
                 <Login />
               </PublicRoute>
             } 
+          />
+          
+          {/* Public Horario Route (sin autenticación) */}
+          <Route 
+            path="/horarios/publico/:laboratorio_id" 
+            element={<HorarioPublico />} 
           />
           
           {/* Protected Routes */}

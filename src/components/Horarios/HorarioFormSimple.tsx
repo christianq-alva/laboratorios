@@ -63,6 +63,20 @@ interface InsumoSeleccionado {
   stock_disponible: number
 }
 
+// Paleta de colores disponibles
+const COLOR_PALETTE = [
+  { color: '#ff6b6b', name: 'Rojo' },
+  { color: '#4ecdc4', name: 'Turquesa' },
+  { color: '#ffa726', name: 'Naranja' },
+  { color: '#ab47bc', name: 'Púrpura' },
+  { color: '#26a69a', name: 'Verde' },
+  { color: '#66bb6a', name: 'Verde Claro' },
+  { color: '#42a5f5', name: 'Azul' },
+  { color: '#ef5350', name: 'Rojo Claro' },
+  { color: '#ffeb3b', name: 'Amarillo' },
+  { color: '#95a5a6', name: 'Gris' }
+]
+
 export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, onSuccess, horario }) => {
   // Estados del formulario
   const [formData, setFormData] = useState<CreateHorarioData>({
@@ -73,6 +87,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     fecha_inicio: '',
     fecha_fin: '',
     cantidad_alumnos: 1,
+    color: '#4ecdc4',
     insumos: []
   })
   
@@ -184,6 +199,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       fecha_inicio: formatDateTimeLocal(horarioData.fecha_inicio),
       fecha_fin: formatDateTimeLocal(horarioData.fecha_fin),
       cantidad_alumnos: horarioData.cantidad_alumnos || 1,
+      color: horarioData.color || '#4ecdc4',
       insumos: horarioData.insumos?.map(i => ({
         insumo_id: i.id,
         cantidad: i.cantidad_usada
@@ -224,6 +240,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       fecha_inicio: '',
       fecha_fin: '',
       cantidad_alumnos: 1,
+      color: '#4ecdc4',
       insumos: []
     })
     setSelectedDate('')
@@ -344,6 +361,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
           const conflicto: ConflictoHorario = {
             tipo: result.tipo_conflicto || 'laboratorio',
             mensaje: result.motivo || 'Conflicto de horario',
+            detalles: result.detalles,
             horario_conflicto: result.conflicto_detalle
           }
           setConflictos([conflicto])
@@ -421,6 +439,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
         fecha_inicio: fechaInicio,
         fecha_fin: fechaFin,
         cantidad_alumnos: formData.cantidad_alumnos || 1, // Asegurar valor por defecto
+        color: formData.color || '#4ecdc4', // Incluir color seleccionado
         insumos: insumosSeleccionados.map(i => ({
           insumo_id: i.insumo_id,
           cantidad: i.cantidad
@@ -428,6 +447,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       }
 
       console.log('📤 Enviando datos al backend:', finalData)
+      console.log('🎨 Color seleccionado en formulario:', formData.color)
 
       let result
       if (isEditing && horario) {
@@ -492,7 +512,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
   }
 
   const canSubmit = () => {
-    return (
+    const isValid = (
       formData.laboratorio_id > 0 &&
       formData.docente_id > 0 &&
       formData.grupo_id > 0 &&
@@ -503,17 +523,45 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       endBlockId &&
       formData.fecha_inicio &&
       formData.fecha_fin &&
+      formData.color &&
       conflictos.length === 0
     )
+    
+    console.log('🔍 Validación formulario:', {
+      laboratorio_id: formData.laboratorio_id > 0,
+      docente_id: formData.docente_id > 0,
+      grupo_id: formData.grupo_id > 0,
+      descripcion: !!formData.descripcion.trim(),
+      cantidad_alumnos: !!(formData.cantidad_alumnos && formData.cantidad_alumnos > 0),
+      selectedDate: !!selectedDate,
+      startBlockId: !!startBlockId,
+      endBlockId: !!endBlockId,
+      fecha_inicio: !!formData.fecha_inicio,
+      fecha_fin: !!formData.fecha_fin,
+      color: !!formData.color,
+      conflictos: conflictos.length === 0,
+      canSubmit: isValid
+    })
+    
+    return isValid
   }
 
   return (
     <Dialog 
       open={open} 
       onClose={handleClose} 
-      maxWidth="md" 
+      maxWidth={false}
       fullWidth
-      PaperProps={{ sx: { borderRadius: 2 } }}
+      PaperProps={{ 
+        sx: { 
+          borderRadius: { xs: 0, md: 1 },
+          width: { xs: '100vw', md: '95vw' },
+          maxWidth: '1600px',
+          height: { xs: '100vh', md: '90vh' },
+          maxHeight: { xs: '100vh', md: '90vh' },
+          m: { xs: 0, md: 'auto' }
+        } 
+      }}
     >
       <DialogTitle sx={{ pb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -526,7 +574,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
         </Box>
       </DialogTitle>
 
-      <DialogContent>
+      <DialogContent sx={{ p: 0 }}>
         {loadingData ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />
@@ -535,17 +583,37 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
             </Typography>
           </Box>
         ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {/* Error general */}
-            {error && (
-              <Alert severity="error">
-                {error}
-              </Alert>
-            )}
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 2, 
+            height: { xs: 'calc(100vh - 140px)', md: 'calc(90vh - 140px)' }, 
+            p: 2,
+            flexDirection: { xs: 'column', lg: 'row' }
+          }}>
+            {/* Panel izquierdo - Formulario principal */}
+            <Box sx={{ 
+              flex: { xs: 1, lg: 2 }, 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: 2,
+              overflowY: 'auto',
+              pr: { xs: 0, lg: 1 }
+            }}>
+              {/* Error general */}
+              {error && (
+                <Alert severity="error" sx={{ borderRadius: 2 }}>
+                  {error}
+                </Alert>
+              )}
 
             {/* Información básica */}
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Paper sx={{ 
+              p: 3, 
+              borderRadius: 1.5,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              border: '1px solid #e8e8e8'
+            }}>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
                 <Schedule />
                 Información Básica
               </Typography>
@@ -665,7 +733,8 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                   disabled={loading}
                 />
 
-                {/* Cantidad de alumnos */}
+                {/* Fila con cantidad de alumnos y color */}
+                <Box sx={{ display: 'flex', gap: 2 }}>
                 <TextField
                   type="number"
                   label="Cantidad de alumnos"
@@ -673,14 +742,95 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                   onChange={(e) => setFormData(prev => ({ ...prev, cantidad_alumnos: parseInt(e.target.value) || 1 }))}
                   disabled={loading}
                   inputProps={{ min: 1, max: 100 }}
-                  helperText="Número estimado de estudiantes que participarán"
-                />
+                    helperText="Número estimado de estudiantes"
+                    sx={{ flex: 1 }}
+                  />
+                  
+                  {/* Selector de color */}
+                  <Box sx={{ flex: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <Typography variant="body2">
+                        Color del horario
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
+                        ({formData.color})
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
+                      {COLOR_PALETTE.map((colorOption) => (
+                        <Box
+                          key={colorOption.color}
+                          onClick={() => {
+                            console.log('🎨 Color seleccionado:', colorOption.color)
+                            console.log('🎨 FormData antes:', formData.color)
+                            setFormData(prev => {
+                              const newData = { ...prev, color: colorOption.color }
+                              console.log('🎨 FormData después:', newData.color)
+                              return newData
+                            })
+                          }}
+                          sx={{
+                            width: 36,
+                            height: 36,
+                            backgroundColor: colorOption.color,
+                            borderRadius: 1,
+                            cursor: 'pointer',
+                            border: formData.color === colorOption.color ? '3px solid #000' : '2px solid #ddd',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            '&:hover': {
+                              transform: 'scale(1.1)',
+                              boxShadow: 3
+                            }
+                          }}
+                          title={colorOption.name}
+                        >
+                          {formData.color === colorOption.color && (
+                            <Box
+                              sx={{
+                                width: 8,
+                                height: 8,
+                                backgroundColor: 'white',
+                                borderRadius: '50%',
+                                boxShadow: 1
+                              }}
+                            />
+                          )}
+                        </Box>
+                      ))}
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Color seleccionado:
+                      </Typography>
+                      <Box
+                        sx={{
+                          width: 20,
+                          height: 20,
+                          backgroundColor: formData.color,
+                          borderRadius: 1,
+                          border: '1px solid #ddd'
+                        }}
+                      />
+                      <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                        {COLOR_PALETTE.find(c => c.color === formData.color)?.name || 'Personalizado'}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
               </Box>
             </Paper>
 
             {/* Fechas y horas */}
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Paper sx={{ 
+              p: 3, 
+              borderRadius: 1.5,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              border: '1px solid #e8e8e8'
+            }}>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
                 <Schedule />
                 Fecha y Horario Académico
               </Typography>
@@ -845,67 +995,184 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                       ✅ El laboratorio y docente están disponibles en el horario seleccionado
                     </Alert>
                   ) : (
-                    <Alert severity="error" icon={<Warning />}>
-                      <Typography variant="body2" gutterBottom>
-                        <strong>Se encontraron conflictos de horario:</strong>
+                    <Alert 
+                      severity="error" 
+                      icon={<Warning />}
+                      sx={{ 
+                        borderRadius: 1.5,
+                        border: '1px solid #f44336',
+                        backgroundColor: '#fef2f2'
+                      }}
+                    >
+                      <Typography variant="body2" gutterBottom sx={{ fontWeight: 600 }}>
+                        ⚠️ Conflicto de Horario Detectado
                       </Typography>
+                      
                       {conflictos.map((conflicto, index) => (
-                        <Box key={index} sx={{ ml: 2, mb: 1 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 500, color: 'error.main' }}>
-                            • {conflicto.tipo === 'laboratorio' ? '🚫 Laboratorio ocupado' : '👨‍🏫 Docente ocupado'}
-                          </Typography>
-                          <Typography variant="body2" sx={{ ml: 2, color: 'text.secondary' }}>
-                            {conflicto.mensaje}
-                          </Typography>
-                          {conflicto.horario_conflicto && (
-                            <Typography variant="caption" sx={{ ml: 2, color: 'text.secondary', display: 'block' }}>
-                              Conflicto: {conflicto.horario_conflicto.fecha_inicio} - {conflicto.horario_conflicto.fecha_fin}
+                        <Box key={index} sx={{ mt: 2 }}>
+                          {/* Tipo de conflicto */}
+                          <Box sx={{ 
+                            p: 2, 
+                            backgroundColor: 'white', 
+                            borderRadius: 1,
+                            border: '1px solid #ffcdd2',
+                            mb: 2
+                          }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'error.main', mb: 1 }}>
+                              {conflicto.tipo === 'laboratorio' ? '🏢 Laboratorio Ocupado' : '👨‍🏫 Docente Ocupado'}
                             </Typography>
+                            <Typography variant="body2" sx={{ color: 'text.primary' }}>
+                              {conflicto.mensaje}
+                            </Typography>
+                          </Box>
+
+                          {/* Detalles del conflicto */}
+                          {conflicto.detalles && (
+                            <Box sx={{ 
+                              p: 2, 
+                              backgroundColor: 'white', 
+                              borderRadius: 1,
+                              border: '1px solid #ffcdd2'
+                            }}>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5, color: 'error.main' }}>
+                                📋 Detalles del Horario en Conflicto:
+                              </Typography>
+                              
+                              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
+                                <Box>
+                                  <Typography variant="caption" color="text.secondary">
+                                    Laboratorio:
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                    {conflicto.detalles.laboratorio}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    📍 {conflicto.detalles.ubicacion}
+                                  </Typography>
+                                </Box>
+                                
+                                <Box>
+                                  <Typography variant="caption" color="text.secondary">
+                                    Docente:
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                    {conflicto.detalles.docente}
+                                  </Typography>
+                                </Box>
+                                
+                                <Box>
+                                  <Typography variant="caption" color="text.secondary">
+                                    Grupo:
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                    {conflicto.detalles.grupo}
+                                  </Typography>
+                                  {conflicto.detalles.escuela && (
+                                    <Typography variant="caption" color="text.secondary">
+                                      {conflicto.detalles.escuela} • {conflicto.detalles.ciclo}
+                                    </Typography>
+                                  )}
+                                </Box>
+                                
+                                <Box>
+                                  <Typography variant="caption" color="text.secondary">
+                                    Horario:
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                    {new Date(conflicto.detalles.fecha_inicio).toLocaleString('es-ES', {
+                                      day: '2-digit',
+                                      month: '2-digit',
+                                      year: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    hasta {new Date(conflicto.detalles.fecha_fin).toLocaleString('es-ES', {
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                              
+                              {conflicto.detalles.descripcion && (
+                                <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid #ffcdd2' }}>
+                                  <Typography variant="caption" color="text.secondary">
+                                    Actividad:
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
+                                    {conflicto.detalles.descripcion}
+                                  </Typography>
+                                </Box>
+                              )}
+                            </Box>
                           )}
                         </Box>
                       ))}
+                      
+                      <Box sx={{ mt: 2, p: 1.5, backgroundColor: '#fff3e0', borderRadius: 1 }}>
+                        <Typography variant="caption" sx={{ fontWeight: 500, color: 'warning.dark' }}>
+                          💡 Sugerencia: Cambia la fecha/hora o selecciona otro laboratorio/docente
+                        </Typography>
+                      </Box>
                     </Alert>
                   )}
                 </Box>
               )}
             </Paper>
+            </Box>
 
-            {/* Insumos (opcional) */}
-            <Paper sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {/* Panel derecho - Gestión de Insumos */}
+            <Box sx={{ 
+              flex: { xs: 1, lg: 1 }, 
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              pl: { xs: 0, lg: 1 }
+            }}>
+              {/* Header del panel de insumos */}
+              <Paper sx={{ 
+                p: 2, 
+                borderRadius: 1.5,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                border: '1px solid #e8e8e8',
+                backgroundColor: '#f8f9fa'
+              }}>
+                <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'secondary.main' }}>
                   <Inventory />
                   Insumos (Opcional)
                 </Typography>
-                <Button 
-                  variant="outlined" 
-                  onClick={() => setShowInsumos(!showInsumos)}
-                  disabled={!formData.laboratorio_id}
-                >
-                  {showInsumos ? 'Ocultar' : 'Gestionar'} Insumos
-                </Button>
-              </Box>
+              </Paper>
 
-              {!formData.laboratorio_id && (
-                <Alert severity="info" sx={{ mb: 2 }}>
+              {!formData.laboratorio_id ? (
+                <Alert severity="info" sx={{ borderRadius: 2 }}>
                   Selecciona un laboratorio para ver los insumos disponibles
                 </Alert>
-              )}
+              ) : (
+                <>
+                  {laboratorioChangeMessage && (
+                    <Alert severity="warning" sx={{ borderRadius: 2 }}>
+                      {laboratorioChangeMessage}
+                    </Alert>
+                  )}
 
-              {laboratorioChangeMessage && (
-                <Alert severity="warning" sx={{ mb: 2 }}>
-                  {laboratorioChangeMessage}
-                </Alert>
-              )}
-
-              {showInsumos && (
-                <Box sx={{ display: 'flex', gap: 2 }}>
                   {/* Insumos disponibles */}
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Disponibles ({insumosDisponibles.length})
-                    </Typography>
-                    <Paper sx={{ maxHeight: 200, overflow: 'auto', p: 1 }}>
+                  <Paper sx={{ 
+                    flex: 1,
+                    borderRadius: 1.5,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    border: '1px solid #e8e8e8',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden'
+                  }}>
+                    <Box sx={{ p: 2, backgroundColor: '#f0f7ff', borderBottom: '1px solid #e0e0e0' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                        Disponibles ({insumosDisponibles.length})
+                      </Typography>
+                    </Box>
+                    <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
                       {insumosDisponibles.length > 0 ? (
                         <List dense>
                           {insumosDisponibles.map((insumo) => {
@@ -917,15 +1184,22 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                                 key={insumo.id}
                                 onClick={() => !yaSeleccionado && agregarInsumo(insumo)}
                                 sx={{ 
-                                  p: 1,
+                                  p: 1.5,
                                   cursor: yaSeleccionado ? 'not-allowed' : 'pointer',
-                                  '&:hover': { bgcolor: yaSeleccionado ? 'none' : 'action.hover' },
+                                  '&:hover': { 
+                                    bgcolor: yaSeleccionado ? 'none' : 'primary.light',
+                                    transform: yaSeleccionado ? 'none' : 'translateY(-1px)',
+                                    boxShadow: yaSeleccionado ? 'none' : '0 4px 12px rgba(0,0,0,0.15)'
+                                  },
                                   opacity: yaSeleccionado ? 0.5 : 1,
                                   borderRadius: 1,
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'space-between',
-                                  border: yaSeleccionado ? '1px solid #e0e0e0' : '1px solid transparent'
+                                  border: yaSeleccionado ? '1px solid #e0e0e0' : '1px solid #f0f0f0',
+                                  mb: 1,
+                                  backgroundColor: yaSeleccionado ? '#f5f5f5' : 'white',
+                                  transition: 'all 0.2s ease'
                                 }}
                               >
                                 <Box>
@@ -960,25 +1234,35 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                           })}
                         </List>
                       ) : (
-                        <Box sx={{ p: 2, textAlign: 'center' }}>
+                        <Box sx={{ p: 2, textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                           <Inventory sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
                           <Typography variant="body2" color="text.secondary">
-                            No hay insumos disponibles para este laboratorio
+                            No hay insumos disponibles
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            Contacta al administrador para agregar insumos
+                            Contacta al administrador
                           </Typography>
                         </Box>
                       )}
-                    </Paper>
-                  </Box>
+                    </Box>
+                  </Paper>
 
                   {/* Insumos seleccionados */}
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Seleccionados ({insumosSeleccionados.length})
-                    </Typography>
-                    <Paper sx={{ maxHeight: 200, overflow: 'auto', p: 1 }}>
+                  <Paper sx={{ 
+                    flex: 1,
+                    borderRadius: 1.5,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    border: '1px solid #e8e8e8',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden'
+                  }}>
+                    <Box sx={{ p: 2, backgroundColor: '#f0fff4', borderBottom: '1px solid #e0e0e0' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'success.main' }}>
+                        Seleccionados ({insumosSeleccionados.length})
+                      </Typography>
+                    </Box>
+                    <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
                       <List dense>
                         {insumosSeleccionados.map((insumo) => {
                           const stockRestante = insumo.stock_disponible - insumo.cantidad
@@ -991,7 +1275,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                                 secondary={
                                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <Typography variant="caption" color="text.secondary">
-                                      Stock restante:
+                                      Restante:
                                     </Typography>
                                     <Chip 
                                       label={stockRestante} 
@@ -1028,36 +1312,43 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                         {insumosSeleccionados.length === 0 && (
                           <ListItem>
                             <ListItemText 
-                              primary="No hay insumos seleccionados"
-                              secondary="Los insumos son opcionales"
+                              primary="Sin insumos seleccionados"
+                              secondary="Haz clic arriba para agregar"
                             />
                           </ListItem>
                         )}
                       </List>
-                    </Paper>
-                  </Box>
-                </Box>
-              )}
+                    </Box>
+                  </Paper>
 
-              {/* Resumen de insumos seleccionados */}
-              {insumosSeleccionados.length > 0 && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="body2" gutterBottom>
-                    <strong>Insumos a utilizar:</strong>
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {insumosSeleccionados.map((insumo) => (
-                      <Chip
-                        key={insumo.insumo_id}
-                        label={`${insumo.nombre} (${insumo.cantidad})`}
-                        variant="outlined"
-                        size="small"
-                      />
-                    ))}
-                  </Box>
-                </Box>
+                  {/* Resumen compacto */}
+                  {insumosSeleccionados.length > 0 && (
+                    <Paper sx={{ 
+                      p: 2, 
+                      borderRadius: 1.5,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                      border: '1px solid #e8e8e8',
+                      backgroundColor: '#fff8e1'
+                    }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'warning.main', mb: 1 }}>
+                        Resumen de Insumos
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {insumosSeleccionados.map((insumo) => (
+                          <Chip
+                            key={insumo.insumo_id}
+                            label={`${insumo.nombre} (${insumo.cantidad})`}
+                            variant="outlined"
+                            size="small"
+                            sx={{ borderRadius: 1 }}
+                          />
+                        ))}
+                      </Box>
+                    </Paper>
+                  )}
+                </>
               )}
-            </Paper>
+            </Box>
           </Box>
         )}
       </DialogContent>

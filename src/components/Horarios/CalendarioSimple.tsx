@@ -43,6 +43,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Today,
+  Share,
+  Download,
 } from '@mui/icons-material'
 import { horarioService, type Horario } from '../../services/horarioService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
@@ -76,6 +78,8 @@ interface CalendarioSimpleProps {
   onDelete?: (horario: Horario) => void
   onView?: (horario: Horario) => void
   onNewHorario?: () => void
+  onShare?: (laboratorioId?: number) => void
+  onExport?: () => void
   refresh?: boolean
   onRefreshComplete?: () => void
 }
@@ -93,13 +97,15 @@ const getColorByTipo = (descripcion: string | null | undefined): string => {
   return '#95a5a6'
 }
 
-const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
+const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
 export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
   onEdit,
   onDelete,
   onView,
   onNewHorario,
+  onShare,
+  onExport,
   refresh = false,
   onRefreshComplete,
 }) => {
@@ -208,7 +214,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
       const fecha = dayjs(horario.fecha_inicio)
       const diaIndex = fecha.isoWeekday() - 1 // 0 = Lunes, 4 = Viernes
       
-      if (diaIndex >= 0 && diaIndex < 5) { // Solo días laborables
+      if (diaIndex >= 0 && diaIndex < 7) { // Todos los días de la semana
         const horaInicio = fecha.format('HH:mm')
         const horaFin = dayjs(horario.fecha_fin).format('HH:mm')
         
@@ -235,7 +241,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
               descripcion: horario.descripcion || '',
               horaInicio,
               horaFin,
-              color: getColorByTipo(horario.descripcion),
+              color: horario.color || getColorByTipo(horario.descripcion),
               cantidad_alumnos: horario.cantidad_alumnos,
               horarioOriginal: horario
             })
@@ -276,6 +282,23 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
   useEffect(() => {
     fetchLaboratorios()
     fetchHorarios()
+    
+    // Verificar si viene navegación desde dashboard
+    const dashboardNav = localStorage.getItem('dashboard_navigation')
+    if (dashboardNav) {
+      try {
+        const navData = JSON.parse(dashboardNav)
+        // Verificar que la navegación sea reciente (últimos 5 segundos)
+        if (Date.now() - navData.timestamp < 5000) {
+          setSelectedLaboratorio(navData.laboratorioId)
+          console.log('🎯 Navegación desde dashboard - Laboratorio seleccionado:', navData.laboratorioId)
+        }
+        // Limpiar la navegación
+        localStorage.removeItem('dashboard_navigation')
+      } catch (err) {
+        console.error('Error al procesar navegación desde dashboard:', err)
+      }
+    }
   }, [fetchLaboratorios, fetchHorarios])
 
   // Refresh cuando se solicita
@@ -381,7 +404,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                 onClick={handleToday}
                 sx={{ minWidth: 200 }}
               >
-                {currentWeek.format('DD/MM/YYYY')} - {currentWeek.add(4, 'day').format('DD/MM/YYYY')}
+                {currentWeek.format('DD/MM/YYYY')} - {currentWeek.add(6, 'day').format('DD/MM/YYYY')}
               </Button>
               
               <IconButton onClick={handleNextWeek} size="small">
@@ -415,6 +438,30 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
             >
               Filtros
             </Button>
+            
+            {onShare && (userRole === 'Jefe de Laboratorio' || userRole === 'Administrador') && (
+              <Button
+                variant="outlined"
+                startIcon={<Share />}
+                onClick={() => onShare(selectedLaboratorio !== 'all' ? selectedLaboratorio as number : undefined)}
+                size="small"
+                color="secondary"
+              >
+                Compartir
+              </Button>
+            )}
+            
+            {onExport && (userRole === 'Jefe de Laboratorio' || userRole === 'Administrador') && (
+              <Button
+                variant="outlined"
+                startIcon={<Download />}
+                onClick={onExport}
+                size="small"
+                color="success"
+              >
+                Descargar
+              </Button>
+            )}
             
             {onNewHorario && (
               <Button
@@ -493,9 +540,13 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
         </Paper>
       </Collapse>
 
-      {/* Tabla de calendario */}
-      <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 300px)' }}>
-        <Table stickyHeader size="small">
+              {/* Tabla de calendario */}
+        <TableContainer 
+          id="calendario-exportable"
+          component={Paper} 
+          sx={{ maxHeight: 'calc(100vh - 300px)' }}
+        >
+          <Table stickyHeader size="small">
           <TableHead>
             <TableRow>
               <TableCell 
@@ -508,23 +559,30 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
               >
                 Hora
               </TableCell>
-              {DIAS_SEMANA.map((dia, index) => (
-                <TableCell 
-                  key={dia} 
-                  align="center"
-                  sx={{ 
-                    fontWeight: 'bold',
-                    backgroundColor: '#f5f5f5',
-                    minWidth: 180,
-                    borderRight: index < 4 ? '1px solid #e0e0e0' : 'none'
-                  }}
-                >
-                  <Typography variant="subtitle2">{dia}</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {currentWeek.add(index, 'day').format('DD/MM')}
-                  </Typography>
-                </TableCell>
-              ))}
+                              {DIAS_SEMANA.map((dia, index) => {
+                  const dayDate = currentWeek.add(index, 'day')
+                  const isToday = dayDate.isSame(dayjs(), 'day')
+                  return (
+                    <TableCell 
+                      key={dia} 
+                      align="center"
+                      sx={{ 
+                        fontWeight: 'bold',
+                        backgroundColor: isToday ? '#e3f2fd' : '#f5f5f5',
+                        minWidth: 180,
+                        borderRight: index < 6 ? '1px solid #e0e0e0' : 'none',
+                        borderTop: isToday ? '3px solid #2196f3' : 'none'
+                      }}
+                    >
+                      <Typography variant="subtitle2" sx={{ color: isToday ? '#1976d2' : 'inherit' }}>
+                        {dia}
+                      </Typography>
+                      <Typography variant="caption" color={isToday ? 'primary' : 'text.secondary'}>
+                        {dayDate.format('DD/MM')}
+                      </Typography>
+                    </TableCell>
+                  )
+                })}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -545,21 +603,25 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                     {block.start} - {block.end}
                   </Typography>
                 </TableCell>
-                {DIAS_SEMANA.map((_, diaIndex) => {
-                  const key = `${diaIndex}-${block.start}`
-                  const eventos = eventosPorDiaYHora[key] || []
-                  
-                  return (
-                    <TableCell 
-                      key={key}
-                      sx={{ 
-                        p: 0.5,
-                        borderRight: diaIndex < 4 ? '1px solid #e0e0e0' : 'none',
-                        verticalAlign: 'top',
-                        height: 60,
-                        backgroundColor: eventos.length > 0 ? '#fafafa' : 'white'
-                      }}
-                    >
+                                  {DIAS_SEMANA.map((_, diaIndex) => {
+                    const key = `${diaIndex}-${block.start}`
+                    const eventos = eventosPorDiaYHora[key] || []
+                    const dayDate = currentWeek.add(diaIndex, 'day')
+                    const isToday = dayDate.isSame(dayjs(), 'day')
+                    
+                    return (
+                      <TableCell 
+                        key={key}
+                        sx={{ 
+                          p: 0.3,
+                          borderRight: diaIndex < 6 ? '1px solid #e0e0e0' : 'none',
+                          verticalAlign: 'top',
+                          height: 42, // Reducido de 60 a 42 (30% menos)
+                          backgroundColor: eventos.length > 0 
+                            ? (isToday ? '#e8f4fd' : '#fafafa')
+                            : (isToday ? '#f3f8fe' : 'white')
+                        }}
+                      >
                       {eventos.map(evento => (
                         <Card
                           key={evento.id}
@@ -601,29 +663,16 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                             >
                               {evento.docente}
                             </Typography>
-                            <Typography 
-                              variant="caption" 
-                              sx={{ 
-                                display: 'block',
-                                fontSize: '0.65rem',
-                                opacity: 0.9
-                              }}
-                            >
-                              {evento.grupo}
-                            </Typography>
-                            {evento.horaInicio !== block.start && (
-                              <Typography 
+                                                          <Typography 
                                 variant="caption" 
                                 sx={{ 
                                   display: 'block',
-                                  fontSize: '0.6rem',
-                                  opacity: 0.85,
-                                  mt: 0.5
+                                  fontSize: '0.65rem',
+                                  opacity: 0.9
                                 }}
                               >
-                                {evento.horaInicio} - {evento.horaFin}
+                                {evento.grupo}
                               </Typography>
-                            )}
                           </CardContent>
                         </Card>
                       ))}
@@ -636,20 +685,34 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
         </Table>
       </TableContainer>
 
-      {/* Leyenda de colores */}
-      <Paper sx={{ p: 2, mt: 2 }}>
-        <Typography variant="subtitle2" gutterBottom>
-          Leyenda de Colores
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <Chip label="Reproductor" size="small" sx={{ backgroundColor: '#ff6b6b', color: 'white' }} />
-          <Chip label="Neurología" size="small" sx={{ backgroundColor: '#4ecdc4', color: 'white' }} />
-          <Chip label="Señalización" size="small" sx={{ backgroundColor: '#ffa726', color: 'white' }} />
-          <Chip label="Histología" size="small" sx={{ backgroundColor: '#ab47bc', color: 'white' }} />
-          <Chip label="FisioEx" size="small" sx={{ backgroundColor: '#26a69a', color: 'white' }} />
-          <Chip label="Otros" size="small" sx={{ backgroundColor: '#95a5a6', color: 'white' }} />
-        </Box>
-      </Paper>
+      {/* Leyenda de colores dinámicos */}
+      {horariosSemana.length > 0 && (
+        <Paper sx={{ p: 2, mt: 2 }}>
+          <Typography variant="subtitle2" gutterBottom>
+            Colores en esta semana
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            {Array.from(new Set(horariosSemana.map(h => h.color || getColorByTipo(h.descripcion))))
+              .map((color, index) => {
+                const horariosConEsteColor = horariosSemana.filter(h => 
+                  (h.color || getColorByTipo(h.descripcion)) === color
+                )
+                const primerHorario = horariosConEsteColor[0]
+                const descripcionTipo = primerHorario?.descripcion?.split(' ')[0] || 'Actividad'
+                
+                return (
+                  <Chip 
+                    key={color}
+                    label={`${descripcionTipo} (${horariosConEsteColor.length})`}
+                    size="small" 
+                    sx={{ backgroundColor: color, color: 'white' }} 
+                  />
+                )
+              })
+            }
+          </Box>
+        </Paper>
+      )}
 
       {/* Dialog para detalles del evento */}
       <Dialog 

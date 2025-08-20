@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Box,
   Card,
@@ -13,7 +14,8 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
-  Button
+  Button,
+  Snackbar
 } from '@mui/material'
 import {
   School,
@@ -35,10 +37,15 @@ import type { DashboardStats } from '../services/dashboardService'
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [horarioFormOpen, setHorarioFormOpen] = useState(false)
+  const [navigationSnackbar, setNavigationSnackbar] = useState({
+    open: false,
+    message: ''
+  })
 
   const fetchStats = async () => {
     try {
@@ -71,6 +78,25 @@ export const Dashboard: React.FC = () => {
   const handleHorarioFormSuccess = () => {
     setHorarioFormOpen(false)
     fetchStats() // Recargar estadísticas después de crear horario
+  }
+
+  const handleNavigateToLab = (laboratorioId: number, horarioId: number) => {
+    // Guardar información en localStorage para que el calendario sepa qué laboratorio mostrar
+    localStorage.setItem('dashboard_navigation', JSON.stringify({
+      laboratorioId,
+      horarioId,
+      timestamp: Date.now()
+    }))
+    
+    setNavigationSnackbar({
+      open: true,
+      message: 'Navegando al calendario semanal...'
+    })
+    
+    // Navegar a la página de horarios
+    setTimeout(() => {
+      navigate('/horarios')
+    }, 500)
   }
 
   useEffect(() => {
@@ -183,6 +209,7 @@ export const Dashboard: React.FC = () => {
         <CalendarView 
           onRefresh={fetchStats} 
           onNewHorario={handleNewHorario}
+          onNavigateToLab={handleNavigateToLab}
         />
       </Box>
 
@@ -278,6 +305,15 @@ export const Dashboard: React.FC = () => {
         open={horarioFormOpen}
         onClose={handleHorarioFormClose}
         onSuccess={handleHorarioFormSuccess}
+      />
+
+      {/* Snackbar de navegación */}
+      <Snackbar
+        open={navigationSnackbar.open}
+        autoHideDuration={1000}
+        onClose={() => setNavigationSnackbar({ open: false, message: '' })}
+        message={navigationSnackbar.message}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
     </Box>
   )

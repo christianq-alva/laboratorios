@@ -20,6 +20,8 @@ import { HorariosTable } from '../components/Horarios/HorariosTable'
 import { CalendarioSimple } from '../components/Horarios/CalendarioSimple'
 import { HorarioFormSimple as HorarioForm } from '../components/Horarios/HorarioFormSimple'
 import { HorarioDetalle } from '../components/Horarios/HorarioDetalle'
+import { ShareModal } from '../components/Share/ShareModal'
+import { ExportModal } from '../components/Export/ExportModal'
 import { horarioService } from '../services/horarioService'
 import type { Horario } from '../services/horarioService'
 
@@ -28,8 +30,13 @@ export const Horarios: React.FC = () => {
   const [formOpen, setFormOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [detalleOpen, setDetalleOpen] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const [selectedHorario, setSelectedHorario] = useState<Horario | null>(null)
   const [selectedHorarioId, setSelectedHorarioId] = useState<number | null>(null)
+  const [selectedLaboratorioId, setSelectedLaboratorioId] = useState<number | undefined>()
+  const [currentWeek, setCurrentWeek] = useState<Date>(new Date())
+  const [currentLaboratorioName, setCurrentLaboratorioName] = useState<string>('')
   const [refresh, setRefresh] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
   
@@ -81,6 +88,28 @@ export const Horarios: React.FC = () => {
   const handleDetalleClose = () => {
     setDetalleOpen(false)
     setSelectedHorarioId(null)
+  }
+
+  // Función para abrir modal de compartir
+  const handleShare = (laboratorioId?: number) => {
+    setSelectedLaboratorioId(laboratorioId)
+    setShareOpen(true)
+  }
+
+  // Función para cerrar modal de compartir
+  const handleShareClose = () => {
+    setShareOpen(false)
+    setSelectedLaboratorioId(undefined)
+  }
+
+  // Función para abrir modal de exportar
+  const handleExport = () => {
+    setExportOpen(true)
+  }
+
+  // Función para cerrar modal de exportar
+  const handleExportClose = () => {
+    setExportOpen(false)
   }
 
   // Función para confirmar eliminación
@@ -155,18 +184,22 @@ export const Horarios: React.FC = () => {
 
   return (
     <Box sx={{ width: '100%', maxWidth: '100%', padding: 0, margin: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
-              {/* Encabezado */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, px: 3, pt: 3 }}>
-        <Box>
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 600, mb: 1 }}>
+      {/* Encabezado compacto */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        px: 2, 
+        py: 1.5,
+        borderBottom: '1px solid #e0e0e0',
+        backgroundColor: '#fafafa'
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
             Horarios
           </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Gestiona las reservas de laboratorios y asignación de docentes
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          {/* Selector de vista */}
+          
+          {/* Selector de vista compacto */}
           <ToggleButtonGroup
             value={viewMode}
             exclusive
@@ -179,62 +212,49 @@ export const Horarios: React.FC = () => {
           >
             <ToggleButton value="calendar" aria-label="vista calendario">
               <CalendarMonth fontSize="small" />
-              Calendario
             </ToggleButton>
             <ToggleButton value="table" aria-label="vista tabla">
               <ViewList fontSize="small" />
-              Tabla
             </ToggleButton>
           </ToggleButtonGroup>
-          
+        </Box>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Button
             variant="contained"
             startIcon={<Add />}
             onClick={handleNewHorario}
-            sx={{ borderRadius: 2, px: 3 }}
+            size="small"
           >
-            Nuevo Horario
+            Nuevo
           </Button>
           
-          <Button
-            variant="outlined"
-            onClick={async () => {
-              try {
-                const result = await horarioService.debug()
-                console.log('🔍 DEBUG RESULT:', result)
-                if (result.success) {
-                  const info = result.debug_info
-                  const mensaje = `
-DEBUG COMPLETO:
-• Total reservas: ${info.total_reservas}
-• Con JOINs: ${info.reservas_con_joins}
-• Registros huérfanos: ${info.registros_huerfanos}
-• IDs inválidos: ${info.registros_con_ids_invalidos}
-
-${info.registros_huerfanos > 0 ? `⚠️ HAY ${info.registros_huerfanos} REGISTROS HUÉRFANOS` : '✅ TODOS LOS REGISTROS TIENEN DATOS COMPLETOS'}
-${info.registros_con_ids_invalidos > 0 ? `⚠️ HAY ${info.registros_con_ids_invalidos} REGISTROS CON IDs INVÁLIDOS` : '✅ TODOS LOS IDs SON VÁLIDOS'}
-                  `
-                  alert(mensaje)
-                  
-                  // Mostrar detalles en consola
-                  if (info.registros_huerfanos > 0) {
-                    console.log('🔍 Registros huérfanos:', info.registros_huerfanos_detalle)
+          {process.env.NODE_ENV === 'development' && (
+            <Button
+              variant="outlined"
+              onClick={async () => {
+                try {
+                  const result = await horarioService.debug()
+                  console.log('🔍 DEBUG RESULT:', result)
+                  if (result.success) {
+                    const info = result.debug_info
+                    const mensaje = `
+DEBUG: ${info.total_reservas} reservas, ${info.reservas_con_joins} con datos, ${info.registros_huerfanos} huérfanos`
+                    alert(mensaje)
+                  } else {
+                    alert('Error en debug: ' + result.message)
                   }
-                  if (info.registros_con_ids_invalidos > 0) {
-                    console.log('🔍 Registros con IDs inválidos:', info.registros_con_ids_invalidos_detalle)
-                  }
-                } else {
-                  alert('Error en debug: ' + result.message)
+                } catch (err) {
+                  console.error('Debug error:', err)
+                  alert('Error en debug')
                 }
-              } catch (err) {
-                console.error('Debug error:', err)
-                alert('Error en debug')
-              }
-            }}
-            sx={{ borderRadius: 2, px: 3 }}
-          >
-            Debug
-          </Button>
+              }}
+              size="small"
+              sx={{ minWidth: 'auto', px: 1 }}
+            >
+              Debug
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -245,6 +265,8 @@ ${info.registros_con_ids_invalidos > 0 ? `⚠️ HAY ${info.registros_con_ids_in
           onDelete={handleDeleteHorario}
           onView={handleViewHorario}
           onNewHorario={handleNewHorario}
+          onShare={handleShare}
+          onExport={handleExport}
           refresh={refresh}
           onRefreshComplete={handleRefreshComplete}
         />
@@ -275,6 +297,22 @@ ${info.registros_con_ids_invalidos > 0 ? `⚠️ HAY ${info.registros_con_ids_in
         open={detalleOpen}
         onClose={handleDetalleClose}
         horarioId={selectedHorarioId}
+      />
+
+      {/* Modal de compartir */}
+      <ShareModal
+        open={shareOpen}
+        onClose={handleShareClose}
+        selectedLaboratorioId={selectedLaboratorioId}
+      />
+
+      {/* Modal de exportar */}
+      <ExportModal
+        open={exportOpen}
+        onClose={handleExportClose}
+        elementId="calendario-exportable"
+        laboratorioNombre={currentLaboratorioName || 'Horarios Semanales'}
+        semanaInicio={currentWeek}
       />
 
       {/* Diálogo de eliminación */}

@@ -14,7 +14,7 @@ const timeToMinutes = (time: string): number => {
   return hours * 60 + minutes
 }
 
-// Bloques de tiempo académicos estándar
+// Bloques de tiempo académicos estándar (Lunes a Domingo)
 export const TIME_BLOCKS: TimeBlock[] = [
   { id: 'block-1', label: '1ra Hora', start: '07:30', end: '08:20', startMinutes: timeToMinutes('07:30'), endMinutes: timeToMinutes('08:20') },
   { id: 'block-2', label: '2da Hora', start: '08:25', end: '09:15', startMinutes: timeToMinutes('08:25'), endMinutes: timeToMinutes('09:15') },

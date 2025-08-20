@@ -41,10 +41,12 @@ dayjs.locale('es')
 interface CalendarViewProps {
   onRefresh?: () => void
   onNewHorario?: () => void
+  onNavigateToLab?: (laboratorioId: number, horarioId: number) => void
 }
 
 interface HorarioEvent {
   id: number
+  laboratorio_id: number
   title: string
   start: Dayjs
   end: Dayjs
@@ -53,13 +55,14 @@ interface HorarioEvent {
   grupo: string
   escuela: string
   descripcion: string
+  color?: string
   insumos?: Array<{
     nombre: string
     cantidad: number
   }>
 }
 
-export const CalendarView: React.FC<CalendarViewProps> = ({ onNewHorario }) => {
+export const CalendarView: React.FC<CalendarViewProps> = ({ onNewHorario, onNavigateToLab }) => {
   const [currentDate, setCurrentDate] = useState<Dayjs>(dayjs())
   const [horarios, setHorarios] = useState<HorarioEvent[]>([])
   const [loading, setLoading] = useState(false)
@@ -79,6 +82,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onNewHorario }) => {
       if (result.success) {
         const horariosFormateados: HorarioEvent[] = result.data.map((horario: Horario) => ({
           id: horario.id,
+          laboratorio_id: horario.laboratorio_id,
           title: `${horario.laboratorio || 'Lab'} - ${horario.docente || 'Docente'}`,
           start: dayjs(horario.fecha_inicio),
           end: dayjs(horario.fecha_fin),
@@ -87,6 +91,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onNewHorario }) => {
           grupo: horario.grupo || 'Grupo',
           escuela: horario.escuela || 'Escuela',
           descripcion: horario.descripcion,
+          color: horario.color,
           insumos: horario.insumos?.map(i => ({
             nombre: i.nombre,
             cantidad: i.cantidad_usada
@@ -209,15 +214,23 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onNewHorario }) => {
             >
               <Box
                 sx={{
-                  bgcolor: 'primary.main',
+                  bgcolor: horario.color || 'primary.main',
                   color: 'white',
                   p: 0.5,
                   borderRadius: 0.5,
                   fontSize: '0.7rem',
                   lineHeight: 1.2,
                   cursor: 'pointer',
+                  transition: 'all 0.2s ease',
                   '&:hover': {
-                    bgcolor: 'primary.dark'
+                    transform: 'scale(1.02)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                  }
+                }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (onNavigateToLab) {
+                    onNavigateToLab(horario.laboratorio_id, horario.id)
                   }
                 }}
               >
@@ -436,15 +449,32 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onNewHorario }) => {
                     </ListItemIcon>
                     <ListItemText
                       primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                            {horario.start.format('HH:mm')} - {horario.end.format('HH:mm')}
-                          </Typography>
-                          <Chip
-                            label={horario.laboratorio}
-                            color="primary"
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                              {horario.start.format('HH:mm')} - {horario.end.format('HH:mm')}
+                            </Typography>
+                            <Chip
+                              label={horario.laboratorio}
+                              sx={{ 
+                                backgroundColor: horario.color || '#4ecdc4',
+                                color: 'white'
+                              }}
+                              size="small"
+                            />
+                          </Box>
+                          <Button
+                            variant="outlined"
                             size="small"
-                          />
+                            onClick={() => {
+                              if (onNavigateToLab) {
+                                onNavigateToLab(horario.laboratorio_id, horario.id)
+                                setDialogOpen(false)
+                              }
+                            }}
+                          >
+                            Ver en Calendario
+                          </Button>
                         </Box>
                       }
                       secondary={
