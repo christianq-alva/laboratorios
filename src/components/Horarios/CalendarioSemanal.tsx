@@ -162,8 +162,25 @@ export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
         return
       }
       
-      const fechaInicio = new Date(horario.fecha_inicio)
-      const fechaFin = new Date(horario.fecha_fin)
+      // Procesar las fechas correctamente, considerando que vienen del backend en formato local
+      // Si la fecha viene con 'T', reemplazar por espacio para evitar problemas de zona horaria
+      const fechaInicioStr = horario.fecha_inicio.replace('T', ' ').split('.')[0].split('Z')[0]
+      const fechaFinStr = horario.fecha_fin.replace('T', ' ').split('.')[0].split('Z')[0]
+      
+      // Crear objetos Date asumiendo que las fechas son locales
+      const fechaInicio = new Date(fechaInicioStr.replace(' ', 'T'))
+      const fechaFin = new Date(fechaFinStr.replace(' ', 'T'))
+      
+      // Log de depuración para verificar las fechas
+      console.log('📅 Procesando horario:', {
+        id: horario.id,
+        fecha_inicio_original: horario.fecha_inicio,
+        fecha_fin_original: horario.fecha_fin,
+        fecha_inicio_procesada: fechaInicio.toISOString(),
+        fecha_fin_procesada: fechaFin.toISOString(),
+        fecha_inicio_local: fechaInicio.toLocaleString(),
+        fecha_fin_local: fechaFin.toLocaleString()
+      })
       
       // Crear título para el evento
       const title = `${horario.laboratorio || 'Laboratorio'} - ${horario.docente || 'Docente'}`

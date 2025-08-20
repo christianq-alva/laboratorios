@@ -1,0 +1,119 @@
+/* Estilos para el CalendarioSimple */
+
+/* Hacer que la tabla sea responsive */
+.calendario-simple-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* Estilos para las celdas con eventos */
+.calendario-evento {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.calendario-evento:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Colores de fondo alternados para mejor legibilidad */
+.calendario-table tbody tr:nth-child(even) {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Estilo para el header sticky */
+.calendario-header-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: #f5f5f5;
+}
+
+/* Ajustar altura mínima de las celdas */
+.calendario-cell {
+  min-height: 60px;
+  vertical-align: top;
+}
+
+/* Responsive para móviles */
+@media (max-width: 768px) {
+  .calendario-table {
+    font-size: 0.75rem;
+  }
+  
+  .calendario-cell {
+    min-width: 80px;
+    padding: 2px;
+  }
+  
+  .calendario-evento {
+    font-size: 0.65rem;
+  }
+}
+
+/* Estilo para la columna de horas */
+.hora-column {
+  background-color: #fafafa;
+  font-weight: 500;
+  position: sticky;
+  left: 0;
+  z-index: 50;
+}
+
+/* Animación suave para los filtros */
+.filtros-collapse {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Mejorar contraste de los chips de colores */
+.leyenda-chip {
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Estilo para días actuales */
+.dia-actual {
+  background-color: rgba(33, 150, 243, 0.08);
+  font-weight: bold;
+}
+
+/* Estilo para las tarjetas de eventos */
+.evento-card {
+  border-radius: 4px;
+  padding: 4px 6px;
+  margin: 2px;
+  font-size: 0.7rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Mejorar la visualización de múltiples eventos en una celda */
+.eventos-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+/* Scrollbar personalizado para la tabla */
+.calendario-table-container::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.calendario-table-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.calendario-table-container::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.calendario-table-container::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

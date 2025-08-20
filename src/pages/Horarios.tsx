@@ -17,7 +17,7 @@ import {
 } from '@mui/material'
 import { Add, Schedule, Warning, ViewList, CalendarMonth } from '@mui/icons-material'
 import { HorariosTable } from '../components/Horarios/HorariosTable'
-import { CalendarioSemanal } from '../components/Horarios/CalendarioSemanal'
+import { CalendarioSimple } from '../components/Horarios/CalendarioSimple'
 import { HorarioFormSimple as HorarioForm } from '../components/Horarios/HorarioFormSimple'
 import { HorarioDetalle } from '../components/Horarios/HorarioDetalle'
 import { horarioService } from '../services/horarioService'
@@ -240,7 +240,7 @@ ${info.registros_con_ids_invalidos > 0 ? `⚠️ HAY ${info.registros_con_ids_in
 
       {/* Contenido según el modo de vista */}
       {viewMode === 'calendar' ? (
-        <CalendarioSemanal
+        <CalendarioSimple
           onEdit={handleEditHorario}
           onDelete={handleDeleteHorario}
           onView={handleViewHorario}

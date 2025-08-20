@@ -47,6 +47,7 @@ import type {
   ConflictoHorario
 } from '../../services/horarioService'
 import type { Laboratorio } from '../../services/laboratorioService'
+import { TIME_BLOCKS, getBlockLabel, combineDateWithTime } from '../../utils/timeBlocks'
 
 interface HorarioFormProps {
   open: boolean
@@ -74,6 +75,11 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     cantidad_alumnos: 1,
     insumos: []
   })
+  
+  // Estados para los selectores de bloques de tiempo
+  const [selectedDate, setSelectedDate] = useState<string>('')
+  const [startBlockId, setStartBlockId] = useState<string>('')
+  const [endBlockId, setEndBlockId] = useState<string>('')
 
   // Estados para opciones de formulario
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
@@ -137,7 +143,29 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
   }
 
   const loadHorarioData = async (horarioData: Horario) => {
-    // Convertir fechas ISO a formato datetime-local
+    // Extraer fecha y hora de los datos del horario
+    const fechaInicio = new Date(horarioData.fecha_inicio)
+    const fechaFin = new Date(horarioData.fecha_fin)
+    
+    // Obtener la fecha (YYYY-MM-DD)
+    const year = fechaInicio.getFullYear()
+    const month = String(fechaInicio.getMonth() + 1).padStart(2, '0')
+    const day = String(fechaInicio.getDate()).padStart(2, '0')
+    const fecha = `${year}-${month}-${day}`
+    
+    // Obtener las horas
+    const horaInicio = `${String(fechaInicio.getHours()).padStart(2, '0')}:${String(fechaInicio.getMinutes()).padStart(2, '0')}`
+    const horaFin = `${String(fechaFin.getHours()).padStart(2, '0')}:${String(fechaFin.getMinutes()).padStart(2, '0')}`
+    
+    // Encontrar los bloques correspondientes
+    const startBlock = TIME_BLOCKS.find(b => b.start === horaInicio)
+    const endBlock = TIME_BLOCKS.find(b => b.end === horaFin)
+    
+    setSelectedDate(fecha)
+    setStartBlockId(startBlock?.id || '')
+    setEndBlockId(endBlock?.id || '')
+    
+    // Mantener las fechas completas en formData para compatibilidad
     const formatDateTimeLocal = (isoString: string) => {
       const date = new Date(isoString)
       const year = date.getFullYear()
@@ -198,6 +226,9 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       cantidad_alumnos: 1,
       insumos: []
     })
+    setSelectedDate('')
+    setStartBlockId('')
+    setEndBlockId('')
     setSelectedEscuela(0)
     setSelectedCiclo(0)
     setInsumosSeleccionados([])
@@ -293,9 +324,9 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
   const verificarDisponibilidad = async () => {
     if (formData.laboratorio_id && formData.docente_id && formData.fecha_inicio && formData.fecha_fin) {
       try {
-        // Convertir datetime-local a ISO string
-        const fechaInicio = new Date(formData.fecha_inicio).toISOString()
-        const fechaFin = new Date(formData.fecha_fin).toISOString()
+        // Mantener las fechas en formato local sin conversión a UTC
+        const fechaInicio = formData.fecha_inicio + ':00'
+        const fechaFin = formData.fecha_fin + ':00'
 
         const result = await horarioService.verificarDisponibilidad({
           laboratorio_id: formData.laboratorio_id,
@@ -334,7 +365,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
 
       return () => clearTimeout(timer)
     }
-  }, [formData.laboratorio_id, formData.docente_id, formData.fecha_inicio, formData.fecha_fin])
+  }, [formData.laboratorio_id, formData.docente_id, formData.fecha_inicio, formData.fecha_fin, selectedDate, startBlockId, endBlockId])
 
   // Manejo de insumos
   const agregarInsumo = (insumo: Insumo) => {
@@ -376,9 +407,10 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       setLoading(true)
       setError(null)
 
-      // Convertir datetime-local a ISO string
-      const fechaInicio = new Date(formData.fecha_inicio).toISOString()
-      const fechaFin = new Date(formData.fecha_fin).toISOString()
+      // Mantener las fechas en formato local sin conversión a UTC
+      // Esto evita problemas de zona horaria
+      const fechaInicio = formData.fecha_inicio + ':00'
+      const fechaFin = formData.fecha_fin + ':00'
 
       // Preparar datos finales - SOLO los campos que necesita el backend
       const finalData: CreateHorarioData = {
@@ -466,6 +498,9 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       formData.grupo_id > 0 &&
       formData.descripcion.trim() &&
       formData.cantidad_alumnos && formData.cantidad_alumnos > 0 &&
+      selectedDate &&
+      startBlockId &&
+      endBlockId &&
       formData.fecha_inicio &&
       formData.fecha_fin &&
       conflictos.length === 0
@@ -647,29 +682,145 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Schedule />
-                Fechas y Horas
+                Fecha y Horario Académico
               </Typography>
               
-              <Box sx={{ display: 'flex', gap: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {/* Selector de fecha */}
                 <TextField
-                  type="datetime-local"
-                  label="Fecha y hora de inicio"
-                  value={formData.fecha_inicio}
-                  onChange={(e) => setFormData(prev => ({ ...prev, fecha_inicio: e.target.value }))}
+                  type="date"
+                  label="Fecha de la clase"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    setSelectedDate(e.target.value)
+                    // Actualizar formData cuando cambian fecha y bloques
+                    if (e.target.value && startBlockId && endBlockId) {
+                      const startBlock = TIME_BLOCKS.find(b => b.id === startBlockId)
+                      const endBlock = TIME_BLOCKS.find(b => b.id === endBlockId)
+                      if (startBlock && endBlock) {
+                        setFormData(prev => ({
+                          ...prev,
+                          fecha_inicio: combineDateWithTime(e.target.value, startBlock.start),
+                          fecha_fin: combineDateWithTime(e.target.value, endBlock.end)
+                        }))
+                      }
+                    }
+                  }}
                   fullWidth
                   disabled={loading}
                   InputLabelProps={{ shrink: true }}
+                  helperText="Selecciona el día en que se realizará la actividad"
                 />
-
-                <TextField
-                  type="datetime-local"
-                  label="Fecha y hora de fin"
-                  value={formData.fecha_fin}
-                  onChange={(e) => setFormData(prev => ({ ...prev, fecha_fin: e.target.value }))}
-                  fullWidth
-                  disabled={loading}
-                  InputLabelProps={{ shrink: true }}
-                />
+                
+                {/* Selectores de bloques de tiempo */}
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <FormControl fullWidth>
+                    <InputLabel>Hora de inicio</InputLabel>
+                    <Select
+                      value={startBlockId}
+                      label="Hora de inicio"
+                      onChange={(e) => {
+                        const blockId = e.target.value as string
+                        setStartBlockId(blockId)
+                        
+                        // Si no hay bloque final seleccionado, poner el mismo
+                        if (!endBlockId) {
+                          setEndBlockId(blockId)
+                        }
+                        
+                        // Actualizar formData
+                        if (selectedDate && blockId) {
+                          const startBlock = TIME_BLOCKS.find(b => b.id === blockId)
+                          const endB = endBlockId ? TIME_BLOCKS.find(b => b.id === endBlockId) : startBlock
+                          if (startBlock && endB) {
+                            setFormData(prev => ({
+                              ...prev,
+                              fecha_inicio: combineDateWithTime(selectedDate, startBlock.start),
+                              fecha_fin: combineDateWithTime(selectedDate, endB.end)
+                            }))
+                          }
+                        }
+                      }}
+                      disabled={loading || !selectedDate}
+                    >
+                      {TIME_BLOCKS.map((block) => (
+                        <MenuItem key={block.id} value={block.id}>
+                          {getBlockLabel(block)}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  
+                  <FormControl fullWidth>
+                    <InputLabel>Hora de fin</InputLabel>
+                    <Select
+                      value={endBlockId}
+                      label="Hora de fin"
+                      onChange={(e) => {
+                        const blockId = e.target.value as string
+                        setEndBlockId(blockId)
+                        
+                        // Actualizar formData
+                        if (selectedDate && startBlockId && blockId) {
+                          const startBlock = TIME_BLOCKS.find(b => b.id === startBlockId)
+                          const endBlock = TIME_BLOCKS.find(b => b.id === blockId)
+                          if (startBlock && endBlock) {
+                            setFormData(prev => ({
+                              ...prev,
+                              fecha_inicio: combineDateWithTime(selectedDate, startBlock.start),
+                              fecha_fin: combineDateWithTime(selectedDate, endBlock.end)
+                            }))
+                          }
+                        }
+                      }}
+                      disabled={loading || !selectedDate || !startBlockId}
+                    >
+                      {TIME_BLOCKS.map((block, index) => {
+                        // Solo mostrar bloques desde el bloque de inicio en adelante
+                        const startIndex = TIME_BLOCKS.findIndex(b => b.id === startBlockId)
+                        const isDisabled = startBlockId && index < startIndex
+                        
+                        return (
+                          <MenuItem 
+                            key={block.id} 
+                            value={block.id}
+                            disabled={isDisabled}
+                          >
+                            {getBlockLabel(block)}
+                          </MenuItem>
+                        )
+                      })}
+                    </Select>
+                  </FormControl>
+                </Box>
+                
+                {/* Mostrar resumen del horario seleccionado */}
+                {selectedDate && startBlockId && endBlockId && (
+                  <Alert severity="info" icon={<Schedule />}>
+                    <Typography variant="body2">
+                      <strong>Horario seleccionado:</strong> {new Date(selectedDate).toLocaleDateString('es-ES', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
+                    </Typography>
+                    <Typography variant="body2">
+                      {(() => {
+                        const startBlock = TIME_BLOCKS.find(b => b.id === startBlockId)
+                        const endBlock = TIME_BLOCKS.find(b => b.id === endBlockId)
+                        const startIndex = TIME_BLOCKS.findIndex(b => b.id === startBlockId)
+                        const endIndex = TIME_BLOCKS.findIndex(b => b.id === endBlockId)
+                        const numBlocks = endIndex - startIndex + 1
+                        
+                        if (startBlock && endBlock) {
+                          return `De ${startBlock.start} a ${endBlock.end} (${numBlocks} ${numBlocks === 1 ? 'hora académica' : 'horas académicas'})`
+                        }
+                        return ''
+                      })()}
+                    </Typography>
+                  </Alert>
+                )}
               </Box>
 
               {/* Verificación de disponibilidad */}
