@@ -88,7 +88,7 @@ export const createShareLink = async (req, res) => {
     }
     
     // Construir URL pública
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
+    const baseUrl = process.env.FRONTEND_URL || 'https://beneficial-wholeness-production-9cd6.up.railway.app'
     const publicUrl = `${baseUrl}/horarios/publico/${laboratorio_id}?token=${shareToken}`
     
     res.json({

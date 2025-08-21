@@ -1,4 +1,5 @@
 import { api } from './api'
+import { config } from '../config/environment'
 
 export interface ShareLink {
   id: number
@@ -91,7 +92,7 @@ export const shareService = {
       console.log('🌐 Obteniendo horarios públicos:', { laboratorioId, token: token.substring(0, 20) + '...' })
       
       // Hacer petición directa sin el interceptor de autenticación
-      const baseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : ''
+      const baseUrl = config.isDevelopment ? 'http://localhost:3000' : config.baseUrl
       const response = await fetch(`${baseUrl}/api/share/public/${laboratorioId}?token=${encodeURIComponent(token)}`, {
         method: 'GET',
         headers: {

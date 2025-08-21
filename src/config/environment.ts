@@ -6,7 +6,7 @@ export const config = {
   
   // URL base del frontend
   baseUrl: import.meta.env.VITE_BASE_URL || 
-           (import.meta.env.DEV ? 'http://localhost:5173' : ''),
+           (import.meta.env.DEV ? 'http://localhost:5173' : 'https://beneficial-wholeness-production-9cd6.up.railway.app'),
   
   // Entorno
   isDevelopment: import.meta.env.DEV,
