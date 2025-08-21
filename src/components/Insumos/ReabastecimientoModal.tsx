@@ -20,8 +20,6 @@ import {
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
-  Divider,
-  Autocomplete,
   InputAdornment,
 } from '@mui/material'
 import {
@@ -37,7 +35,7 @@ import {
 } from '@mui/icons-material'
 import { insumoService, type Insumo } from '../../services/insumoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
-import { useAuth } from '../../context/authContext'
+
 
 interface ReabastecimientoModalProps {
   open: boolean
@@ -59,7 +57,7 @@ export const ReabastecimientoModal: React.FC<ReabastecimientoModalProps> = ({
   onClose,
   onSuccess
 }) => {
-  const { user } = useAuth()
+
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
   const [insumosDisponibles, setInsumosDisponibles] = useState<Insumo[]>([])
   const [selectedLaboratorio, setSelectedLaboratorio] = useState<number>(0)

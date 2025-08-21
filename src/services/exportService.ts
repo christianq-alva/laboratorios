@@ -24,15 +24,15 @@ export const exportService = {
 
       // Configurar opciones de captura
       const canvas = await html2canvas(element, {
-        backgroundColor: '#ffffff',
-        scale: options.quality || 2, // Mayor calidad
+        background: '#ffffff',
+        // scale: options.quality || 2, // Mayor calidad - Propiedad no soportada
         useCORS: true,
         allowTaint: true,
         logging: false,
         width: element.scrollWidth,
-        height: element.scrollHeight,
-        windowWidth: element.scrollWidth,
-        windowHeight: element.scrollHeight
+        height: element.scrollHeight
+        // windowWidth: element.scrollWidth, // Propiedad no soportada
+        // windowHeight: element.scrollHeight // Propiedad no soportada
       })
 
       // Generar nombre de archivo
@@ -69,8 +69,8 @@ export const exportService = {
 
       // Capturar como canvas primero
       const canvas = await html2canvas(element, {
-        backgroundColor: '#ffffff',
-        scale: 1.5, // Buena calidad para PDF
+        background: '#ffffff',
+        // scale: 1.5, // Buena calidad para PDF - Propiedad no soportada
         useCORS: true,
         allowTaint: true,
         logging: false
@@ -184,8 +184,8 @@ export const exportService = {
       }
 
       const canvas = await html2canvas(element, {
-        backgroundColor: '#ffffff',
-        scale: 0.5, // Baja calidad para preview rápido
+        background: '#ffffff',
+        // scale: 0.5, // Baja calidad para preview rápido - Propiedad no soportada
         useCORS: true,
         allowTaint: true,
         logging: false

@@ -13,13 +13,12 @@ import {
   Select,
   MenuItem,
   IconButton,
-  Alert,
-  Divider
+  Alert
 } from '@mui/material'
 import { Close, Add, Delete, LocationOn, Inventory, Info } from '@mui/icons-material'
 import { insumoService, type Insumo } from '../../services/insumoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
-import { useAuth } from '../../context/authContext'
+
 
 interface InsumoFormProps {
   open: boolean
@@ -40,7 +39,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
   onSuccess,
   insumo
 }) => {
-  const { user } = useAuth()
+
   const [formData, setFormData] = useState({
     nombre: '',
     descripcion: '',

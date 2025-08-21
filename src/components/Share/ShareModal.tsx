@@ -7,7 +7,6 @@ import {
   Button,
   Box,
   Typography,
-  TextField,
   IconButton,
   Alert,
   CircularProgress,
@@ -21,7 +20,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  InputAdornment,
   Tooltip,
 } from '@mui/material'
 import {
@@ -33,8 +31,6 @@ import {
   Visibility,
   LocationOn,
   Schedule,
-  CheckCircle,
-  Warning,
 } from '@mui/icons-material'
 import { shareService, type ShareLink } from '../../services/shareService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
@@ -178,13 +174,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     onClose()
   }
 
-  const getExpirationLabel = (days: number) => {
-    if (days === 7) return '1 semana'
-    if (days === 30) return '1 mes'
-    if (days === 90) return '3 meses'
-    if (days === 365) return '1 año'
-    return `${days} días`
-  }
+
 
   return (
     <Dialog 

@@ -12,8 +12,6 @@ import {
   TableRow,
   Chip,
   IconButton,
-  TextField,
-  InputAdornment,
   Alert,
   CircularProgress,
   Card,
@@ -28,8 +26,6 @@ import {
 import {
   LocationOn,
   Person,
-  Group,
-  Schedule,
   ChevronLeft,
   ChevronRight,
   Today,
@@ -146,7 +142,7 @@ export const HorarioPublico: React.FC = () => {
   const eventosPorDiaYHora = useMemo(() => {
     const eventos: Record<string, HorarioEventoPublico[]> = {}
     
-    DIAS_SEMANA.forEach((dia, diaIndex) => {
+    DIAS_SEMANA.forEach((_, diaIndex) => {
       TIME_BLOCKS.forEach(block => {
         const key = `${diaIndex}-${block.start}`
         eventos[key] = []
@@ -542,7 +538,7 @@ export const HorarioPublico: React.FC = () => {
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
               {Array.from(new Set(horariosSemana.map(h => h.color || getColorByTipo(h.descripcion))))
-                .map((color, index) => {
+                .map((color) => {
                   const horariosConEsteColor = horariosSemana.filter(h => 
                     (h.color || getColorByTipo(h.descripcion)) === color
                   )

@@ -24,7 +24,6 @@ import {
   Divider,
   Card,
   CardContent,
-  Tooltip,
   FormControl,
   InputLabel,
   Select,
@@ -39,7 +38,6 @@ import {
   Delete,
   Visibility,
   FilterList,
-  Search,
   ChevronLeft,
   ChevronRight,
   Today,
@@ -203,7 +201,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
   const eventosPorDiaYHora = useMemo(() => {
     const eventos: Record<string, HorarioEvento[]> = {}
     
-    DIAS_SEMANA.forEach((dia, diaIndex) => {
+    DIAS_SEMANA.forEach((_, diaIndex) => {
       TIME_BLOCKS.forEach(block => {
         const key = `${diaIndex}-${block.start}`
         eventos[key] = []
@@ -416,7 +414,6 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
             {(userRole === 'Jefe de Laboratorio' || userRole === 'Administrador') && selectedLaboratorio !== 'all' && (
               <Alert 
                 severity="info" 
-                size="small"
                 sx={{ 
                   py: 0.5, 
                   fontSize: '0.75rem',
@@ -586,7 +583,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
             </TableRow>
           </TableHead>
           <TableBody>
-            {TIME_BLOCKS.map((block, blockIndex) => (
+            {TIME_BLOCKS.map((block) => (
               <TableRow key={block.id} hover>
                 <TableCell 
                   sx={{ 
@@ -693,7 +690,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
           </Typography>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             {Array.from(new Set(horariosSemana.map(h => h.color || getColorByTipo(h.descripcion))))
-              .map((color, index) => {
+              .map((color) => {
                 const horariosConEsteColor = horariosSemana.filter(h => 
                   (h.color || getColorByTipo(h.descripcion)) === color
                 )

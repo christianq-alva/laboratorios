@@ -35,8 +35,8 @@ export const Horarios: React.FC = () => {
   const [selectedHorario, setSelectedHorario] = useState<Horario | null>(null)
   const [selectedHorarioId, setSelectedHorarioId] = useState<number | null>(null)
   const [selectedLaboratorioId, setSelectedLaboratorioId] = useState<number | undefined>()
-  const [currentWeek, setCurrentWeek] = useState<Date>(new Date())
-  const [currentLaboratorioName, setCurrentLaboratorioName] = useState<string>('')
+  const [currentWeek] = useState<Date>(new Date())
+  const [currentLaboratorioName] = useState<string>('')
   const [refresh, setRefresh] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
   

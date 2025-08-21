@@ -8,7 +8,6 @@ import {
   Typography,
   Alert,
   CircularProgress,
-  Avatar,
   Container,
   InputAdornment,
   IconButton,

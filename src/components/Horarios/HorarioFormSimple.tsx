@@ -114,7 +114,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
   const [loadingData, setLoadingData] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [conflictos, setConflictos] = useState<ConflictoHorario[]>([])
-  const [showInsumos, setShowInsumos] = useState(false)
+
   const [laboratorioChangeMessage, setLaboratorioChangeMessage] = useState<string | null>(null)
 
   const isEditing = Boolean(horario)
@@ -251,7 +251,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     setInsumosSeleccionados([])
     setConflictos([])
     setError(null)
-    setShowInsumos(false)
+
     setLaboratorioChangeMessage(null)
   }
 
@@ -361,7 +361,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
           const conflicto: ConflictoHorario = {
             tipo: result.tipo_conflicto || 'laboratorio',
             mensaje: result.motivo || 'Conflicto de horario',
-            detalles: result.detalles,
+            detalles: (result as any).detalles,
             horario_conflicto: result.conflicto_detalle
           }
           setConflictos([conflicto])
@@ -928,7 +928,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                       {TIME_BLOCKS.map((block, index) => {
                         // Solo mostrar bloques desde el bloque de inicio en adelante
                         const startIndex = TIME_BLOCKS.findIndex(b => b.id === startBlockId)
-                        const isDisabled = startBlockId && index < startIndex
+                        const isDisabled = Boolean(startBlockId && index < startIndex)
                         
                         return (
                           <MenuItem 
