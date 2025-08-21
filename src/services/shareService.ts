@@ -57,6 +57,7 @@ export const shareService = {
     try {
       console.log('🔗 Creando enlace compartible:', data)
       const response = await api.post('/share/create', data)
+      console.log('🔗 Respuesta del backend:', response.data)
       return response.data
     } catch (error: any) {
       console.error('❌ Error al crear enlace:', error)

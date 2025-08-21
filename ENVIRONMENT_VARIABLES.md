@@ -13,8 +13,9 @@ DB_NAME=your-mysql-database
 # JWT Secret
 JWT_SECRET=your-jwt-secret-key
 
-# URL del Frontend (para enlaces compartidos)
-FRONTEND_URL=https://beneficial-wholeness-production-9cd6.up.railway.app
+# Entorno de producción (CRÍTICO para enlaces compartidos)
+NODE_ENV=production
+RAILWAY_ENVIRONMENT=production
 
 # Puerto del servidor
 PORT=3000
@@ -38,9 +39,11 @@ VITE_BASE_URL=https://beneficial-wholeness-production-9cd6.up.railway.app
 
 ## Notas Importantes
 
-- La variable `FRONTEND_URL` es crucial para que los enlaces compartidos funcionen correctamente
-- Si cambias el dominio de Railway, actualiza tanto `FRONTEND_URL` como `VITE_BASE_URL`
-- El sistema detectará automáticamente si está en desarrollo o producción basándose en el hostname:
-  - `localhost` o `127.0.0.1` = Desarrollo
-  - Cualquier otro dominio = Producción
-- Los enlaces compartidos ahora se generarán con el dominio correcto automáticamente
+- **🚨 CRÍTICO para Enlaces Compartidos**: Configura estas variables en Railway:
+  - `NODE_ENV=production`
+  - `RAILWAY_ENVIRONMENT=production`
+- **Detección Automática de Entorno**:
+  - **Desarrollo**: URLs con `http://localhost:5173`
+  - **Producción**: URLs con `https://beneficial-wholeness-production-9cd6.up.railway.app`
+- **Debugging**: Los logs mostrarán qué entorno se detectó y por qué
+- **Sin estas variables**: Los enlaces tendrán localhost incluso en Railway
