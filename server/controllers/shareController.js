@@ -91,6 +91,8 @@ export const createShareLink = async (req, res) => {
     const baseUrl = 'https://beneficial-wholeness-production-9cd6.up.railway.app'
     const publicUrl = `${baseUrl}/horarios/publico/${laboratorio_id}?token=${shareToken}`
     
+    console.log('🔗 URL generada:', publicUrl)
+    
     res.json({
       success: true,
       data: {
@@ -364,3 +366,5 @@ export const deactivateShareLink = async (req, res) => {
     })
   }
 }
+
+

@@ -113,6 +113,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
       })
       
       if (result.success) {
+        console.log('🔗 URL recibida del backend:', result.data.url)
         setSuccess(`Enlace creado para ${result.data.laboratorio_nombre}`)
         
         // Recargar enlaces
