@@ -87,16 +87,21 @@ export const createShareLink = async (req, res) => {
       console.log('✅ Nuevo enlace creado:', shareId)
     }
     
-    // Construir URL pública - FORZAR DOMINIO DE RAILWAY
-    const baseUrl = 'https://beneficial-wholeness-production-9cd6.up.railway.app'
+    // Construir URL pública - Detectar entorno de manera robusta
+    const isProduction = process.env.RAILWAY_ENVIRONMENT || 
+                        process.env.NODE_ENV === 'production' || 
+                        process.env.RAILWAY_PROJECT_ID ||
+                        process.env.PORT // Railway siempre establece PORT
+    const baseUrl = isProduction ? 'https://beneficial-wholeness-production-9cd6.up.railway.app' : 'http://localhost:5173'
     const publicUrl = `${baseUrl}/horarios/publico/${laboratorio_id}?token=${shareToken}`
     
     console.log('🔗 URL generada:', publicUrl)
-    console.log('🔗 DOMINIO FORZADO: Railway')
-    console.log('🔗 Variables de entorno (solo para debug):', {
+    console.log('🔗 Entorno detectado:', isProduction ? 'PRODUCTION (Railway)' : 'DEVELOPMENT (Local)')
+    console.log('🔗 Variables de entorno:', {
       NODE_ENV: process.env.NODE_ENV,
       RAILWAY_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT,
-      RAILWAY_PROJECT_ID: !!process.env.RAILWAY_PROJECT_ID
+      RAILWAY_PROJECT_ID: !!process.env.RAILWAY_PROJECT_ID,
+      PORT: process.env.PORT
     })
     
     res.json({
