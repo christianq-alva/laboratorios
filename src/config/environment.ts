@@ -2,26 +2,25 @@
 export const config = {
   // URL base de la API
   apiUrl: import.meta.env.VITE_API_URL || 
-          (import.meta.env.DEV ? 'http://localhost:3000/api' : '/api'),
+          (window.location.hostname === 'localhost' ? 'http://localhost:3000/api' : '/api'),
   
   // URL base del frontend
   baseUrl: import.meta.env.VITE_BASE_URL || 
-           (import.meta.env.DEV ? 'http://localhost:5173' : 'https://beneficial-wholeness-production-9cd6.up.railway.app'),
+           (window.location.hostname === 'localhost' ? 'http://localhost:5173' : 'https://beneficial-wholeness-production-9cd6.up.railway.app'),
   
   // Entorno
-  isDevelopment: import.meta.env.DEV,
-  isProduction: import.meta.env.PROD,
+  isDevelopment: window.location.hostname === 'localhost',
+  isProduction: window.location.hostname !== 'localhost',
   
   // Configuración de la aplicación
   appName: 'Sistema de Laboratorios',
   version: '1.0.0'
 }
 
-// Log de configuración en desarrollo
-if (config.isDevelopment) {
-  console.log('🔧 Configuración de entorno:', {
-    apiUrl: config.apiUrl,
-    baseUrl: config.baseUrl,
-    environment: config.isDevelopment ? 'development' : 'production'
-  })
-}
+// Log de configuración
+console.log('🔧 Configuración de entorno:', {
+  apiUrl: config.apiUrl,
+  baseUrl: config.baseUrl,
+  environment: config.isDevelopment ? 'development' : 'production',
+  hostname: window.location.hostname
+})

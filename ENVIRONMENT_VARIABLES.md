@@ -40,4 +40,7 @@ VITE_BASE_URL=https://beneficial-wholeness-production-9cd6.up.railway.app
 
 - La variable `FRONTEND_URL` es crucial para que los enlaces compartidos funcionen correctamente
 - Si cambias el dominio de Railway, actualiza tanto `FRONTEND_URL` como `VITE_BASE_URL`
-- El sistema detectará automáticamente si está en desarrollo o producción
+- El sistema detectará automáticamente si está en desarrollo o producción basándose en el hostname:
+  - `localhost` o `127.0.0.1` = Desarrollo
+  - Cualquier otro dominio = Producción
+- Los enlaces compartidos ahora se generarán con el dominio correcto automáticamente
