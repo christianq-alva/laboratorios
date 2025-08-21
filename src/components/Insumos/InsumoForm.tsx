@@ -16,9 +16,10 @@ import {
   Alert,
   Divider
 } from '@mui/material'
-import { Close, Add, Delete } from '@mui/icons-material'
+import { Close, Add, Delete, LocationOn, Inventory, Info } from '@mui/icons-material'
 import { insumoService, type Insumo } from '../../services/insumoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
+import { useAuth } from '../../context/authContext'
 
 interface InsumoFormProps {
   open: boolean
@@ -39,6 +40,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
   onSuccess,
   insumo
 }) => {
+  const { user } = useAuth()
   const [formData, setFormData] = useState({
     nombre: '',
     descripcion: '',
@@ -48,15 +50,29 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
   const [stockInicial, setStockInicial] = useState<StockInicial[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<string>('')
 
   // Cargar laboratorios
   useEffect(() => {
     const loadLaboratorios = async () => {
       try {
         const response = await laboratorioService.getAll()
-        setLaboratorios(response.data)
+        if (response.success) {
+          setLaboratorios(response.data || [])
+          setUserRole(response.user_role || '')
+          
+          // Si es jefe de laboratorio con un solo lab, agregarlo automáticamente
+          if (response.user_role === 'Jefe de Laboratorio' && response.data?.length === 1) {
+            setStockInicial([{
+              laboratorio_id: response.data[0].id,
+              cantidad: 0,
+              observaciones: 'Nuevo ingreso'
+            }])
+          }
+        }
       } catch (err) {
         console.error('Error al cargar laboratorios:', err)
+        setError('Error al cargar laboratorios disponibles')
       }
     }
     
@@ -97,18 +113,44 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
 
   // Agregar stock inicial
   const handleAddStock = () => {
+    // Encontrar laboratorios que aún no han sido agregados
+    const laboratoriosUsados = stockInicial.map(s => s.laboratorio_id)
+    const laboratoriosDisponibles = laboratorios.filter(lab => !laboratoriosUsados.includes(lab.id))
+    
+    if (laboratoriosDisponibles.length === 0) {
+      setError('Ya has agregado todos tus laboratorios disponibles')
+      return
+    }
+    
+    const siguienteLaboratorio = laboratoriosDisponibles[0]
+    const tipoMovimiento = stockInicial.length === 0 ? 'Stock inicial' : 'Nuevo ingreso'
+    
     setStockInicial(prev => [...prev, {
-      laboratorio_id: laboratorios[0]?.id || 0,
+      laboratorio_id: siguienteLaboratorio.id,
       cantidad: 0,
-      observaciones: 'Stock inicial'
+      observaciones: tipoMovimiento
     }])
   }
 
   // Actualizar stock inicial
   const handleStockChange = (index: number, field: keyof StockInicial, value: any) => {
+    // Validar que no se repita el laboratorio
+    if (field === 'laboratorio_id') {
+      const yaExiste = stockInicial.some((item, i) => i !== index && item.laboratorio_id === value)
+      if (yaExiste) {
+        setError('Este laboratorio ya fue agregado. Selecciona otro laboratorio.')
+        return
+      }
+    }
+    
     setStockInicial(prev => prev.map((item, i) => 
       i === index ? { ...item, [field]: value } : item
     ))
+    
+    // Limpiar error si era por laboratorio duplicado
+    if (field === 'laboratorio_id' && error?.includes('ya fue agregado')) {
+      setError(null)
+    }
   }
 
   // Eliminar stock inicial
@@ -167,53 +209,91 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
   }
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="lg" 
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 1.5,
+          minHeight: '70vh'
+        }
+      }}
+    >
+      <DialogTitle sx={{ pb: 2, backgroundColor: '#f8f9fa' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">
-            {insumo ? 'Editar Insumo' : 'Nuevo Insumo'}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Inventory color="primary" />
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              {insumo ? 'Editar Insumo' : 'Nuevo Insumo'}
+            </Typography>
+            {userRole === 'Jefe de Laboratorio' && laboratorios.length > 1 && (
+              <Typography variant="caption" sx={{ 
+                backgroundColor: 'info.light', 
+                color: 'info.contrastText',
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                ml: 1
+              }}>
+                Múltiples laboratorios
+              </Typography>
+            )}
+          </Box>
           <IconButton onClick={onClose} size="small">
             <Close />
           </IconButton>
         </Box>
       </DialogTitle>
 
-      <DialogContent>
+      <DialogContent sx={{ p: 3 }}>
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" sx={{ mb: 3, borderRadius: 1.5 }}>
             {error}
           </Alert>
         )}
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {/* Información básica del insumo */}
-          <Box>
-            <Typography variant="h6" gutterBottom>
+          <Box sx={{ 
+            p: 3, 
+            backgroundColor: '#f0f7ff', 
+            borderRadius: 1.5,
+            border: '1px solid #e3f2fd'
+          }}>
+            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
+              <Info />
               Información del Insumo
             </Typography>
-          </Box>
-          
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            <TextField
-              label="Nombre del Insumo"
-              value={formData.nombre}
-              onChange={(e) => handleInputChange('nombre', e.target.value)}
-              required
-              sx={{ minWidth: 250, flex: 1 }}
-            />
             
-            <TextField
-              label="Unidad de Medida"
-              value={formData.unidad_medida}
-              onChange={(e) => handleInputChange('unidad_medida', e.target.value)}
-              placeholder="ej: unidades, kg, litros, etc."
-              required
-              sx={{ minWidth: 200 }}
-            />
-          </Box>
+            {userRole === 'Jefe de Laboratorio' && (
+              <Alert severity="info" sx={{ mb: 2, borderRadius: 1 }}>
+                <Typography variant="body2">
+                  Como jefe de laboratorio, puedes agregar insumos a {laboratorios.length === 1 ? 'tu laboratorio' : 'cualquiera de tus laboratorios asignados'}.
+                </Typography>
+              </Alert>
+            )}
           
-          <Box>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <TextField
+                label="Nombre del Insumo"
+                value={formData.nombre}
+                onChange={(e) => handleInputChange('nombre', e.target.value)}
+                required
+                sx={{ minWidth: 250, flex: 1 }}
+              />
+              
+              <TextField
+                label="Unidad de Medida"
+                value={formData.unidad_medida}
+                onChange={(e) => handleInputChange('unidad_medida', e.target.value)}
+                placeholder="ej: unidades, kg, litros, etc."
+                required
+                sx={{ minWidth: 200 }}
+              />
+            </Box>
+            
             <TextField
               fullWidth
               label="Descripción"
@@ -227,93 +307,167 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
 
           {/* Stock inicial (solo para nuevos insumos) */}
           {!insumo && (
-            <>
-              <Box>
-                <Divider sx={{ my: 2 }} />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="h6">
-                    Stock Inicial por Laboratorio
-                  </Typography>
+            <Box sx={{ 
+              p: 3, 
+              backgroundColor: '#f0fff4', 
+              borderRadius: 1.5,
+              border: '1px solid #e8f5e8'
+            }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'success.main' }}>
+                  <LocationOn />
+                  Stock por Laboratorio
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  {userRole === 'Jefe de Laboratorio' && laboratorios.length > 1 && stockInicial.length === 0 && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      color="success"
+                      onClick={() => {
+                        const todosLosLabs = laboratorios.map(lab => ({
+                          laboratorio_id: lab.id,
+                          cantidad: 0,
+                          observaciones: 'Stock inicial'
+                        }))
+                        setStockInicial(todosLosLabs)
+                      }}
+                    >
+                      Agregar a Todos
+                    </Button>
+                  )}
                   <Button
                     startIcon={<Add />}
                     onClick={handleAddStock}
-                    variant="outlined"
+                    variant="contained"
                     size="small"
+                    color="success"
+                    disabled={laboratorios.length === 0 || stockInicial.length >= laboratorios.length}
                   >
-                    Agregar Stock
+                    Agregar a Laboratorio
                   </Button>
                 </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Opcional: Puedes asignar stock inicial a laboratorios específicos
-                </Typography>
               </Box>
+              
+              {userRole === 'Jefe de Laboratorio' && laboratorios.length > 1 && (
+                <Alert severity="success" sx={{ mb: 2, borderRadius: 1 }}>
+                  <Typography variant="body2">
+                    Puedes agregar este insumo a cualquiera de tus {laboratorios.length} laboratorios asignados.
+                  </Typography>
+                </Alert>
+              )}
+              
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                {laboratorios.length === 1 
+                  ? 'Agrega la cantidad inicial de este insumo a tu laboratorio'
+                  : 'Selecciona los laboratorios donde quieres agregar este insumo y sus cantidades iniciales'
+                }
+              </Typography>
 
               {stockInicial.map((stock, index) => (
                 <Box key={index} sx={{ 
-                  p: 2, 
-                  border: 1, 
-                  borderColor: 'divider', 
-                  borderRadius: 1,
-                  display: 'flex',
-                  gap: 2,
-                  alignItems: 'center',
-                  flexWrap: 'wrap'
+                  p: 3, 
+                  backgroundColor: 'white',
+                  border: '1px solid #e0e0e0', 
+                  borderRadius: 1.5,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                  mb: 2
                 }}>
-                  <FormControl sx={{ minWidth: 200 }}>
-                    <InputLabel>Laboratorio</InputLabel>
-                    <Select
-                      value={stock.laboratorio_id}
-                      label="Laboratorio"
-                      onChange={(e) => handleStockChange(index, 'laboratorio_id', e.target.value)}
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'success.main' }}>
+                      Laboratorio #{index + 1}
+                    </Typography>
+                    <IconButton 
+                      onClick={() => handleRemoveStock(index)}
+                      color="error"
+                      size="small"
+                      sx={{ 
+                        '&:hover': { 
+                          backgroundColor: 'error.light',
+                          transform: 'scale(1.1)'
+                        }
+                      }}
                     >
-                      {laboratorios.map((lab) => (
-                        <MenuItem key={lab.id} value={lab.id}>
-                          {lab.nombre}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                      <Delete />
+                    </IconButton>
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                    <FormControl sx={{ minWidth: 250, flex: 1 }}>
+                      <InputLabel>Laboratorio</InputLabel>
+                      <Select
+                        value={stock.laboratorio_id}
+                        label="Laboratorio"
+                        onChange={(e) => handleStockChange(index, 'laboratorio_id', e.target.value)}
+                      >
+                        {laboratorios.map((lab) => (
+                          <MenuItem key={lab.id} value={lab.id}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <LocationOn fontSize="small" />
+                              <Box>
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                  {lab.nombre}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {lab.ubicacion} {lab.escuela && `• ${lab.escuela}`}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
 
-                  <TextField
-                    label="Cantidad"
-                    type="number"
-                    value={stock.cantidad}
-                    onChange={(e) => handleStockChange(index, 'cantidad', parseInt(e.target.value) || 0)}
-                    sx={{ width: 120 }}
-                  />
+                    <TextField
+                      label="Cantidad inicial"
+                      type="number"
+                      value={stock.cantidad}
+                      onChange={(e) => handleStockChange(index, 'cantidad', parseInt(e.target.value) || 0)}
+                      inputProps={{ min: 0 }}
+                      sx={{ width: 150 }}
+                      helperText="Unidades disponibles"
+                    />
 
-                  <TextField
-                    label="Observaciones"
-                    value={stock.observaciones}
-                    onChange={(e) => handleStockChange(index, 'observaciones', e.target.value)}
-                    sx={{ flexGrow: 1, minWidth: 200 }}
-                  />
-
-                  <IconButton 
-                    onClick={() => handleRemoveStock(index)}
-                    color="error"
-                    size="small"
-                  >
-                    <Delete />
-                  </IconButton>
+                    <TextField
+                      label="Motivo del ingreso"
+                      value={stock.observaciones}
+                      onChange={(e) => handleStockChange(index, 'observaciones', e.target.value)}
+                      sx={{ flex: 1, minWidth: 200 }}
+                      placeholder="ej: Compra, Donación, Reabastecimiento"
+                      helperText="Razón del ingreso de stock"
+                    />
+                  </Box>
                 </Box>
               ))}
 
               {stockInicial.length === 0 && (
                 <Box sx={{ 
-                  p: 3, 
+                  p: 4, 
                   border: 2, 
-                  borderColor: 'grey.200', 
+                  borderColor: 'success.light', 
                   borderStyle: 'dashed',
-                  borderRadius: 1,
-                  textAlign: 'center'
+                  borderRadius: 1.5,
+                  textAlign: 'center',
+                  backgroundColor: '#fafffe'
                 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    No se ha agregado stock inicial. El insumo se creará sin stock en ningún laboratorio.
+                  <LocationOn sx={{ fontSize: 48, color: 'success.light', mb: 1 }} />
+                  <Typography variant="body1" sx={{ fontWeight: 500, mb: 1 }}>
+                    Agregar a Laboratorios
                   </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Haz clic en "Agregar a Laboratorio" para asignar stock inicial a laboratorios específicos.
+                    {userRole === 'Jefe de Laboratorio' && laboratorios.length > 1 && (
+                      <><br />Puedes agregar el mismo insumo a múltiples laboratorios con diferentes cantidades.</>
+                    )}
+                  </Typography>
+                  {laboratorios.length === 0 && (
+                    <Alert severity="warning" sx={{ mt: 2, borderRadius: 1 }}>
+                      No tienes laboratorios asignados para agregar insumos
+                    </Alert>
+                  )}
                 </Box>
               )}
-            </>
+            </Box>
           )}
         </Box>
       </DialogContent>

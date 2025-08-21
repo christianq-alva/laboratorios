@@ -62,17 +62,17 @@ interface HorarioEventoPublico {
   cantidad_alumnos?: number
 }
 
-// Colores por tipo de actividad (mismo que el calendario privado)
+// Colores por tipo de actividad - Paleta UPeU
 const getColorByTipo = (descripcion: string | null | undefined): string => {
-  if (!descripcion) return '#95a5a6'
+  if (!descripcion) return '#6b7280' // Gris
   
   const desc = descripcion.toLowerCase()
-  if (desc.includes('reproductor')) return '#ff6b6b'
-  if (desc.includes('neurología') || desc.includes('neurologia')) return '#4ecdc4'
-  if (desc.includes('señalización') || desc.includes('señalizacion')) return '#ffa726'
-  if (desc.includes('histología') || desc.includes('histologia')) return '#ab47bc'
-  if (desc.includes('fisioex') || desc.includes('physioex')) return '#26a69a'
-  return '#95a5a6'
+  if (desc.includes('reproductor')) return '#d32f2f' // Rojo
+  if (desc.includes('neurología') || desc.includes('neurologia')) return '#2e5984' // Azul medio
+  if (desc.includes('señalización') || desc.includes('señalizacion')) return '#f4a900' // Dorado UPeU
+  if (desc.includes('histología') || desc.includes('histologia')) return '#4a6fa5' // Azul claro
+  if (desc.includes('fisioex') || desc.includes('physioex')) return '#2e7d32' // Verde
+  return '#1e3a5f' // Azul UPeU por defecto
 }
 
 const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']

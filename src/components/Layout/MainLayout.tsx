@@ -79,12 +79,17 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const drawer = (
     <Box>
       {/* Header del Sidebar */}
-      <Box sx={{ p: 2, textAlign: 'center', backgroundColor: 'primary.main', color: 'white' }}>
+      <Box sx={{ 
+        p: 2, 
+        textAlign: 'center', 
+        background: 'linear-gradient(135deg, #1e3a5f 0%, #2e5984 100%)',
+        color: 'white' 
+      }}>
         <Typography variant="h6" component="div" fontWeight={600}>
           Sistema Laboratorios
         </Typography>
-        <Typography variant="body2" sx={{ opacity: 0.8, mt: 0.5 }}>
-          Universidad ABC
+        <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.5, color: '#ffc947' }}>
+          Universidad Peruana Unión
         </Typography>
       </Box>
 

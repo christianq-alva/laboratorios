@@ -227,3 +227,142 @@ export const getActividadInsumos = async (req, res) => {
     res.status(500).json({ success: false, message: error.message })
   }
 }
+
+export const reabastecimientoInsumos = async (req, res) => {
+  const connection = await pool.getConnection()
+  
+  try {
+    await connection.beginTransaction()
+    
+    const { laboratorio_id, motivo_general, insumos } = req.body
+    const userId = req.user.userId
+    
+    console.log('📦 Procesando reabastecimiento:', { laboratorio_id, motivo_general, insumos_count: insumos?.length })
+    
+    // Validaciones
+    if (!laboratorio_id || !insumos || !Array.isArray(insumos) || insumos.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Datos incompletos: laboratorio_id e insumos son requeridos'
+      })
+    }
+    
+    // Verificar permisos del usuario sobre el laboratorio
+    if (req.user.rol === 'Jefe de Laboratorio') {
+      if (!req.user.laboratorio_ids.includes(parseInt(laboratorio_id))) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permisos para agregar insumos a este laboratorio'
+        })
+      }
+    }
+    
+    // Verificar que el laboratorio existe
+    const [labCheck] = await connection.execute(
+      'SELECT id, nombre FROM laboratorios WHERE id = ?',
+      [laboratorio_id]
+    )
+    
+    if (labCheck.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Laboratorio no encontrado'
+      })
+    }
+    
+    const laboratorioNombre = labCheck[0].nombre
+    let insumosActualizados = 0
+    
+    // Procesar cada insumo
+    for (const insumoData of insumos) {
+      const { insumo_id, cantidad, observaciones } = insumoData
+      
+      console.log('🔍 Procesando insumo:', { insumo_id, cantidad, observaciones })
+      
+      if (!insumo_id || cantidad <= 0) {
+        console.log('⚠️ Saltando insumo con datos inválidos:', insumoData)
+        continue
+      }
+      
+      // Verificar que el insumo existe
+      const [insumoCheck] = await connection.execute(
+        'SELECT id, nombre FROM insumos WHERE id = ?',
+        [insumo_id]
+      )
+      
+      if (insumoCheck.length === 0) {
+        console.log('⚠️ Insumo no encontrado:', insumo_id)
+        continue
+      }
+      
+      // Verificar si ya existe stock para este insumo en este laboratorio
+      const [stockExistente] = await connection.execute(
+        'SELECT cantidad FROM inventario_insumos WHERE insumo_id = ? AND laboratorio_id = ?',
+        [insumo_id, laboratorio_id]
+      )
+      
+      console.log('📦 Stock existente:', stockExistente.length > 0 ? stockExistente[0] : 'No existe')
+      
+      if (stockExistente.length > 0) {
+        // Actualizar stock existente
+        console.log('🔄 Actualizando stock existente...')
+        await connection.execute(`
+          UPDATE inventario_insumos 
+          SET cantidad = cantidad + ?
+          WHERE insumo_id = ? AND laboratorio_id = ?
+        `, [cantidad, insumo_id, laboratorio_id])
+        console.log('✅ Stock actualizado')
+      } else {
+        // Crear nuevo registro de stock
+        console.log('🆕 Creando nuevo registro de stock...')
+        await connection.execute(`
+          INSERT INTO inventario_insumos (insumo_id, laboratorio_id, cantidad)
+          VALUES (?, ?, ?)
+        `, [insumo_id, laboratorio_id, cantidad])
+        console.log('✅ Nuevo stock creado')
+      }
+      
+      // Registrar movimiento en el historial
+      console.log('📝 Registrando movimiento...', { insumo_id, laboratorio_id, cantidad, userId })
+      try {
+        await connection.execute(`
+          INSERT INTO movimientos_insumos 
+          (insumo_id, laboratorio_id, tipo_movimiento, cantidad, observaciones, usuario_id, fecha_movimiento)
+          VALUES (?, ?, 'entrada', ?, ?, ?, NOW())
+        `, [insumo_id, laboratorio_id, cantidad, observaciones || motivo_general, userId || 1])
+        console.log('✅ Movimiento registrado')
+      } catch (movError) {
+        console.error('❌ Error al registrar movimiento:', movError.message)
+        // Continuar sin fallar el reabastecimiento
+      }
+      
+      insumosActualizados++
+      console.log(`✅ Insumo ${insumoCheck[0].nombre} reabastecido: +${cantidad}`)
+    }
+    
+    await connection.commit()
+    
+    console.log(`🎉 Reabastecimiento completado: ${insumosActualizados} insumos actualizados`)
+    
+    res.json({
+      success: true,
+      message: `Reabastecimiento completado exitosamente en ${laboratorioNombre}`,
+      data: {
+        laboratorio_id: parseInt(laboratorio_id),
+        laboratorio_nombre: laboratorioNombre,
+        insumos_actualizados: insumosActualizados,
+        motivo: motivo_general
+      }
+    })
+    
+  } catch (error) {
+    await connection.rollback()
+    console.error('❌ Error en reabastecimiento:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Error interno al procesar reabastecimiento'
+    })
+  } finally {
+    connection.release()
+  }
+}

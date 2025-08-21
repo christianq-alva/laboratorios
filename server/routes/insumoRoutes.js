@@ -4,7 +4,8 @@ import { authorize } from '../middleware/authorize.js'
 import { 
   getInsumos, 
   createInsumo,
-  getActividadInsumos
+  getActividadInsumos,
+  reabastecimientoInsumos
 } from '../controllers/insumoController.js'
 
 const router = express.Router()
@@ -25,6 +26,12 @@ router.get('/actividad',
   authenticateToken,
   authorize('read', 'Insumo'),
   getActividadInsumos
+)
+
+router.post('/reabastecimiento', 
+  authenticateToken,
+  authorize('create', 'Insumo'),
+  reabastecimientoInsumos
 )
 
 export default router

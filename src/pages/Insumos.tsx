@@ -13,10 +13,11 @@ import {
   DialogActions,
   CircularProgress
 } from '@mui/material'
-import { Add, Warning, History } from '@mui/icons-material'
+import { Add, Warning, History, TrendingUp } from '@mui/icons-material'
 import { InsumosTable } from '../components/Insumos/InsumosTable'
 import { InsumoForm } from '../components/Insumos/InsumoForm'
 import { ActividadInsumos } from '../components/Insumos/ActividadInsumos'
+import { ReabastecimientoModal } from '../components/Insumos/ReabastecimientoModal'
 import type { Insumo } from '../services/insumoService'
 
 export const Insumos: React.FC = () => {
@@ -27,6 +28,7 @@ export const Insumos: React.FC = () => {
   const [refresh, setRefresh] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [actividadOpen, setActividadOpen] = useState(false)
+  const [reabastecimientoOpen, setReabastecimientoOpen] = useState(false)
   
   // Estados para notificaciones
   const [snackbar, setSnackbar] = useState({
@@ -120,6 +122,26 @@ export const Insumos: React.FC = () => {
     // Esta función se ejecuta cuando la tabla termina de refrescar
   }
 
+  // Función para abrir reabastecimiento
+  const handleOpenReabastecimiento = () => {
+    setReabastecimientoOpen(true)
+  }
+
+  // Función para cerrar reabastecimiento
+  const handleCloseReabastecimiento = () => {
+    setReabastecimientoOpen(false)
+  }
+
+  // Función para éxito de reabastecimiento
+  const handleReabastecimientoSuccess = () => {
+    setRefresh(prev => !prev)
+    setSnackbar({
+      open: true,
+      message: 'Reabastecimiento procesado correctamente',
+      severity: 'success'
+    })
+  }
+
   // Función para cerrar snackbar
   const handleSnackbarClose = () => {
     setSnackbar(prev => ({ ...prev, open: false }))
@@ -156,6 +178,17 @@ export const Insumos: React.FC = () => {
           >
             Actividad
           </Button>
+          
+          <Button
+            variant="outlined"
+            startIcon={<TrendingUp />}
+            onClick={handleOpenReabastecimiento}
+            sx={{ borderRadius: 2, px: 3 }}
+            color="success"
+          >
+            Reabastecimiento
+          </Button>
+          
           <Button
             variant="contained"
             startIcon={<Add />}
@@ -233,6 +266,13 @@ export const Insumos: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Modal de reabastecimiento */}
+      <ReabastecimientoModal
+        open={reabastecimientoOpen}
+        onClose={handleCloseReabastecimiento}
+        onSuccess={handleReabastecimientoSuccess}
+      />
 
       {/* Snackbar para notificaciones */}
       <Snackbar 

@@ -110,6 +110,26 @@ class InsumoService {
       throw new Error(error.response?.data?.message || 'Error al obtener actividad de insumos')
     }
   }
+
+  // Reabastecimiento de insumos
+  async reabastecimiento(data: {
+    laboratorio_id: number
+    motivo_general: string
+    insumos: Array<{
+      insumo_id: number
+      cantidad: number
+      observaciones?: string
+    }>
+  }): Promise<{ success: boolean; message: string; data: any }> {
+    try {
+      console.log('📦 Enviando reabastecimiento:', data)
+      const response = await api.post('/insumos/reabastecimiento', data)
+      return response.data
+    } catch (error: any) {
+      console.error('Error al procesar reabastecimiento:', error)
+      throw new Error(error.response?.data?.message || 'Error al procesar reabastecimiento')
+    }
+  }
 }
 
 export const insumoService = new InsumoService() 

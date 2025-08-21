@@ -4,22 +4,39 @@ export const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#1976d2',
-      light: '#42a5f5',
-      dark: '#1565c0',
+      main: '#1e3a5f', // Azul oscuro del logo UPeU
+      light: '#4a6fa5',
+      dark: '#0f1e2d',
+      contrastText: '#ffffff',
     },
     secondary: {
-      main: '#9c27b0',
-      light: '#ba68c8',
-      dark: '#7b1fa2',
+      main: '#f4a900', // Dorado/naranja del logo UPeU
+      light: '#ffc947',
+      dark: '#b8790a',
+      contrastText: '#ffffff',
+    },
+    info: {
+      main: '#2e5984', // Azul medio UPeU
+      light: '#5a7fa8',
+      dark: '#1a3a5c',
+    },
+    success: {
+      main: '#2e7d32',
+      light: '#4caf50',
+      dark: '#1b5e20',
+    },
+    warning: {
+      main: '#f4a900', // Mismo que secondary para consistencia
+      light: '#ffc947',
+      dark: '#b8790a',
     },
     background: {
-      default: '#f5f5f5',
+      default: '#fafbfc', // Fondo más suave
       paper: '#ffffff',
     },
     text: {
-      primary: '#212121',
-      secondary: '#757575',
+      primary: '#1e3a5f', // Texto principal en azul oscuro UPeU
+      secondary: '#6b7280',
     },
   },
   typography: {
