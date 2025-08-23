@@ -17,11 +17,6 @@ JWT_SECRET=your-jwt-secret-key
 NODE_ENV=production
 RAILWAY_ENVIRONMENT=production
 
-# URL del frontend (CRÍTICO para enlaces compartidos)
-FRONTEND_URL=https://your-railway-domain.up.railway.app
-# O alternativamente:
-VITE_BASE_URL=https://your-railway-domain.up.railway.app
-
 # Puerto del servidor
 PORT=3000
 ```
@@ -47,22 +42,8 @@ VITE_BASE_URL=https://beneficial-wholeness-production-9cd6.up.railway.app
 - **🚨 CRÍTICO para Enlaces Compartidos**: Configura estas variables en Railway:
   - `NODE_ENV=production`
   - `RAILWAY_ENVIRONMENT=production`
-  - `FRONTEND_URL=https://tu-dominio-railway.up.railway.app` (reemplaza con tu dominio real)
-
-- **Configuración de URL del Frontend**:
-  - **Opción 1**: `FRONTEND_URL` - URL completa del frontend
-  - **Opción 2**: `VITE_BASE_URL` - URL base del frontend
-  - **Fallback**: Si no se configuran, usa el dominio hardcodeado
-
 - **Detección Automática de Entorno**:
   - **Desarrollo**: URLs con `http://localhost:5173`
-  - **Producción**: URLs dinámicas basadas en variables de entorno
-
-- **Debugging**: Los logs mostrarán qué entorno se detectó y qué URL se generó
-
-- **Sin estas variables**: Los enlaces pueden usar localhost o el dominio hardcodeado
-
-- **Para obtener tu dominio de Railway**:
-  1. Ve a tu proyecto en Railway
-  2. En la pestaña "Deployments", copia la URL del deployment
-  3. Úsala como valor para `FRONTEND_URL`
+  - **Producción**: URLs con `https://beneficial-wholeness-production-9cd6.up.railway.app`
+- **Debugging**: Los logs mostrarán qué entorno se detectó y por qué
+- **Sin estas variables**: Los enlaces tendrán localhost incluso en Railway
