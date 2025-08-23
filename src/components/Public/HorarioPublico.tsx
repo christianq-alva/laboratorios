@@ -103,9 +103,9 @@ export const HorarioPublico: React.FC = () => {
         
         const data = await shareService.getPublicHorarios(parseInt(laboratorio_id), token)
         setPublicData(data)
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error al cargar datos públicos:', err)
-        setError(err.message || 'Error al cargar horarios públicos')
+        setError(err instanceof Error ? err.message : 'Error al cargar horarios públicos')
       } finally {
         setLoading(false)
       }
