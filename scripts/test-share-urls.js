@@ -20,20 +20,29 @@ function generateShareUrl(laboratorioId, token, envVars = {}) {
     PORT: envVars.PORT
   }
 
-  // Detectar entorno (misma lógica que el controller)
+  // Detectar entorno (misma lógica que el controller) - PRIORIDAD A PRODUCCIÓN
   const isProduction = mockEnv.RAILWAY_ENVIRONMENT || 
                       mockEnv.NODE_ENV === 'production' || 
                       mockEnv.RAILWAY_PROJECT_ID ||
-                      mockEnv.PORT
+                      mockEnv.PORT || // Railway siempre establece PORT
+                      mockEnv.FRONTEND_URL || // Si hay FRONTEND_URL, asumir producción
+                      mockEnv.VITE_BASE_URL   // Si hay VITE_BASE_URL, asumir producción
 
-  // Construir URL base
-  let baseUrl
-  if (isProduction) {
-    baseUrl = mockEnv.FRONTEND_URL || 
-              mockEnv.VITE_BASE_URL || 
-              (mockEnv.RAILWAY_STATIC_URL ? `https://${mockEnv.RAILWAY_STATIC_URL}` : null) ||
-              'https://beneficial-wholeness-production-9cd6.up.railway.app'
-  } else {
+  // PRIORIZAR SIEMPRE URLs DE PRODUCCIÓN
+  let baseUrl = mockEnv.FRONTEND_URL || 
+                mockEnv.VITE_BASE_URL || 
+                (mockEnv.RAILWAY_STATIC_URL ? `https://${mockEnv.RAILWAY_STATIC_URL}` : null) ||
+                'https://beneficial-wholeness-production-9cd6.up.railway.app'
+  
+  // Solo usar localhost si EXPLÍCITAMENTE está en desarrollo local
+  const isExplicitLocalDev = mockEnv.NODE_ENV === 'development' && 
+                            !mockEnv.RAILWAY_ENVIRONMENT && 
+                            !mockEnv.RAILWAY_PROJECT_ID && 
+                            !mockEnv.PORT && 
+                            !mockEnv.FRONTEND_URL && 
+                            !mockEnv.VITE_BASE_URL
+  
+  if (isExplicitLocalDev) {
     baseUrl = 'http://localhost:5173'
   }
 
@@ -41,6 +50,7 @@ function generateShareUrl(laboratorioId, token, envVars = {}) {
 
   return {
     isProduction,
+    isExplicitLocalDev,
     baseUrl,
     publicUrl,
     envVars: mockEnv
@@ -113,8 +123,17 @@ testCases.forEach((testCase, index) => {
   const result = generateShareUrl(laboratorioId, sampleToken, testCase.envVars)
   
   console.log(`   Entorno detectado: ${result.isProduction ? 'PRODUCCIÓN' : 'DESARROLLO'}`)
+  console.log(`   Desarrollo local explícito: ${result.isExplicitLocalDev ? 'SÍ' : 'NO'}`)
   console.log(`   Base URL: ${result.baseUrl}`)
   console.log(`   URL completa: ${result.publicUrl}`)
+  
+  // Mostrar razón de la URL elegida
+  const reason = testCase.envVars.FRONTEND_URL ? 'FRONTEND_URL configurada' :
+                testCase.envVars.VITE_BASE_URL ? 'VITE_BASE_URL configurada' :
+                testCase.envVars.RAILWAY_STATIC_URL ? 'RAILWAY_STATIC_URL configurada' :
+                result.isExplicitLocalDev ? 'Desarrollo local explícito' :
+                'URL de producción por defecto (hardcodeada)'
+  console.log(`   Razón: ${reason}`)
   
   // Validar URL
   const isValidUrl = result.publicUrl.startsWith('http')

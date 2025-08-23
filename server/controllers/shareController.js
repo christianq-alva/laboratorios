@@ -87,22 +87,30 @@ export const createShareLink = async (req, res) => {
       console.log('✅ Nuevo enlace creado:', shareId)
     }
     
-    // Construir URL pública - Detectar entorno de manera robusta
+    // Construir URL pública - PRIORIDAD ABSOLUTA A PRODUCCIÓN
+    // Detectar entorno de manera más agresiva
     const isProduction = process.env.RAILWAY_ENVIRONMENT || 
                         process.env.NODE_ENV === 'production' || 
                         process.env.RAILWAY_PROJECT_ID ||
-                        process.env.PORT // Railway siempre establece PORT
+                        process.env.PORT || // Railway siempre establece PORT
+                        process.env.FRONTEND_URL || // Si hay FRONTEND_URL, asumir producción
+                        process.env.VITE_BASE_URL   // Si hay VITE_BASE_URL, asumir producción
     
-    // Usar variables de entorno para URLs dinámicas
-    let baseUrl
-    if (isProduction) {
-      // En producción, usar la variable de entorno o construir dinámicamente
-      baseUrl = process.env.FRONTEND_URL || 
-                process.env.VITE_BASE_URL || 
-                (process.env.RAILWAY_STATIC_URL ? `https://${process.env.RAILWAY_STATIC_URL}` : null) ||
-                'https://beneficial-wholeness-production-9cd6.up.railway.app'
-    } else {
-      // En desarrollo
+    // PRIORIZAR SIEMPRE URLs DE PRODUCCIÓN
+    let baseUrl = process.env.FRONTEND_URL || 
+                  process.env.VITE_BASE_URL || 
+                  (process.env.RAILWAY_STATIC_URL ? `https://${process.env.RAILWAY_STATIC_URL}` : null) ||
+                  'https://beneficial-wholeness-production-9cd6.up.railway.app'
+    
+    // Solo usar localhost si EXPLÍCITAMENTE está en desarrollo local
+    const isExplicitLocalDev = process.env.NODE_ENV === 'development' && 
+                              !process.env.RAILWAY_ENVIRONMENT && 
+                              !process.env.RAILWAY_PROJECT_ID && 
+                              !process.env.PORT && 
+                              !process.env.FRONTEND_URL && 
+                              !process.env.VITE_BASE_URL
+    
+    if (isExplicitLocalDev) {
       baseUrl = 'http://localhost:5173'
     }
     
@@ -111,6 +119,14 @@ export const createShareLink = async (req, res) => {
     console.log('🔗 URL generada:', publicUrl)
     console.log('🔗 Entorno detectado:', isProduction ? 'PRODUCTION (Railway)' : 'DEVELOPMENT (Local)')
     console.log('🔗 Base URL utilizada:', baseUrl)
+    console.log('🔗 Es desarrollo local explícito:', isExplicitLocalDev)
+    console.log('🔗 Razón de la URL elegida:', 
+      process.env.FRONTEND_URL ? 'FRONTEND_URL configurada' :
+      process.env.VITE_BASE_URL ? 'VITE_BASE_URL configurada' :
+      process.env.RAILWAY_STATIC_URL ? 'RAILWAY_STATIC_URL configurada' :
+      isExplicitLocalDev ? 'Desarrollo local explícito' :
+      'URL de producción por defecto (hardcodeada)'
+    )
     console.log('🔗 Variables de entorno:', {
       NODE_ENV: process.env.NODE_ENV,
       RAILWAY_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT,

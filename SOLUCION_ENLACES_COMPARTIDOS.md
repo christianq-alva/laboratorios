@@ -6,7 +6,25 @@ Cuando se comparten horarios mediante enlaces, siempre aparece `localhost` en la
 ## Causa
 El problema se debe a que la URL del frontend estaba hardcodeada en el código del backend. Aunque el sistema detectaba correctamente el entorno de producción, no tenía una forma dinámica de obtener la URL correcta del frontend.
 
-## Solución Implementada
+## 🔧 Solución Implementada
+
+Se ha modificado el archivo `server/controllers/shareController.js` para **PRIORIZAR SIEMPRE las URLs de producción** y evitar el uso de `localhost` en entornos de producción:
+
+### Lógica de Prioridad (ACTUALIZADA):
+1. **FRONTEND_URL** (recomendado para Railway)
+2. **VITE_BASE_URL** (alternativa)
+3. **RAILWAY_STATIC_URL** (si está disponible)
+4. **URL hardcodeada de producción** como fallback seguro
+5. `localhost:5173` **SOLO** si está explícitamente en desarrollo local
+
+### Condiciones para Desarrollo Local:
+Solo se usa `localhost` si se cumplen **TODAS** estas condiciones:
+- `NODE_ENV === 'development'`
+- NO hay `RAILWAY_ENVIRONMENT`
+- NO hay `RAILWAY_PROJECT_ID`
+- NO hay `PORT` (Railway siempre establece PORT)
+- NO hay `FRONTEND_URL`
+- NO hay `VITE_BASE_URL`
 
 ### 1. Configuración Dinámica de URLs
 Se modificó el archivo `server/controllers/shareController.js` para usar variables de entorno dinámicas:
@@ -30,22 +48,30 @@ if (isProduction) {
 ### 2. Variables de Entorno Requeridas
 Para Railway en producción, configura **una** de estas variables:
 
-#### Opción 1: FRONTEND_URL (Recomendado)
+## 🚀 Configuración para Railway
+
+### ⭐ Opción 1: FRONTEND_URL (MÁS RECOMENDADO)
 ```bash
-FRONTEND_URL=https://tu-dominio-railway.up.railway.app
+FRONTEND_URL=https://tu-dominio.up.railway.app
+```
+**Esta es la opción más directa y clara para especificar la URL del frontend.**
+
+### Opción 2: VITE_BASE_URL
+```bash
+VITE_BASE_URL=https://tu-dominio.up.railway.app
 ```
 
-#### Opción 2: VITE_BASE_URL
+### Opción 3: RAILWAY_STATIC_URL
 ```bash
-VITE_BASE_URL=https://tu-dominio-railway.up.railway.app
+RAILWAY_STATIC_URL=tu-dominio.up.railway.app
 ```
 
-#### Opción 3: Variables de entorno automáticas
-```bash
-NODE_ENV=production
-RAILWAY_ENVIRONMENT=production
+### ⚡ Fallback Automático
+Si no configuras ninguna variable, el sistema usará automáticamente:
 ```
-(Usará el dominio hardcodeado como fallback)
+https://beneficial-wholeness-production-9cd6.up.railway.app
+```
+**Esto garantiza que NUNCA aparezca `localhost` en producción.**
 
 ### 3. Cómo Obtener tu Dominio de Railway
 
@@ -107,25 +133,38 @@ Cuando crees un enlace compartido, revisa los logs del backend. Deberías ver:
 - **URL generada**: `https://beneficial-wholeness-production-9cd6.up.railway.app/horarios/publico/1?token=...`
 - **Funciona**: ⚠️ Solo si el dominio hardcodeado coincide
 
-## Troubleshooting
+## 🔍 Troubleshooting
 
-### Problema: Sigue apareciendo localhost
-**Solución**: 
-1. Verifica que `FRONTEND_URL` esté configurada en Railway
-2. Verifica que `NODE_ENV=production` esté configurada
-3. Redeploy la aplicación
-4. Revisa los logs del backend
+### ❌ Problema: Aún aparece localhost
+**Causas posibles:**
+- Las variables de entorno no están configuradas en Railway
+- No se ha redesplegado después de configurar las variables
+- Hay un problema con la detección del entorno
 
-### Problema: URL con "undefined"
-**Solución**: 
-1. No configures `RAILWAY_STATIC_URL` a menos que sepas su valor exacto
-2. Usa `FRONTEND_URL` en su lugar
+**Solución:**
+1. Configura `FRONTEND_URL` en Railway
+2. Redesplega la aplicación
+3. Ejecuta el script de diagnóstico: `node scripts/test-share-urls.js`
 
-### Problema: Enlaces no funcionan
-**Solución**: 
-1. Verifica que la URL generada sea accesible
-2. Verifica que el token no haya expirado
-3. Verifica que el laboratorio exista
+### ❌ Problema: URL "undefined" o "https://undefined"
+**Causa:** `RAILWAY_STATIC_URL` está vacía o mal configurada
+
+**Solución:** Usa `FRONTEND_URL` en su lugar:
+```bash
+FRONTEND_URL=https://tu-dominio.up.railway.app
+```
+
+### ❌ Problema: El enlace no funciona
+**Verificaciones:**
+- El frontend está desplegado y accesible
+- La ruta `/horarios/publico/:id` existe en el frontend
+- El token JWT es válido y no ha expirado
+
+### ✅ Verificación Rápida
+Ejecuta este comando para probar la lógica:
+```bash
+node scripts/test-share-urls.js
+```
 
 ## Archivos Modificados
 
@@ -133,12 +172,39 @@ Cuando crees un enlace compartido, revisa los logs del backend. Deberías ver:
 - `ENVIRONMENT_VARIABLES.md` - Documentación de variables
 - `scripts/test-share-urls.js` - Script de diagnóstico (nuevo)
 
-## Próximos Pasos
+## 📋 Próximos Pasos
 
-1. **Configura `FRONTEND_URL` en Railway**
-2. **Redeploy tu aplicación**
-3. **Prueba crear un enlace compartido**
-4. **Verifica que la URL no contenga localhost**
-5. **Comparte el enlace y prueba desde otro dispositivo**
+### 🎯 Pasos Inmediatos (OBLIGATORIOS)
+
+1. **Configurar FRONTEND_URL en Railway:**
+   ```bash
+   FRONTEND_URL=https://tu-dominio.up.railway.app
+   ```
+   - Ve a tu proyecto en Railway
+   - En "Variables", añade `FRONTEND_URL`
+   - Usa la URL completa de tu deployment
+
+2. **Redesplegar la aplicación** en Railway
+   - Esto es CRÍTICO para que los cambios tomen efecto
+
+3. **Verificar inmediatamente:**
+   - Crear un enlace compartido desde la aplicación
+   - Confirmar que NO aparece `localhost`
+   - Verificar que el enlace funciona
+
+### 🔧 Pasos de Verificación
+
+4. **Ejecutar diagnóstico local:**
+   ```bash
+   node scripts/test-share-urls.js
+   ```
+
+5. **Revisar logs del backend** para confirmar la URL generada
+
+6. **Probar diferentes escenarios** de enlaces compartidos
+
+### ✅ Resultado Esperado
+- **ANTES:** `http://localhost:5173/horarios/publico/1?token=...`
+- **DESPUÉS:** `https://tu-dominio.up.railway.app/horarios/publico/1?token=...`
 
 ¡Con estos cambios, los enlaces compartidos deberían funcionar correctamente en producción!
