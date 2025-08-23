@@ -92,15 +92,32 @@ export const createShareLink = async (req, res) => {
                         process.env.NODE_ENV === 'production' || 
                         process.env.RAILWAY_PROJECT_ID ||
                         process.env.PORT // Railway siempre establece PORT
-    const baseUrl = isProduction ? 'https://beneficial-wholeness-production-9cd6.up.railway.app' : 'http://localhost:5173'
+    
+    // Usar variables de entorno para URLs dinámicas
+    let baseUrl
+    if (isProduction) {
+      // En producción, usar la variable de entorno o construir dinámicamente
+      baseUrl = process.env.FRONTEND_URL || 
+                process.env.VITE_BASE_URL || 
+                (process.env.RAILWAY_STATIC_URL ? `https://${process.env.RAILWAY_STATIC_URL}` : null) ||
+                'https://beneficial-wholeness-production-9cd6.up.railway.app'
+    } else {
+      // En desarrollo
+      baseUrl = 'http://localhost:5173'
+    }
+    
     const publicUrl = `${baseUrl}/horarios/publico/${laboratorio_id}?token=${shareToken}`
     
     console.log('🔗 URL generada:', publicUrl)
     console.log('🔗 Entorno detectado:', isProduction ? 'PRODUCTION (Railway)' : 'DEVELOPMENT (Local)')
+    console.log('🔗 Base URL utilizada:', baseUrl)
     console.log('🔗 Variables de entorno:', {
       NODE_ENV: process.env.NODE_ENV,
       RAILWAY_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT,
       RAILWAY_PROJECT_ID: !!process.env.RAILWAY_PROJECT_ID,
+      FRONTEND_URL: process.env.FRONTEND_URL,
+      VITE_BASE_URL: process.env.VITE_BASE_URL,
+      RAILWAY_STATIC_URL: process.env.RAILWAY_STATIC_URL,
       PORT: process.env.PORT
     })
     
