@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   Box,
   Paper,
@@ -157,7 +157,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
       } else {
         setError(result.message || 'Error al cargar horarios')
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error al cargar horarios:', err)
       setError('Error de conexión al cargar horarios')
     } finally {
@@ -299,13 +299,16 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
     }
   }, [fetchLaboratorios, fetchHorarios])
 
-  // Refresh cuando se solicita
+  // Refresh cuando se solicita (siempre que cambie la bandera), evitando el primer render
+  const hasMountedRef = useRef(false)
   useEffect(() => {
-    if (refresh) {
-      Promise.all([fetchLaboratorios(), fetchHorarios()]).then(() => {
-        onRefreshComplete?.()
-      })
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true
+      return
     }
+    Promise.all([fetchLaboratorios(), fetchHorarios()]).then(() => {
+      onRefreshComplete?.()
+    })
   }, [refresh, fetchLaboratorios, fetchHorarios, onRefreshComplete])
 
   if (loading) {
