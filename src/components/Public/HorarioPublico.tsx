@@ -102,10 +102,12 @@ export const HorarioPublico: React.FC = () => {
         setError(null)
         
         const data = await shareService.getPublicHorarios(parseInt(laboratorio_id), token)
+        console.log('🔍 [DEBUG] Datos recibidos del backend:', data)
+        console.log('🔍 [DEBUG] Número de horarios:', data?.horarios?.length || 0)
         setPublicData(data)
-      } catch (err: any) {
-        console.error('Error al cargar datos públicos:', err)
-        setError(err.message || 'Error al cargar horarios públicos')
+      } catch (err: unknown) {
+          console.error('Error al cargar datos públicos:', err)
+          setError(err instanceof Error ? err.message : 'Error al cargar horarios públicos')
       } finally {
         setLoading(false)
       }
@@ -116,15 +118,35 @@ export const HorarioPublico: React.FC = () => {
 
   // Filtrar horarios por semana actual y filtros
   const horariosSemana = useMemo(() => {
-    if (!publicData) return []
+    if (!publicData) {
+      console.log('🔍 [DEBUG] No hay publicData')
+      return []
+    }
+    
+    console.log('🔍 [DEBUG] Procesando horarios:', publicData.horarios.length)
     
     const inicioSemana = currentWeek.startOf('isoWeek')
     const finSemana = currentWeek.endOf('isoWeek')
     
-    return publicData.horarios.filter(horario => {
+    console.log('🔍 [DEBUG] Semana actual:', {
+      inicio: inicioSemana.format('YYYY-MM-DD'),
+      fin: finSemana.format('YYYY-MM-DD'),
+      currentWeek: currentWeek.format('YYYY-MM-DD')
+    })
+    
+    const horariosFiltered = publicData.horarios.filter(horario => {
       // Verificar si el horario está en la semana actual
       const fechaHorario = dayjs(horario.fecha_inicio)
-      if (!fechaHorario.isBetween(inicioSemana, finSemana, null, '[]')) {
+      const estaEnSemana = fechaHorario.isBetween(inicioSemana, finSemana, null, '[]')
+      
+      console.log('🔍 [DEBUG] Horario:', {
+        descripcion: horario.descripcion,
+        fecha_inicio: horario.fecha_inicio,
+        fechaHorario: fechaHorario.format('YYYY-MM-DD'),
+        estaEnSemana
+      })
+      
+      if (!estaEnSemana) {
         return false
       }
       
@@ -136,6 +158,10 @@ export const HorarioPublico: React.FC = () => {
       
       return cumpleDocente && cumpleCiclo
     })
+    
+    console.log('🔍 [DEBUG] Horarios después del filtro:', horariosFiltered.length)
+    
+    return horariosFiltered
   }, [publicData, currentWeek, filtroDocente, filtroCiclo])
 
   // Organizar eventos por día y hora
