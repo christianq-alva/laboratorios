@@ -114,6 +114,7 @@ export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
   const [selectedEvent, setSelectedEvent] = useState<HorarioCalendario | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [currentDate, setCurrentDate] = useState(new Date())
+  const [initialDateSet, setInitialDateSet] = useState(false)
   const [currentView, setCurrentView] = useState<'week' | 'day'>('week')
   
   // Estados para filtros
@@ -214,7 +215,22 @@ export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
     
     console.log('📊 Total horarios procesados:', horariosProcesados.length)
     setHorariosCalendario(horariosProcesados)
-  }, [])
+    
+    // 🎯 SOLUCIÓN DEFINITIVA: Ajustar fecha del calendario automáticamente
+    if (!initialDateSet && horariosProcesados.length > 0) {
+      // Encontrar el horario más reciente o más próximo
+      const fechasOrdenadas = horariosProcesados
+        .map(h => h.start)
+        .sort((a, b) => b.getTime() - a.getTime()) // Más reciente primero
+      
+      if (fechasOrdenadas.length > 0) {
+        const fechaMasReciente = fechasOrdenadas[0]
+        console.log('🎯 Ajustando calendario a la fecha más reciente:', fechaMasReciente.toLocaleString())
+        setCurrentDate(fechaMasReciente)
+        setInitialDateSet(true)
+      }
+    }
+  }, [initialDateSet])
 
   // Filtrar horarios
   const horariosFiltrados = useMemo(() => {
@@ -303,6 +319,7 @@ export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
   // Refresh cuando se solicita
   useEffect(() => {
     if (refresh) {
+      setInitialDateSet(false) // Permitir que se reajuste la fecha
       fetchHorarios().then(() => {
         onRefreshComplete?.()
       })
@@ -370,6 +387,26 @@ export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
             onClick={() => setMostrarFiltros(!mostrarFiltros)}
           >
             Filtros
+          </Button>
+          
+          <Button
+            variant="outlined"
+            onClick={() => {
+              if (horariosCalendario.length > 0) {
+                const fechasOrdenadas = horariosCalendario
+                  .map(h => h.start)
+                  .sort((a, b) => b.getTime() - a.getTime())
+                
+                if (fechasOrdenadas.length > 0) {
+                  setCurrentDate(fechasOrdenadas[0])
+                }
+              }
+            }}
+            startIcon={<Schedule />}
+            color="primary"
+            size="small"
+          >
+            Ir a Recientes
           </Button>
           
           {onNewHorario && (

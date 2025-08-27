@@ -113,6 +113,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
   const [selectedEvent, setSelectedEvent] = useState<Horario | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [currentWeek, setCurrentWeek] = useState(dayjs().startOf('isoWeek'))
+  const [initialWeekSet, setInitialWeekSet] = useState(false)
   
   // Estados para laboratorios (jefes con múltiples labs)
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
@@ -152,8 +153,23 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
       const result = await horarioService.getAll()
       
       if (result.success) {
-        setHorarios(result.data || [])
+        const horariosData = result.data || []
+        setHorarios(horariosData)
         setUserRole(result.user_role || '')
+        
+        // 🎯 SOLUCIÓN DEFINITIVA: Ajustar semana automáticamente a donde hay horarios
+        if (!initialWeekSet && horariosData.length > 0) {
+          const fechasOrdenadas = horariosData
+            .map((h: Horario) => dayjs(h.fecha_inicio))
+            .sort((a: dayjs.Dayjs, b: dayjs.Dayjs) => b.valueOf() - a.valueOf()) // Más reciente primero
+          
+          if (fechasOrdenadas.length > 0) {
+            const fechaMasReciente = fechasOrdenadas[0].startOf('isoWeek')
+            console.log('🎯 Ajustando calendario simple a la semana más reciente:', fechaMasReciente.format('YYYY-MM-DD'))
+            setCurrentWeek(fechaMasReciente)
+            setInitialWeekSet(true)
+          }
+        }
       } else {
         setError(result.message || 'Error al cargar horarios')
       }
