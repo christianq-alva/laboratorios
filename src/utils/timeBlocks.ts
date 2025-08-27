@@ -84,5 +84,21 @@ export const formatBlockRange = (blocks: TimeBlock[]): string => {
 export const combineDateWithTime = (date: string, time: string): string => {
   // date viene en formato YYYY-MM-DD
   // time viene en formato HH:MM
-  return `${date}T${time}:00`
+  
+  // Crear fecha local explícitamente para evitar problemas de zona horaria
+  const [year, month, day] = date.split('-').map(Number)
+  const [hours, minutes] = time.split(':').map(Number)
+  
+  // Crear Date con valores locales
+  const localDate = new Date(year, month - 1, day, hours, minutes, 0)
+  
+  // Formatear para el servidor (YYYY-MM-DD HH:MM:SS)
+  const formattedDate = localDate.getFullYear() + '-' +
+    String(localDate.getMonth() + 1).padStart(2, '0') + '-' +
+    String(localDate.getDate()).padStart(2, '0') + ' ' +
+    String(localDate.getHours()).padStart(2, '0') + ':' +
+    String(localDate.getMinutes()).padStart(2, '0') + ':' +
+    String(localDate.getSeconds()).padStart(2, '0')
+  
+  return formattedDate
 }

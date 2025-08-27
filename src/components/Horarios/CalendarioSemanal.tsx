@@ -162,14 +162,19 @@ export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
         return
       }
       
-      // Procesar las fechas correctamente, considerando que vienen del backend en formato local
-      // Si la fecha viene con 'T', reemplazar por espacio para evitar problemas de zona horaria
-      const fechaInicioStr = horario.fecha_inicio.replace('T', ' ').split('.')[0].split('Z')[0]
-      const fechaFinStr = horario.fecha_fin.replace('T', ' ').split('.')[0].split('Z')[0]
+      // Procesar las fechas de manera más directa
+      // Las fechas vienen del backend en formato MySQL: 'YYYY-MM-DD HH:MM:SS'
+      const fechaInicio = new Date(horario.fecha_inicio)
+      const fechaFin = new Date(horario.fecha_fin)
       
-      // Crear objetos Date asumiendo que las fechas son locales
-      const fechaInicio = new Date(fechaInicioStr.replace(' ', 'T'))
-      const fechaFin = new Date(fechaFinStr.replace(' ', 'T'))
+      // Verificar que las fechas sean válidas
+      if (isNaN(fechaInicio.getTime()) || isNaN(fechaFin.getTime())) {
+        console.warn('⚠️ Fecha inválida para horario:', horario.id, {
+          fecha_inicio: horario.fecha_inicio,
+          fecha_fin: horario.fecha_fin
+        })
+        return
+      }
       
       // Log de depuración para verificar las fechas
       console.log('📅 Procesando horario:', {
@@ -179,7 +184,8 @@ export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
         fecha_inicio_procesada: fechaInicio.toISOString(),
         fecha_fin_procesada: fechaFin.toISOString(),
         fecha_inicio_local: fechaInicio.toLocaleString(),
-        fecha_fin_local: fechaFin.toLocaleString()
+        fecha_fin_local: fechaFin.toLocaleString(),
+        es_fecha_valida: !isNaN(fechaInicio.getTime())
       })
       
       // Crear título para el evento
