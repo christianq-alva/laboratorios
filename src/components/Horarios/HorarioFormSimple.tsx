@@ -426,9 +426,9 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       setError(null)
 
       // Mantener las fechas en formato local sin conversión a UTC
-      // Esto evita problemas de zona horaria
-      const fechaInicio = formData.fecha_inicio + ':00'
-      const fechaFin = formData.fecha_fin + ':00'
+      // Las fechas ya vienen con segundos desde combineDateWithTime
+      const fechaInicio = formData.fecha_inicio
+      const fechaFin = formData.fecha_fin
 
       // Preparar datos finales - SOLO los campos que necesita el backend
       const finalData: CreateHorarioData = {
