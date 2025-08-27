@@ -38,6 +38,10 @@ const convertirFechaParaMySQL = (fechaInput) => {
 }
 
 // 🚫 FUNCIÓN PARA VERIFICAR CRUCES DE HORARIOS
+// 🔧 MODIFICADO: Permite clases consecutivas (una termina cuando otra comienza)
+// La lógica anterior detectaba como conflicto cuando fecha_fin_A = fecha_inicio_B
+// La nueva lógica usa NOT (fecha_fin_nueva <= fecha_inicio_existente OR fecha_inicio_nueva >= fecha_fin_existente)
+// Esto permite que una clase termine exactamente cuando otra comienza (clases consecutivas)
 const verificarCruceHorarios = async (connection, laboratorio_id, docente_id, fecha_inicio, fecha_fin, reserva_id = null) => {
   
   // ✅ CONVERTIR FECHAS A FORMATO MYSQL
@@ -65,18 +69,14 @@ const verificarCruceHorarios = async (connection, laboratorio_id, docente_id, fe
     LEFT JOIN ciclos c ON g.ciclo_id = c.id
     WHERE r.laboratorio_id = ?
       AND r.id != COALESCE(?, 0)
-      AND (
-        (? < r.fecha_fin AND ? > r.fecha_inicio) OR
-        (? < r.fecha_fin AND ? > r.fecha_inicio) OR
-        (? <= r.fecha_inicio AND ? >= r.fecha_fin)
+      AND NOT (
+        ? <= r.fecha_inicio OR ? >= r.fecha_fin
       )
   `
   
   const [cruceLabRows] = await connection.execute(queryLab, [
     laboratorio_id, reserva_id,
-    fechaInicioMySQL, fechaInicioMySQL,
-    fechaFinMySQL, fechaFinMySQL, 
-    fechaInicioMySQL, fechaFinMySQL
+    fechaFinMySQL, fechaInicioMySQL
   ])
   
   if (cruceLabRows.length > 0) {
@@ -100,7 +100,7 @@ const verificarCruceHorarios = async (connection, laboratorio_id, docente_id, fe
     }
   }
   
-  // 👨‍🏫 VERIFICAR CRUCE DE DOCENTE
+  // 👨‍🏫 VERIFICAR CRUCE DE DOCENTE (PERMITE CLASES CONSECUTIVAS)
   const queryDocente = `
     SELECT 
       r.id,
@@ -121,18 +121,14 @@ const verificarCruceHorarios = async (connection, laboratorio_id, docente_id, fe
     LEFT JOIN ciclos c ON g.ciclo_id = c.id
     WHERE r.docente_id = ?
       AND r.id != COALESCE(?, 0)
-      AND (
-        (? < r.fecha_fin AND ? > r.fecha_inicio) OR
-        (? < r.fecha_fin AND ? > r.fecha_inicio) OR
-        (? <= r.fecha_inicio AND ? >= r.fecha_fin)
+      AND NOT (
+        ? <= r.fecha_inicio OR ? >= r.fecha_fin
       )
   `
   
   const [cruceDocenteRows] = await connection.execute(queryDocente, [
     docente_id, reserva_id,
-    fechaInicioMySQL, fechaInicioMySQL,
-    fechaFinMySQL, fechaFinMySQL,
-    fechaInicioMySQL, fechaFinMySQL
+    fechaFinMySQL, fechaInicioMySQL
   ])
   
   if (cruceDocenteRows.length > 0) {
