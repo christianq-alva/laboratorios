@@ -11,7 +11,8 @@ import {
   getEscuelas,      // ← NUEVO
   getCiclos,        // ← NUEVO
   getGrupos,        // ← NUEVO
-  debugHorarios     // ← DEBUG
+  debugHorarios,    // ← DEBUG
+  diagnosticarZonaHoraria  // ← DIAGNÓSTICO ZONA HORARIA
 } from '../controllers/horarioController.js'
 
 const router = express.Router()
@@ -85,6 +86,12 @@ router.get('/utils/grupos',
 router.get('/debug', 
   authenticateToken,
   debugHorarios
+)
+
+// 🕐 DIAGNÓSTICO: ZONA HORARIA DEL SERVIDOR
+router.get('/diagnostico/timezone', 
+  authenticateToken,
+  diagnosticarZonaHoraria
 )
 
 export default router

@@ -24,6 +24,9 @@ VITE_BASE_URL=https://your-railway-domain.up.railway.app
 
 # Puerto del servidor
 PORT=3000
+
+# Zona horaria (CRÍTICO para fechas y horas correctas)
+TZ=America/Lima
 ```
 
 ### Para el Frontend (Vite)
@@ -48,6 +51,10 @@ VITE_BASE_URL=https://beneficial-wholeness-production-9cd6.up.railway.app
   - `NODE_ENV=production`
   - `RAILWAY_ENVIRONMENT=production`
   - `FRONTEND_URL=https://tu-dominio-railway.up.railway.app` (reemplaza con tu dominio real)
+
+- **🕐 CRÍTICO para Fechas y Horas**: Configura la zona horaria en Railway:
+  - `TZ=America/Lima` - Zona horaria de Lima (UTC-5)
+  - Sin esta variable, el servidor usará UTC y las horas se mostrarán incorrectas
 
 - **Configuración de URL del Frontend**:
   - **Opción 1**: `FRONTEND_URL` - URL completa del frontend

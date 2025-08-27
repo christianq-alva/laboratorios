@@ -5,23 +5,32 @@ import { Insumo } from '../models/Insumo.js'
 const convertirFechaParaMySQL = (fechaInput) => {
   if (!fechaInput) return null
   
+  console.log('🕐 convertirFechaParaMySQL - Input:', fechaInput)
+  console.log('🌍 Zona horaria del servidor:', process.env.TZ || 'UTC')
+  
   // Si la fecha ya viene en formato YYYY-MM-DD HH:MM:SS, la usamos directamente
   if (fechaInput.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)) {
+    console.log('✅ Formato YYYY-MM-DD HH:MM:SS detectado, usando directamente')
     return fechaInput
   }
   
   // Si viene en formato YYYY-MM-DDTHH:MM:SS (datetime-local con segundos)
   if (fechaInput.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/)) {
-    return fechaInput.replace('T', ' ')
+    const resultado = fechaInput.replace('T', ' ')
+    console.log('✅ Formato ISO local detectado, convertido a:', resultado)
+    return resultado
   }
   
   // Si es una fecha ISO con zona horaria, mantenemos solo la parte local
   if (fechaInput.includes('T')) {
     // Tomamos solo los primeros 19 caracteres (YYYY-MM-DDTHH:MM:SS)
-    return fechaInput.slice(0, 19).replace('T', ' ')
+    const resultado = fechaInput.slice(0, 19).replace('T', ' ')
+    console.log('✅ Fecha ISO con zona horaria, usando parte local:', resultado)
+    return resultado
   }
   
   // Fallback: intentar parsear como fecha
+  console.log('⚠️ Usando fallback para parsear fecha')
   const fecha = new Date(fechaInput)
   if (!isNaN(fecha.getTime())) {
     // Usar la fecha local, no UTC
@@ -31,9 +40,12 @@ const convertirFechaParaMySQL = (fechaInput) => {
     const hours = String(fecha.getHours()).padStart(2, '0')
     const minutes = String(fecha.getMinutes()).padStart(2, '0')
     const seconds = String(fecha.getSeconds()).padStart(2, '0')
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+    const resultado = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+    console.log('✅ Fecha parseada como local:', resultado)
+    return resultado
   }
   
+  console.log('❌ No se pudo parsear la fecha')
   return null
 }
 
@@ -1150,6 +1162,50 @@ export const getGrupos = async (req, res) => {
     })
   } catch (error) {
     console.error('Error en getGrupos:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+}
+
+// 🕐 ENDPOINT PARA DIAGNOSTICAR ZONA HORARIA
+export const diagnosticarZonaHoraria = async (req, res) => {
+  try {
+    const ahora = new Date()
+    const fechaUTC = new Date().toISOString()
+    const fechaLocal = ahora.toLocaleString()
+    const offsetMinutos = ahora.getTimezoneOffset()
+    
+    // Información detallada de zona horaria
+    const diagnostico = {
+      servidor: {
+        timezone_env: process.env.TZ || 'No configurado',
+        fecha_utc: fechaUTC,
+        fecha_local: fechaLocal,
+        offset_minutos: offsetMinutos,
+        offset_horas: offsetMinutos / -60,
+        timestamp_unix: ahora.getTime()
+      },
+      prueba_conversion: {
+        input_ejemplo: '2024-01-15 07:30:00',
+        output_mysql: convertirFechaParaMySQL('2024-01-15 07:30:00')
+      },
+      fecha_sistema: {
+        year: ahora.getFullYear(),
+        month: ahora.getMonth() + 1,
+        day: ahora.getDate(),
+        hours: ahora.getHours(),
+        minutes: ahora.getMinutes(),
+        seconds: ahora.getSeconds()
+      }
+    }
+    
+    console.log('🕐 Diagnóstico de zona horaria:', diagnostico)
+    
+    res.json({
+      success: true,
+      data: diagnostico
+    })
+  } catch (error) {
+    console.error('Error en diagnosticarZonaHoraria:', error)
     res.status(500).json({ success: false, message: error.message })
   }
 }
