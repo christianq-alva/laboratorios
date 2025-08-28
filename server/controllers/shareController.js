@@ -249,6 +249,18 @@ export const getPublicHorarios = async (req, res) => {
       ORDER BY r.fecha_inicio ASC
     `, [laboratorio_id])
     
+    console.log('🕐 Diagnóstico horarios públicos:', {
+      timezone: process.env.TZ || 'UTC',
+      total_horarios: horarios.length,
+      primer_horario: horarios[0] ? {
+        id: horarios[0].id,
+        fecha_inicio_raw: horarios[0].fecha_inicio,
+        fecha_fin_raw: horarios[0].fecha_fin,
+        fecha_inicio_string: horarios[0].fecha_inicio?.toString(),
+        fecha_fin_string: horarios[0].fecha_fin?.toString()
+      } : null
+    })
+    
     // Obtener lista de docentes y ciclos para filtros
     const [docentes] = await pool.execute(`
       SELECT DISTINCT d.nombre

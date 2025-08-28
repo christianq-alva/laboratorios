@@ -102,6 +102,22 @@ export const HorarioPublico: React.FC = () => {
         setError(null)
         
         const data = await shareService.getPublicHorarios(parseInt(laboratorio_id), token)
+        
+        // 🕐 DEBUG: Diagnóstico de fechas recibidas
+        if (data.horarios && data.horarios.length > 0) {
+          console.log('🕐 Diagnóstico horarios públicos recibidos:', {
+            total: data.horarios.length,
+            primer_horario: {
+              id: data.horarios[0].id,
+              fecha_inicio_raw: data.horarios[0].fecha_inicio,
+              fecha_fin_raw: data.horarios[0].fecha_fin,
+              fecha_inicio_dayjs: dayjs(data.horarios[0].fecha_inicio).format('YYYY-MM-DD HH:mm:ss'),
+              fecha_fin_dayjs: dayjs(data.horarios[0].fecha_fin).format('YYYY-MM-DD HH:mm:ss'),
+              timezone_offset: new Date().getTimezoneOffset()
+            }
+          })
+        }
+        
         setPublicData(data)
       } catch (err: unknown) {
         console.error('Error al cargar datos públicos:', err)
@@ -123,7 +139,12 @@ export const HorarioPublico: React.FC = () => {
     
     return publicData.horarios.filter(horario => {
       // Verificar si el horario está en la semana actual
-      const fechaHorario = dayjs(horario.fecha_inicio)
+      // 🕐 Asegurar que la fecha se interprete como local
+      const fechaHorario = typeof horario.fecha_inicio === 'string' && 
+                          horario.fecha_inicio.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/) ?
+                          dayjs(horario.fecha_inicio, 'YYYY-MM-DD HH:mm:ss') :
+                          dayjs(horario.fecha_inicio)
+      
       if (!fechaHorario.isBetween(inicioSemana, finSemana, null, '[]')) {
         return false
       }
@@ -150,12 +171,23 @@ export const HorarioPublico: React.FC = () => {
     })
     
     horariosSemana.forEach(horario => {
-      const fecha = dayjs(horario.fecha_inicio)
-      const diaIndex = fecha.isoWeekday() - 1 // 0 = Lunes, 4 = Viernes
+      // 🕐 Asegurar que las fechas se interpreten como locales
+      // Si viene en formato YYYY-MM-DD HH:MM:SS, tratarla como local
+      const fechaInicio = typeof horario.fecha_inicio === 'string' && 
+                         horario.fecha_inicio.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/) ?
+                         dayjs(horario.fecha_inicio, 'YYYY-MM-DD HH:mm:ss') :
+                         dayjs(horario.fecha_inicio)
+      
+      const fechaFin = typeof horario.fecha_fin === 'string' && 
+                      horario.fecha_fin.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/) ?
+                      dayjs(horario.fecha_fin, 'YYYY-MM-DD HH:mm:ss') :
+                      dayjs(horario.fecha_fin)
+      
+      const diaIndex = fechaInicio.isoWeekday() - 1 // 0 = Lunes, 4 = Viernes
       
       if (diaIndex >= 0 && diaIndex < 7) { // Todos los días de la semana
-        const horaInicio = fecha.format('HH:mm')
-        const horaFin = dayjs(horario.fecha_fin).format('HH:mm')
+        const horaInicio = fechaInicio.format('HH:mm')
+        const horaFin = fechaFin.format('HH:mm')
         
         // Encontrar el slot de tiempo correspondiente
         TIME_BLOCKS.forEach(block => {
