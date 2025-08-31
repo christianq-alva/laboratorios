@@ -10,7 +10,7 @@ export const getLaboratorios = async (req, res) => {
         SELECT l.*, e.nombre as escuela 
         FROM laboratorios l
         LEFT JOIN escuelas e ON l.escuela_id = e.id
-        ORDER BY l.nombre
+        ORDER BY l.codigo, l.nombre
       `
     } else if (req.user.rol === 'Jefe de Laboratorio') {
       query = `
@@ -19,7 +19,7 @@ export const getLaboratorios = async (req, res) => {
         LEFT JOIN escuelas e ON l.escuela_id = e.id
         JOIN jefe_laboratorio jl ON l.id = jl.laboratorio_id
         WHERE jl.usuario_id = ?
-        ORDER BY l.nombre
+        ORDER BY l.codigo, l.nombre
       `
       params = [req.user.userId]
     } else {
@@ -61,11 +61,16 @@ export const createLaboratorio = async (req, res) => {
       })
     }
 
+    // Generar código único para el laboratorio
+    const [maxId] = await pool.execute('SELECT MAX(id) as max_id FROM laboratorios')
+    const nextId = (maxId[0].max_id || 0) + 1
+    const codigo = `LAB-${nextId.toString().padStart(4, '0')}`
+
     // Insertar laboratorio
     const [result] = await pool.execute(`
-      INSERT INTO laboratorios (nombre, ubicacion, escuela_id, piso) 
-      VALUES (?, ?, ?, ?)
-    `, [nombre, ubicacion, escuela_id, piso])
+      INSERT INTO laboratorios (codigo, nombre, ubicacion, escuela_id, piso) 
+      VALUES (?, ?, ?, ?, ?)
+    `, [codigo, nombre, ubicacion, escuela_id, piso])
 
     console.log('✅ Laboratorio creado con ID:', result.insertId)
 
@@ -73,6 +78,7 @@ export const createLaboratorio = async (req, res) => {
       success: true,
       data: {
         id: result.insertId,
+        codigo,
         nombre,
         ubicacion,
         escuela_id,

@@ -5,7 +5,11 @@ import {
   getInsumos, 
   createInsumo,
   getActividadInsumos,
-  reabastecimientoInsumos
+  reabastecimientoInsumos,
+  generarPlantillaExcel,
+  procesarArchivoExcel,
+  ejecutarReabastecimientoMasivo,
+  upload
 } from '../controllers/insumoController.js'
 
 const router = express.Router()
@@ -32,6 +36,26 @@ router.post('/reabastecimiento',
   authenticateToken,
   authorize('create', 'Insumo'),
   reabastecimientoInsumos
+)
+
+// Rutas para carga masiva
+router.get('/plantilla-excel', 
+  authenticateToken,
+  authorize('create', 'Insumo'),
+  generarPlantillaExcel
+)
+
+router.post('/procesar-excel', 
+  authenticateToken,
+  authorize('create', 'Insumo'),
+  upload.single('archivo_excel'),
+  procesarArchivoExcel
+)
+
+router.post('/reabastecimiento-masivo', 
+  authenticateToken,
+  authorize('create', 'Insumo'),
+  ejecutarReabastecimientoMasivo
 )
 
 export default router

@@ -2,6 +2,7 @@ import { api } from './api'
 
 export interface Laboratorio {
   id: number
+  codigo: string
   nombre: string
   ubicacion: string
   escuela_id: number

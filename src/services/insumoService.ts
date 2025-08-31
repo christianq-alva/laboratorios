@@ -2,6 +2,7 @@ import { api } from './api'
 
 export interface Insumo {
   id: number
+  codigo: string
   nombre: string
   descripcion: string
   unidad_medida: string
@@ -128,6 +129,94 @@ class InsumoService {
     } catch (error: any) {
       console.error('Error al procesar reabastecimiento:', error)
       throw new Error(error.response?.data?.message || 'Error al procesar reabastecimiento')
+    }
+  }
+
+  // Descargar plantilla Excel para carga masiva
+  async descargarPlantillaExcel(): Promise<{ data: Blob }> {
+    try {
+      const response = await api.get('/insumos/plantilla-excel', {
+        responseType: 'blob'
+      })
+      return { data: response.data }
+    } catch (error: any) {
+      console.error('Error al descargar plantilla Excel:', error)
+      throw new Error(error.response?.data?.message || 'Error al descargar plantilla Excel')
+    }
+  }
+
+  // Procesar archivo Excel
+  async procesarArchivoExcel(formData: FormData): Promise<{
+    success: boolean
+    message: string
+    data: {
+      archivo: string
+      total_filas: number
+      registros_validos: number
+      registros_con_errores: number
+      datos_validados: Array<{
+        fila: number
+        insumo_id: number
+        insumo_codigo: string
+        insumo_nombre: string
+        insumo_unidad: string
+        cantidad: number
+        laboratorio_id: number
+        laboratorio_codigo: string
+        laboratorio_nombre: string
+      }>
+      errores: string[]
+    }
+  }> {
+    try {
+      const response = await api.post('/insumos/procesar-excel', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      return response.data
+    } catch (error: any) {
+      console.error('Error al procesar archivo Excel:', error)
+      throw new Error(error.response?.data?.message || 'Error al procesar archivo Excel')
+    }
+  }
+
+  // Ejecutar reabastecimiento masivo
+  async ejecutarReabastecimientoMasivo(data: {
+    datos_reabastecimiento: Array<{
+      insumo_id: number
+      insumo_codigo: string
+      insumo_nombre: string
+      insumo_unidad: string
+      cantidad: number
+      laboratorio_id: number
+      laboratorio_codigo: string
+      laboratorio_nombre: string
+    }>
+    motivo_general: string
+  }): Promise<{
+    success: boolean
+    message: string
+    data: {
+      total_registros: number
+      registros_procesados: number
+      registros_fallidos: number
+      motivo: string
+      resultados: Array<{
+        insumo: string
+        laboratorio: string
+        cantidad: number
+        estado: 'exitoso' | 'error'
+        error?: string
+      }>
+    }
+  }> {
+    try {
+      const response = await api.post('/insumos/reabastecimiento-masivo', data)
+      return response.data
+    } catch (error: any) {
+      console.error('Error al ejecutar reabastecimiento masivo:', error)
+      throw new Error(error.response?.data?.message || 'Error al ejecutar reabastecimiento masivo')
     }
   }
 }

@@ -18,15 +18,17 @@ import {
   Alert,
   IconButton,
   Tooltip,
-  TextField
+  TextField,
+  Button
 } from '@mui/material'
-import { Edit, Delete, Inventory, Science, Info, Search, Clear } from '@mui/icons-material'
+import { Edit, Delete, Inventory, Science, Info, Search, Clear, CloudUpload } from '@mui/icons-material'
 import { insumoService, type Insumo } from '../../services/insumoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
 
 interface InsumosTableProps {
   onEdit?: (insumo: Insumo) => void
   onDelete?: (insumo: Insumo) => void
+  onCargaMasiva?: () => void
   refresh?: boolean
   onRefreshComplete?: () => void
 }
@@ -34,6 +36,7 @@ interface InsumosTableProps {
 export const InsumosTable: React.FC<InsumosTableProps> = ({
   onEdit,
   onDelete,
+  onCargaMasiva,
   refresh,
   onRefreshComplete
 }) => {
@@ -166,6 +169,7 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
     
     const searchLower = searchTerm.toLowerCase()
     return (
+      (insumo.codigo && insumo.codigo.toLowerCase().includes(searchLower)) ||
       insumo.nombre.toLowerCase().includes(searchLower) ||
       (insumo.descripcion && insumo.descripcion.toLowerCase().includes(searchLower)) ||
       insumo.unidad_medida.toLowerCase().includes(searchLower)
@@ -197,23 +201,38 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
     <Box>
       {/* Filtros y búsqueda */}
       <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-        {/* Primera fila: Filtro de laboratorio y resumen */}
+        {/* Primera fila: Filtro de laboratorio, botón de carga masiva y resumen */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>Filtrar por Laboratorio</InputLabel>
-            <Select
-              value={selectedLaboratorio}
-              label="Filtrar por Laboratorio"
-              onChange={(e) => setSelectedLaboratorio(e.target.value as number | 'all')}
-            >
-              <MenuItem value="all">Todos los Laboratorios</MenuItem>
-              {laboratorios.map((lab) => (
-                <MenuItem key={lab.id} value={lab.id}>
-                  {lab.nombre}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <FormControl sx={{ minWidth: 200 }}>
+              <InputLabel>Filtrar por Laboratorio</InputLabel>
+              <Select
+                value={selectedLaboratorio}
+                label="Filtrar por Laboratorio"
+                onChange={(e) => setSelectedLaboratorio(e.target.value as number | 'all')}
+              >
+                <MenuItem value="all">Todos los Laboratorios</MenuItem>
+                {laboratorios.map((lab) => (
+                  <MenuItem key={lab.id} value={lab.id}>
+                    {lab.nombre}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            {onCargaMasiva && (
+              <Tooltip title="Cargar stock masivamente desde Excel">
+                <Button
+                  variant="outlined"
+                  startIcon={<CloudUpload />}
+                  onClick={onCargaMasiva}
+                  color="primary"
+                >
+                  Carga Masiva
+                </Button>
+              </Tooltip>
+            )}
+          </Box>
           
           {/* Resumen de stock */}
           {insumos.length > 0 && (
@@ -248,7 +267,7 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
         {/* Segunda fila: Barra de búsqueda */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <TextField
-            placeholder="Buscar insumos por nombre, descripción o unidad..."
+            placeholder="Buscar insumos por código, nombre, descripción o unidad..."
             value={searchTerm}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
             size="small"
@@ -281,10 +300,11 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: 'grey.50' }}>
-              <TableCell sx={{ fontWeight: 600, width: '20%' }}>Insumo</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '25%' }}>Descripción</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '10%' }}>Unidad</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '15%' }}>Stock Disponible</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '10%' }}>Código</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '18%' }}>Insumo</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '22%' }}>Descripción</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '8%' }}>Unidad</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '12%' }}>Stock Disponible</TableCell>
               <TableCell sx={{ fontWeight: 600, width: '25%' }}>Stock por Laboratorio</TableCell>
               <TableCell sx={{ fontWeight: 600, width: '5%' }} align="center">Acciones</TableCell>
             </TableRow>
@@ -292,7 +312,7 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
           <TableBody>
             {filteredInsumos.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
                   <Box sx={{ textAlign: 'center' }}>
                     <Inventory sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
                     <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -312,6 +332,15 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
             ) : (
               filteredInsumos.map((insumo) => (
                 <TableRow key={insumo.id} hover>
+                  <TableCell>
+                    <Chip 
+                      label={insumo.codigo || 'N/A'} 
+                      size="small" 
+                      color="primary"
+                      variant="outlined"
+                      sx={{ fontFamily: 'monospace', fontWeight: 600 }}
+                    />
+                  </TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Science color="primary" />

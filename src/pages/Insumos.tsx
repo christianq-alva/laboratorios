@@ -13,11 +13,12 @@ import {
   DialogActions,
   CircularProgress
 } from '@mui/material'
-import { Add, Warning, History, TrendingUp } from '@mui/icons-material'
+import { Add, Warning, History, TrendingUp, CloudUpload } from '@mui/icons-material'
 import { InsumosTable } from '../components/Insumos/InsumosTable'
 import { InsumoForm } from '../components/Insumos/InsumoForm'
 import { ActividadInsumos } from '../components/Insumos/ActividadInsumos'
 import { ReabastecimientoModal } from '../components/Insumos/ReabastecimientoModal'
+import { CargaMasivaModal } from '../components/Insumos/CargaMasivaModal'
 import type { Insumo } from '../services/insumoService'
 
 export const Insumos: React.FC = () => {
@@ -29,6 +30,7 @@ export const Insumos: React.FC = () => {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [actividadOpen, setActividadOpen] = useState(false)
   const [reabastecimientoOpen, setReabastecimientoOpen] = useState(false)
+  const [cargaMasivaOpen, setCargaMasivaOpen] = useState(false)
   
   // Estados para notificaciones
   const [snackbar, setSnackbar] = useState({
@@ -157,6 +159,26 @@ export const Insumos: React.FC = () => {
     setActividadOpen(false)
   }
 
+  // Función para abrir carga masiva
+  const handleCargaMasivaOpen = () => {
+    setCargaMasivaOpen(true)
+  }
+
+  // Función para cerrar carga masiva
+  const handleCargaMasivaClose = () => {
+    setCargaMasivaOpen(false)
+  }
+
+  // Función para éxito de carga masiva
+  const handleCargaMasivaSuccess = () => {
+    setRefresh(prev => !prev)
+    setSnackbar({
+      open: true,
+      message: 'Carga masiva procesada correctamente',
+      severity: 'success'
+    })
+  }
+
   return (
     <Box>
       {/* Encabezado */}
@@ -188,6 +210,16 @@ export const Insumos: React.FC = () => {
           >
             Reabastecimiento
           </Button>
+
+          <Button
+            variant="outlined"
+            startIcon={<CloudUpload />}
+            onClick={handleCargaMasivaOpen}
+            sx={{ borderRadius: 2, px: 3 }}
+            color="info"
+          >
+            Carga Masiva
+          </Button>
           
           <Button
             variant="contained"
@@ -206,6 +238,7 @@ export const Insumos: React.FC = () => {
           <InsumosTable 
             onEdit={handleEditInsumo}
             onDelete={handleDeleteInsumo}
+            onCargaMasiva={handleCargaMasivaOpen}
             refresh={refresh}
             onRefreshComplete={handleRefreshComplete}
           />
@@ -272,6 +305,13 @@ export const Insumos: React.FC = () => {
         open={reabastecimientoOpen}
         onClose={handleCloseReabastecimiento}
         onSuccess={handleReabastecimientoSuccess}
+      />
+
+      {/* Modal de carga masiva */}
+      <CargaMasivaModal
+        open={cargaMasivaOpen}
+        onClose={handleCargaMasivaClose}
+        onSuccess={handleCargaMasivaSuccess}
       />
 
       {/* Snackbar para notificaciones */}

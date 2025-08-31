@@ -8,13 +8,14 @@ export const Insumo = {
     const [rows] = await pool.execute(`
       SELECT 
         i.id,
+        i.codigo,
         i.nombre,
         i.descripcion,
         i.unidad_medida,
         COALESCE(inv.cantidad, 0) as stock_disponible
       FROM insumos i
       LEFT JOIN inventario_insumos inv ON i.id = inv.insumo_id AND inv.laboratorio_id = ?
-      ORDER BY i.nombre
+      ORDER BY i.codigo, i.nombre
     `, [laboratorio_id])
     
     console.log('📦 Insumos encontrados para laboratorio', laboratorio_id, ':', rows.length)
