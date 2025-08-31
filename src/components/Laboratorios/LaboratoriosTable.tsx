@@ -18,6 +18,7 @@ import {
   CircularProgress,
   Alert,
   Tooltip,
+  TextField,
 } from '@mui/material'
 import {
   MoreVert,
@@ -26,6 +27,8 @@ import {
   School,
   LocationOn,
   AccountBalance,
+  Search,
+  Clear,
 } from '@mui/icons-material'
 import { laboratorioService } from '../../services/laboratorioService'
 import type { Laboratorio } from '../../services/laboratorioService'
@@ -48,6 +51,7 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
   const [error, setError] = useState<string | null>(null)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [selectedLab, setSelectedLab] = useState<Laboratorio | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
 
   const fetchLaboratorios = async () => {
     try {
@@ -103,6 +107,24 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
     handleMenuClose()
   }
 
+  // Función para filtrar laboratorios por término de búsqueda
+  const filteredLaboratorios = laboratorios.filter(lab => {
+    if (!searchTerm) return true
+    
+    const searchLower = searchTerm.toLowerCase()
+    return (
+      (lab.codigo && lab.codigo.toLowerCase().includes(searchLower)) ||
+      lab.nombre.toLowerCase().includes(searchLower) ||
+      lab.ubicacion.toLowerCase().includes(searchLower) ||
+      (lab.escuela && lab.escuela.toLowerCase().includes(searchLower))
+    )
+  })
+
+  // Función para limpiar búsqueda
+  const handleClearSearch = () => {
+    setSearchTerm('')
+  }
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -134,21 +156,82 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
   }
 
   return (
-    <TableContainer component={Paper} sx={{ mt: 2 }}>
-      <Table>
+    <Box>
+      {/* Barra de búsqueda */}
+      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+        <TextField
+          placeholder="Buscar laboratorios por código, nombre, ubicación o escuela..."
+          value={searchTerm}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+          size="small"
+          sx={{ flexGrow: 1 }}
+          InputProps={{
+            startAdornment: (
+              <Search sx={{ color: 'text.secondary', mr: 1 }} />
+            ),
+            endAdornment: searchTerm && (
+              <IconButton
+                size="small"
+                onClick={handleClearSearch}
+                sx={{ color: 'text.secondary' }}
+              >
+                <Clear />
+              </IconButton>
+            )
+          }}
+        />
+        {searchTerm && (
+          <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+            {filteredLaboratorios.length} resultado{filteredLaboratorios.length !== 1 ? 's' : ''}
+          </Typography>
+        )}
+      </Box>
+
+      <TableContainer component={Paper}>
+        <Table>
         <TableHead>
           <TableRow sx={{ backgroundColor: 'grey.50' }}>
-            <TableCell sx={{ fontWeight: 600 }}>Laboratorio</TableCell>
-            <TableCell sx={{ fontWeight: 600 }}>Ubicación</TableCell>
-            <TableCell sx={{ fontWeight: 600 }}>Piso</TableCell>
-            <TableCell sx={{ fontWeight: 600 }}>Escuela</TableCell>
-            <TableCell sx={{ fontWeight: 600 }}>Estado</TableCell>
-            <TableCell align="center" sx={{ fontWeight: 600 }}>Acciones</TableCell>
+            <TableCell sx={{ fontWeight: 600, width: '12%' }}>Código</TableCell>
+            <TableCell sx={{ fontWeight: 600, width: '25%' }}>Laboratorio</TableCell>
+            <TableCell sx={{ fontWeight: 600, width: '20%' }}>Ubicación</TableCell>
+            <TableCell sx={{ fontWeight: 600, width: '8%' }}>Piso</TableCell>
+            <TableCell sx={{ fontWeight: 600, width: '20%' }}>Escuela</TableCell>
+            <TableCell sx={{ fontWeight: 600, width: '10%' }}>Estado</TableCell>
+            <TableCell align="center" sx={{ fontWeight: 600, width: '5%' }}>Acciones</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {laboratorios.map((lab) => (
+          {filteredLaboratorios.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <School sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
+                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                    No se encontraron laboratorios
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {searchTerm 
+                      ? `No hay laboratorios que coincidan con "${searchTerm}"`
+                      : 'No hay laboratorios registrados en el sistema'
+                    }
+                  </Typography>
+                </Box>
+              </TableCell>
+            </TableRow>
+          ) : (
+            filteredLaboratorios.map((lab) => (
             <TableRow key={lab.id} hover>
+              {/* Código */}
+              <TableCell>
+                <Chip 
+                  label={lab.codigo || 'N/A'} 
+                  size="small" 
+                  color="secondary"
+                  variant="outlined"
+                  sx={{ fontFamily: 'monospace', fontWeight: 600 }}
+                />
+              </TableCell>
+
               {/* Nombre */}
               <TableCell>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -207,9 +290,11 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
                 </Tooltip>
               </TableCell>
             </TableRow>
-          ))}
+            ))
+          )}
         </TableBody>
       </Table>
+      </TableContainer>
 
       {/* Menu contextual */}
       <Menu
@@ -232,6 +317,6 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
           <ListItemText>Eliminar</ListItemText>
         </MenuItem>
       </Menu>
-    </TableContainer>
+    </Box>
   )
 } 
