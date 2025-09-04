@@ -15,6 +15,14 @@ export interface ShareLink {
   created_at: string
 }
 
+export interface PublicInsumo {
+  id: number
+  nombre: string
+  descripcion?: string
+  cantidad_usada: number
+  unidad_medida?: string
+}
+
 export interface PublicHorario {
   id: number
   fecha_inicio: string
@@ -27,6 +35,7 @@ export interface PublicHorario {
   escuela?: string
   ciclo?: string
   grupo: string
+  insumos?: PublicInsumo[]
 }
 
 export interface PublicLaboratorio {

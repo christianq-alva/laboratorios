@@ -22,6 +22,7 @@ import {
   MenuItem,
   Collapse,
   Button,
+  Tooltip,
 } from '@mui/material'
 import {
   LocationOn,
@@ -35,6 +36,7 @@ import {
 } from '@mui/icons-material'
 import { shareService, type PublicData } from '../../services/shareService'
 import { TIME_BLOCKS } from '../../utils/timeBlocks'
+import { HorarioDetallePublico } from './HorarioDetallePublico'
 import dayjs from 'dayjs'
 import 'dayjs/locale/es'
 import isoWeek from 'dayjs/plugin/isoWeek'
@@ -56,6 +58,13 @@ interface HorarioEventoPublico {
   horaFin: string
   color: string
   cantidad_alumnos?: number
+  insumos?: Array<{
+    id: number
+    nombre: string
+    descripcion?: string
+    cantidad_usada: number
+    unidad_medida?: string
+  }>
 }
 
 // Colores por tipo de actividad - Paleta UPeU
@@ -87,6 +96,10 @@ export const HorarioPublico: React.FC = () => {
   const [filtroDocente, setFiltroDocente] = useState<string>('')
   const [filtroCiclo, setFiltroCiclo] = useState<string>('')
   const [mostrarFiltros, setMostrarFiltros] = useState(false)
+  
+  // Estados para modal de detalles
+  const [modalDetalleOpen, setModalDetalleOpen] = useState(false)
+  const [horarioSeleccionado, setHorarioSeleccionado] = useState<any>(null)
 
   // Cargar datos públicos
   useEffect(() => {
@@ -214,7 +227,8 @@ export const HorarioPublico: React.FC = () => {
               horaInicio,
               horaFin,
               color: horario.color || getColorByTipo(horario.descripcion),
-              cantidad_alumnos: horario.cantidad_alumnos
+              cantidad_alumnos: horario.cantidad_alumnos,
+              insumos: horario.insumos || []
             })
           }
         })
@@ -241,6 +255,25 @@ export const HorarioPublico: React.FC = () => {
   const limpiarFiltros = () => {
     setFiltroDocente('')
     setFiltroCiclo('')
+  }
+
+  // Manejar clic en evento para mostrar detalles
+  const handleEventClick = (evento: HorarioEventoPublico) => {
+    // Buscar el horario completo en los datos públicos
+    const horarioCompleto = publicData?.horarios.find(h => h.id === evento.id)
+    if (horarioCompleto) {
+      setHorarioSeleccionado({
+        ...horarioCompleto,
+        escuela: horarioCompleto.escuela || 'No especificada'
+      })
+      setModalDetalleOpen(true)
+    }
+  }
+
+  // Cerrar modal de detalles
+  const handleCloseModal = () => {
+    setModalDetalleOpen(false)
+    setHorarioSeleccionado(null)
   }
 
   if (loading) {
@@ -509,15 +542,26 @@ export const HorarioPublico: React.FC = () => {
                         }}
                       >
                         {eventos.map(evento => (
-                          <Card
+                          <Tooltip
                             key={evento.id}
-                            sx={{
-                              backgroundColor: evento.color,
-                              color: 'white',
-                              mb: eventos.length > 1 ? 0.5 : 0,
-                              cursor: 'default'
-                            }}
+                            title="Haz clic para ver detalles completos"
+                            arrow
+                            placement="top"
                           >
+                            <Card
+                              sx={{
+                                backgroundColor: evento.color,
+                                color: 'white',
+                                mb: eventos.length > 1 ? 0.5 : 0,
+                                cursor: 'pointer',
+                                transition: 'transform 0.2s, box-shadow 0.2s',
+                                '&:hover': {
+                                  transform: 'scale(1.02)',
+                                  boxShadow: 3
+                                }
+                              }}
+                              onClick={() => handleEventClick(evento)}
+                            >
                             <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
                               <Typography 
                                 variant="caption" 
@@ -551,7 +595,8 @@ export const HorarioPublico: React.FC = () => {
                                 {evento.ciclo}
                               </Typography>
                             </CardContent>
-                          </Card>
+                            </Card>
+                          </Tooltip>
                         ))}
                       </TableCell>
                     )
@@ -598,6 +643,13 @@ export const HorarioPublico: React.FC = () => {
           </Typography>
         </Box>
       </Box>
+
+      {/* Modal de detalles del horario */}
+      <HorarioDetallePublico
+        open={modalDetalleOpen}
+        onClose={handleCloseModal}
+        horario={horarioSeleccionado}
+      />
     </Box>
   )
 }

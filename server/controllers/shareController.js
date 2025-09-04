@@ -248,16 +248,54 @@ export const getPublicHorarios = async (req, res) => {
         AND r.fecha_inicio >= CURDATE()
       ORDER BY r.fecha_inicio ASC
     `, [laboratorio_id])
+
+    // Obtener insumos para cada horario usando detalle_reserva_insumos
+    console.log('✅ Obteniendo insumos para horarios públicos...')
+    const horariosConInsumos = await Promise.all(
+      horarios.map(async (horario) => {
+        try {
+          const [insumos] = await pool.execute(`
+            SELECT 
+              i.id,
+              i.nombre,
+              i.descripcion,
+              dri.cantidad_usada,
+              i.unidad_medida
+            FROM detalle_reserva_insumos dri
+            JOIN insumos i ON dri.insumo_id = i.id
+            WHERE dri.reserva_id = ?
+            ORDER BY i.nombre
+          `, [horario.id])
+          
+          console.log(`🔍 Horario ${horario.id}: ${insumos.length} insumos encontrados`)
+          if (insumos.length > 0) {
+            console.log(`   Insumos:`, insumos.map(i => `${i.nombre} (${i.cantidad_usada})`))
+          }
+          
+          return {
+            ...horario,
+            insumos: insumos || []
+          }
+        } catch (error) {
+          console.log(`⚠️ Error obteniendo insumos para horario ${horario.id}:`, error.message)
+          return {
+            ...horario,
+            insumos: []
+          }
+        }
+      })
+    )
     
     console.log('🕐 Diagnóstico horarios públicos:', {
       timezone: process.env.TZ || 'UTC',
-      total_horarios: horarios.length,
-      primer_horario: horarios[0] ? {
-        id: horarios[0].id,
-        fecha_inicio_raw: horarios[0].fecha_inicio,
-        fecha_fin_raw: horarios[0].fecha_fin,
-        fecha_inicio_string: horarios[0].fecha_inicio?.toString(),
-        fecha_fin_string: horarios[0].fecha_fin?.toString()
+      total_horarios: horariosConInsumos.length,
+      primer_horario: horariosConInsumos[0] ? {
+        id: horariosConInsumos[0].id,
+        fecha_inicio_raw: horariosConInsumos[0].fecha_inicio,
+        fecha_fin_raw: horariosConInsumos[0].fecha_fin,
+        fecha_inicio_string: horariosConInsumos[0].fecha_inicio?.toString(),
+        fecha_fin_string: horariosConInsumos[0].fecha_fin?.toString(),
+        insumos_count: horariosConInsumos[0].insumos?.length || 0
       } : null
     })
     
@@ -279,13 +317,13 @@ export const getPublicHorarios = async (req, res) => {
       ORDER BY c.nombre
     `, [laboratorio_id])
     
-    console.log('✅ Horarios públicos obtenidos:', horarios.length)
+    console.log('✅ Horarios públicos obtenidos:', horariosConInsumos.length)
     
     res.json({
       success: true,
       data: {
         laboratorio: laboratorio[0],
-        horarios: horarios,
+        horarios: horariosConInsumos,
         filtros: {
           docentes: docentes.map(d => d.nombre),
           ciclos: ciclos.map(c => c.nombre)
