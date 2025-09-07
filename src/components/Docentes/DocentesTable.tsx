@@ -181,8 +181,8 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
               <TableCell>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Email fontSize="small" color="action" />
-                  <Typography variant="body2">
-                    {docente.correo}
+                  <Typography variant="body2" color={docente.correo ? 'text.primary' : 'text.secondary'}>
+                    {docente.correo || 'Sin correo'}
                   </Typography>
                 </Box>
               </TableCell>

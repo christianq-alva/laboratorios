@@ -51,20 +51,22 @@ export const createDocente = async (req, res) => {
     console.log('🔍 Creando docente:', { nombre, correo, usuario: req.user.usuario })
     
     // Validaciones básicas
-    if (!nombre || !correo) {
+    if (!nombre) {
       return res.status(400).json({
         success: false,
-        message: 'Nombre y correo son requeridos'
+        message: 'El nombre es requerido'
       })
     }
     
-    // Verificar si el correo ya existe
-    const [existing] = await pool.execute('SELECT id FROM docentes WHERE correo = ?', [correo])
-    if (existing.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Ya existe un docente con ese correo'
-      })
+    // Verificar si el correo ya existe (solo si se proporciona)
+    if (correo && correo.trim()) {
+      const [existing] = await pool.execute('SELECT id FROM docentes WHERE correo = ?', [correo])
+      if (existing.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Ya existe un docente con ese correo'
+        })
+      }
     }
     
     // Crear el docente
@@ -103,13 +105,15 @@ export const updateDocente = async (req, res) => {
       })
     }
     
-    // Verificar si el correo ya existe (excluyendo el propio docente)
-    const [existing] = await pool.execute('SELECT id FROM docentes WHERE correo = ? AND id != ?', [correo, id])
-    if (existing.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Ya existe otro docente con ese correo'
-      })
+    // Verificar si el correo ya existe (solo si se proporciona y excluyendo el propio docente)
+    if (correo && correo.trim()) {
+      const [existing] = await pool.execute('SELECT id FROM docentes WHERE correo = ? AND id != ?', [correo, id])
+      if (existing.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Ya existe otro docente con ese correo'
+        })
+      }
     }
     
     // Actualizar el docente

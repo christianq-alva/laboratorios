@@ -67,7 +67,7 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
       if (docente) {
         setFormData({
           nombre: docente.nombre,
-          correo: docente.correo,
+          correo: docente.correo || '',
           escuela_id: docente.escuela_id,
         })
       } else {
@@ -108,10 +108,8 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
       if (!formData.nombre.trim()) {
         throw new Error('El nombre es requerido')
       }
-      if (!formData.correo.trim()) {
-        throw new Error('El correo es requerido')
-      }
-      if (!formData.correo.includes('@')) {
+      // Validar correo solo si se proporciona
+      if (formData.correo && formData.correo.trim() && !formData.correo.includes('@')) {
         throw new Error('El correo debe tener un formato válido')
       }
       if (formData.escuela_id <= 0) {
@@ -184,14 +182,14 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
 
           <TextField
             fullWidth
-            label="Correo Electrónico"
+            label="Correo Electrónico (Opcional)"
             type="email"
             value={formData.correo}
             onChange={handleChange('correo')}
-            required
             disabled={loading}
             sx={{ mb: 2 }}
             placeholder="Ej: juan.perez@universidad.edu"
+            helperText="El correo es opcional. Déjalo vacío si no está disponible."
           />
 
           <FormControl fullWidth sx={{ mb: 1 }}>

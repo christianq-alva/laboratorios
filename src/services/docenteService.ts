@@ -3,7 +3,7 @@ import { api } from './api'
 export interface Docente {
   id: number
   nombre: string
-  correo: string
+  correo?: string | null
   escuela_id: number
   escuela?: string
   total_horarios?: number
@@ -11,7 +11,7 @@ export interface Docente {
 
 export interface CreateDocenteData {
   nombre: string
-  correo: string
+  correo?: string
   escuela_id: number
 }
 
