@@ -90,6 +90,21 @@ class InsumoService {
     }
   }
 
+  // Actualizar insumo
+  async update(id: number, insumoData: {
+    nombre: string
+    descripcion: string
+    unidad_medida: string
+  }): Promise<{ success: boolean; message: string; data: any }> {
+    try {
+      const response = await api.put(`/insumos/${id}`, insumoData)
+      return response.data
+    } catch (error: any) {
+      console.error('Error al actualizar insumo:', error)
+      throw new Error(error.response?.data?.message || 'Error al actualizar insumo')
+    }
+  }
+
   // Obtener actividad de insumos
   async getActividad(filters?: {
     laboratorio_id?: number

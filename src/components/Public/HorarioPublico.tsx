@@ -152,11 +152,7 @@ export const HorarioPublico: React.FC = () => {
     
     return publicData.horarios.filter(horario => {
       // Verificar si el horario está en la semana actual
-      // 🕐 Asegurar que la fecha se interprete como local
-      const fechaHorario = typeof horario.fecha_inicio === 'string' && 
-                          horario.fecha_inicio.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/) ?
-                          dayjs(horario.fecha_inicio, 'YYYY-MM-DD HH:mm:ss') :
-                          dayjs(horario.fecha_inicio)
+      const fechaHorario = dayjs(horario.fecha_inicio)
       
       if (!fechaHorario.isBetween(inicioSemana, finSemana, null, '[]')) {
         return false
@@ -184,23 +180,23 @@ export const HorarioPublico: React.FC = () => {
     })
     
     horariosSemana.forEach(horario => {
-      // 🕐 Asegurar que las fechas se interpreten como locales
-      // Si viene en formato YYYY-MM-DD HH:MM:SS, tratarla como local
-      const fechaInicio = typeof horario.fecha_inicio === 'string' && 
-                         horario.fecha_inicio.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/) ?
-                         dayjs(horario.fecha_inicio, 'YYYY-MM-DD HH:mm:ss') :
-                         dayjs(horario.fecha_inicio)
-      
-      const fechaFin = typeof horario.fecha_fin === 'string' && 
-                      horario.fecha_fin.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/) ?
-                      dayjs(horario.fecha_fin, 'YYYY-MM-DD HH:mm:ss') :
-                      dayjs(horario.fecha_fin)
+      // 🕐 Parsear fechas correctamente (maneja tanto formato ISO como local)
+      const fechaInicio = dayjs(horario.fecha_inicio)
+      const fechaFin = dayjs(horario.fecha_fin)
       
       const diaIndex = fechaInicio.isoWeekday() - 1 // 0 = Lunes, 4 = Viernes
       
       if (diaIndex >= 0 && diaIndex < 7) { // Todos los días de la semana
         const horaInicio = fechaInicio.format('HH:mm')
         const horaFin = fechaFin.format('HH:mm')
+        
+        // Debug: Log para verificar que los datos se están procesando
+        console.log(`🔍 Procesando evento ${horario.id}:`, {
+          horaInicio,
+          horaFin,
+          descripcion: horario.descripcion,
+          docente: horario.docente
+        })
         
         // Encontrar el slot de tiempo correspondiente
         TIME_BLOCKS.forEach(block => {
@@ -535,7 +531,7 @@ export const HorarioPublico: React.FC = () => {
                           p: 0.3,
                           borderRight: diaIndex < 6 ? '1px solid #e0e0e0' : 'none',
                           verticalAlign: 'top',
-                          height: 42, // Reducido de 60 a 42 (30% menos)
+                          height: 65, // Aumentado para acomodar más información
                           backgroundColor: eventos.length > 0 
                             ? (isToday ? '#e8f4fd' : '#fafafa')
                             : (isToday ? '#f3f8fe' : 'white')
@@ -563,36 +559,59 @@ export const HorarioPublico: React.FC = () => {
                               onClick={() => handleEventClick(evento)}
                             >
                             <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
+                              {/* Hora */}
                               <Typography 
                                 variant="caption" 
                                 sx={{ 
                                   fontWeight: 'bold',
                                   display: 'block',
                                   fontSize: '0.7rem',
-                                  lineHeight: 1.2
+                                  lineHeight: 1.1,
+                                  mb: 0.3
+                                }}
+                              >
+                                HORA: {evento.horaInicio} - {evento.horaFin}
+                              </Typography>
+                              
+                              {/* Nombre del curso/descripción */}
+                              <Typography 
+                                variant="caption" 
+                                sx={{ 
+                                  fontWeight: 600,
+                                  display: 'block',
+                                  fontSize: '0.65rem',
+                                  lineHeight: 1.1,
+                                  mb: 0.2,
+                                  opacity: 0.95
+                                }}
+                              >
+                                CURSO: {evento.descripcion}
+                              </Typography>
+                              
+                              {/* Docente */}
+                              <Typography 
+                                variant="caption" 
+                                sx={{ 
+                                  display: 'block',
+                                  fontSize: '0.6rem',
+                                  opacity: 0.9,
+                                  lineHeight: 1.1
                                 }}
                               >
                                 {evento.docente}
                               </Typography>
+                              
+                              {/* Grupo y Ciclo en la misma línea */}
                               <Typography 
                                 variant="caption" 
                                 sx={{ 
                                   display: 'block',
-                                  fontSize: '0.65rem',
-                                  opacity: 0.95
+                                  fontSize: '0.6rem',
+                                  opacity: 0.85,
+                                  lineHeight: 1.1
                                 }}
                               >
-                                {evento.grupo}
-                              </Typography>
-                              <Typography 
-                                variant="caption" 
-                                sx={{ 
-                                  display: 'block',
-                                  fontSize: '0.65rem',
-                                  opacity: 0.9
-                                }}
-                              >
-                                {evento.ciclo}
+                                {evento.grupo} • {evento.ciclo}
                               </Typography>
                             </CardContent>
                             </Card>

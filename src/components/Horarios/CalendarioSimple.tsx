@@ -632,7 +632,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                           p: 0.3,
                           borderRight: diaIndex < 6 ? '1px solid #e0e0e0' : 'none',
                           verticalAlign: 'top',
-                          height: 42, // Reducido de 60 a 42 (30% menos)
+                          height: 65, // Aumentado para acomodar más información
                           backgroundColor: eventos.length > 0 
                             ? (isToday ? '#e8f4fd' : '#fafafa')
                             : (isToday ? '#f3f8fe' : 'white')
@@ -658,37 +658,60 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                           }}
                         >
                           <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
+                            {/* Hora */}
                             <Typography 
                               variant="caption" 
                               sx={{ 
                                 fontWeight: 'bold',
                                 display: 'block',
                                 fontSize: '0.7rem',
-                                lineHeight: 1.2
+                                lineHeight: 1.1,
+                                mb: 0.3
                               }}
                             >
-                              {evento.laboratorio}
+                              {evento.horaInicio} - {evento.horaFin}
                             </Typography>
+                            
+                            {/* Nombre del curso/descripción */}
+                            <Typography 
+                              variant="caption" 
+                              sx={{ 
+                                fontWeight: 600,
+                                display: 'block',
+                                fontSize: '0.65rem',
+                                lineHeight: 1.1,
+                                mb: 0.2,
+                                opacity: 0.95
+                              }}
+                            >
+                              {evento.descripcion}
+                            </Typography>
+                            
+                            {/* Docente */}
                             <Typography 
                               variant="caption" 
                               sx={{ 
                                 display: 'block',
-                                fontSize: '0.65rem',
-                                opacity: 0.95
+                                fontSize: '0.6rem',
+                                opacity: 0.9,
+                                lineHeight: 1.1
                               }}
                             >
                               {evento.docente}
                             </Typography>
-                                                          <Typography 
-                                variant="caption" 
-                                sx={{ 
-                                  display: 'block',
-                                  fontSize: '0.65rem',
-                                  opacity: 0.9
-                                }}
-                              >
-                                {evento.grupo}
-                              </Typography>
+                            
+                            {/* Grupo y Laboratorio en la misma línea */}
+                            <Typography 
+                              variant="caption" 
+                              sx={{ 
+                                display: 'block',
+                                fontSize: '0.6rem',
+                                opacity: 0.85,
+                                lineHeight: 1.1
+                              }}
+                            >
+                              {evento.grupo} • {evento.laboratorio}
+                            </Typography>
                           </CardContent>
                         </Card>
                       ))}

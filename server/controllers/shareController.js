@@ -224,7 +224,7 @@ export const getPublicHorarios = async (req, res) => {
       })
     }
     
-    // Obtener horarios del laboratorio
+    // Obtener horarios del laboratorio (incluye fechas pasadas y futuras)
     const [horarios] = await pool.execute(`
       SELECT 
         r.id,
@@ -245,8 +245,7 @@ export const getPublicHorarios = async (req, res) => {
       LEFT JOIN escuelas e ON g.escuela_id = e.id
       LEFT JOIN ciclos c ON g.ciclo_id = c.id
       WHERE r.laboratorio_id = ?
-        AND r.fecha_inicio >= CURDATE()
-      ORDER BY r.fecha_inicio ASC
+      ORDER BY r.fecha_inicio DESC
     `, [laboratorio_id])
 
     // Obtener insumos para cada horario usando detalle_reserva_insumos
@@ -299,12 +298,12 @@ export const getPublicHorarios = async (req, res) => {
       } : null
     })
     
-    // Obtener lista de docentes y ciclos para filtros
+    // Obtener lista de docentes y ciclos para filtros (incluye todos los horarios)
     const [docentes] = await pool.execute(`
       SELECT DISTINCT d.nombre
       FROM reservas r
       JOIN docentes d ON r.docente_id = d.id
-      WHERE r.laboratorio_id = ? AND r.fecha_inicio >= CURDATE()
+      WHERE r.laboratorio_id = ?
       ORDER BY d.nombre
     `, [laboratorio_id])
     
@@ -313,7 +312,7 @@ export const getPublicHorarios = async (req, res) => {
       FROM reservas r
       JOIN grupos g ON r.grupo_id = g.id
       JOIN ciclos c ON g.ciclo_id = c.id
-      WHERE r.laboratorio_id = ? AND r.fecha_inicio >= CURDATE()
+      WHERE r.laboratorio_id = ?
       ORDER BY c.nombre
     `, [laboratorio_id])
     

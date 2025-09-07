@@ -192,8 +192,12 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
       }
 
       if (insumo) {
-        // TODO: Implementar actualización cuando esté disponible
-        throw new Error('La edición de insumos no está implementada aún')
+        // Actualizar insumo existente
+        await insumoService.update(insumo.id, {
+          nombre: formData.nombre.trim(),
+          descripcion: formData.descripcion.trim(),
+          unidad_medida: formData.unidad_medida.trim()
+        })
       } else {
         await insumoService.create(insumoData)
       }

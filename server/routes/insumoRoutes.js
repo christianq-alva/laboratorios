@@ -4,6 +4,7 @@ import { authorize } from '../middleware/authorize.js'
 import { 
   getInsumos, 
   createInsumo,
+  updateInsumo,
   getActividadInsumos,
   reabastecimientoInsumos,
   generarPlantillaExcel,
@@ -24,6 +25,12 @@ router.post('/',
   authenticateToken,
   authorize('create', 'Insumo'),
   createInsumo
+)
+
+router.put('/:id', 
+  authenticateToken,
+  authorize('update', 'Insumo'),
+  updateInsumo
 )
 
 router.get('/actividad', 

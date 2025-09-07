@@ -772,4 +772,72 @@ export const ejecutarReabastecimientoMasivo = async (req, res) => {
   } finally {
     connection.release()
   }
+}// Actualizar insumo
+export const updateInsumo = async (req, res) => {
+  try {
+    const { id } = req.params
+    const insumoId = parseInt(id, 10) // Convertir a número entero
+    const { nombre, descripcion, unidad_medida } = req.body
+    
+    // Limpiar espacios en blanco
+    const nombreLimpio = nombre?.trim()
+    const descripcionLimpia = descripcion?.trim()
+    const unidadLimpia = unidad_medida?.trim()
+    
+    console.log('🔄 Actualizando insumo:', { id, insumoId, nombre: nombreLimpio, descripcion: descripcionLimpia, unidad_medida: unidadLimpia })
+    
+    // Validar ID
+    if (isNaN(insumoId) || insumoId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID de insumo inválido'
+      })
+    }
+    
+    // Validar datos
+    if (!nombreLimpio || !unidadLimpia) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nombre y unidad de medida son requeridos'
+      })
+    }
+    
+    // Verificar que el insumo existe
+    const [existingInsumo] = await pool.execute(
+      'SELECT id FROM insumos WHERE id = ?',
+      [insumoId]
+    )
+    
+    if (existingInsumo.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Insumo no encontrado'
+      })
+    }
+    
+    // Validación de duplicados deshabilitada para permitir edición libre
+    console.log('ℹ️ Validación de duplicados omitida - permitiendo edición libre')
+    
+    // Actualizar insumo
+    await pool.execute(`
+      UPDATE insumos 
+      SET nombre = ?, descripcion = ?, unidad_medida = ?
+      WHERE id = ?
+    `, [nombreLimpio, descripcionLimpia || '', unidadLimpia, insumoId])
+    
+    console.log('✅ Insumo actualizado exitosamente:', insumoId)
+    
+    res.json({
+      success: true,
+      message: 'Insumo actualizado exitosamente',
+      data: { id: insumoId, nombre: nombreLimpio, descripcion: descripcionLimpia, unidad_medida: unidadLimpia }
+    })
+    
+  } catch (error) {
+    console.error('❌ Error al actualizar insumo:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    })
+  }
 }
