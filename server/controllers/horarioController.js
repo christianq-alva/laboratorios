@@ -52,9 +52,20 @@ const convertirFechaParaMySQL = (fechaInput) => {
 // 🚫 FUNCIÓN PARA VERIFICAR CRUCES DE HORARIOS
 const verificarCruceHorarios = async (connection, laboratorio_id, docente_id, fecha_inicio, fecha_fin, reserva_id = null) => {
   
+  console.log('🔍 verificarCruceHorarios - Parámetros recibidos:', {
+    laboratorio_id,
+    docente_id,
+    fecha_inicio,
+    fecha_fin,
+    reserva_id,
+    reserva_id_type: typeof reserva_id
+  })
+  
   // ✅ CONVERTIR FECHAS A FORMATO MYSQL
   const fechaInicioMySQL = convertirFechaParaMySQL(fecha_inicio)
   const fechaFinMySQL = convertirFechaParaMySQL(fecha_fin)
+  
+  console.log('🔍 Fechas convertidas:', { fechaInicioMySQL, fechaFinMySQL })
   
   // 🏢 VERIFICAR CRUCE DE LABORATORIO
   const queryLab = `
@@ -90,6 +101,13 @@ const verificarCruceHorarios = async (connection, laboratorio_id, docente_id, fe
     fechaFinMySQL, fechaFinMySQL, 
     fechaInicioMySQL, fechaFinMySQL
   ])
+  
+  console.log('🔍 Consulta de laboratorio ejecutada:', {
+    query: queryLab,
+    params: [laboratorio_id, reserva_id, fechaInicioMySQL, fechaInicioMySQL, fechaFinMySQL, fechaFinMySQL, fechaInicioMySQL, fechaFinMySQL],
+    resultados: cruceLabRows.length,
+    conflictos_encontrados: cruceLabRows
+  })
   
   if (cruceLabRows.length > 0) {
     const cruce = cruceLabRows[0]
@@ -602,6 +620,7 @@ export const getHorarios = async (req, res) => {
       await connection.beginTransaction()
       
       const { id } = req.params
+      const horarioId = parseInt(id, 10) // ← Convertir a número
       const { 
         laboratorio_id, 
         docente_id, 
@@ -697,7 +716,7 @@ export const getHorarios = async (req, res) => {
         docente_id, 
         fecha_inicio, 
         fecha_fin,
-        id // Excluir la reserva que estamos editando
+        horarioId // Excluir la reserva que estamos editando
       )
       
       if (cruce) {
@@ -714,7 +733,7 @@ export const getHorarios = async (req, res) => {
       
       // Verificación de permisos (igual que antes)
       if (req.user.rol === 'Jefe de Laboratorio') {
-        const [existing] = await connection.execute('SELECT laboratorio_id FROM reservas WHERE id = ?', [id])
+        const [existing] = await connection.execute('SELECT laboratorio_id FROM reservas WHERE id = ?', [horarioId])
         if (existing.length === 0 || !req.user.laboratorio_ids.includes(existing[0].laboratorio_id)) {
           await connection.rollback()
           return res.status(403).json({ 
@@ -729,7 +748,7 @@ export const getHorarios = async (req, res) => {
         SELECT insumo_id, cantidad_usada 
         FROM detalle_reserva_insumos 
         WHERE reserva_id = ?
-      `, [id])
+      `, [horarioId])
       
       console.log('🔍 Insumos actuales:', insumosActuales)
       
@@ -742,18 +761,18 @@ export const getHorarios = async (req, res) => {
           WHERE insumo_id = ? AND laboratorio_id = (
             SELECT laboratorio_id FROM reservas WHERE id = ?
           )
-        `, [insumoActual.cantidad_usada, insumoActual.insumo_id, id])
+        `, [insumoActual.cantidad_usada, insumoActual.insumo_id, horarioId])
         
         // Registrar movimiento de devolución
         await connection.execute(`
           INSERT INTO movimientos_insumos 
           (insumo_id, laboratorio_id, usuario_id, tipo_movimiento, cantidad, reserva_id, observaciones)
           VALUES (?, (SELECT laboratorio_id FROM reservas WHERE id = ?), ?, 'entrada', ?, ?, 'Devolución por edición de horario')
-        `, [insumoActual.insumo_id, id, req.user.userId, insumoActual.cantidad_usada, id])
+        `, [insumoActual.insumo_id, horarioId, req.user.userId, insumoActual.cantidad_usada, horarioId])
       }
       
       // 3️⃣ ELIMINAR REGISTROS ANTIGUOS DE INSUMOS
-      await connection.execute('DELETE FROM detalle_reserva_insumos WHERE reserva_id = ?', [id])
+      await connection.execute('DELETE FROM detalle_reserva_insumos WHERE reserva_id = ?', [horarioId])
       
       // 4️⃣ VERIFICAR STOCK DE NUEVOS INSUMOS
       for (const insumo of insumos) {
@@ -777,7 +796,7 @@ export const getHorarios = async (req, res) => {
         UPDATE reservas 
         SET laboratorio_id = ?, docente_id = ?, grupo_id = ?, descripcion = ?, fecha_inicio = ?, fecha_fin = ?, cantidad_alumnos = ?, color = ?
         WHERE id = ?
-      `, [laboratorio_id, docente_id, grupo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, id])
+      `, [laboratorio_id, docente_id, grupo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, horarioId])
       
       // 6️⃣ PROCESAR NUEVOS INSUMOS
       for (const insumo of insumos) {
@@ -829,8 +848,9 @@ export const getHorarios = async (req, res) => {
       await connection.beginTransaction()
       
       const { id } = req.params
+      const horarioId = parseInt(id, 10) // ← Convertir a número
       
-      console.log('🔍 Eliminando horario ID:', id)
+      console.log('🔍 Eliminando horario ID:', horarioId)
       
       // 1️⃣ OBTENER INFORMACIÓN COMPLETA DEL HORARIO
       const [horarioInfo] = await connection.execute(`
@@ -855,7 +875,7 @@ export const getHorarios = async (req, res) => {
         JOIN escuelas e ON g.escuela_id = e.id
         JOIN ciclos c ON g.ciclo_id = c.id
         WHERE r.id = ?
-      `, [id])
+      `, [horarioId])
       
       if (horarioInfo.length === 0) {
         await connection.rollback()
@@ -898,7 +918,7 @@ export const getHorarios = async (req, res) => {
         FROM detalle_reserva_insumos dri
         JOIN insumos i ON dri.insumo_id = i.id
         WHERE dri.reserva_id = ?
-      `, [id])
+      `, [horarioId])
       
       console.log('📦 Insumos a devolver:', insumosUsados.length)
       
@@ -918,15 +938,15 @@ export const getHorarios = async (req, res) => {
           INSERT INTO movimientos_insumos 
           (insumo_id, laboratorio_id, usuario_id, tipo_movimiento, cantidad, reserva_id, observaciones)
           VALUES (?, ?, ?, 'entrada', ?, ?, 'Devolución por eliminación de horario')
-        `, [insumo.insumo_id, horario.laboratorio_id, req.user.userId, insumo.cantidad_usada, id])
+        `, [insumo.insumo_id, horario.laboratorio_id, req.user.userId, insumo.cantidad_usada, horarioId])
       }
       
       // 5️⃣ ELIMINAR REGISTROS RELACIONADOS
-      await connection.execute('DELETE FROM detalle_reserva_insumos WHERE reserva_id = ?', [id])
+      await connection.execute('DELETE FROM detalle_reserva_insumos WHERE reserva_id = ?', [horarioId])
       console.log('✅ Registros de insumos eliminados')
       
       // 6️⃣ ELIMINAR EL HORARIO/RESERVA
-      await connection.execute('DELETE FROM reservas WHERE id = ?', [id])
+      await connection.execute('DELETE FROM reservas WHERE id = ?', [horarioId])
       console.log('✅ Horario eliminado')
       
       await connection.commit()
@@ -963,9 +983,16 @@ export const getHorarios = async (req, res) => {
   // 🔍 VERIFICAR DISPONIBILIDAD DE HORARIO
   export const verificarDisponibilidad = async (req, res) => {
     try {
-      const { laboratorio_id, docente_id, fecha_inicio, fecha_fin } = req.body
+      const { laboratorio_id, docente_id, fecha_inicio, fecha_fin, horario_id } = req.body
       
-      console.log('🔍 Verificando disponibilidad:', { laboratorio_id, docente_id, fecha_inicio, fecha_fin })
+      console.log('🔍 Verificando disponibilidad:', { 
+        laboratorio_id, 
+        docente_id, 
+        fecha_inicio, 
+        fecha_fin, 
+        horario_id,
+        horario_id_type: typeof horario_id 
+      })
       
       const connection = await pool.getConnection()
       const cruce = await verificarCruceHorarios(
@@ -973,7 +1000,8 @@ export const getHorarios = async (req, res) => {
         laboratorio_id, 
         docente_id, 
         fecha_inicio, 
-        fecha_fin
+        fecha_fin,
+        horario_id // ← Pasar el horario_id para excluirlo
       )
       connection.release()
       
