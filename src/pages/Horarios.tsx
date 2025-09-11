@@ -15,10 +15,11 @@ import {
   ToggleButtonGroup,
   ToggleButton
 } from '@mui/material'
-import { Add, Schedule, Warning, ViewList, CalendarMonth } from '@mui/icons-material'
+import { Add, Schedule, Warning, ViewList, CalendarMonth, Repeat } from '@mui/icons-material'
 import { HorariosTable } from '../components/Horarios/HorariosTable'
 import { CalendarioSimple } from '../components/Horarios/CalendarioSimple'
 import { HorarioFormSimple as HorarioForm } from '../components/Horarios/HorarioFormSimple'
+import { HorarioRecurrente } from '../components/Horarios/HorarioRecurrente'
 import { HorarioDetalle } from '../components/Horarios/HorarioDetalle'
 import { ShareModal } from '../components/Share/ShareModal'
 import { ExportModal } from '../components/Export/ExportModal'
@@ -28,6 +29,7 @@ import type { Horario } from '../services/horarioService'
 export const Horarios: React.FC = () => {
   // Estados para formulario y eliminación
   const [formOpen, setFormOpen] = useState(false)
+  const [recurrenteOpen, setRecurrenteOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [detalleOpen, setDetalleOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
@@ -54,6 +56,26 @@ export const Horarios: React.FC = () => {
   const handleNewHorario = () => {
     setSelectedHorario(null)
     setFormOpen(true)
+  }
+
+  // Función para abrir formulario de horarios recurrentes
+  const handleNewHorarioRecurrente = () => {
+    setRecurrenteOpen(true)
+  }
+
+  // Función para cerrar formulario de horarios recurrentes
+  const handleRecurrenteClose = () => {
+    setRecurrenteOpen(false)
+  }
+
+  // Función cuando el formulario recurrente tiene éxito
+  const handleRecurrenteSuccess = () => {
+    setRefresh(prev => !prev)
+    setSnackbar({
+      open: true,
+      message: 'Horarios recurrentes creados correctamente',
+      severity: 'success'
+    })
   }
 
   // Función para editar horario
@@ -220,14 +242,24 @@ export const Horarios: React.FC = () => {
         </Box>
         
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={handleNewHorario}
-            size="small"
-          >
-            Nuevo
-          </Button>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={handleNewHorario}
+              size="small"
+            >
+              Nuevo
+            </Button>
+            
+            <Button
+              variant="outlined"
+              startIcon={<Repeat />}
+              onClick={handleNewHorarioRecurrente}
+              size="small"
+              color="secondary"
+            >
+              Recurrente
+            </Button>
           
           {process.env.NODE_ENV === 'development' && (
             <Button
@@ -290,6 +322,13 @@ DEBUG: ${info.total_reservas} reservas, ${info.reservas_con_joins} con datos, ${
         onClose={handleFormClose}
         onSuccess={handleFormSuccess}
         horario={selectedHorario}
+      />
+
+      {/* Formulario de horarios recurrentes */}
+      <HorarioRecurrente
+        open={recurrenteOpen}
+        onClose={handleRecurrenteClose}
+        onSuccess={handleRecurrenteSuccess}
       />
 
       {/* Diálogo de detalles */}
