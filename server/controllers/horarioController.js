@@ -1134,9 +1134,10 @@ export const getEscuelas = async (req, res) => {
 export const getCiclos = async (req, res) => {
   try {
     const [ciclos] = await pool.execute(`
-      SELECT id, nombre 
+      SELECT id, nombre,
+             CAST(SUBSTRING_INDEX(nombre, ' ', -1) AS UNSIGNED) as numero_ciclo
       FROM ciclos 
-      ORDER BY nombre
+      ORDER BY numero_ciclo ASC
     `)
     
     res.json({ 

@@ -434,11 +434,17 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
                   label="Ciclo"
                   disabled={!selectedEscuela}
                 >
-                  {ciclos.map(ciclo => (
-                    <MenuItem key={ciclo.id} value={ciclo.id}>
-                      {ciclo.nombre}
-                    </MenuItem>
-                  ))}
+                  {[...ciclos]
+                    .sort((a, b) => {
+                      const numA = parseInt(a.nombre.replace(/[^\d]/g, '')) || 0;
+                      const numB = parseInt(b.nombre.replace(/[^\d]/g, '')) || 0;
+                      return numA - numB;
+                    })
+                    .map(ciclo => (
+                      <MenuItem key={ciclo.id} value={ciclo.id}>
+                        {ciclo.nombre}
+                      </MenuItem>
+                    ))}
                 </Select>
               </FormControl>
 

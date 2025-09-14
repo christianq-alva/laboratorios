@@ -692,11 +692,17 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                       disabled={loading}
                     >
                       <MenuItem value={0}>Todos los ciclos</MenuItem>
-                      {ciclos.map((ciclo) => (
-                        <MenuItem key={ciclo.id} value={ciclo.id}>
-                          {ciclo.nombre}
-                        </MenuItem>
-                      ))}
+                      {[...ciclos]
+                        .sort((a, b) => {
+                          const numA = parseInt(a.nombre.replace(/[^\d]/g, '')) || 0;
+                          const numB = parseInt(b.nombre.replace(/[^\d]/g, '')) || 0;
+                          return numA - numB;
+                        })
+                        .map((ciclo) => (
+                          <MenuItem key={ciclo.id} value={ciclo.id}>
+                            {ciclo.nombre}
+                          </MenuItem>
+                        ))}
                     </Select>
                   </FormControl>
 
