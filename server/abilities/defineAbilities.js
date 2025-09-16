@@ -22,7 +22,7 @@ export const defineAbilitiesFor = (user) => {
         can(['create', 'read', 'update', 'delete'], 'Horario', { laboratorio_id: labId })
         can(['create', 'read'], 'Incidencia', { laboratorio_id: labId })
         can(['create', 'read', 'update', 'delete'], 'Equipo', { laboratorio_id: labId })
-        can(['create', 'read', 'update'], 'Insumo', { laboratorio_id: labId })
+        can(['create', 'read', 'update', 'delete'], 'Insumo', { laboratorio_id: labId })
         can(['create', 'read', 'update', 'delete'], 'Reserva', { laboratorio_id: labId })
         can(['read', 'update'], 'Laboratorio', { id: labId })
       })

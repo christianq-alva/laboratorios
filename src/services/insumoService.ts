@@ -105,6 +105,24 @@ class InsumoService {
     }
   }
 
+  // Eliminar insumo
+  async delete(id: number): Promise<{ success: boolean; message: string }> {
+    try {
+      console.log('🗑️ Eliminando insumo:', id)
+      const response = await api.delete(`/insumos/${id}`)
+      console.log('✅ Respuesta del servidor:', response.data)
+      return response.data
+    } catch (error: any) {
+      console.error('❌ Error al eliminar insumo:', {
+        status: error.response?.status,
+        message: error.response?.data?.message,
+        data: error.response?.data,
+        error: error.message
+      })
+      throw error
+    }
+  }
+
   // Obtener actividad de insumos
   async getActividad(filters?: {
     laboratorio_id?: number

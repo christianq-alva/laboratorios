@@ -773,6 +773,77 @@ export const ejecutarReabastecimientoMasivo = async (req, res) => {
     connection.release()
   }
 }// Actualizar insumo
+// Eliminar insumo
+export const deleteInsumo = async (req, res) => {
+  const connection = await pool.getConnection()
+  
+  try {
+    await connection.beginTransaction()
+    
+    const { id } = req.params
+    const insumoId = parseInt(id, 10)
+    
+    console.log('🗑️ Eliminando insumo:', insumoId)
+    
+    // Validar ID
+    if (isNaN(insumoId) || insumoId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID de insumo inválido'
+      })
+    }
+    
+    // Verificar que el insumo existe
+    const [existingInsumo] = await connection.execute(
+      'SELECT id, nombre FROM insumos WHERE id = ?',
+      [insumoId]
+    )
+    
+    if (existingInsumo.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Insumo no encontrado'
+      })
+    }
+
+    // Verificar si hay movimientos asociados
+    const [movimientos] = await connection.execute(
+      'SELECT COUNT(*) as total FROM movimientos_insumos WHERE insumo_id = ?',
+      [insumoId]
+    )
+
+    if (movimientos[0].total > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No se puede eliminar el insumo porque tiene movimientos registrados'
+      })
+    }
+
+    // Eliminar registros relacionados en orden
+    await connection.execute('DELETE FROM inventario_insumos WHERE insumo_id = ?', [insumoId])
+    await connection.execute('DELETE FROM insumos WHERE id = ?', [insumoId])
+    
+    await connection.commit()
+    
+    console.log('✅ Insumo eliminado exitosamente:', insumoId)
+    
+    res.json({
+      success: true,
+      message: 'Insumo eliminado exitosamente'
+    })
+    
+  } catch (error) {
+    await connection.rollback()
+    console.error('❌ Error al eliminar insumo:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Error interno al eliminar el insumo'
+    })
+  } finally {
+    connection.release()
+  }
+}
+
 export const updateInsumo = async (req, res) => {
   try {
     const { id } = req.params

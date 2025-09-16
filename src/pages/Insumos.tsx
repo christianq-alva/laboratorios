@@ -19,7 +19,7 @@ import { InsumoForm } from '../components/Insumos/InsumoForm'
 import { ActividadInsumos } from '../components/Insumos/ActividadInsumos'
 import { ReabastecimientoModal } from '../components/Insumos/ReabastecimientoModal'
 import { CargaMasivaModal } from '../components/Insumos/CargaMasivaModal'
-import type { Insumo } from '../services/insumoService'
+import { insumoService, type Insumo } from '../services/insumoService'
 
 export const Insumos: React.FC = () => {
   // Estados para formulario y eliminación
@@ -87,31 +87,45 @@ export const Insumos: React.FC = () => {
 
     setDeleteLoading(true)
     try {
-      // TODO: Implementar eliminación cuando esté disponible en el backend
-      throw new Error('La eliminación de insumos no está implementada aún')
+      console.log('🗑️ Intentando eliminar insumo:', selectedInsumo.id)
+      const result = await insumoService.delete(selectedInsumo.id)
       
-      // const result = await insumoService.delete(selectedInsumo.id)
-      
-      // if (result.success) {
-      //   setDeleteOpen(false)
-      //   setSelectedInsumo(null)
-      //   setRefresh(prev => !prev)
-      //   setSnackbar({
-      //     open: true,
-      //     message: 'Insumo eliminado correctamente',
-      //     severity: 'success'
-      //   })
-      // } else {
-      //   setSnackbar({
-      //     open: true,
-      //     message: result.message || 'Error al eliminar el insumo',
-      //     severity: 'error'
-      //   })
-      // }
+      if (result.success) {
+        console.log('✅ Insumo eliminado correctamente')
+        setDeleteOpen(false)
+        setSelectedInsumo(null)
+        setRefresh(prev => !prev)
+        setSnackbar({
+          open: true,
+          message: 'Insumo eliminado correctamente',
+          severity: 'success'
+        })
+      } else {
+        console.error('❌ Error al eliminar insumo:', result)
+        setSnackbar({
+          open: true,
+          message: result.message || 'Error al eliminar el insumo',
+          severity: 'error'
+        })
+      }
     } catch (err: any) {
+      console.error('❌ Error de conexión:', {
+        error: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      })
+      
+      let errorMessage = 'Error de conexión al eliminar el insumo'
+      
+      if (err.response?.status === 403) {
+        errorMessage = 'No tienes permisos para eliminar este insumo'
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message
+      }
+      
       setSnackbar({
         open: true,
-        message: err.message || 'Error de conexión al eliminar el insumo',
+        message: errorMessage,
         severity: 'error'
       })
     } finally {

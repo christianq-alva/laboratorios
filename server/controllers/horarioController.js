@@ -941,11 +941,16 @@ export const getHorarios = async (req, res) => {
         `, [insumo.insumo_id, horario.laboratorio_id, req.user.userId, insumo.cantidad_usada, horarioId])
       }
       
-      // 5️⃣ ELIMINAR REGISTROS RELACIONADOS
+      // 5️⃣ ELIMINAR REGISTROS EN ORDEN
+      // 1. Eliminar movimientos de insumos
+      await connection.execute('DELETE FROM movimientos_insumos WHERE reserva_id = ?', [horarioId])
+      console.log('✅ Movimientos de insumos eliminados')
+
+      // 2. Eliminar detalles de insumos
       await connection.execute('DELETE FROM detalle_reserva_insumos WHERE reserva_id = ?', [horarioId])
-      console.log('✅ Registros de insumos eliminados')
+      console.log('✅ Detalles de insumos eliminados')
       
-      // 6️⃣ ELIMINAR EL HORARIO/RESERVA
+      // 3. Eliminar el horario/reserva
       await connection.execute('DELETE FROM reservas WHERE id = ?', [horarioId])
       console.log('✅ Horario eliminado')
       

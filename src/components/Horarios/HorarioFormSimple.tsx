@@ -20,6 +20,7 @@ import {
   ListItem,
   ListItemText,
   Chip,
+  Tooltip,
 } from '@mui/material'
 import {
   Close,
@@ -33,6 +34,7 @@ import {
   Remove,
   Warning,
   CheckCircle,
+  Delete,
 } from '@mui/icons-material'
 import { horarioService } from '../../services/horarioService'
 import { laboratorioService } from '../../services/laboratorioService'
@@ -399,13 +401,17 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     }
   }
 
+  const eliminarInsumo = (insumo_id: number) => {
+    setInsumosSeleccionados(prev => prev.filter(i => i.insumo_id !== insumo_id))
+  }
+
   const actualizarCantidadInsumo = (insumo_id: number, cantidad: number) => {
     const insumo = insumosSeleccionados.find(i => i.insumo_id === insumo_id)
     if (!insumo) return
 
     // Validar límites
     if (cantidad <= 0) {
-      setInsumosSeleccionados(prev => prev.filter(i => i.insumo_id !== insumo_id))
+      eliminarInsumo(insumo_id)
     } else if (cantidad <= insumo.stock_disponible) {
       setInsumosSeleccionados(prev => 
         prev.map(i => i.insumo_id === insumo_id ? { ...i, cantidad } : i)
@@ -1293,24 +1299,35 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                                 }
                               />
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <IconButton
-                                  size="small"
-                                  onClick={() => actualizarCantidadInsumo(insumo.insumo_id, insumo.cantidad - 1)}
-                                  color="error"
-                                >
-                                  <Remove />
-                                </IconButton>
-                                <Typography variant="body2" sx={{ minWidth: 30, textAlign: 'center', fontWeight: 500 }}>
-                                  {insumo.cantidad}
-                                </Typography>
-                                <IconButton
-                                  size="small"
-                                  onClick={() => actualizarCantidadInsumo(insumo.insumo_id, insumo.cantidad + 1)}
-                                  disabled={insumo.cantidad >= insumo.stock_disponible}
-                                  color="primary"
-                                >
-                                  <Add />
-                                </IconButton>
+                                <Tooltip title="Eliminar insumo">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => eliminarInsumo(insumo.insumo_id)}
+                                    color="error"
+                                  >
+                                    <Delete fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => actualizarCantidadInsumo(insumo.insumo_id, insumo.cantidad - 1)}
+                                    color="error"
+                                  >
+                                    <Remove />
+                                  </IconButton>
+                                  <Typography variant="body2" sx={{ minWidth: 30, textAlign: 'center', fontWeight: 500 }}>
+                                    {insumo.cantidad}
+                                  </Typography>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => actualizarCantidadInsumo(insumo.insumo_id, insumo.cantidad + 1)}
+                                    disabled={insumo.cantidad >= insumo.stock_disponible}
+                                    color="primary"
+                                  >
+                                    <Add />
+                                  </IconButton>
+                                </Box>
                               </Box>
                             </ListItem>
                           )

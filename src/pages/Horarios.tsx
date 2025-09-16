@@ -154,9 +154,11 @@ export const Horarios: React.FC = () => {
 
     setDeleteLoading(true)
     try {
+      console.log('🗑️ Intentando eliminar horario:', selectedHorario.id)
       const result = await horarioService.delete(selectedHorario.id)
       
       if (result.success) {
+        console.log('✅ Horario eliminado correctamente')
         setDeleteOpen(false)
         setSelectedHorario(null)
         setRefresh(prev => !prev)
@@ -166,16 +168,31 @@ export const Horarios: React.FC = () => {
           severity: 'success'
         })
       } else {
+        console.error('❌ Error al eliminar horario:', result)
         setSnackbar({
           open: true,
           message: result.message || 'Error al eliminar el horario',
           severity: 'error'
         })
       }
-    } catch (err) {
+    } catch (err: any) {
+      console.error('❌ Error de conexión:', {
+        error: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      })
+      
+      let errorMessage = 'Error de conexión al eliminar el horario'
+      
+      if (err.response?.status === 403) {
+        errorMessage = 'No tienes permisos para eliminar este horario'
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message
+      }
+      
       setSnackbar({
         open: true,
-        message: 'Error de conexión al eliminar el horario',
+        message: errorMessage,
         severity: 'error'
       })
     } finally {

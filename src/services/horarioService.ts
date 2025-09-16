@@ -152,8 +152,20 @@ export const horarioService = {
   },
 
   delete: async (id: number) => {
-    const response = await api.delete(`/horarios/${id}`)
-    return response.data
+    try {
+      console.log('🗑️ Eliminando horario:', id)
+      const response = await api.delete(`/horarios/${id}`)
+      console.log('✅ Respuesta del servidor:', response.data)
+      return response.data
+    } catch (error: any) {
+      console.error('❌ Error al eliminar horario:', {
+        status: error.response?.status,
+        message: error.response?.data?.message,
+        data: error.response?.data,
+        error: error.message
+      })
+      throw error
+    }
   },
 
   // Verificación de disponibilidad

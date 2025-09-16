@@ -5,6 +5,7 @@ import {
   getInsumos, 
   createInsumo,
   updateInsumo,
+  deleteInsumo,
   getActividadInsumos,
   reabastecimientoInsumos,
   generarPlantillaExcel,
@@ -31,6 +32,12 @@ router.put('/:id',
   authenticateToken,
   authorize('update', 'Insumo'),
   updateInsumo
+)
+
+router.delete('/:id',
+  authenticateToken,
+  authorize('delete', 'Insumo'),
+  deleteInsumo
 )
 
 router.get('/actividad', 
