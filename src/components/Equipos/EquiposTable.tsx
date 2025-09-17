@@ -18,8 +18,7 @@ import {
   Alert,
   IconButton,
   Tooltip,
-  TextField,
-  Button
+  TextField
 } from '@mui/material'
 import { Edit, Delete, Build, Info, Search, Clear } from '@mui/icons-material'
 import { equipoService, type Equipo } from '../../services/equipoService'

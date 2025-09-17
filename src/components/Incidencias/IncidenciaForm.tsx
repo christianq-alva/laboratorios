@@ -24,7 +24,10 @@ import {
   Person,
   LocationOn,
   Group,
-  CalendarToday
+  CalendarToday,
+  FilterList,
+  Clear,
+  Search
 } from '@mui/icons-material'
 import { incidenciaService, type HorarioParaIncidencia } from '../../services/incidenciaService'
 
@@ -36,12 +39,19 @@ interface IncidenciaFormProps {
 
 export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, onSuccess }) => {
   const [horarios, setHorarios] = useState<HorarioParaIncidencia[]>([])
+  const [filteredHorarios, setFilteredHorarios] = useState<HorarioParaIncidencia[]>([])
   const [selectedHorario, setSelectedHorario] = useState<number | ''>('')
   const [titulo, setTitulo] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  
+  // Filtros
+  const [filtroFecha, setFiltroFecha] = useState('')
+  const [filtroLaboratorio, setFiltroLaboratorio] = useState('')
+  const [filtroDocente, setFiltroDocente] = useState('')
+  const [mostrarFiltros, setMostrarFiltros] = useState(false)
 
   // Cargar horarios disponibles
   const loadHorarios = async () => {
@@ -52,6 +62,7 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
       const response = await incidenciaService.getHorariosDisponibles()
       if (response.success) {
         setHorarios(response.data)
+        setFilteredHorarios(response.data)
       } else {
         setError(response.message || 'Error al cargar horarios')
       }
@@ -70,12 +81,39 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
     }
   }, [open])
 
+  // Efecto para aplicar filtros
+  useEffect(() => {
+    let filtered = horarios
+
+    if (filtroFecha) {
+      filtered = filtered.filter(h => h.fecha_clase.includes(filtroFecha))
+    }
+    if (filtroLaboratorio) {
+      filtered = filtered.filter(h => h.laboratorio.toLowerCase().includes(filtroLaboratorio.toLowerCase()))
+    }
+    if (filtroDocente) {
+      filtered = filtered.filter(h => h.docente.toLowerCase().includes(filtroDocente.toLowerCase()))
+    }
+
+    setFilteredHorarios(filtered)
+  }, [horarios, filtroFecha, filtroLaboratorio, filtroDocente])
+
+  // Función para limpiar filtros
+  const limpiarFiltros = () => {
+    setFiltroFecha('')
+    setFiltroLaboratorio('')
+    setFiltroDocente('')
+    setFilteredHorarios(horarios)
+  }
+
   // Función para limpiar el formulario
   const handleClose = () => {
     setSelectedHorario('')
     setTitulo('')
     setDescripcion('')
     setError(null)
+    limpiarFiltros()
+    setMostrarFiltros(false)
     onClose()
   }
 
@@ -166,9 +204,76 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
 
         {/* Selección de horario */}
         <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
-            Seleccionar Horario
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              Seleccionar Horario
+            </Typography>
+            {horarios.length > 10 && (
+              <Button
+                size="small"
+                startIcon={<FilterList />}
+                onClick={() => setMostrarFiltros(!mostrarFiltros)}
+                variant="outlined"
+              >
+                {mostrarFiltros ? 'Ocultar Filtros' : 'Filtrar'}
+              </Button>
+            )}
+          </Box>
+
+          {/* Filtros */}
+          {mostrarFiltros && (
+            <Box sx={{ 
+              p: 2, 
+              mb: 2, 
+              border: '1px solid #e0e0e0', 
+              borderRadius: 1, 
+              backgroundColor: '#f5f5f5' 
+            }}>
+              <Typography variant="body2" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Search fontSize="small" />
+                Filtrar horarios ({filteredHorarios.length} de {horarios.length})
+              </Typography>
+              
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                <TextField
+                  size="small"
+                  label="Fecha (DD/MM/YYYY)"
+                  value={filtroFecha}
+                  onChange={(e) => setFiltroFecha(e.target.value)}
+                  placeholder="Ej: 15/12/2024"
+                  sx={{ minWidth: 150 }}
+                />
+                
+                <TextField
+                  size="small"
+                  label="Laboratorio"
+                  value={filtroLaboratorio}
+                  onChange={(e) => setFiltroLaboratorio(e.target.value)}
+                  placeholder="Nombre del laboratorio"
+                  sx={{ minWidth: 150 }}
+                />
+                
+                <TextField
+                  size="small"
+                  label="Docente"
+                  value={filtroDocente}
+                  onChange={(e) => setFiltroDocente(e.target.value)}
+                  placeholder="Nombre del docente"
+                  sx={{ minWidth: 150 }}
+                />
+                
+                <Button
+                  size="small"
+                  startIcon={<Clear />}
+                  onClick={limpiarFiltros}
+                  variant="outlined"
+                  color="secondary"
+                >
+                  Limpiar
+                </Button>
+              </Box>
+            </Box>
+          )}
           
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
@@ -179,6 +284,13 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
               No hay horarios disponibles para reportar incidencias. 
               Solo se pueden reportar incidencias para clases que ya han terminado.
             </Alert>
+          ) : filteredHorarios.length === 0 ? (
+            <Alert severity="warning">
+              No se encontraron horarios con los filtros aplicados. 
+              <Button size="small" onClick={limpiarFiltros} sx={{ ml: 1 }}>
+                Limpiar filtros
+              </Button>
+            </Alert>
           ) : (
             <FormControl fullWidth size="small">
               <InputLabel>Seleccionar horario</InputLabel>
@@ -186,17 +298,36 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
                 value={selectedHorario}
                 label="Seleccionar horario"
                 onChange={(e) => setSelectedHorario(e.target.value as number | '')}
+                MenuProps={{
+                  PaperProps: {
+                    style: {
+                      maxHeight: 300, // Limitar altura del dropdown
+                    },
+                  },
+                }}
               >
-                {horarios.map((horario) => (
+                {filteredHorarios.slice(0, 50).map((horario) => ( // Mostrar máximo 50 resultados
                   <MenuItem key={horario.id} value={horario.id}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Schedule fontSize="small" />
-                      <Typography variant="body2">
-                        {horario.fecha_clase} - {horario.laboratorio}
-                      </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                      <Schedule fontSize="small" color="primary" />
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {horario.fecha_clase}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {horario.laboratorio} - {horario.docente}
+                        </Typography>
+                      </Box>
                     </Box>
                   </MenuItem>
                 ))}
+                {filteredHorarios.length > 50 && (
+                  <MenuItem disabled>
+                    <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', width: '100%' }}>
+                      ... y {filteredHorarios.length - 50} más. Usa los filtros para reducir resultados.
+                    </Typography>
+                  </MenuItem>
+                )}
               </Select>
             </FormControl>
           )}

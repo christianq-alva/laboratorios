@@ -93,7 +93,7 @@ export const getHorariosParaIncidencias = async (req, res) => {
       FROM reservas r
       JOIN laboratorios l ON r.laboratorio_id = l.id
       JOIN docentes d ON r.docente_id = d.id
-      WHERE r.fecha_fin < NOW()  -- Solo horarios ya ejecutados
+      WHERE r.fecha_inicio >= DATE_SUB(NOW(), INTERVAL 30 DAY)  -- Últimos 30 días
     `
     let params = []
     
@@ -109,9 +109,18 @@ export const getHorariosParaIncidencias = async (req, res) => {
       }
     }
     
-    query += ' ORDER BY r.fecha_inicio DESC LIMIT 20' // Solo últimos 20 horarios
+    query += ' ORDER BY r.fecha_inicio DESC LIMIT 100' // Últimos 100 horarios
     
     const [horarios] = await pool.execute(query, params)
+    
+    console.log('🔍 Horarios disponibles para incidencias:', {
+      usuario: req.user.usuario,
+      rol: req.user.rol,
+      laboratorio_ids: req.user.laboratorio_ids,
+      total_horarios: horarios.length,
+      query: query,
+      params: params
+    })
     
     res.json({ 
       success: true, 

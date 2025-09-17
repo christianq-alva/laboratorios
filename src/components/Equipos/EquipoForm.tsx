@@ -16,11 +16,8 @@ import {
   Select,
   MenuItem,
   Paper,
-  Chip,
   List,
-  ListItem,
-  ListItemText,
-  Divider
+  ListItem
 } from '@mui/material'
 import { Close, Build, Add, Remove } from '@mui/icons-material'
 import { equipoService, type Equipo } from '../../services/equipoService'
