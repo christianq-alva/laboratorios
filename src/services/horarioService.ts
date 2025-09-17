@@ -41,6 +41,10 @@ export interface CreateHorarioData {
     insumo_id: number
     cantidad: number
   }>
+  equipos?: Array<{
+    equipo_id: number
+    cantidad: number
+  }>
 }
 
 export interface UpdateHorarioData extends CreateHorarioData {}
@@ -222,6 +226,19 @@ export const horarioService = {
     } catch (error) {
       console.error('❌ Error al cargar insumos:', error)
       return { success: false, data: [], message: 'Error al cargar insumos' }
+    }
+  },
+
+  // Obtener equipos por laboratorio
+  getEquiposByLaboratorio: async (laboratorio_id: number) => {
+    try {
+      console.log('🔍 Cargando equipos para laboratorio:', laboratorio_id)
+      const response = await api.get(`/equipos?laboratorio_id=${laboratorio_id}`)
+      console.log('🔧 Equipos recibidos:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('❌ Error al cargar equipos:', error)
+      return { success: false, data: [], message: 'Error al cargar equipos' }
     }
   },
 

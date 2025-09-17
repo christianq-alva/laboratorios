@@ -11,6 +11,7 @@ import {
   Docentes,
   Horarios,
   Insumos,
+  Equipos,
   Incidencias,
 } from './pages'
 import { HorarioPublico } from './components/Public/HorarioPublico'
@@ -63,6 +64,7 @@ function App() {
                     <Route path="/docentes" element={<Docentes />} />
                     <Route path="/horarios" element={<Horarios />} />
                     <Route path="/insumos" element={<Insumos />} />
+                    <Route path="/equipos" element={<Equipos />} />
                     <Route path="/incidencias" element={<Incidencias />} />
                     
                     {/* Default redirect */}

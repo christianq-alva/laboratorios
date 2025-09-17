@@ -20,6 +20,7 @@ import {
   Person,
   Schedule,
   Inventory,
+  Build,
   ReportProblem,
   Settings,
   Logout
@@ -39,6 +40,7 @@ const menuItems = [
   { text: 'Docentes', icon: <Person />, path: '/docentes', roles: ['Administrador', 'Jefe de Laboratorio'] },
   { text: 'Horarios', icon: <Schedule />, path: '/horarios', roles: ['Administrador', 'Jefe de Laboratorio'] },
   { text: 'Insumos', icon: <Inventory />, path: '/insumos', roles: ['Administrador', 'Jefe de Laboratorio'] },
+  { text: 'Equipos', icon: <Build />, path: '/equipos', roles: ['Administrador', 'Jefe de Laboratorio'] },
   { text: 'Incidencias', icon: <ReportProblem />, path: '/incidencias', roles: ['Administrador', 'Jefe de Laboratorio'] },
   { text: 'Configuración', icon: <Settings />, path: '/configuracion', roles: ['Administrador'] },
 ]
