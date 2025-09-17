@@ -26,6 +26,7 @@ import {
   School,
   Group,
   Inventory,
+  Build,
   CalendarToday,
   People
 } from '@mui/icons-material'
@@ -280,6 +281,72 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                         />
                       </ListItem>
                       {index < horario.insumos!.length - 1 && <Divider />}
+                    </React.Fragment>
+                  ))}
+                </List>
+              )}
+            </Paper>
+
+            {/* Equipos utilizados */}
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Build color="primary" />
+                Equipos Utilizados
+                {horario.equipos && horario.equipos.length > 0 && (
+                  <Chip 
+                    label={horario.equipos.length} 
+                    size="small" 
+                    color="primary" 
+                    variant="outlined"
+                  />
+                )}
+              </Typography>
+              
+              {!horario.equipos || horario.equipos.length === 0 ? (
+                <Alert severity="info">
+                  <Typography variant="body2">
+                    No se registraron equipos para este horario
+                  </Typography>
+                </Alert>
+              ) : (
+                <List>
+                  {horario.equipos.map((equipo, index) => (
+                    <React.Fragment key={equipo.id}>
+                      <ListItem sx={{ px: 0 }}>
+                        <ListItemIcon>
+                          <Build color="action" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                {equipo.nombre}
+                              </Typography>
+                              <Chip 
+                                label={`${equipo.cantidad_usada} unidad${equipo.cantidad_usada !== 1 ? 'es' : ''}`}
+                                size="small"
+                                color="secondary"
+                                variant="outlined"
+                              />
+                            </Box>
+                          }
+                          secondary={
+                            <Box>
+                              {equipo.marca && equipo.modelo && (
+                                <Typography variant="body2" color="text.secondary">
+                                  {equipo.marca} {equipo.modelo}
+                                </Typography>
+                              )}
+                              {equipo.codigo && (
+                                <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                                  Código: {equipo.codigo}
+                                </Typography>
+                              )}
+                            </Box>
+                          }
+                        />
+                      </ListItem>
+                      {index < horario.equipos!.length - 1 && <Divider />}
                     </React.Fragment>
                   ))}
                 </List>

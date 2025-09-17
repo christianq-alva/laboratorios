@@ -46,7 +46,9 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
     marca: '',
     modelo: '',
     numero_serie: '',
-    estado: 'Operativo' as 'Operativo' | 'En Mantenimiento' | 'Fuera de Servicio'
+    estado: 'Operativo' as 'Operativo' | 'En Mantenimiento' | 'Fuera de Servicio',
+    fecha_ultimo_mantenimiento: '',
+    fecha_proximo_mantenimiento: ''
   })
   
   const [inventarioInicial, setInventarioInicial] = useState<InventarioInicial[]>([])
@@ -91,7 +93,9 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
       marca: equipoData.marca || '',
       modelo: equipoData.modelo || '',
       numero_serie: equipoData.numero_serie || '',
-      estado: equipoData.estado
+      estado: equipoData.estado,
+      fecha_ultimo_mantenimiento: equipoData.fecha_ultimo_mantenimiento || '',
+      fecha_proximo_mantenimiento: equipoData.fecha_proximo_mantenimiento || ''
     })
   }
 
@@ -102,7 +106,9 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
       marca: '',
       modelo: '',
       numero_serie: '',
-      estado: 'Operativo'
+      estado: 'Operativo',
+      fecha_ultimo_mantenimiento: '',
+      fecha_proximo_mantenimiento: ''
     })
     setInventarioInicial([])
     setError(null)
@@ -218,6 +224,29 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
               </Typography>
               
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {isEditing && equipo?.codigo && (
+                  <TextField
+                    fullWidth
+                    label="Código de Activo"
+                    value={equipo.codigo}
+                    disabled
+                    InputProps={{
+                      startAdornment: (
+                        <Box sx={{ mr: 1, color: 'primary.main', fontWeight: 600 }}>
+                          EQP-
+                        </Box>
+                      )
+                    }}
+                    sx={{
+                      '& .MuiInputBase-input': {
+                        fontFamily: 'monospace',
+                        fontWeight: 600,
+                        color: 'primary.main'
+                      }
+                    }}
+                  />
+                )}
+                
                 <TextField
                   fullWidth
                   label="Nombre del equipo"
@@ -282,6 +311,28 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
                       <MenuItem value="Fuera de Servicio">Fuera de Servicio</MenuItem>
                     </Select>
                   </FormControl>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <TextField
+                    fullWidth
+                    type="date"
+                    label="Fecha último mantenimiento"
+                    value={formData.fecha_ultimo_mantenimiento}
+                    onChange={(e) => setFormData(prev => ({ ...prev, fecha_ultimo_mantenimiento: e.target.value }))}
+                    InputLabelProps={{ shrink: true }}
+                    disabled={loading}
+                  />
+
+                  <TextField
+                    fullWidth
+                    type="date"
+                    label="Fecha próximo mantenimiento"
+                    value={formData.fecha_proximo_mantenimiento}
+                    onChange={(e) => setFormData(prev => ({ ...prev, fecha_proximo_mantenimiento: e.target.value }))}
+                    InputLabelProps={{ shrink: true }}
+                    disabled={loading}
+                  />
                 </Box>
               </Box>
             </Paper>

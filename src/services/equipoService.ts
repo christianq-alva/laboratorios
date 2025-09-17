@@ -9,6 +9,8 @@ export interface Equipo {
   modelo: string
   numero_serie: string
   estado: 'Operativo' | 'En Mantenimiento' | 'Fuera de Servicio'
+  fecha_ultimo_mantenimiento?: string
+  fecha_proximo_mantenimiento?: string
   cantidad_disponible?: number
   cantidad_total?: number
   cantidad_en_uso?: number
@@ -85,6 +87,8 @@ class EquipoService {
     modelo: string
     numero_serie: string
     estado: string
+    fecha_ultimo_mantenimiento?: string
+    fecha_proximo_mantenimiento?: string
     inventario_inicial?: Array<{
       laboratorio_id: number
       cantidad_total: number
@@ -108,6 +112,8 @@ class EquipoService {
     modelo: string
     numero_serie: string
     estado: string
+    fecha_ultimo_mantenimiento?: string
+    fecha_proximo_mantenimiento?: string
   }): Promise<{ success: boolean; message: string; data: any }> {
     try {
       const response = await api.put(`/equipos/${id}`, equipoData)

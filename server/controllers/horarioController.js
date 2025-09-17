@@ -1,5 +1,6 @@
 import { pool } from '../config/database.js'
 import { Insumo } from '../models/Insumo.js'
+import { Equipo } from '../models/Equipo.js'
 
 // Función para convertir fecha a formato MySQL
 const convertirFechaParaMySQL = (fechaInput) => {
@@ -289,9 +290,26 @@ export const getHorarios = async (req, res) => {
             WHERE dri.reserva_id = ?
           `, [horario.id])
           
+          // Cargar equipos del horario
+          const [equipos] = await pool.execute(`
+            SELECT 
+              dre.equipo_id as id,
+              e.nombre,
+              e.marca,
+              e.modelo,
+              e.codigo,
+              e.estado,
+              dre.cantidad as cantidad_usada
+            FROM detalle_reserva_equipos dre
+            JOIN equipos e ON dre.equipo_id = e.id
+            WHERE dre.reserva_id = ?
+            ORDER BY e.nombre
+          `, [horario.id])
+          
           return {
             ...horario,
-            insumos: insumos
+            insumos: insumos,
+            equipos: equipos
           }
         })
       )
@@ -312,7 +330,8 @@ export const getHorarios = async (req, res) => {
           grupo: horariosConInsumos[0].grupo,
           escuela: horariosConInsumos[0].escuela,
           ciclo: horariosConInsumos[0].ciclo,
-          insumos_count: horariosConInsumos[0].insumos?.length || 0
+          insumos_count: horariosConInsumos[0].insumos?.length || 0,
+          equipos_count: horariosConInsumos[0].equipos?.length || 0
         } : null
       })
     } catch (error) {
@@ -391,9 +410,26 @@ export const getHorarios = async (req, res) => {
         ORDER BY i.nombre
       `, [id])
       
+      // Cargar equipos del horario
+      const [equipos] = await pool.execute(`
+        SELECT 
+          dre.equipo_id as id,
+          e.nombre,
+          e.marca,
+          e.modelo,
+          e.codigo,
+          e.estado,
+          dre.cantidad as cantidad_usada
+        FROM detalle_reserva_equipos dre
+        JOIN equipos e ON dre.equipo_id = e.id
+        WHERE dre.reserva_id = ?
+        ORDER BY e.nombre
+      `, [id])
+      
       const horarioConInsumos = {
         ...horario,
-        insumos: insumos
+        insumos: insumos,
+        equipos: equipos
       }
       
       console.log('📋 Horario encontrado:', {
@@ -403,7 +439,8 @@ export const getHorarios = async (req, res) => {
         grupo: horarioConInsumos.grupo,
         escuela: horarioConInsumos.escuela,
         ciclo: horarioConInsumos.ciclo,
-        insumos_count: horarioConInsumos.insumos?.length || 0
+        insumos_count: horarioConInsumos.insumos?.length || 0,
+        equipos_count: horarioConInsumos.equipos?.length || 0
       })
       
       res.json({ 
@@ -431,11 +468,14 @@ export const getHorarios = async (req, res) => {
         fecha_fin, 
         cantidad_alumnos = 1, // ← Valor por defecto
         color = '#4ecdc4', // ← Color del horario
-        insumos = [] // ← Array de insumos a usar
+        insumos = [], // ← Array de insumos a usar
+        equipos = [] // ← Array de equipos a usar
       } = req.body
       
       console.log('🔍 Datos recibidos:', { 
-        laboratorio_id, docente_id, grupo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos
+        laboratorio_id, docente_id, grupo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos,
+        insumos_count: insumos.length,
+        equipos_count: equipos.length
       })
 
       // ✅ VALIDACIÓN 0: Verificar que no hay valores undefined
@@ -559,6 +599,23 @@ export const getHorarios = async (req, res) => {
         }
       }
       
+      // 🔍 VERIFICAR DISPONIBILIDAD DE EQUIPOS
+      for (const equipo of equipos) {
+        const disponible = await Equipo.checkDisponibilidad(
+          equipo.equipo_id, 
+          laboratorio_id, 
+          equipo.cantidad
+        )
+        
+        if (!disponible) {
+          await connection.rollback()
+          return res.status(400).json({
+            success: false,
+            message: `Equipo ID ${equipo.equipo_id} no disponible en la cantidad solicitada`
+          })
+        }
+      }
+      
       // 1. CREAR LA RESERVA
       const [reservaResult] = await connection.execute(`
         INSERT INTO reservas (laboratorio_id, docente_id, grupo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos, color) 
@@ -589,6 +646,27 @@ export const getHorarios = async (req, res) => {
         )
       }
       
+      // 3. PROCESAR EQUIPOS
+      for (const equipo of equipos) {
+        console.log('🔄 Procesando equipo:', equipo)
+        
+        // Insertar en detalle_reserva_equipos
+        await connection.execute(`
+          INSERT INTO detalle_reserva_equipos (reserva_id, equipo_id, cantidad)
+          VALUES (?, ?, ?)
+        `, [reserva_id, equipo.equipo_id, equipo.cantidad])
+        
+        // Reservar equipo (marcar como en uso)
+        await Equipo.reservarEquipo(
+          connection,
+          equipo.equipo_id,
+          laboratorio_id,
+          equipo.cantidad,
+          req.user.userId,
+          reserva_id
+        )
+      }
+      
       await connection.commit()
       
       res.json({ 
@@ -601,7 +679,8 @@ export const getHorarios = async (req, res) => {
           grupo: grupoInfo.grupo_nombre,
           docente: docenteInfo.docente_nombre
         },
-        insumos_procesados: insumos.length
+        insumos_procesados: insumos.length,
+        equipos_procesados: equipos.length
       })
       
     } catch (error) {
@@ -630,12 +709,15 @@ export const getHorarios = async (req, res) => {
         fecha_fin, 
         cantidad_alumnos = 1, // ← Valor por defecto
         color = '#4ecdc4', // ← Color del horario
-        insumos = [] // ← Insumos actualizados
+        insumos = [], // ← Insumos actualizados
+        equipos = [] // ← Equipos actualizados
       } = req.body
       
       console.log('🔍 Editando horario:', id)
       console.log('🔍 Datos recibidos:', { 
-        laboratorio_id, docente_id, grupo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos
+        laboratorio_id, docente_id, grupo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos,
+        insumos_count: insumos.length,
+        equipos_count: equipos.length
       })
 
       // ✅ VALIDACIÓN 0: Verificar que no hay valores undefined
@@ -752,7 +834,29 @@ export const getHorarios = async (req, res) => {
       
       console.log('🔍 Insumos actuales:', insumosActuales)
       
-      // 2️⃣ DEVOLVER STOCK DE INSUMOS ACTUALES
+      // 2️⃣ OBTENER EQUIPOS ACTUALES
+      const [equiposActuales] = await connection.execute(`
+        SELECT equipo_id, cantidad 
+        FROM detalle_reserva_equipos 
+        WHERE reserva_id = ?
+      `, [horarioId])
+      
+      console.log('🔍 Equipos actuales:', equiposActuales)
+      
+      // 3️⃣ DEVOLVER EQUIPOS ACTUALES
+      for (const equipoActual of equiposActuales) {
+        // Devolver equipo (marcar como disponible)
+        await Equipo.devolverEquipo(
+          connection,
+          equipoActual.equipo_id,
+          laboratorio_id,
+          equipoActual.cantidad,
+          req.user.userId,
+          horarioId
+        )
+      }
+      
+      // 4️⃣ DEVOLVER STOCK DE INSUMOS ACTUALES
       for (const insumoActual of insumosActuales) {
         // Devolver stock
         await connection.execute(`
@@ -771,10 +875,11 @@ export const getHorarios = async (req, res) => {
         `, [insumoActual.insumo_id, horarioId, req.user.userId, insumoActual.cantidad_usada, horarioId])
       }
       
-      // 3️⃣ ELIMINAR REGISTROS ANTIGUOS DE INSUMOS
+      // 5️⃣ ELIMINAR REGISTROS ANTIGUOS DE INSUMOS Y EQUIPOS
       await connection.execute('DELETE FROM detalle_reserva_insumos WHERE reserva_id = ?', [horarioId])
+      await connection.execute('DELETE FROM detalle_reserva_equipos WHERE reserva_id = ?', [horarioId])
       
-      // 4️⃣ VERIFICAR STOCK DE NUEVOS INSUMOS
+      // 6️⃣ VERIFICAR STOCK DE NUEVOS INSUMOS
       for (const insumo of insumos) {
         const stockSuficiente = await Insumo.checkStock(
           insumo.insumo_id, 
@@ -791,7 +896,24 @@ export const getHorarios = async (req, res) => {
         }
       }
       
-      // 5️⃣ ACTUALIZAR DATOS BÁSICOS DEL HORARIO (ACTUALIZADO)
+      // 7️⃣ VERIFICAR DISPONIBILIDAD DE NUEVOS EQUIPOS
+      for (const equipo of equipos) {
+        const disponible = await Equipo.checkDisponibilidad(
+          equipo.equipo_id, 
+          laboratorio_id, 
+          equipo.cantidad
+        )
+        
+        if (!disponible) {
+          await connection.rollback()
+          return res.status(400).json({
+            success: false,
+            message: `Equipo ID ${equipo.equipo_id} no disponible en la cantidad solicitada`
+          })
+        }
+      }
+      
+      // 8️⃣ ACTUALIZAR DATOS BÁSICOS DEL HORARIO (ACTUALIZADO)
       await connection.execute(`
         UPDATE reservas 
         SET laboratorio_id = ?, docente_id = ?, grupo_id = ?, descripcion = ?, fecha_inicio = ?, fecha_fin = ?, cantidad_alumnos = ?, color = ?
@@ -817,6 +939,25 @@ export const getHorarios = async (req, res) => {
         )
       }
       
+      // 9️⃣ PROCESAR NUEVOS EQUIPOS
+      for (const equipo of equipos) {
+        // Insertar en detalle_reserva_equipos
+        await connection.execute(`
+          INSERT INTO detalle_reserva_equipos (reserva_id, equipo_id, cantidad)
+          VALUES (?, ?, ?)
+        `, [horarioId, equipo.equipo_id, equipo.cantidad])
+        
+        // Reservar equipo (marcar como en uso)
+        await Equipo.reservarEquipo(
+          connection,
+          equipo.equipo_id,
+          laboratorio_id,
+          equipo.cantidad,
+          req.user.userId,
+          horarioId
+        )
+      }
+      
       await connection.commit()
       
       res.json({ 
@@ -829,7 +970,9 @@ export const getHorarios = async (req, res) => {
           docente: docenteInfo.docente_nombre
         },
         insumos_anteriores: insumosActuales.length,
-        insumos_nuevos: insumos.length
+        insumos_nuevos: insumos.length,
+        equipos_anteriores: equiposActuales.length,
+        equipos_nuevos: equipos.length
       })
       
     } catch (error) {
@@ -922,7 +1065,32 @@ export const getHorarios = async (req, res) => {
       
       console.log('📦 Insumos a devolver:', insumosUsados.length)
       
-      // 4️⃣ DEVOLVER STOCK DE TODOS LOS INSUMOS
+      // 4️⃣ OBTENER EQUIPOS A DEVOLVER
+      const [equiposUsados] = await connection.execute(`
+        SELECT dre.equipo_id, dre.cantidad, e.nombre as equipo_nombre
+        FROM detalle_reserva_equipos dre
+        JOIN equipos e ON dre.equipo_id = e.id
+        WHERE dre.reserva_id = ?
+      `, [horarioId])
+      
+      console.log('🔧 Equipos a devolver:', equiposUsados.length)
+      
+      // 5️⃣ DEVOLVER TODOS LOS EQUIPOS
+      for (const equipo of equiposUsados) {
+        console.log(`🔄 Devolviendo ${equipo.cantidad} de ${equipo.equipo_nombre}`)
+        
+        // Devolver equipo (marcar como disponible)
+        await Equipo.devolverEquipo(
+          connection,
+          equipo.equipo_id,
+          horario.laboratorio_id,
+          equipo.cantidad,
+          req.user.userId,
+          horarioId
+        )
+      }
+      
+      // 6️⃣ DEVOLVER STOCK DE TODOS LOS INSUMOS
       for (const insumo of insumosUsados) {
         console.log(`🔄 Devolviendo ${insumo.cantidad_usada} de ${insumo.insumo_nombre}`)
         
@@ -941,16 +1109,24 @@ export const getHorarios = async (req, res) => {
         `, [insumo.insumo_id, horario.laboratorio_id, req.user.userId, insumo.cantidad_usada, horarioId])
       }
       
-      // 5️⃣ ELIMINAR REGISTROS EN ORDEN
+      // 7️⃣ ELIMINAR REGISTROS EN ORDEN
       // 1. Eliminar movimientos de insumos
       await connection.execute('DELETE FROM movimientos_insumos WHERE reserva_id = ?', [horarioId])
       console.log('✅ Movimientos de insumos eliminados')
 
-      // 2. Eliminar detalles de insumos
+      // 2. Eliminar movimientos de equipos
+      await connection.execute('DELETE FROM movimientos_equipos WHERE reserva_id = ?', [horarioId])
+      console.log('✅ Movimientos de equipos eliminados')
+
+      // 3. Eliminar detalles de insumos
       await connection.execute('DELETE FROM detalle_reserva_insumos WHERE reserva_id = ?', [horarioId])
       console.log('✅ Detalles de insumos eliminados')
       
-      // 3. Eliminar el horario/reserva
+      // 4. Eliminar detalles de equipos
+      await connection.execute('DELETE FROM detalle_reserva_equipos WHERE reserva_id = ?', [horarioId])
+      console.log('✅ Detalles de equipos eliminados')
+      
+      // 5. Eliminar el horario/reserva
       await connection.execute('DELETE FROM reservas WHERE id = ?', [horarioId])
       console.log('✅ Horario eliminado')
       
@@ -970,7 +1146,8 @@ export const getHorarios = async (req, res) => {
           fecha_inicio: horario.fecha_inicio,
           fecha_fin: horario.fecha_fin
         },
-        insumos_devueltos: insumosUsados.length
+        insumos_devueltos: insumosUsados.length,
+        equipos_devueltos: equiposUsados.length
       })
       
     } catch (error) {

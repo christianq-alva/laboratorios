@@ -16,6 +16,8 @@ export class Equipo {
           e.modelo,
           e.numero_serie,
           e.estado,
+          e.fecha_ultimo_mantenimiento,
+          e.fecha_proximo_mantenimiento,
           COALESCE(ie.cantidad_disponible, 0) as cantidad_disponible,
           COALESCE(ie.cantidad_total, 0) as cantidad_total,
           COALESCE(ie.cantidad_en_uso, 0) as cantidad_en_uso

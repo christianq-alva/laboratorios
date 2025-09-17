@@ -30,6 +30,7 @@ import {
   School,
   Group,
   Inventory,
+  Build,
   Add,
   Remove,
   Warning,
@@ -38,6 +39,7 @@ import {
 } from '@mui/icons-material'
 import { horarioService } from '../../services/horarioService'
 import { laboratorioService } from '../../services/laboratorioService'
+import type { Equipo } from '../../services/equipoService'
 import type { 
   Horario, 
   CreateHorarioData, 
@@ -63,6 +65,13 @@ interface InsumoSeleccionado {
   nombre: string
   cantidad: number
   stock_disponible: number
+}
+
+interface EquipoSeleccionado {
+  equipo_id: number
+  nombre: string
+  cantidad: number
+  cantidad_disponible: number
 }
 
 // Paleta de colores disponibles
@@ -106,6 +115,8 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
   const [grupos, setGrupos] = useState<Grupo[]>([])
   const [insumosDisponibles, setInsumosDisponibles] = useState<Insumo[]>([])
   const [insumosSeleccionados, setInsumosSeleccionados] = useState<InsumoSeleccionado[]>([])
+  const [equiposDisponibles, setEquiposDisponibles] = useState<Equipo[]>([])
+  const [equiposSeleccionados, setEquiposSeleccionados] = useState<EquipoSeleccionado[]>([])
 
   // Estados de selección en cascada
   const [selectedEscuela, setSelectedEscuela] = useState<number>(0)
@@ -227,9 +238,12 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       })))
     }
 
-    // Cargar insumos del laboratorio si ya está seleccionado
+    // Cargar insumos y equipos del laboratorio si ya está seleccionado
     if (horarioData.laboratorio_id) {
-      await loadInsumosByLaboratorio(horarioData.laboratorio_id)
+      await Promise.all([
+        loadInsumosByLaboratorio(horarioData.laboratorio_id),
+        loadEquiposByLaboratorio(horarioData.laboratorio_id)
+      ])
     }
   }
 
@@ -251,6 +265,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     setSelectedEscuela(0)
     setSelectedCiclo(0)
     setInsumosSeleccionados([])
+    setEquiposSeleccionados([])
     setConflictos([])
     setError(null)
 
@@ -315,27 +330,64 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     }
   }
 
+  // Cargar equipos cuando se selecciona laboratorio
+  const loadEquiposByLaboratorio = async (laboratorio_id: number) => {
+    try {
+      console.log('🔍 Cargando equipos para laboratorio:', laboratorio_id)
+      
+      // Mostrar loading en la sección de equipos
+      setEquiposDisponibles([])
+      
+      const result = await horarioService.getEquiposByLaboratorio(laboratorio_id)
+      console.log('🔧 Resultado de equipos:', result)
+      
+      if (result.success) {
+        const equipos = result.data || []
+        console.log('✅ Equipos cargados:', equipos.length)
+        setEquiposDisponibles(equipos)
+        
+        // Si no hay equipos, mostrar mensaje informativo
+        if (equipos.length === 0) {
+          console.log('ℹ️ No hay equipos disponibles para este laboratorio')
+        }
+      } else {
+        console.error('❌ Error al cargar equipos:', result.message)
+        setEquiposDisponibles([])
+        // No mostrar error, solo log - los equipos son opcionales
+      }
+    } catch (err) {
+      console.error('❌ Excepción al cargar equipos:', err)
+      setEquiposDisponibles([])
+    }
+  }
+
   const handleLaboratorioChange = async (laboratorio_id: number) => {
     const laboratorioAnterior = formData.laboratorio_id
     
     setFormData(prev => ({ ...prev, laboratorio_id }))
     
-    // Limpiar insumos seleccionados cuando se cambia el laboratorio
+    // Limpiar insumos y equipos seleccionados cuando se cambia el laboratorio
     if (laboratorioAnterior > 0 && laboratorioAnterior !== laboratorio_id) {
       const insumosAnteriores = insumosSeleccionados.length
+      const equiposAnteriores = equiposSeleccionados.length
       setInsumosSeleccionados([])
+      setEquiposSeleccionados([])
       
-      // Mostrar mensaje temporal si había insumos seleccionados
-      if (insumosAnteriores > 0) {
-        setLaboratorioChangeMessage(`Se han limpiado ${insumosAnteriores} insumo(s) seleccionado(s) del laboratorio anterior`)
+      // Mostrar mensaje temporal si había insumos o equipos seleccionados
+      if (insumosAnteriores > 0 || equiposAnteriores > 0) {
+        setLaboratorioChangeMessage(`Se han limpiado ${insumosAnteriores} insumo(s) y ${equiposAnteriores} equipo(s) seleccionado(s) del laboratorio anterior`)
         setTimeout(() => setLaboratorioChangeMessage(null), 3000)
       }
     }
     
     if (laboratorio_id > 0) {
-      await loadInsumosByLaboratorio(laboratorio_id)
+      await Promise.all([
+        loadInsumosByLaboratorio(laboratorio_id),
+        loadEquiposByLaboratorio(laboratorio_id)
+      ])
     } else {
       setInsumosDisponibles([])
+      setEquiposDisponibles([])
     }
   }
 
@@ -420,6 +472,39 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     // Si la cantidad excede el stock, no hacer nada
   }
 
+  // Manejo de equipos
+  const agregarEquipo = (equipo: Equipo) => {
+    const yaSeleccionado = equiposSeleccionados.find(e => e.equipo_id === equipo.id)
+    if (!yaSeleccionado && (equipo.cantidad_disponible || 0) > 0) {
+      const nuevoEquipo: EquipoSeleccionado = {
+        equipo_id: equipo.id,
+        nombre: equipo.nombre,
+        cantidad: 1,
+        cantidad_disponible: equipo.cantidad_disponible || 0
+      }
+      setEquiposSeleccionados(prev => [...prev, nuevoEquipo])
+    }
+  }
+
+  const eliminarEquipo = (equipo_id: number) => {
+    setEquiposSeleccionados(prev => prev.filter(e => e.equipo_id !== equipo_id))
+  }
+
+  const actualizarCantidadEquipo = (equipo_id: number, cantidad: number) => {
+    const equipo = equiposSeleccionados.find(e => e.equipo_id === equipo_id)
+    if (!equipo) return
+
+    // Validar límites
+    if (cantidad <= 0) {
+      eliminarEquipo(equipo_id)
+    } else if (cantidad <= equipo.cantidad_disponible) {
+      setEquiposSeleccionados(prev => 
+        prev.map(e => e.equipo_id === equipo_id ? { ...e, cantidad } : e)
+      )
+    }
+    // Si la cantidad excede la disponible, no hacer nada
+  }
+
   // Submit del formulario
   const handleSubmit = async () => {
     if (conflictos.length > 0) {
@@ -449,6 +534,10 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
         insumos: insumosSeleccionados.map(i => ({
           insumo_id: i.insumo_id,
           cantidad: i.cantidad
+        })),
+        equipos: equiposSeleccionados.map(e => ({
+          equipo_id: e.equipo_id,
+          cantidad: e.cantidad
         }))
       }
 
@@ -1370,6 +1459,264 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                     </Paper>
                   )}
                 </>
+              )}
+            </Box>
+
+            {/* Panel derecho - Gestión de Equipos */}
+            <Box sx={{ 
+              flex: { xs: 1, lg: 1 }, 
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              minHeight: 0,
+            }}>
+              {/* Título de la sección */}
+              <Paper sx={{ 
+                p: 2, 
+                borderRadius: 1.5,
+                background: 'linear-gradient(135deg, #f5f5f5 0%, #eeeeee 100%)',
+                border: '1px solid #e0e0e0'
+              }}>
+                <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'secondary.main' }}>
+                  <Build />
+                  Equipos (Opcional)
+                </Typography>
+              </Paper>
+
+              {/* Contenido de equipos */}
+              {formData.laboratorio_id > 0 ? (
+                <>
+                  {/* Mensaje de cambio de laboratorio */}
+                  {laboratorioChangeMessage && (
+                    <Alert severity="warning" sx={{ borderRadius: 1.5 }}>
+                      {laboratorioChangeMessage}
+                    </Alert>
+                  )}
+
+                  {/* Equipos disponibles */}
+                  <Paper sx={{ 
+                    flex: 1,
+                    borderRadius: 1.5,
+                    border: '1px solid #e0e0e0',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minHeight: 250,
+                    maxHeight: 300
+                  }}>
+                    <Box sx={{ p: 2, backgroundColor: '#f0f7ff', borderBottom: '1px solid #e0e0e0' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                        Disponibles ({equiposDisponibles.length})
+                      </Typography>
+                    </Box>
+                    <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
+                      {equiposDisponibles.length > 0 ? (
+                        <List dense>
+                          {equiposDisponibles.map((equipo) => {
+                            const yaSeleccionado = equiposSeleccionados.some(e => e.equipo_id === equipo.id)
+                            const disponibilidadColor = (equipo.cantidad_disponible || 0) === 0 ? 'error' : 
+                                                       (equipo.cantidad_disponible || 0) < 5 ? 'warning' : 'success'
+                            return (
+                              <ListItem
+                                key={equipo.id}
+                                sx={{
+                                  border: '1px solid #f0f0f0',
+                                  borderRadius: 1,
+                                  mb: 1,
+                                  backgroundColor: yaSeleccionado ? '#e8f5e8' : 'transparent',
+                                  '&:hover': {
+                                    backgroundColor: yaSeleccionado ? '#e8f5e8' : '#f5f5f5'
+                                  }
+                                }}
+                              >
+                                <ListItemText
+                                  primary={
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                        {equipo.nombre}
+                                      </Typography>
+                                      <Chip 
+                                        label={`${equipo.cantidad_disponible || 0} disp.`}
+                                        size="small"
+                                        color={disponibilidadColor}
+                                        variant="filled"
+                                        sx={{ 
+                                          minWidth: 'auto',
+                                          '& .MuiChip-label': { px: 1, fontSize: '0.75rem' }
+                                        }}
+                                      />
+                                    </Box>
+                                  }
+                                  secondary={
+                                    <Typography variant="caption" color="text.secondary">
+                                      {equipo.marca} {equipo.modelo} - {equipo.codigo}
+                                    </Typography>
+                                  }
+                                />
+                                <IconButton
+                                  size="small"
+                                  onClick={() => agregarEquipo(equipo)}
+                                  disabled={yaSeleccionado || (equipo.cantidad_disponible || 0) === 0}
+                                  color="primary"
+                                  sx={{ ml: 1 }}
+                                >
+                                  <Add />
+                                </IconButton>
+                              </ListItem>
+                            )
+                          })}
+                        </List>
+                      ) : (
+                        <Box sx={{ p: 3, textAlign: 'center' }}>
+                          <Build sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
+                          <Typography variant="body2" color="text.secondary">
+                            No hay equipos disponibles en este laboratorio
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  </Paper>
+
+                  {/* Equipos seleccionados */}
+                  <Paper sx={{ 
+                    flex: 1,
+                    borderRadius: 1.5,
+                    border: '1px solid #e0e0e0',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minHeight: 200,
+                    maxHeight: 250
+                  }}>
+                    <Box sx={{ p: 2, backgroundColor: '#f0fff4', borderBottom: '1px solid #e0e0e0' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'success.main' }}>
+                        Seleccionados ({equiposSeleccionados.length})
+                      </Typography>
+                    </Box>
+                    <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
+                      <List dense>
+                        {equiposSeleccionados.map((equipo) => {
+                          const disponibleRestante = equipo.cantidad_disponible - equipo.cantidad
+                          const disponibilidadColor = disponibleRestante === 0 ? 'error' : 
+                                                     disponibleRestante < 3 ? 'warning' : 'success'
+                          return (
+                            <ListItem
+                              key={equipo.equipo_id}
+                              sx={{
+                                border: '1px solid #e8f5e8',
+                                borderRadius: 1,
+                                mb: 1,
+                                backgroundColor: '#f9fff9'
+                              }}
+                            >
+                              <ListItemText
+                                primary={
+                                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                      {equipo.nombre}
+                                    </Typography>
+                                    <Chip 
+                                      label={`${disponibleRestante} restantes`}
+                                      size="small"
+                                      color={disponibilidadColor}
+                                      variant="outlined"
+                                      sx={{ 
+                                        minWidth: 'auto',
+                                        '& .MuiChip-label': { px: 1, fontSize: '0.75rem' }
+                                      }}
+                                    />
+                                  </Box>
+                                }
+                                secondary={
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => actualizarCantidadEquipo(equipo.equipo_id, equipo.cantidad - 1)}
+                                      disabled={equipo.cantidad <= 1}
+                                      color="primary"
+                                    >
+                                      <Remove />
+                                    </IconButton>
+                                    <Typography variant="body2" sx={{ 
+                                      minWidth: 40, 
+                                      textAlign: 'center',
+                                      fontWeight: 600,
+                                      color: 'primary.main'
+                                    }}>
+                                      {equipo.cantidad}
+                                    </Typography>
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => actualizarCantidadEquipo(equipo.equipo_id, equipo.cantidad + 1)}
+                                      disabled={equipo.cantidad >= equipo.cantidad_disponible}
+                                      color="primary"
+                                    >
+                                      <Add />
+                                    </IconButton>
+                                  </Box>
+                                }
+                              />
+                              <Tooltip title="Eliminar equipo">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => eliminarEquipo(equipo.equipo_id)}
+                                  color="error"
+                                  sx={{ ml: 1 }}
+                                >
+                                  <Delete />
+                                </IconButton>
+                              </Tooltip>
+                            </ListItem>
+                          )
+                        })}
+                        {equiposSeleccionados.length === 0 && (
+                          <ListItem>
+                            <ListItemText 
+                              primary="Sin equipos seleccionados"
+                              secondary="Los equipos seleccionados aparecerán aquí"
+                              sx={{ textAlign: 'center', color: 'text.secondary' }}
+                            />
+                          </ListItem>
+                        )}
+                      </List>
+                    </Box>
+                  </Paper>
+
+                  {/* Resumen compacto */}
+                  {equiposSeleccionados.length > 0 && (
+                    <Paper sx={{ 
+                      p: 2, 
+                      borderRadius: 1.5,
+                      border: '1px solid #e0e0e0',
+                      backgroundColor: '#fff8e1'
+                    }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'warning.main', mb: 1 }}>
+                        Resumen de Equipos
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {equiposSeleccionados.map((equipo) => (
+                          <Chip
+                            key={equipo.equipo_id}
+                            label={`${equipo.nombre} (${equipo.cantidad})`}
+                            variant="outlined"
+                            size="small"
+                            sx={{ borderRadius: 1 }}
+                          />
+                        ))}
+                      </Box>
+                    </Paper>
+                  )}
+                </>
+              ) : (
+                <Paper sx={{ p: 3, textAlign: 'center', borderRadius: 1.5, border: '1px solid #e0e0e0' }}>
+                  <Build sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
+                  <Typography variant="body1" color="text.secondary" gutterBottom>
+                    Selecciona un laboratorio
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Los equipos disponibles se mostrarán aquí
+                  </Typography>
+                </Paper>
               )}
             </Box>
           </Box>

@@ -17,6 +17,7 @@ export interface Horario {
   ciclo?: string
   grupo?: string
   insumos?: InsumoHorario[]
+  equipos?: EquipoHorario[]
 }
 
 export interface InsumoHorario {
@@ -26,6 +27,16 @@ export interface InsumoHorario {
   stock_disponible?: number
   descripcion?: string
   unidad_medida?: string
+}
+
+export interface EquipoHorario {
+  id: number
+  nombre: string
+  cantidad_usada: number
+  marca?: string
+  modelo?: string
+  codigo?: string
+  estado?: string
 }
 
 export interface CreateHorarioData {

@@ -298,20 +298,22 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: 'grey.50' }}>
-              <TableCell sx={{ fontWeight: 600, width: '10%' }}>Código</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '20%' }}>Equipo</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '15%' }}>Marca/Modelo</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '12%' }}>N° Serie</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '10%' }}>Estado</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '15%' }}>Disponibilidad</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '13%' }}>Inventario por Lab</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '5%' }} align="center">Acciones</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '8%' }}>Cod. Activo</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '18%' }}>Equipo</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '12%' }}>Marca/Modelo</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '10%' }}>N° Serie</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '8%' }}>Estado</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '10%' }}>Último Mant.</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '10%' }}>Próximo Mant.</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '12%' }}>Disponibilidad</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '10%' }}>Inventario por Lab</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '2%' }} align="center">Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredEquipos.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={11} align="center" sx={{ py: 4 }}>
                   <Box sx={{ textAlign: 'center' }}>
                     <Build sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
                     <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -377,6 +379,28 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
                       variant="filled"
                       size="small"
                     />
+                  </TableCell>
+                  <TableCell>
+                    {equipo.fecha_ultimo_mantenimiento ? (
+                      <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                        {new Date(equipo.fecha_ultimo_mantenimiento).toLocaleDateString('es-ES')}
+                      </Typography>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                        No registrado
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {equipo.fecha_proximo_mantenimiento ? (
+                      <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                        {new Date(equipo.fecha_proximo_mantenimiento).toLocaleDateString('es-ES')}
+                      </Typography>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                        No programado
+                      </Typography>
+                    )}
                   </TableCell>
                   <TableCell>
                     {equipo.cantidad_disponible !== undefined && equipo.cantidad_total !== undefined ? (

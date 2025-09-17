@@ -45,7 +45,7 @@ export const getEquipos = async (req, res) => {
           FROM equipos e
           LEFT JOIN inventario_equipos ie ON e.id = ie.equipo_id
           LEFT JOIN laboratorios l ON ie.laboratorio_id = l.id
-          GROUP BY e.id
+          GROUP BY e.id, e.codigo, e.nombre, e.descripcion, e.marca, e.modelo, e.numero_serie, e.estado, e.fecha_ultimo_mantenimiento, e.fecha_proximo_mantenimiento
           ORDER BY e.codigo, e.nombre
         `)
         equipos = rows
@@ -77,6 +77,8 @@ export const createEquipo = async (req, res) => {
       modelo,
       numero_serie,
       estado = 'Operativo',
+      fecha_ultimo_mantenimiento,
+      fecha_proximo_mantenimiento,
       inventario_inicial = []
     } = req.body
     
@@ -89,9 +91,9 @@ export const createEquipo = async (req, res) => {
     
     // Crear el equipo
     const [equipoResult] = await connection.execute(`
-      INSERT INTO equipos (codigo, nombre, descripcion, marca, modelo, numero_serie, estado) 
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `, [codigo, nombre, descripcion, marca, modelo, numero_serie, estado])
+      INSERT INTO equipos (codigo, nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [codigo, nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento])
     
     const equipo_id = equipoResult.insertId
     console.log('✅ Equipo creado con ID:', equipo_id)
@@ -151,7 +153,7 @@ export const updateEquipo = async (req, res) => {
   try {
     const { id } = req.params
     const equipoId = parseInt(id, 10)
-    const { nombre, descripcion, marca, modelo, numero_serie, estado } = req.body
+    const { nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento } = req.body
     
     console.log('🔄 Actualizando equipo:', { id, equipoId, nombre, marca, modelo })
     
@@ -187,9 +189,9 @@ export const updateEquipo = async (req, res) => {
     // Actualizar equipo
     await pool.execute(`
       UPDATE equipos 
-      SET nombre = ?, descripcion = ?, marca = ?, modelo = ?, numero_serie = ?, estado = ?
+      SET nombre = ?, descripcion = ?, marca = ?, modelo = ?, numero_serie = ?, estado = ?, fecha_ultimo_mantenimiento = ?, fecha_proximo_mantenimiento = ?
       WHERE id = ?
-    `, [nombre.trim(), descripcion?.trim() || '', marca?.trim() || '', modelo?.trim() || '', numero_serie?.trim() || '', estado || 'Operativo', equipoId])
+    `, [nombre.trim(), descripcion?.trim() || '', marca?.trim() || '', modelo?.trim() || '', numero_serie?.trim() || '', estado || 'Operativo', fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, equipoId])
     
     console.log('✅ Equipo actualizado exitosamente:', equipoId)
     
