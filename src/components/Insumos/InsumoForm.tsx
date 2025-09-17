@@ -43,7 +43,8 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
   const [formData, setFormData] = useState({
     nombre: '',
     descripcion: '',
-    unidad_medida: ''
+    unidad_medida: '',
+    categoria: 'Materiales' as 'Reactivos' | 'Materiales' | 'Material_Biologico'
   })
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
   const [stockInicial, setStockInicial] = useState<StockInicial[]>([])
@@ -87,14 +88,16 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
         setFormData({
           nombre: insumo.nombre,
           descripcion: insumo.descripcion || '',
-          unidad_medida: insumo.unidad_medida
+          unidad_medida: insumo.unidad_medida,
+          categoria: insumo.categoria || 'Materiales'
         })
         setStockInicial([]) // Para edición, no mostramos stock inicial
       } else {
         setFormData({
           nombre: '',
           descripcion: '',
-          unidad_medida: ''
+          unidad_medida: '',
+          categoria: 'Materiales'
         })
         setStockInicial([])
       }
@@ -196,7 +199,8 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
         await insumoService.update(insumo.id, {
           nombre: formData.nombre.trim(),
           descripcion: formData.descripcion.trim(),
-          unidad_medida: formData.unidad_medida.trim()
+          unidad_medida: formData.unidad_medida.trim(),
+          categoria: formData.categoria
         })
       } else {
         await insumoService.create(insumoData)
@@ -295,6 +299,37 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
                 required
                 sx={{ minWidth: 200 }}
               />
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <FormControl sx={{ minWidth: 250 }}>
+                <InputLabel>Categoría del Insumo</InputLabel>
+                <Select
+                  value={formData.categoria}
+                  label="Categoría del Insumo"
+                  onChange={(e) => handleInputChange('categoria', e.target.value)}
+                  required
+                >
+                  <MenuItem value="Reactivos">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#ff9800' }} />
+                      <Typography>Reactivos</Typography>
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="Materiales">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#2196f3' }} />
+                      <Typography>Materiales</Typography>
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="Material_Biologico">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#4caf50' }} />
+                      <Typography>Material Biológico</Typography>
+                    </Box>
+                  </MenuItem>
+                </Select>
+              </FormControl>
             </Box>
             
             <TextField

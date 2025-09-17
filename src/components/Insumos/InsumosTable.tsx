@@ -41,8 +41,10 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
   onRefreshComplete
 }) => {
   const [insumos, setInsumos] = useState<Insumo[]>([])
+  const [filteredInsumos, setFilteredInsumos] = useState<Insumo[]>([])
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
   const [selectedLaboratorio, setSelectedLaboratorio] = useState<number | 'all'>('all')
+  const [selectedCategoria, setSelectedCategoria] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -66,6 +68,7 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
       }
       
       setInsumos(insumosResponse.data)
+      setFilteredInsumos(insumosResponse.data)
     } catch (err: any) {
       setError(err.message)
       console.error('Error al cargar datos:', err)
@@ -93,6 +96,56 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
       loadData()
     }
   }, [selectedLaboratorio])
+
+  // Efecto para aplicar filtros
+  useEffect(() => {
+    let filtered = insumos
+
+    // Filtro por búsqueda
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase()
+      filtered = filtered.filter(insumo => 
+        insumo.nombre.toLowerCase().includes(searchLower) ||
+        insumo.descripcion.toLowerCase().includes(searchLower) ||
+        insumo.codigo.toLowerCase().includes(searchLower)
+      )
+    }
+
+    // Filtro por categoría
+    if (selectedCategoria !== 'all') {
+      filtered = filtered.filter(insumo => insumo.categoria === selectedCategoria)
+    }
+
+    setFilteredInsumos(filtered)
+  }, [insumos, searchTerm, selectedCategoria])
+
+  // Función para obtener el color de la categoría
+  const getCategoriaColor = (categoria: string) => {
+    switch (categoria) {
+      case 'Reactivos':
+        return '#ff9800'
+      case 'Materiales':
+        return '#2196f3'
+      case 'Material_Biologico':
+        return '#4caf50'
+      default:
+        return '#757575'
+    }
+  }
+
+  // Función para obtener el nombre de la categoría
+  const getCategoriaName = (categoria: string) => {
+    switch (categoria) {
+      case 'Reactivos':
+        return 'Reactivos'
+      case 'Materiales':
+        return 'Materiales'
+      case 'Material_Biologico':
+        return 'Material Biológico'
+      default:
+        return categoria
+    }
+  }
 
   // Función para formatear el stock por laboratorio
   const formatStockPorLaboratorio = (stockString?: string, unidadMedida?: string) => {
@@ -163,18 +216,6 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
     return 'success'
   }
 
-  // Función para filtrar insumos por término de búsqueda
-  const filteredInsumos = insumos.filter(insumo => {
-    if (!searchTerm) return true
-    
-    const searchLower = searchTerm.toLowerCase()
-    return (
-      (insumo.codigo && insumo.codigo.toLowerCase().includes(searchLower)) ||
-      insumo.nombre.toLowerCase().includes(searchLower) ||
-      (insumo.descripcion && insumo.descripcion.toLowerCase().includes(searchLower)) ||
-      insumo.unidad_medida.toLowerCase().includes(searchLower)
-    )
-  })
 
   // Función para limpiar búsqueda
   const handleClearSearch = () => {
@@ -217,6 +258,35 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
                     {lab.nombre}
                   </MenuItem>
                 ))}
+              </Select>
+            </FormControl>
+
+            <FormControl sx={{ minWidth: 200 }}>
+              <InputLabel>Filtrar por Categoría</InputLabel>
+              <Select
+                value={selectedCategoria}
+                label="Filtrar por Categoría"
+                onChange={(e) => setSelectedCategoria(e.target.value)}
+              >
+                <MenuItem value="all">Todas las Categorías</MenuItem>
+                <MenuItem value="Reactivos">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#ff9800' }} />
+                    <Typography>Reactivos</Typography>
+                  </Box>
+                </MenuItem>
+                <MenuItem value="Materiales">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#2196f3' }} />
+                    <Typography>Materiales</Typography>
+                  </Box>
+                </MenuItem>
+                <MenuItem value="Material_Biologico">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#4caf50' }} />
+                    <Typography>Material Biológico</Typography>
+                  </Box>
+                </MenuItem>
               </Select>
             </FormControl>
             
@@ -300,19 +370,20 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: 'grey.50' }}>
-              <TableCell sx={{ fontWeight: 600, width: '10%' }}>Código</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '18%' }}>Insumo</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '22%' }}>Descripción</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '8%' }}>Unidad</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '12%' }}>Stock Disponible</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '25%' }}>Stock por Laboratorio</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '8%' }}>Código</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '15%' }}>Insumo</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '10%' }}>Categoría</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '18%' }}>Descripción</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '7%' }}>Unidad</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '10%' }}>Stock Disponible</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '22%' }}>Stock por Laboratorio</TableCell>
               <TableCell sx={{ fontWeight: 600, width: '5%' }} align="center">Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredInsumos.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                   <Box sx={{ textAlign: 'center' }}>
                     <Inventory sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
                     <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -348,6 +419,18 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
                         {insumo.nombre}
                       </Typography>
                     </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={getCategoriaName(insumo.categoria)}
+                      size="small"
+                      sx={{
+                        backgroundColor: getCategoriaColor(insumo.categoria),
+                        color: 'white',
+                        fontWeight: 600,
+                        fontSize: '0.75rem'
+                      }}
+                    />
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" color="text.secondary">
@@ -437,6 +520,9 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
             )}
             {searchTerm && (
               <> que coinciden con "{searchTerm}"</>
+            )}
+            {selectedCategoria !== 'all' && (
+              <> de categoría {getCategoriaName(selectedCategoria)}</>
             )}
           </Typography>
         </Box>

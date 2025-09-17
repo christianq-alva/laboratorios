@@ -47,8 +47,8 @@ export const getInsumos = async (req, res) => {
           FROM insumos i
           LEFT JOIN inventario_insumos inv ON i.id = inv.insumo_id
           LEFT JOIN laboratorios l ON inv.laboratorio_id = l.id
-          GROUP BY i.id
-          ORDER BY i.codigo, i.nombre
+          GROUP BY i.id, i.codigo, i.nombre, i.descripcion, i.unidad_medida, i.categoria
+          ORDER BY i.categoria, i.codigo, i.nombre
         `)
         insumos = rows
       }
@@ -76,6 +76,7 @@ export const createInsumo = async (req, res) => {
         nombre, 
         descripcion, 
         unidad_medida,
+        categoria = 'Materiales', // ← NUEVO: Categoría del insumo
         stock_inicial = [] // ← NUEVO: Array de stock por laboratorio
       } = req.body
       
@@ -88,9 +89,9 @@ export const createInsumo = async (req, res) => {
       
       // 1️⃣ CREAR EL INSUMO (catálogo)
       const [insumoResult] = await connection.execute(`
-        INSERT INTO insumos (codigo, nombre, descripcion, unidad_medida) 
-        VALUES (?, ?, ?, ?)
-      `, [codigo, nombre, descripcion, unidad_medida])
+        INSERT INTO insumos (codigo, nombre, descripcion, unidad_medida, categoria) 
+        VALUES (?, ?, ?, ?, ?)
+      `, [codigo, nombre, descripcion, unidad_medida, categoria])
       
       const insumo_id = insumoResult.insertId
       console.log('✅ Insumo creado con ID:', insumo_id)
@@ -848,7 +849,7 @@ export const updateInsumo = async (req, res) => {
   try {
     const { id } = req.params
     const insumoId = parseInt(id, 10) // Convertir a número entero
-    const { nombre, descripcion, unidad_medida } = req.body
+    const { nombre, descripcion, unidad_medida, categoria } = req.body
     
     // Limpiar espacios en blanco
     const nombreLimpio = nombre?.trim()
@@ -892,9 +893,9 @@ export const updateInsumo = async (req, res) => {
     // Actualizar insumo
     await pool.execute(`
       UPDATE insumos 
-      SET nombre = ?, descripcion = ?, unidad_medida = ?
+      SET nombre = ?, descripcion = ?, unidad_medida = ?, categoria = ?
       WHERE id = ?
-    `, [nombreLimpio, descripcionLimpia || '', unidadLimpia, insumoId])
+    `, [nombreLimpio, descripcionLimpia || '', unidadLimpia, categoria || 'Materiales', insumoId])
     
     console.log('✅ Insumo actualizado exitosamente:', insumoId)
     

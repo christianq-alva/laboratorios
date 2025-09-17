@@ -6,6 +6,7 @@ export interface Insumo {
   nombre: string
   descripcion: string
   unidad_medida: string
+  categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico'
   stock_disponible?: number
   stock_por_laboratorio?: string
 }
@@ -75,6 +76,7 @@ class InsumoService {
     nombre: string
     descripcion: string
     unidad_medida: string
+    categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico'
     stock_inicial?: Array<{
       laboratorio_id: number
       cantidad: number
@@ -95,6 +97,7 @@ class InsumoService {
     nombre: string
     descripcion: string
     unidad_medida: string
+    categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico'
   }): Promise<{ success: boolean; message: string; data: any }> {
     try {
       const response = await api.put(`/insumos/${id}`, insumoData)
