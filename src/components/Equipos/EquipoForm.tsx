@@ -45,7 +45,10 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
     numero_serie: '',
     estado: 'Operativo' as 'Operativo' | 'En Mantenimiento' | 'Fuera de Servicio',
     fecha_ultimo_mantenimiento: '',
-    fecha_proximo_mantenimiento: ''
+    fecha_proximo_mantenimiento: '',
+    comentarios: '',
+    condicion: 'Bueno' as 'Excelente' | 'Bueno' | 'Regular' | 'Malo',
+    anio_adquisicion: ''
   })
   
   const [inventarioInicial, setInventarioInicial] = useState<InventarioInicial[]>([])
@@ -84,6 +87,17 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
   }
 
   const loadEquipoData = (equipoData: Equipo) => {
+    // Función para formatear fechas al formato YYYY-MM-DD requerido por input[type="date"]
+    const formatDateForInput = (date: string | undefined) => {
+      if (!date) return ''
+      try {
+        return new Date(date).toISOString().split('T')[0]
+      } catch (error) {
+        console.warn('Error al formatear fecha:', date, error)
+        return ''
+      }
+    }
+
     setFormData({
       nombre: equipoData.nombre,
       descripcion: equipoData.descripcion || '',
@@ -91,8 +105,11 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
       modelo: equipoData.modelo || '',
       numero_serie: equipoData.numero_serie || '',
       estado: equipoData.estado,
-      fecha_ultimo_mantenimiento: equipoData.fecha_ultimo_mantenimiento || '',
-      fecha_proximo_mantenimiento: equipoData.fecha_proximo_mantenimiento || ''
+      fecha_ultimo_mantenimiento: formatDateForInput(equipoData.fecha_ultimo_mantenimiento),
+      fecha_proximo_mantenimiento: formatDateForInput(equipoData.fecha_proximo_mantenimiento),
+      comentarios: equipoData.comentarios || '',
+      condicion: equipoData.condicion || 'Bueno',
+      anio_adquisicion: equipoData.anio_adquisicion ? equipoData.anio_adquisicion.toString() : ''
     })
   }
 
@@ -105,7 +122,10 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
       numero_serie: '',
       estado: 'Operativo',
       fecha_ultimo_mantenimiento: '',
-      fecha_proximo_mantenimiento: ''
+      fecha_proximo_mantenimiento: '',
+      comentarios: '',
+      condicion: 'Bueno',
+      anio_adquisicion: ''
     })
     setInventarioInicial([])
     setError(null)
@@ -148,6 +168,8 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
         marca: formData.marca.trim(),
         modelo: formData.modelo.trim(),
         numero_serie: formData.numero_serie.trim(),
+        comentarios: formData.comentarios.trim(),
+        anio_adquisicion: formData.anio_adquisicion && formData.anio_adquisicion.trim() ? parseInt(formData.anio_adquisicion) : null,
         inventario_inicial: isEditing ? undefined : inventarioInicial.filter(inv => inv.laboratorio_id > 0 && inv.cantidad_total > 0)
       }
 
@@ -331,6 +353,49 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
                     disabled={loading}
                   />
                 </Box>
+
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <FormControl fullWidth>
+                    <InputLabel>Condición</InputLabel>
+                    <Select
+                      value={formData.condicion}
+                      label="Condición"
+                      onChange={(e) => setFormData(prev => ({ ...prev, condicion: e.target.value as any }))}
+                      disabled={loading}
+                    >
+                      <MenuItem value="Excelente">Excelente</MenuItem>
+                      <MenuItem value="Bueno">Bueno</MenuItem>
+                      <MenuItem value="Regular">Regular</MenuItem>
+                      <MenuItem value="Malo">Malo</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Año de adquisición"
+                    value={formData.anio_adquisicion}
+                    onChange={(e) => setFormData(prev => ({ ...prev, anio_adquisicion: e.target.value }))}
+                    placeholder="Ej: 2023"
+                    disabled={loading}
+                    inputProps={{ 
+                      min: 1900, 
+                      max: new Date().getFullYear() + 1,
+                      step: 1 
+                    }}
+                  />
+                </Box>
+
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label="Comentarios"
+                  value={formData.comentarios}
+                  onChange={(e) => setFormData(prev => ({ ...prev, comentarios: e.target.value }))}
+                  placeholder="Comentarios adicionales sobre el equipo..."
+                  disabled={loading}
+                />
               </Box>
             </Paper>
 

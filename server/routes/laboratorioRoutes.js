@@ -5,7 +5,8 @@ import {
   getLaboratorios, 
   createLaboratorio, 
   updateLaboratorio,
-  deleteLaboratorio 
+  deleteLaboratorio,
+  getEscuelas
 } from '../controllers/laboratorioController.js'
 
 const router = express.Router()
@@ -15,6 +16,13 @@ router.get('/',
   authenticateToken,                    // 1️⃣ Verificar JWT
   authorize('read', 'Laboratorio'),     // 2️⃣ Verificar permiso general
   getLaboratorios
+)
+
+// 🏫 OBTENER ESCUELAS (debe ir antes de /:id)
+router.get('/escuelas', 
+  authenticateToken,                    // 1️⃣ JWT
+  authorize('read', 'Laboratorio'),     // 2️⃣ Permiso de lectura
+  getEscuelas
 )
 
 // ➕ CREAR LABORATORIO

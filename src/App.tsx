@@ -13,6 +13,7 @@ import {
   Insumos,
   Equipos,
   Incidencias,
+  ReportesSimple,
 } from './pages'
 import { HorarioPublico } from './components/Public/HorarioPublico'
 
@@ -66,6 +67,7 @@ function App() {
                     <Route path="/insumos" element={<Insumos />} />
                     <Route path="/equipos" element={<Equipos />} />
                     <Route path="/incidencias" element={<Incidencias />} />
+                    <Route path="/reportes" element={<ReportesSimple />} />
                     
                     {/* Default redirect */}
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />

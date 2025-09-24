@@ -216,6 +216,17 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
     return 'success'
   }
 
+  // Función para obtener el color de la condición
+  const getCondicionColor = (condicion: string) => {
+    switch (condicion) {
+      case 'Excelente': return 'success'
+      case 'Bueno': return 'info'
+      case 'Regular': return 'warning'
+      case 'Malo': return 'error'
+      default: return 'info'
+    }
+  }
+
 
   // Función para limpiar búsqueda
   const handleClearSearch = () => {
@@ -370,20 +381,24 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: 'grey.50' }}>
-              <TableCell sx={{ fontWeight: 600, width: '8%' }}>Código</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '15%' }}>Insumo</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '10%' }}>Categoría</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '18%' }}>Descripción</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '7%' }}>Unidad</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '10%' }}>Stock Disponible</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '22%' }}>Stock por Laboratorio</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '5%' }} align="center">Acciones</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '6%' }}>Código</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '12%' }}>Insumo</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '8%' }}>Categoría</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '12%' }}>Descripción</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '6%' }}>Unidad</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '10%' }}>Presentación</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '7%' }}>Condición</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '8%' }}>F. Vencimiento</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '8%' }}>Stock Disponible</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '15%' }}>Stock por Lab</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '12%' }}>Observación</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '4%' }} align="center">Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredInsumos.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={12} align="center" sx={{ py: 4 }}>
                   <Box sx={{ textAlign: 'center' }}>
                     <Inventory sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
                     <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -445,6 +460,30 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
                     />
                   </TableCell>
                   <TableCell>
+                    <Typography variant="body2">
+                      {insumo.presentacion || 'N/A'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip 
+                      label={insumo.condicion || 'Bueno'}
+                      color={getCondicionColor(insumo.condicion || 'Bueno')}
+                      variant="outlined"
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    {insumo.fecha_vencimiento ? (
+                      <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                        {new Date(insumo.fecha_vencimiento).toLocaleDateString('es-ES')}
+                      </Typography>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                        Sin fecha
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     {insumo.stock_disponible !== undefined ? (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Chip 
@@ -476,6 +515,28 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
                   </TableCell>
                   <TableCell>
                     {formatStockPorLaboratorio(insumo.stock_por_laboratorio, insumo.unidad_medida)}
+                  </TableCell>
+                  <TableCell>
+                    {insumo.observacion ? (
+                      <Tooltip title={insumo.observacion}>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            maxWidth: 150,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            cursor: 'help'
+                          }}
+                        >
+                          {insumo.observacion}
+                        </Typography>
+                      </Tooltip>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                        Sin observaciones
+                      </Typography>
+                    )}
                   </TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>

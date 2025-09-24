@@ -11,6 +11,9 @@ import {
   generarPlantillaExcel,
   procesarArchivoExcel,
   ejecutarReabastecimientoMasivo,
+  generarPlantillaImportacion,
+  previsualizarImportacionMasiva,
+  importacionMasiva,
   upload
 } from '../controllers/insumoController.js'
 
@@ -70,6 +73,27 @@ router.post('/reabastecimiento-masivo',
   authenticateToken,
   authorize('create', 'Insumo'),
   ejecutarReabastecimientoMasivo
+)
+
+// Rutas para importación masiva de insumos
+router.get('/plantilla-importacion', 
+  authenticateToken,
+  authorize('create', 'Insumo'),
+  generarPlantillaImportacion
+)
+
+router.post('/previsualizar-importacion', 
+  authenticateToken,
+  authorize('create', 'Insumo'),
+  upload.single('archivo_excel'),
+  previsualizarImportacionMasiva
+)
+
+router.post('/importacion-masiva', 
+  authenticateToken,
+  authorize('create', 'Insumo'),
+  upload.single('archivo_excel'),
+  importacionMasiva
 )
 
 export default router

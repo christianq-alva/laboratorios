@@ -47,7 +47,7 @@ export const getInsumos = async (req, res) => {
           FROM insumos i
           LEFT JOIN inventario_insumos inv ON i.id = inv.insumo_id
           LEFT JOIN laboratorios l ON inv.laboratorio_id = l.id
-          GROUP BY i.id, i.codigo, i.nombre, i.descripcion, i.unidad_medida, i.categoria
+          GROUP BY i.id, i.codigo, i.nombre, i.descripcion, i.unidad_medida, i.categoria, i.presentacion, i.condicion, i.fecha_vencimiento, i.observacion
           ORDER BY i.categoria, i.codigo, i.nombre
         `)
         insumos = rows
@@ -77,6 +77,10 @@ export const createInsumo = async (req, res) => {
         descripcion, 
         unidad_medida,
         categoria = 'Materiales', // ← NUEVO: Categoría del insumo
+        presentacion,
+        condicion = 'Bueno',
+        fecha_vencimiento,
+        observacion,
         stock_inicial = [] // ← NUEVO: Array de stock por laboratorio
       } = req.body
       
@@ -89,9 +93,9 @@ export const createInsumo = async (req, res) => {
       
       // 1️⃣ CREAR EL INSUMO (catálogo)
       const [insumoResult] = await connection.execute(`
-        INSERT INTO insumos (codigo, nombre, descripcion, unidad_medida, categoria) 
-        VALUES (?, ?, ?, ?, ?)
-      `, [codigo, nombre, descripcion, unidad_medida, categoria])
+        INSERT INTO insumos (codigo, nombre, descripcion, unidad_medida, categoria, presentacion, condicion, fecha_vencimiento, observacion) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [codigo, nombre, descripcion, unidad_medida, categoria, presentacion, condicion, fecha_vencimiento || null, observacion])
       
       const insumo_id = insumoResult.insertId
       console.log('✅ Insumo creado con ID:', insumo_id)
@@ -120,12 +124,24 @@ export const createInsumo = async (req, res) => {
             VALUES (?, ?, ?)
           `, [insumo_id, laboratorio_id, cantidad])
           
+          // Crear fecha en zona horaria de Perú
+          const fechaPeru = new Date().toLocaleString('en-CA', { 
+            timeZone: 'America/Lima',
+            year: 'numeric',
+            month: '2-digit', 
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          }).replace(', ', ' ')
+
           // Registrar movimiento de entrada
           await connection.execute(`
             INSERT INTO movimientos_insumos 
-            (insumo_id, laboratorio_id, usuario_id, tipo_movimiento, cantidad, observaciones)
-            VALUES (?, ?, ?, 'entrada', ?, ?)
-          `, [insumo_id, laboratorio_id, req.user.userId, cantidad, observaciones])
+            (insumo_id, laboratorio_id, usuario_id, tipo_movimiento, cantidad, observaciones, fecha_movimiento)
+            VALUES (?, ?, ?, 'entrada', ?, ?, ?)
+          `, [insumo_id, laboratorio_id, req.user.userId, cantidad, observaciones, fechaPeru])
         }
       }
       
@@ -217,11 +233,19 @@ export const getActividadInsumos = async (req, res) => {
     
     const [rows] = await pool.execute(query, params)
     
+    // Convertir fechas al formato ISO para el frontend
+    const actividadConFechasISO = rows.map(row => ({
+      ...row,
+      fecha_movimiento: row.fecha_movimiento ? new Date(row.fecha_movimiento).toISOString() : null,
+      reserva_fecha_inicio: row.reserva_fecha_inicio ? new Date(row.reserva_fecha_inicio).toISOString() : null,
+      reserva_fecha_fin: row.reserva_fecha_fin ? new Date(row.reserva_fecha_fin).toISOString() : null
+    }))
+    
     console.log('📊 Actividad encontrada:', rows.length)
     
     res.json({ 
       success: true, 
-      data: rows,
+      data: actividadConFechasISO,
       total_movimientos: rows.length,
       filtros_aplicados: {
         laboratorio_id: laboratorio_id || null,
@@ -330,14 +354,26 @@ export const reabastecimientoInsumos = async (req, res) => {
         console.log('✅ Nuevo stock creado')
       }
       
+      // Crear fecha en zona horaria de Perú
+      const fechaPeru = new Date().toLocaleString('en-CA', { 
+        timeZone: 'America/Lima',
+        year: 'numeric',
+        month: '2-digit', 
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }).replace(', ', ' ')
+
       // Registrar movimiento en el historial
       console.log('📝 Registrando movimiento...', { insumo_id, laboratorio_id, cantidad, userId })
       try {
         await connection.execute(`
           INSERT INTO movimientos_insumos 
           (insumo_id, laboratorio_id, tipo_movimiento, cantidad, observaciones, usuario_id, fecha_movimiento)
-          VALUES (?, ?, 'entrada', ?, ?, ?, NOW())
-        `, [insumo_id, laboratorio_id, cantidad, observaciones || motivo_general, userId || 1])
+          VALUES (?, ?, 'entrada', ?, ?, ?, ?)
+        `, [insumo_id, laboratorio_id, cantidad, observaciones || motivo_general, userId || 1, fechaPeru])
         console.log('✅ Movimiento registrado')
       } catch (movError) {
         console.error('❌ Error al registrar movimiento:', movError.message)
@@ -717,12 +753,24 @@ export const ejecutarReabastecimientoMasivo = async (req, res) => {
           `, [insumo_id, laboratorio_id, cantidad])
         }
         
+        // Crear fecha en zona horaria de Perú
+        const fechaPeru = new Date().toLocaleString('en-CA', { 
+          timeZone: 'America/Lima',
+          year: 'numeric',
+          month: '2-digit', 
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        }).replace(', ', ' ')
+
         // Registrar movimiento
         await connection.execute(`
           INSERT INTO movimientos_insumos 
           (insumo_id, laboratorio_id, tipo_movimiento, cantidad, observaciones, usuario_id, fecha_movimiento)
-          VALUES (?, ?, 'entrada', ?, ?, ?, NOW())
-        `, [insumo_id, laboratorio_id, cantidad, motivo_general, userId])
+          VALUES (?, ?, 'entrada', ?, ?, ?, ?)
+        `, [insumo_id, laboratorio_id, cantidad, motivo_general, userId, fechaPeru])
         
         registrosProcesados++
         resultados.push({
@@ -845,16 +893,490 @@ export const deleteInsumo = async (req, res) => {
   }
 }
 
+// Generar plantilla Excel para importación masiva de insumos
+export const generarPlantillaImportacion = async (req, res) => {
+  try {
+    console.log('📊 Generando plantilla Excel para importación masiva de insumos...')
+    
+    // Obtener laboratorios para referencia
+    const [laboratorios] = await pool.execute(`
+      SELECT id, codigo, nombre 
+      FROM laboratorios 
+      ORDER BY codigo
+    `)
+    
+    // Crear workbook
+    const wb = XLSX.utils.book_new()
+    
+    // Hoja 1: Plantilla de insumos
+    const plantillaData = [
+      [
+        'NOMBRE',
+        'DESCRIPCION', 
+        'UNIDAD_MEDIDA',
+        'CATEGORIA',
+        'PRESENTACION',
+        'CONDICION',
+        'FECHA_VENCIMIENTO',
+        'OBSERVACION',
+        'STOCK_LAB_1',
+        'STOCK_LAB_2',
+        'STOCK_LAB_3'
+      ],
+      [
+        'Alcohol etílico 70%',
+        'Alcohol para desinfección y limpieza',
+        'Litros',
+        'Reactivos',
+        'Frasco 1L',
+        'Bueno',
+        '2025-12-31',
+        'Mantener en lugar fresco y seco',
+        '10',
+        '5',
+        '0'
+      ],
+      [
+        'Jeringas desechables 10ml',
+        'Jeringas estériles para procedimientos',
+        'Unidades',
+        'Materiales',
+        'Caja x 100 unidades',
+        'Excelente',
+        '',
+        'Verificar fecha de vencimiento',
+        '200',
+        '150',
+        '100'
+      ],
+      [
+        'Cultivo bacteriano E.coli',
+        'Cultivo para prácticas de microbiología',
+        'Placas',
+        'Material_Biologico',
+        'Placa Petri',
+        'Bueno',
+        '2025-06-30',
+        'Mantener refrigerado a 4°C',
+        '5',
+        '3',
+        '2'
+      ]
+    ]
+    
+    const wsPlantilla = XLSX.utils.aoa_to_sheet(plantillaData)
+    
+    // Configurar ancho de columnas
+    wsPlantilla['!cols'] = [
+      { width: 25 }, // NOMBRE
+      { width: 35 }, // DESCRIPCION
+      { width: 15 }, // UNIDAD_MEDIDA
+      { width: 18 }, // CATEGORIA
+      { width: 20 }, // PRESENTACION
+      { width: 12 }, // CONDICION
+      { width: 18 }, // FECHA_VENCIMIENTO
+      { width: 30 }, // OBSERVACION
+      { width: 12 }, // STOCK_LAB_1
+      { width: 12 }, // STOCK_LAB_2
+      { width: 12 }  // STOCK_LAB_3
+    ]
+    
+    XLSX.utils.book_append_sheet(wb, wsPlantilla, 'Plantilla Insumos')
+    
+    // Hoja 2: Instrucciones y validaciones
+    const instruccionesData = [
+      ['INSTRUCCIONES PARA IMPORTACIÓN MASIVA DE INSUMOS'],
+      [''],
+      ['COLUMNAS OBLIGATORIAS:'],
+      ['• NOMBRE: Nombre del insumo (texto, máximo 255 caracteres)'],
+      ['• UNIDAD_MEDIDA: Unidad de medida (ej: Litros, Unidades, Gramos, ml)'],
+      [''],
+      ['COLUMNAS OPCIONALES:'],
+      ['• DESCRIPCION: Descripción detallada del insumo'],
+      ['• CATEGORIA: Reactivos | Materiales | Material_Biologico (por defecto: Materiales)'],
+      ['• PRESENTACION: Formato de presentación (ej: Frasco 500ml, Caja x 100)'],
+      ['• CONDICION: Excelente | Bueno | Regular | Malo (por defecto: Bueno)'],
+      ['• FECHA_VENCIMIENTO: Formato YYYY-MM-DD (ej: 2025-12-31)'],
+      ['• OBSERVACION: Observaciones adicionales'],
+      ['• STOCK_LAB_X: Stock inicial por laboratorio (números enteros)'],
+      [''],
+      ['LABORATORIOS DISPONIBLES:'],
+      ['ID', 'CODIGO', 'NOMBRE'],
+      ...laboratorios.map(lab => [lab.id, lab.codigo, lab.nombre]),
+      [''],
+      ['NOTAS IMPORTANTES:'],
+      ['• Los códigos de insumos se generan automáticamente'],
+      ['• Las fechas deben estar en formato YYYY-MM-DD'],
+      ['• El stock por laboratorio es opcional (0 por defecto)'],
+      ['• Las categorías deben ser exactamente: Reactivos, Materiales o Material_Biologico'],
+      ['• Las condiciones deben ser: Excelente, Bueno, Regular o Malo'],
+      ['• Elimine esta hoja antes de importar el archivo']
+    ]
+    
+    const wsInstrucciones = XLSX.utils.aoa_to_sheet(instruccionesData)
+    wsInstrucciones['!cols'] = [{ width: 80 }, { width: 15 }, { width: 30 }]
+    
+    // Hacer la primera fila más grande y en negrita
+    wsInstrucciones['A1'].s = {
+      font: { bold: true, sz: 14 },
+      alignment: { horizontal: 'center' }
+    }
+    
+    XLSX.utils.book_append_sheet(wb, wsInstrucciones, 'INSTRUCCIONES')
+    
+    // Configurar respuesta para descarga
+    const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' })
+    const timestamp = new Date().toISOString().slice(0, 10)
+    
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    res.setHeader('Content-Disposition', `attachment; filename=plantilla_insumos_${timestamp}.xlsx`)
+    res.send(buffer)
+    
+    console.log('✅ Plantilla Excel generada y enviada')
+    
+  } catch (error) {
+    console.error('❌ Error al generar plantilla Excel:', error)
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error al generar la plantilla Excel' 
+    })
+  }
+}
+
+// Previsualizar importación masiva de insumos
+export const previsualizarImportacionMasiva = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No se ha proporcionado ningún archivo'
+      })
+    }
+    
+    console.log('📊 Previsualizando importación masiva de insumos...')
+    console.log('📁 Archivo recibido:', req.file.originalname, 'Tamaño:', req.file.size)
+    
+    // Leer archivo Excel
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' })
+    const sheetName = workbook.SheetNames[0]
+    const worksheet = workbook.Sheets[sheetName]
+    const data = XLSX.utils.sheet_to_json(worksheet)
+    
+    console.log('📋 Registros encontrados en Excel:', data.length)
+    
+    if (data.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'El archivo Excel está vacío o no tiene el formato correcto'
+      })
+    }
+    
+    // Obtener laboratorios existentes
+    const [laboratorios] = await pool.execute('SELECT id, codigo, nombre FROM laboratorios ORDER BY id')
+    
+    const previewData = []
+    const erroresGenerales = []
+    
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i]
+      const rowNum = i + 2 // +2 porque Excel empieza en 1 y tenemos header
+      const erroresFila = []
+      
+      // Validar y limpiar datos
+      const nombre = row.NOMBRE ? row.NOMBRE.toString().trim() : ''
+      const descripcion = row.DESCRIPCION ? row.DESCRIPCION.toString().trim() : ''
+      const unidad_medida = row.UNIDAD_MEDIDA ? row.UNIDAD_MEDIDA.toString().trim() : ''
+      const categoria = row.CATEGORIA ? row.CATEGORIA.toString().trim() : 'Materiales'
+      const presentacion = row.PRESENTACION ? row.PRESENTACION.toString().trim() : ''
+      const condicion = row.CONDICION ? row.CONDICION.toString().trim() : 'Bueno'
+      const observacion = row.OBSERVACION ? row.OBSERVACION.toString().trim() : ''
+      
+      // Validar campos obligatorios
+      if (!nombre) {
+        erroresFila.push('NOMBRE es obligatorio')
+      }
+      if (!unidad_medida) {
+        erroresFila.push('UNIDAD_MEDIDA es obligatorio')
+      }
+      
+      // Validar fecha de vencimiento
+      let fecha_vencimiento = ''
+      if (row.FECHA_VENCIMIENTO) {
+        const fechaStr = row.FECHA_VENCIMIENTO.toString().trim()
+        if (fechaStr) {
+          const fecha = new Date(fechaStr)
+          if (!isNaN(fecha.getTime())) {
+            fecha_vencimiento = fecha.toISOString().split('T')[0]
+          } else {
+            erroresFila.push('Fecha de vencimiento inválida (use formato YYYY-MM-DD)')
+          }
+        }
+      }
+      
+      // Validar categoría
+      const categoriasValidas = ['Reactivos', 'Materiales', 'Material_Biologico']
+      if (!categoriasValidas.includes(categoria)) {
+        erroresFila.push(`Categoría inválida. Debe ser: ${categoriasValidas.join(', ')}`)
+      }
+      
+      // Validar condición
+      const condicionesValidas = ['Excelente', 'Bueno', 'Regular', 'Malo']
+      if (!condicionesValidas.includes(condicion)) {
+        erroresFila.push(`Condición inválida. Debe ser: ${condicionesValidas.join(', ')}`)
+      }
+      
+      // Procesar stock por laboratorio
+      const stock_labs = {}
+      for (let labId = 1; labId <= laboratorios.length; labId++) {
+        const stockColumn = `STOCK_LAB_${labId}`
+        if (row[stockColumn] && !isNaN(parseInt(row[stockColumn]))) {
+          const cantidad = parseInt(row[stockColumn])
+          if (cantidad > 0) {
+            const lab = laboratorios.find(l => l.id === labId)
+            if (lab) {
+              stock_labs[lab.nombre] = cantidad
+            }
+          }
+        }
+      }
+      
+      previewData.push({
+        fila: rowNum,
+        nombre,
+        descripcion,
+        unidad_medida,
+        categoria,
+        presentacion,
+        condicion,
+        fecha_vencimiento,
+        observacion,
+        stock_labs,
+        errores: erroresFila
+      })
+    }
+    
+    console.log(`📊 Previsualización completada: ${previewData.length} filas procesadas`)
+    
+    res.json({
+      success: true,
+      data: previewData,
+      total_filas: previewData.length,
+      errores_generales: erroresGenerales
+    })
+    
+  } catch (error) {
+    console.error('❌ Error en previsualización de insumos:', error)
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error interno en la previsualización',
+      error: error.message
+    })
+  }
+}
+
+// Importación masiva de insumos desde Excel
+export const importacionMasiva = async (req, res) => {
+  const connection = await pool.getConnection()
+  
+  try {
+    await connection.beginTransaction()
+    
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No se ha proporcionado ningún archivo'
+      })
+    }
+    
+    console.log('📊 Procesando importación masiva de insumos...')
+    console.log('📁 Archivo recibido:', req.file.originalname, 'Tamaño:', req.file.size)
+    
+    // Leer archivo Excel
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' })
+    const sheetName = workbook.SheetNames[0]
+    const worksheet = workbook.Sheets[sheetName]
+    const data = XLSX.utils.sheet_to_json(worksheet)
+    
+    console.log('📋 Registros encontrados en Excel:', data.length)
+    
+    if (data.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'El archivo Excel está vacío o no tiene el formato correcto'
+      })
+    }
+    
+    // Obtener laboratorios existentes
+    const [laboratorios] = await connection.execute('SELECT id, codigo, nombre FROM laboratorios ORDER BY id')
+    const labMap = new Map(laboratorios.map(lab => [lab.id, lab]))
+    
+    let procesados = 0
+    let errores = []
+    const resultados = []
+    
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i]
+      const rowNum = i + 2 // +2 porque Excel empieza en 1 y tenemos header
+      
+      try {
+        // Validar campos obligatorios
+        if (!row.NOMBRE || !row.UNIDAD_MEDIDA) {
+          errores.push(`Fila ${rowNum}: NOMBRE y UNIDAD_MEDIDA son obligatorios`)
+          continue
+        }
+        
+        // Limpiar y validar datos
+        const nombre = row.NOMBRE.toString().trim()
+        const descripcion = row.DESCRIPCION ? row.DESCRIPCION.toString().trim() : ''
+        const unidad_medida = row.UNIDAD_MEDIDA.toString().trim()
+        const categoria = row.CATEGORIA ? row.CATEGORIA.toString().trim() : 'Materiales'
+        const presentacion = row.PRESENTACION ? row.PRESENTACION.toString().trim() : ''
+        const condicion = row.CONDICION ? row.CONDICION.toString().trim() : 'Bueno'
+        const observacion = row.OBSERVACION ? row.OBSERVACION.toString().trim() : ''
+        
+        // Validar fecha de vencimiento
+        let fecha_vencimiento = null
+        if (row.FECHA_VENCIMIENTO) {
+          const fechaStr = row.FECHA_VENCIMIENTO.toString().trim()
+          if (fechaStr) {
+            // Intentar parsear diferentes formatos de fecha
+            const fecha = new Date(fechaStr)
+            if (!isNaN(fecha.getTime())) {
+              fecha_vencimiento = fecha.toISOString().split('T')[0]
+            } else {
+              errores.push(`Fila ${rowNum}: Fecha de vencimiento inválida (use formato YYYY-MM-DD)`)
+              continue
+            }
+          }
+        }
+        
+        // Validar categoría
+        const categoriasValidas = ['Reactivos', 'Materiales', 'Material_Biologico']
+        if (!categoriasValidas.includes(categoria)) {
+          errores.push(`Fila ${rowNum}: Categoría inválida. Debe ser: ${categoriasValidas.join(', ')}`)
+          continue
+        }
+        
+        // Validar condición
+        const condicionesValidas = ['Excelente', 'Bueno', 'Regular', 'Malo']
+        if (!condicionesValidas.includes(condicion)) {
+          errores.push(`Fila ${rowNum}: Condición inválida. Debe ser: ${condicionesValidas.join(', ')}`)
+          continue
+        }
+        
+        // Generar código único
+        const [maxId] = await connection.execute('SELECT MAX(id) as max_id FROM insumos')
+        const nextId = (maxId[0].max_id || 0) + procesados + 1
+        const codigo = `INS-${nextId.toString().padStart(4, '0')}`
+        
+        // Crear el insumo
+        const [insumoResult] = await connection.execute(`
+          INSERT INTO insumos (codigo, nombre, descripcion, unidad_medida, categoria, presentacion, condicion, fecha_vencimiento, observacion) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [codigo, nombre, descripcion, unidad_medida, categoria, presentacion, condicion, fecha_vencimiento, observacion])
+        
+        const insumo_id = insumoResult.insertId
+        
+        // Procesar stock por laboratorio
+        const stockInfo = []
+        for (let labId = 1; labId <= laboratorios.length; labId++) {
+          const stockColumn = `STOCK_LAB_${labId}`
+          if (row[stockColumn] && !isNaN(parseInt(row[stockColumn]))) {
+            const cantidad = parseInt(row[stockColumn])
+            if (cantidad > 0 && labMap.has(labId)) {
+              // Crear registro de inventario
+              await connection.execute(`
+                INSERT INTO inventario_insumos (insumo_id, laboratorio_id, cantidad)
+                VALUES (?, ?, ?)
+              `, [insumo_id, labId, cantidad])
+              
+              // Crear fecha en zona horaria de Perú
+              const fechaPeru = new Date().toLocaleString('en-CA', { 
+                timeZone: 'America/Lima',
+                year: 'numeric',
+                month: '2-digit', 
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+              }).replace(', ', ' ')
+              
+              // Registrar movimiento
+              await connection.execute(`
+                INSERT INTO movimientos_insumos 
+                (insumo_id, laboratorio_id, usuario_id, tipo_movimiento, cantidad, observaciones, fecha_movimiento)
+                VALUES (?, ?, ?, 'entrada', ?, ?, ?)
+              `, [insumo_id, labId, req.user.userId, cantidad, 'Importación masiva', fechaPeru])
+              
+              stockInfo.push(`${labMap.get(labId).nombre}: ${cantidad}`)
+            }
+          }
+        }
+        
+        resultados.push({
+          fila: rowNum,
+          codigo: codigo,
+          nombre: nombre,
+          categoria: categoria,
+          stock: stockInfo.join(', ') || 'Sin stock inicial'
+        })
+        
+        procesados++
+        
+      } catch (error) {
+        console.error(`❌ Error procesando fila ${rowNum}:`, error)
+        errores.push(`Fila ${rowNum}: ${error.message}`)
+      }
+    }
+    
+    if (errores.length > 0 && procesados === 0) {
+      await connection.rollback()
+      return res.status(400).json({
+        success: false,
+        message: 'No se pudo procesar ningún registro',
+        errores: errores
+      })
+    }
+    
+    await connection.commit()
+    
+    console.log(`✅ Importación completada: ${procesados} insumos creados, ${errores.length} errores`)
+    
+    res.json({
+      success: true,
+      message: `Importación completada: ${procesados} insumos creados`,
+      procesados: procesados,
+      errores: errores.length,
+      detalles_errores: errores,
+      resultados: resultados
+    })
+    
+  } catch (error) {
+    await connection.rollback()
+    console.error('❌ Error en importación masiva:', error)
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error interno en la importación masiva',
+      error: error.message
+    })
+  } finally {
+    connection.release()
+  }
+}
+
 export const updateInsumo = async (req, res) => {
   try {
     const { id } = req.params
     const insumoId = parseInt(id, 10) // Convertir a número entero
-    const { nombre, descripcion, unidad_medida, categoria } = req.body
+    const { nombre, descripcion, unidad_medida, categoria, presentacion, condicion, fecha_vencimiento, observacion } = req.body
     
     // Limpiar espacios en blanco
     const nombreLimpio = nombre?.trim()
     const descripcionLimpia = descripcion?.trim()
     const unidadLimpia = unidad_medida?.trim()
+    const presentacionLimpia = presentacion?.trim()
+    const observacionLimpia = observacion?.trim()
     
     console.log('🔄 Actualizando insumo:', { id, insumoId, nombre: nombreLimpio, descripcion: descripcionLimpia, unidad_medida: unidadLimpia })
     
@@ -893,9 +1415,9 @@ export const updateInsumo = async (req, res) => {
     // Actualizar insumo
     await pool.execute(`
       UPDATE insumos 
-      SET nombre = ?, descripcion = ?, unidad_medida = ?, categoria = ?
+      SET nombre = ?, descripcion = ?, unidad_medida = ?, categoria = ?, presentacion = ?, condicion = ?, fecha_vencimiento = ?, observacion = ?
       WHERE id = ?
-    `, [nombreLimpio, descripcionLimpia || '', unidadLimpia, categoria || 'Materiales', insumoId])
+    `, [nombreLimpio, descripcionLimpia || '', unidadLimpia, categoria || 'Materiales', presentacionLimpia || '', condicion || 'Bueno', fecha_vencimiento || null, observacionLimpia || '', insumoId])
     
     console.log('✅ Insumo actualizado exitosamente:', insumoId)
     

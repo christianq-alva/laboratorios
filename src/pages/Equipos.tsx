@@ -13,15 +13,19 @@ import {
   DialogActions,
   CircularProgress
 } from '@mui/material'
-import { Add, Warning, History } from '@mui/icons-material'
+import { Add, Warning, History, FileUpload } from '@mui/icons-material'
 import { EquiposTable } from '../components/Equipos/EquiposTable'
 import { EquipoForm } from '../components/Equipos/EquipoForm'
+import { ActividadEquipos } from '../components/Equipos/ActividadEquipos'
+import { ImportacionMasivaEquipos } from '../components/Equipos/ImportacionMasivaEquipos'
 import { equipoService, type Equipo } from '../services/equipoService'
 
 export const Equipos: React.FC = () => {
   // Estados para formulario y eliminación
   const [formOpen, setFormOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [actividadOpen, setActividadOpen] = useState(false)
+  const [importacionMasivaOpen, setImportacionMasivaOpen] = useState(false)
   const [selectedEquipo, setSelectedEquipo] = useState<Equipo | null>(null)
   const [refresh, setRefresh] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -49,6 +53,36 @@ export const Equipos: React.FC = () => {
   const handleFormClose = () => {
     setFormOpen(false)
     setSelectedEquipo(null)
+  }
+
+  // Función para abrir actividad
+  const handleActividad = () => {
+    setActividadOpen(true)
+  }
+
+  // Función para cerrar actividad
+  const handleActividadClose = () => {
+    setActividadOpen(false)
+  }
+
+  // Función para abrir importación masiva
+  const handleImportacionMasivaOpen = () => {
+    setImportacionMasivaOpen(true)
+  }
+
+  // Función para cerrar importación masiva
+  const handleImportacionMasivaClose = () => {
+    setImportacionMasivaOpen(false)
+  }
+
+  // Función para éxito de importación masiva
+  const handleImportacionMasivaSuccess = () => {
+    setRefresh(prev => !prev)
+    setSnackbar({
+      open: true,
+      message: 'Importación masiva de equipos completada correctamente',
+      severity: 'success'
+    })
   }
 
   // Función cuando el formulario tiene éxito
@@ -153,9 +187,20 @@ export const Equipos: React.FC = () => {
           <Button
             variant="outlined"
             startIcon={<History />}
+            onClick={handleActividad}
             sx={{ borderRadius: 2, px: 3 }}
           >
             Actividad
+          </Button>
+
+          <Button
+            variant="outlined"
+            startIcon={<FileUpload />}
+            onClick={handleImportacionMasivaOpen}
+            sx={{ borderRadius: 2, px: 3 }}
+            color="secondary"
+          >
+            Importar Excel
           </Button>
           
           <Button
@@ -242,6 +287,19 @@ export const Equipos: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Modal de actividad */}
+      <ActividadEquipos
+        open={actividadOpen}
+        onClose={handleActividadClose}
+      />
+
+      {/* Modal de importación masiva */}
+      <ImportacionMasivaEquipos
+        open={importacionMasivaOpen}
+        onClose={handleImportacionMasivaClose}
+        onSuccess={handleImportacionMasivaSuccess}
+      />
 
       {/* Snackbar para notificaciones */}
       <Snackbar 

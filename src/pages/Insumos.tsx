@@ -13,12 +13,13 @@ import {
   DialogActions,
   CircularProgress
 } from '@mui/material'
-import { Add, Warning, History, TrendingUp, CloudUpload } from '@mui/icons-material'
+import { Add, Warning, History, TrendingUp, CloudUpload, FileUpload } from '@mui/icons-material'
 import { InsumosTable } from '../components/Insumos/InsumosTable'
 import { InsumoForm } from '../components/Insumos/InsumoForm'
 import { ActividadInsumos } from '../components/Insumos/ActividadInsumos'
 import { ReabastecimientoModal } from '../components/Insumos/ReabastecimientoModal'
 import { CargaMasivaModal } from '../components/Insumos/CargaMasivaModal'
+import { ImportacionMasiva } from '../components/Insumos/ImportacionMasiva'
 import { insumoService, type Insumo } from '../services/insumoService'
 
 export const Insumos: React.FC = () => {
@@ -31,6 +32,7 @@ export const Insumos: React.FC = () => {
   const [actividadOpen, setActividadOpen] = useState(false)
   const [reabastecimientoOpen, setReabastecimientoOpen] = useState(false)
   const [cargaMasivaOpen, setCargaMasivaOpen] = useState(false)
+  const [importacionMasivaOpen, setImportacionMasivaOpen] = useState(false)
   
   // Estados para notificaciones
   const [snackbar, setSnackbar] = useState({
@@ -193,6 +195,26 @@ export const Insumos: React.FC = () => {
     })
   }
 
+  // Función para abrir importación masiva
+  const handleImportacionMasivaOpen = () => {
+    setImportacionMasivaOpen(true)
+  }
+
+  // Función para cerrar importación masiva
+  const handleImportacionMasivaClose = () => {
+    setImportacionMasivaOpen(false)
+  }
+
+  // Función para éxito de importación masiva
+  const handleImportacionMasivaSuccess = () => {
+    setRefresh(prev => !prev)
+    setSnackbar({
+      open: true,
+      message: 'Importación masiva completada correctamente',
+      severity: 'success'
+    })
+  }
+
   return (
     <Box>
       {/* Encabezado */}
@@ -233,6 +255,16 @@ export const Insumos: React.FC = () => {
             color="info"
           >
             Carga Masiva
+          </Button>
+
+          <Button
+            variant="outlined"
+            startIcon={<FileUpload />}
+            onClick={handleImportacionMasivaOpen}
+            sx={{ borderRadius: 2, px: 3 }}
+            color="secondary"
+          >
+            Importar Excel
           </Button>
           
           <Button
@@ -326,6 +358,13 @@ export const Insumos: React.FC = () => {
         open={cargaMasivaOpen}
         onClose={handleCargaMasivaClose}
         onSuccess={handleCargaMasivaSuccess}
+      />
+
+      {/* Modal de importación masiva */}
+      <ImportacionMasiva
+        open={importacionMasivaOpen}
+        onClose={handleImportacionMasivaClose}
+        onSuccess={handleImportacionMasivaSuccess}
       />
 
       {/* Snackbar para notificaciones */}

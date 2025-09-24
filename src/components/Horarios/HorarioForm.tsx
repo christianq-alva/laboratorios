@@ -38,6 +38,7 @@ import {
   CheckCircle,
 } from '@mui/icons-material'
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
+import dayjs from 'dayjs'
 import { horarioService } from '../../services/horarioService'
 import { laboratorioService } from '../../services/laboratorioService'
 import type { 
@@ -516,17 +517,11 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
               <Box>
                 <DateTimePicker
                   label="Fecha y hora de inicio"
-                  value={formData.fecha_inicio ? new Date(formData.fecha_inicio) : null}
+                  value={formData.fecha_inicio ? dayjs(formData.fecha_inicio) : null}
                   onChange={(date) => {
                     if (date) {
                       // Formatear fecha como YYYY-MM-DD HH:MM:SS en zona horaria local
-                      const year = date.getFullYear()
-                      const month = String(date.getMonth() + 1).padStart(2, '0')
-                      const day = String(date.getDate()).padStart(2, '0')
-                      const hours = String(date.getHours()).padStart(2, '0')
-                      const minutes = String(date.getMinutes()).padStart(2, '0')
-                      const seconds = String(date.getSeconds()).padStart(2, '0')
-                      const fechaLocal = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+                      const fechaLocal = date.format('YYYY-MM-DD HH:mm:ss')
                       
                       setFormData(prev => ({ 
                         ...prev, 
@@ -545,24 +540,18 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
                       required: true
                     }
                   }}
-                  minDateTime={new Date()}
+                  minDateTime={dayjs()}
                 />
               </Box>
 
               <Box>
                 <DateTimePicker
                   label="Fecha y hora de fin"
-                  value={formData.fecha_fin ? new Date(formData.fecha_fin) : null}
+                  value={formData.fecha_fin ? dayjs(formData.fecha_fin) : null}
                   onChange={(date) => {
                     if (date) {
                       // Formatear fecha como YYYY-MM-DD HH:MM:SS en zona horaria local
-                      const year = date.getFullYear()
-                      const month = String(date.getMonth() + 1).padStart(2, '0')
-                      const day = String(date.getDate()).padStart(2, '0')
-                      const hours = String(date.getHours()).padStart(2, '0')
-                      const minutes = String(date.getMinutes()).padStart(2, '0')
-                      const seconds = String(date.getSeconds()).padStart(2, '0')
-                      const fechaLocal = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+                      const fechaLocal = date.format('YYYY-MM-DD HH:mm:ss')
                       
                       setFormData(prev => ({ 
                         ...prev, 
@@ -581,7 +570,7 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
                       required: true
                     }
                   }}
-                  minDateTime={formData.fecha_inicio ? new Date(formData.fecha_inicio) : new Date()}
+                  minDateTime={formData.fecha_inicio ? dayjs(formData.fecha_inicio) : dayjs()}
                 />
               </Box>
             </Box>

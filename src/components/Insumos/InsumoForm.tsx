@@ -44,7 +44,11 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
     nombre: '',
     descripcion: '',
     unidad_medida: '',
-    categoria: 'Materiales' as 'Reactivos' | 'Materiales' | 'Material_Biologico'
+    categoria: 'Materiales' as 'Reactivos' | 'Materiales' | 'Material_Biologico',
+    presentacion: '',
+    condicion: 'Bueno' as 'Excelente' | 'Bueno' | 'Regular' | 'Malo',
+    fecha_vencimiento: '',
+    observacion: ''
   })
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
   const [stockInicial, setStockInicial] = useState<StockInicial[]>([])
@@ -85,11 +89,26 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
   useEffect(() => {
     if (open) {
       if (insumo) {
+        // Función para formatear fechas al formato YYYY-MM-DD requerido por input[type="date"]
+        const formatDateForInput = (date: string | undefined) => {
+          if (!date) return ''
+          try {
+            return new Date(date).toISOString().split('T')[0]
+          } catch (error) {
+            console.warn('Error al formatear fecha:', date, error)
+            return ''
+          }
+        }
+
         setFormData({
           nombre: insumo.nombre,
           descripcion: insumo.descripcion || '',
           unidad_medida: insumo.unidad_medida,
-          categoria: insumo.categoria || 'Materiales'
+          categoria: insumo.categoria || 'Materiales',
+          presentacion: insumo.presentacion || '',
+          condicion: insumo.condicion || 'Bueno',
+          fecha_vencimiento: formatDateForInput(insumo.fecha_vencimiento),
+          observacion: insumo.observacion || ''
         })
         setStockInicial([]) // Para edición, no mostramos stock inicial
       } else {
@@ -97,7 +116,11 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
           nombre: '',
           descripcion: '',
           unidad_medida: '',
-          categoria: 'Materiales'
+          categoria: 'Materiales',
+          presentacion: '',
+          condicion: 'Bueno',
+          fecha_vencimiento: '',
+          observacion: ''
         })
         setStockInicial([])
       }
@@ -191,6 +214,12 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
     try {
       const insumoData = {
         ...formData,
+        nombre: formData.nombre.trim(),
+        descripcion: formData.descripcion.trim(),
+        unidad_medida: formData.unidad_medida.trim(),
+        presentacion: formData.presentacion.trim(),
+        observacion: formData.observacion.trim(),
+        fecha_vencimiento: formData.fecha_vencimiento && formData.fecha_vencimiento.trim() ? formData.fecha_vencimiento : undefined,
         stock_inicial: stockInicial.length > 0 ? stockInicial : undefined
       }
 
@@ -200,7 +229,11 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
           nombre: formData.nombre.trim(),
           descripcion: formData.descripcion.trim(),
           unidad_medida: formData.unidad_medida.trim(),
-          categoria: formData.categoria
+          categoria: formData.categoria,
+          presentacion: formData.presentacion.trim(),
+          condicion: formData.condicion,
+          fecha_vencimiento: formData.fecha_vencimiento && formData.fecha_vencimiento.trim() ? formData.fecha_vencimiento : undefined,
+          observacion: formData.observacion.trim()
         })
       } else {
         await insumoService.create(insumoData)
@@ -340,6 +373,51 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
               multiline
               rows={3}
               placeholder="Descripción opcional del insumo"
+            />
+
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <TextField
+                label="Presentación"
+                value={formData.presentacion}
+                onChange={(e) => handleInputChange('presentacion', e.target.value)}
+                placeholder="ej: Frasco 500ml, Caja x 100 unidades"
+                sx={{ minWidth: 250, flex: 1 }}
+              />
+              
+              <FormControl sx={{ minWidth: 200 }}>
+                <InputLabel>Condición</InputLabel>
+                <Select
+                  value={formData.condicion}
+                  label="Condición"
+                  onChange={(e) => handleInputChange('condicion', e.target.value)}
+                >
+                  <MenuItem value="Excelente">Excelente</MenuItem>
+                  <MenuItem value="Bueno">Bueno</MenuItem>
+                  <MenuItem value="Regular">Regular</MenuItem>
+                  <MenuItem value="Malo">Malo</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <TextField
+                type="date"
+                label="Fecha de Vencimiento"
+                value={formData.fecha_vencimiento}
+                onChange={(e) => handleInputChange('fecha_vencimiento', e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                sx={{ minWidth: 200 }}
+              />
+            </Box>
+
+            <TextField
+              fullWidth
+              label="Observaciones"
+              value={formData.observacion}
+              onChange={(e) => handleInputChange('observacion', e.target.value)}
+              multiline
+              rows={2}
+              placeholder="Observaciones adicionales sobre el insumo..."
             />
           </Box>
 

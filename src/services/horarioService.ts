@@ -39,6 +39,33 @@ export interface EquipoHorario {
   estado?: string
 }
 
+export interface ActividadHorario {
+  actividad_id: number
+  accion: 'crear' | 'editar' | 'eliminar' | 'ver'
+  reserva_id: number
+  descripcion: string
+  fecha_actividad: string
+  ip_address: string
+  usuario_id: number
+  usuario_nombre: string
+  usuario_nombre_completo: string
+  usuario_rol: string
+  horario_descripcion: string
+  fecha_inicio: string
+  fecha_fin: string
+  cantidad_alumnos: number
+  color: string
+  horario_creado_en: string
+  horario_actualizado_en: string
+  laboratorio_nombre: string
+  laboratorio_ubicacion: string
+  docente_nombre: string
+  docente_correo: string
+  grupo_nombre: string
+  escuela_nombre: string
+  ciclo_nombre: string
+}
+
 export interface CreateHorarioData {
   laboratorio_id: number
   docente_id: number
@@ -250,6 +277,31 @@ export const horarioService = {
     } catch (error) {
       console.error('❌ Error al cargar equipos:', error)
       return { success: false, data: [], message: 'Error al cargar equipos' }
+    }
+  },
+
+  // 📊 Obtener actividad de horarios
+  getActividad: async (filters?: {
+    laboratorio_id?: number
+    fecha_inicio?: string
+    fecha_fin?: string
+    accion?: string
+    usuario_id?: number
+  }) => {
+    try {
+      const params = new URLSearchParams()
+      
+      if (filters?.laboratorio_id) params.append('laboratorio_id', filters.laboratorio_id.toString())
+      if (filters?.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio)
+      if (filters?.fecha_fin) params.append('fecha_fin', filters.fecha_fin)
+      if (filters?.accion) params.append('accion', filters.accion)
+      if (filters?.usuario_id) params.append('usuario_id', filters.usuario_id.toString())
+
+      const response = await api.get(`/horarios/actividad?${params.toString()}`)
+      return response.data
+    } catch (error) {
+      console.error('❌ Error al obtener actividad de horarios:', error)
+      return { success: false, data: [], message: 'Error al obtener actividad' }
     }
   },
 

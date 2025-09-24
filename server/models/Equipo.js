@@ -18,6 +18,9 @@ export class Equipo {
           e.estado,
           e.fecha_ultimo_mantenimiento,
           e.fecha_proximo_mantenimiento,
+          e.comentarios,
+          e.condicion,
+          e.anio_adquisicion,
           COALESCE(ie.cantidad_disponible, 0) as cantidad_disponible,
           COALESCE(ie.cantidad_total, 0) as cantidad_total,
           COALESCE(ie.cantidad_en_uso, 0) as cantidad_en_uso

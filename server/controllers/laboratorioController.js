@@ -214,3 +214,18 @@ export const deleteLaboratorio = async (req, res) => {
     })
   }
 }
+
+// Obtener escuelas disponibles para el selector
+export const getEscuelas = async (req, res) => {
+  try {
+    const [escuelas] = await pool.execute('SELECT id, nombre FROM escuelas ORDER BY nombre')
+    
+    res.json({ 
+      success: true, 
+      data: escuelas
+    })
+  } catch (error) {
+    console.error('Error en getEscuelas:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+}

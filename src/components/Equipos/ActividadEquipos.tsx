@@ -28,25 +28,28 @@ import {
 import {
   Close,
   History,
+  Build,
   Add,
-  Remove,
+  Edit,
+  Delete,
   FilterList,
   Refresh,
   Schedule,
   Person,
   LocationOn,
-  Inventory
+  Memory,
+  SwapHoriz
 } from '@mui/icons-material'
-import { insumoService, type ActividadInsumo } from '../../services/insumoService'
+import { equipoService, type ActividadEquipo } from '../../services/equipoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
 
-interface ActividadInsumosProps {
+interface ActividadEquiposProps {
   open: boolean
   onClose: () => void
 }
 
-export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClose }) => {
-  const [actividad, setActividad] = useState<ActividadInsumo[]>([])
+export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClose }) => {
+  const [actividad, setActividad] = useState<ActividadEquipo[]>([])
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -89,12 +92,12 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
       if (filters.fecha_fin) filtersToSend.fecha_fin = filters.fecha_fin
       if (filters.tipo_movimiento) filtersToSend.tipo_movimiento = filters.tipo_movimiento
 
-      const result = await insumoService.getActividad(filtersToSend)
+      const result = await equipoService.getActividad(filtersToSend)
       
       if (result.success) {
         setActividad(result.data)
       } else {
-        setError(result.message || 'Error al cargar actividad')
+        setError('Error al cargar actividad')
       }
     } catch (err: any) {
       console.error('Error al cargar actividad:', err)
@@ -124,12 +127,40 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
     })
   }
 
-  const getTipoMovimientoColor = (tipo: string) => {
-    return tipo === 'entrada' ? 'success' : 'error'
+  const getTipoMovimientoColor = (tipo: string, tipoRegistro: string) => {
+    if (tipoRegistro === 'crud') {
+      switch (tipo) {
+        case 'crear': return 'success'
+        case 'actualizar': return 'info'
+        case 'eliminar': return 'error'
+        default: return 'default'
+      }
+    } else {
+      switch (tipo) {
+        case 'entrada': return 'success'
+        case 'reserva': return 'warning'
+        case 'devolucion': return 'info'
+        default: return 'default'
+      }
+    }
   }
 
-  const getTipoMovimientoIcon = (tipo: string) => {
-    return tipo === 'entrada' ? <Add /> : <Remove />
+  const getTipoMovimientoIcon = (tipo: string, tipoRegistro: string) => {
+    if (tipoRegistro === 'crud') {
+      switch (tipo) {
+        case 'crear': return <Add />
+        case 'actualizar': return <Edit />
+        case 'eliminar': return <Delete />
+        default: return <Build />
+      }
+    } else {
+      switch (tipo) {
+        case 'entrada': return <Add />
+        case 'reserva': return <SwapHoriz />
+        case 'devolucion': return <SwapHoriz />
+        default: return <Memory />
+      }
+    }
   }
 
   const formatFecha = (fecha: string) => {
@@ -150,19 +181,37 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
     }
   }
 
+  const formatTipoMovimiento = (tipo: string, tipoRegistro: string) => {
+    if (tipoRegistro === 'crud') {
+      switch (tipo) {
+        case 'crear': return 'Creado'
+        case 'actualizar': return 'Actualizado'
+        case 'eliminar': return 'Eliminado'
+        default: return tipo
+      }
+    } else {
+      switch (tipo) {
+        case 'entrada': return 'Ingreso'
+        case 'reserva': return 'Reserva'
+        case 'devolucion': return 'Devolución'
+        default: return tipo
+      }
+    }
+  }
+
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="lg"
+      maxWidth="xl"
       fullWidth
-      PaperProps={{ sx: { borderRadius: 2 } }}
+      PaperProps={{ sx: { borderRadius: 2, height: '90vh' } }}
     >
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
             <History color="primary" />
-            Actividad de Insumos
+            Actividad de Equipos
           </Typography>
           <IconButton onClick={onClose}>
             <Close />
@@ -194,7 +243,7 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
               >
                 <MenuItem value="">Todos los laboratorios</MenuItem>
                 {laboratorios.map((lab) => (
-                  <MenuItem key={lab.id} value={lab.id}>
+                  <MenuItem key={lab.id} value={lab.id.toString()}>
                     {lab.nombre}
                   </MenuItem>
                 ))}
@@ -202,33 +251,37 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
             </FormControl>
 
             <TextField
-              label="Fecha inicio"
+              size="small"
               type="date"
+              label="Fecha inicio"
               value={filters.fecha_inicio}
               onChange={(e) => handleFilterChange('fecha_inicio', e.target.value)}
-              size="small"
               InputLabelProps={{ shrink: true }}
             />
 
             <TextField
-              label="Fecha fin"
+              size="small"
               type="date"
+              label="Fecha fin"
               value={filters.fecha_fin}
               onChange={(e) => handleFilterChange('fecha_fin', e.target.value)}
-              size="small"
               InputLabelProps={{ shrink: true }}
             />
 
             <FormControl size="small">
-              <InputLabel>Tipo de movimiento</InputLabel>
+              <InputLabel>Tipo de actividad</InputLabel>
               <Select
                 value={filters.tipo_movimiento}
-                label="Tipo de movimiento"
+                label="Tipo de actividad"
                 onChange={(e) => handleFilterChange('tipo_movimiento', e.target.value)}
               >
-                <MenuItem value="">Todos los movimientos</MenuItem>
-                <MenuItem value="entrada">Entrada</MenuItem>
-                <MenuItem value="salida">Salida</MenuItem>
+                <MenuItem value="">Todos</MenuItem>
+                <MenuItem value="crear">Creación</MenuItem>
+                <MenuItem value="actualizar">Actualización</MenuItem>
+                <MenuItem value="eliminar">Eliminación</MenuItem>
+                <MenuItem value="entrada">Ingreso</MenuItem>
+                <MenuItem value="reserva">Reserva</MenuItem>
+                <MenuItem value="devolucion">Devolución</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -272,72 +325,101 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
                 <TableRow sx={{ backgroundColor: 'grey.50' }}>
                   <TableCell sx={{ fontWeight: 600 }}>Fecha</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Tipo</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Insumo</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Equipo</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Marca/Modelo</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Cantidad</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Laboratorio</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Usuario</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Observaciones</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Detalles</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {actividad.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                    <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                       <Box sx={{ textAlign: 'center' }}>
                         <History sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
                         <Typography variant="h6" color="text.secondary" gutterBottom>
                           No hay actividad registrada
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          No se encontraron movimientos de insumos con los filtros aplicados
+                          No se encontraron registros de actividad con los filtros aplicados
                         </Typography>
                       </Box>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  actividad.map((movimiento) => (
-                    <TableRow key={movimiento.id} hover>
+                  actividad.map((registro) => (
+                    <TableRow key={`${registro.tipo_registro}-${registro.id}`} hover>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Schedule fontSize="small" color="action" />
                           <Typography variant="body2">
-                            {formatFecha(movimiento.fecha_movimiento)}
+                            {formatFecha(registro.fecha_movimiento)}
                           </Typography>
                         </Box>
                       </TableCell>
                       
                       <TableCell>
                         <Chip
-                          icon={getTipoMovimientoIcon(movimiento.tipo_movimiento)}
-                          label={movimiento.tipo_movimiento === 'entrada' ? 'Entrada' : 'Salida'}
-                          color={getTipoMovimientoColor(movimiento.tipo_movimiento)}
-                          size="small"
+                          icon={getTipoMovimientoIcon(registro.tipo_movimiento, registro.tipo_registro)}
+                          label={formatTipoMovimiento(registro.tipo_movimiento, registro.tipo_registro)}
+                          color={getTipoMovimientoColor(registro.tipo_movimiento, registro.tipo_registro)}
                           variant="filled"
+                          size="small"
                         />
                       </TableCell>
                       
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Inventory fontSize="small" color="primary" />
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                            {movimiento.insumo_nombre}
-                          </Typography>
+                          <Memory fontSize="small" color="action" />
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              {registro.equipo_nombre}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {registro.equipo_codigo}
+                            </Typography>
+                          </Box>
                         </Box>
                       </TableCell>
                       
                       <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {movimiento.cantidad} {movimiento.unidad_medida}
+                        <Typography variant="body2">
+                          {registro.equipo_marca && registro.equipo_modelo 
+                            ? `${registro.equipo_marca} ${registro.equipo_modelo}`
+                            : registro.equipo_marca || registro.equipo_modelo || 'N/A'
+                          }
                         </Typography>
                       </TableCell>
                       
                       <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <LocationOn fontSize="small" color="action" />
-                          <Typography variant="body2">
-                            {movimiento.laboratorio_nombre}
+                        {registro.cantidad ? (
+                          <Chip 
+                            label={registro.cantidad}
+                            size="small"
+                            variant="outlined"
+                          />
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">
+                            -
                           </Typography>
-                        </Box>
+                        )}
+                      </TableCell>
+                      
+                      <TableCell>
+                        {registro.laboratorio_nombre ? (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <LocationOn fontSize="small" color="action" />
+                            <Typography variant="body2">
+                              {registro.laboratorio_nombre}
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">
+                            -
+                          </Typography>
+                        )}
                       </TableCell>
                       
                       <TableCell>
@@ -345,24 +427,24 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
                           <Person fontSize="small" color="action" />
                           <Box>
                             <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              {movimiento.usuario_nombre}
+                              {registro.usuario_nombre}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              {movimiento.usuario_rol}
+                              {registro.usuario_rol}
                             </Typography>
                           </Box>
                         </Box>
                       </TableCell>
                       
                       <TableCell>
-                        <Tooltip title={movimiento.observaciones} arrow>
+                        <Tooltip title={registro.observaciones} arrow>
                           <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {movimiento.observaciones}
+                            {registro.observaciones}
                           </Typography>
                         </Tooltip>
-                        {movimiento.reserva_descripcion && (
+                        {registro.reserva_descripcion && (
                           <Typography variant="caption" color="text.secondary" display="block">
-                            Reserva: {movimiento.reserva_descripcion}
+                            Reserva: {registro.reserva_descripcion}
                           </Typography>
                         )}
                       </TableCell>
@@ -378,7 +460,7 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
         {actividad.length > 0 && (
           <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
             <Typography variant="body2" color="text.secondary">
-              Mostrando {actividad.length} movimientos de insumos
+              Mostrando {actividad.length} registros de actividad de equipos
             </Typography>
           </Box>
         )}
@@ -391,4 +473,4 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
       </DialogActions>
     </Dialog>
   )
-} 
+}

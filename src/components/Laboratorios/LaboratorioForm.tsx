@@ -73,7 +73,7 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
           nombre: laboratorio.nombre,
           ubicacion: laboratorio.ubicacion,
           escuela_id: laboratorio.escuela_id,
-          piso: laboratorio.piso
+          piso: laboratorio.piso?.toString() || ''
         })
       } else {
         // Modo creación - resetear formulario
@@ -91,7 +91,12 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
 
   // Manejar cambios en campos de texto
   const handleChange = (field: keyof CreateLaboratorioData) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = field === 'escuela_id' ? parseInt(event.target.value) || 0 : event.target.value
+    let value: string | number = event.target.value
+    
+    if (field === 'escuela_id') {
+      value = parseInt(value) || 0
+    }
+    
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
@@ -108,13 +113,13 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
 
     try {
       // Validaciones
-      if (!formData.nombre.trim()) {
+      if (!formData.nombre?.trim()) {
         throw new Error('El nombre es requerido')
       }
-      if (!formData.ubicacion.trim()) {
+      if (!formData.ubicacion?.trim()) {
         throw new Error('La ubicación es requerida')
       }
-      if (!formData.piso.trim()) {
+      if (!formData.piso?.toString().trim()) {
         throw new Error('El piso es requerido')
       }
       if (formData.escuela_id <= 0) {

@@ -9,6 +9,10 @@ export interface Insumo {
   categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico'
   stock_disponible?: number
   stock_por_laboratorio?: string
+  presentacion?: string
+  condicion?: 'Excelente' | 'Bueno' | 'Regular' | 'Malo'
+  fecha_vencimiento?: string
+  observacion?: string
 }
 
 export interface InsumoResponse {
@@ -77,6 +81,10 @@ class InsumoService {
     descripcion: string
     unidad_medida: string
     categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico'
+    presentacion?: string
+    condicion?: string
+    fecha_vencimiento?: string
+    observacion?: string
     stock_inicial?: Array<{
       laboratorio_id: number
       cantidad: number
@@ -98,6 +106,10 @@ class InsumoService {
     descripcion: string
     unidad_medida: string
     categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico'
+    presentacion?: string
+    condicion?: string
+    fecha_vencimiento?: string
+    observacion?: string
   }): Promise<{ success: boolean; message: string; data: any }> {
     try {
       const response = await api.put(`/insumos/${id}`, insumoData)
@@ -253,6 +265,112 @@ class InsumoService {
     } catch (error: any) {
       console.error('Error al ejecutar reabastecimiento masivo:', error)
       throw new Error(error.response?.data?.message || 'Error al ejecutar reabastecimiento masivo')
+    }
+  }
+
+  // Descargar plantilla Excel para importación masiva
+  async descargarPlantillaImportacion(): Promise<void> {
+    try {
+      const response = await api.get('/insumos/plantilla-importacion', {
+        responseType: 'blob'
+      })
+      
+      // Crear enlace de descarga
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      })
+      
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      
+      // Obtener nombre del archivo desde header o usar uno por defecto
+      const contentDisposition = response.headers['content-disposition']
+      let filename = 'plantilla_insumos.xlsx'
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/)
+        if (filenameMatch) {
+          filename = filenameMatch[1]
+        }
+      }
+      
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      
+    } catch (error: any) {
+      console.error('Error al descargar plantilla:', error)
+      throw new Error(error.response?.data?.message || 'Error al descargar la plantilla')
+    }
+  }
+
+  // Previsualizar datos del Excel antes de importar
+  async previsualizarImportacion(archivo: File): Promise<{
+    success: boolean
+    data: Array<{
+      fila: number
+      nombre: string
+      descripcion: string
+      unidad_medida: string
+      categoria: string
+      presentacion: string
+      condicion: string
+      fecha_vencimiento: string
+      observacion: string
+      stock_labs: { [key: string]: number }
+      errores: string[]
+    }>
+    total_filas: number
+    errores_generales: string[]
+  }> {
+    try {
+      const formData = new FormData()
+      formData.append('archivo_excel', archivo)
+      
+      const response = await api.post('/insumos/previsualizar-importacion', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      
+      return response.data
+    } catch (error: any) {
+      console.error('Error en previsualización:', error)
+      throw new Error(error.response?.data?.message || 'Error al previsualizar el archivo')
+    }
+  }
+
+  // Importación masiva de insumos desde Excel
+  async importacionMasiva(archivo: File): Promise<{
+    success: boolean
+    message: string
+    procesados: number
+    errores: number
+    detalles_errores: string[]
+    resultados: Array<{
+      fila: number
+      codigo: string
+      nombre: string
+      categoria: string
+      stock: string
+    }>
+  }> {
+    try {
+      const formData = new FormData()
+      formData.append('archivo_excel', archivo)
+      
+      const response = await api.post('/insumos/importacion-masiva', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      
+      return response.data
+    } catch (error: any) {
+      console.error('Error en importación masiva:', error)
+      throw new Error(error.response?.data?.message || 'Error en la importación masiva')
     }
   }
 }

@@ -15,12 +15,13 @@ import {
   ToggleButtonGroup,
   ToggleButton
 } from '@mui/material'
-import { Add, Schedule, Warning, ViewList, CalendarMonth, Repeat } from '@mui/icons-material'
+import { Add, Schedule, Warning, ViewList, CalendarMonth, Repeat, History } from '@mui/icons-material'
 import { HorariosTable } from '../components/Horarios/HorariosTable'
 import { CalendarioSimple } from '../components/Horarios/CalendarioSimple'
 import { HorarioFormSimple as HorarioForm } from '../components/Horarios/HorarioFormSimple'
 import { HorarioRecurrente } from '../components/Horarios/HorarioRecurrente'
 import { HorarioDetalle } from '../components/Horarios/HorarioDetalle'
+import { ActividadHorarios } from '../components/Horarios/ActividadHorarios'
 import { ShareModal } from '../components/Share/ShareModal'
 import { ExportModal } from '../components/Export/ExportModal'
 import { horarioService } from '../services/horarioService'
@@ -32,6 +33,7 @@ export const Horarios: React.FC = () => {
   const [recurrenteOpen, setRecurrenteOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [detalleOpen, setDetalleOpen] = useState(false)
+  const [actividadOpen, setActividadOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [selectedHorario, setSelectedHorario] = useState<Horario | null>(null)
@@ -110,6 +112,16 @@ export const Horarios: React.FC = () => {
   const handleDetalleClose = () => {
     setDetalleOpen(false)
     setSelectedHorarioId(null)
+  }
+
+  // Función para abrir modal de actividad
+  const handleActividad = () => {
+    setActividadOpen(true)
+  }
+
+  // Función para cerrar modal de actividad
+  const handleActividadClose = () => {
+    setActividadOpen(false)
   }
 
   // Función para abrir modal de compartir
@@ -277,6 +289,16 @@ export const Horarios: React.FC = () => {
             >
               Recurrente
             </Button>
+
+            <Button
+              variant="outlined"
+              startIcon={<History />}
+              onClick={handleActividad}
+              size="small"
+              color="info"
+            >
+              Actividad
+            </Button>
           
           {process.env.NODE_ENV === 'development' && (
             <Button
@@ -353,6 +375,12 @@ DEBUG: ${info.total_reservas} reservas, ${info.reservas_con_joins} con datos, ${
         open={detalleOpen}
         onClose={handleDetalleClose}
         horarioId={selectedHorarioId}
+      />
+
+      {/* Modal de actividad */}
+      <ActividadHorarios
+        open={actividadOpen}
+        onClose={handleActividadClose}
       />
 
       {/* Modal de compartir */}

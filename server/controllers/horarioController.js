@@ -190,6 +190,118 @@ const verificarCruceHorarios = async (connection, laboratorio_id, docente_id, fe
   return null // No hay cruces
 }
 
+// Obtener actividad de horarios
+export const getActividadHorarios = async (req, res) => {
+  try {
+    const { laboratorio_id, fecha_inicio, fecha_fin, accion, usuario_id } = req.query
+    
+    console.log('🔍 getActividadHorarios - Parámetros:', { 
+      laboratorio_id, 
+      fecha_inicio, 
+      fecha_fin, 
+      accion,
+      usuario_id,
+      user_role: req.user.rol, 
+      user_laboratorio_ids: req.user.laboratorio_ids || []
+    })
+    
+    let query = `
+      SELECT 
+        actividad_id,
+        accion,
+        reserva_id,
+        descripcion,
+        fecha_actividad,
+        ip_address,
+        usuario_id,
+        usuario_nombre,
+        usuario_nombre_completo,
+        usuario_rol,
+        horario_descripcion,
+        fecha_inicio,
+        fecha_fin,
+        cantidad_alumnos,
+        color,
+        horario_creado_en,
+        horario_actualizado_en,
+        laboratorio_nombre,
+        laboratorio_ubicacion,
+        docente_nombre,
+        docente_correo,
+        grupo_nombre,
+        escuela_nombre,
+        ciclo_nombre
+      FROM vista_actividad_horarios
+      WHERE 1=1
+    `
+    
+    const params = []
+    
+    // Filtros según permisos del usuario
+    if (req.user.rol === 'Jefe de Laboratorio' && req.user.laboratorio_ids && req.user.laboratorio_ids.length > 0) {
+      // Necesitamos obtener los nombres de laboratorios para filtrar por nombre
+      const labIds = req.user.laboratorio_ids.join(',')
+      query += ` AND reserva_id IN (
+        SELECT r.id FROM reservas r 
+        INNER JOIN laboratorios l ON r.laboratorio_id = l.id 
+        WHERE l.id IN (${labIds})
+      )`
+    }
+    
+    // Filtros opcionales
+    if (laboratorio_id) {
+      query += ` AND reserva_id IN (
+        SELECT r.id FROM reservas r 
+        WHERE r.laboratorio_id = ?
+      )`
+      params.push(laboratorio_id)
+    }
+    
+    if (fecha_inicio) {
+      query += ` AND DATE(fecha_actividad) >= ?`
+      params.push(fecha_inicio)
+    }
+    
+    if (fecha_fin) {
+      query += ` AND DATE(fecha_actividad) <= ?`
+      params.push(fecha_fin)
+    }
+    
+    if (accion) {
+      query += ` AND accion = ?`
+      params.push(accion)
+    }
+    
+    if (usuario_id) {
+      query += ` AND usuario_id = ?`
+      params.push(usuario_id)
+    }
+    
+        query += ` ORDER BY fecha_actividad DESC LIMIT 500`
+
+        const [rows] = await pool.execute(query, params)
+
+        // Mantener las fechas como están (la conversión se hará en el frontend)
+        const rowsWithTimeZone = rows.map(row => ({
+          ...row,
+          // Asegurar que la fecha esté en formato ISO string
+          fecha_actividad: new Date(row.fecha_actividad).toISOString()
+        }))
+
+        console.log('📊 Actividad encontrada:', rows.length)
+
+        res.json({
+          success: true,
+          data: rowsWithTimeZone,
+          total: rows.length
+        })
+    
+  } catch (error) {
+    console.error('Error en getActividadHorarios:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+}
+
 export const getHorarios = async (req, res) => {
     try {
       console.log('🔍 getHorarios - Usuario:', {
@@ -669,6 +781,16 @@ export const getHorarios = async (req, res) => {
       
       await connection.commit()
       
+      // Obtener información del laboratorio y registrar actividad
+      const labInfo = await obtenerInfoLaboratorio(laboratorio_id)
+      await registrarActividadHorario({
+        accion: 'crear',
+        reserva_id: reserva_id,
+        descripcion: `Horario creado: "${descripcion}" | Lab: ${labInfo.laboratorio_nombre} | Docente: ${docenteInfo?.docente_nombre || 'N/A'} | Grupo: ${grupoInfo?.grupo_nombre || 'N/A'} | Escuela: ${grupoInfo?.escuela_nombre || 'N/A'} | ${new Date(fechaInicioMySQL).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })} ${new Date(fechaInicioMySQL).toLocaleTimeString('es-PE', {hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima'})} - ${new Date(fechaFinMySQL).toLocaleTimeString('es-PE', {hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima'})} | ${cantidad_alumnos} alumnos`,
+        usuario_id: req.user.userId,
+        ip_address: req.ip || req.connection.remoteAddress
+      })
+      
       res.json({ 
         success: true, 
         message: 'Horario creado correctamente',
@@ -960,6 +1082,16 @@ export const getHorarios = async (req, res) => {
       
       await connection.commit()
       
+      // Obtener información del laboratorio y registrar actividad
+      const labInfo = await obtenerInfoLaboratorio(laboratorio_id)
+      await registrarActividadHorario({
+        accion: 'editar',
+        reserva_id: horarioId,
+        descripcion: `Horario editado: "${descripcion}" | Lab: ${labInfo.laboratorio_nombre} | Docente: ${docenteInfo?.docente_nombre || 'N/A'} | Grupo: ${grupoInfo?.grupo_nombre || 'N/A'} | Escuela: ${grupoInfo?.escuela_nombre || 'N/A'} | ${new Date(fechaInicioMySQL).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })} ${new Date(fechaInicioMySQL).toLocaleTimeString('es-PE', {hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima'})} - ${new Date(fechaFinMySQL).toLocaleTimeString('es-PE', {hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima'})} | ${cantidad_alumnos} alumnos`,
+        usuario_id: req.user.userId,
+        ip_address: req.ip || req.connection.remoteAddress
+      })
+      
       res.json({ 
         success: true, 
         message: 'Horario actualizado correctamente',
@@ -1131,6 +1263,15 @@ export const getHorarios = async (req, res) => {
       console.log('✅ Horario eliminado')
       
       await connection.commit()
+      
+      // Registrar actividad (después del commit)
+      await registrarActividadHorario({
+        accion: 'eliminar',
+        reserva_id: horarioId,
+        descripcion: `Horario eliminado: "${horario.descripcion}" | Lab: ${horario.laboratorio_nombre || 'N/A'} | Docente: ${horario.docente_nombre || 'N/A'} | Grupo: ${horario.grupo_nombre || 'N/A'} | Escuela: ${horario.escuela_nombre || 'N/A'} | ${new Date(horario.fecha_inicio).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })} ${new Date(horario.fecha_inicio).toLocaleTimeString('es-PE', {hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima'})} - ${new Date(horario.fecha_fin).toLocaleTimeString('es-PE', {hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima'})} | ${horario.cantidad_alumnos} alumnos`,
+        usuario_id: req.user.userId,
+        ip_address: req.ip || req.connection.remoteAddress
+      })
       
       res.json({ 
         success: true, 
@@ -1420,3 +1561,49 @@ export const diagnosticarZonaHoraria = async (req, res) => {
     res.status(500).json({ success: false, message: error.message })
   }
 }
+
+// 🏢 FUNCIÓN AUXILIAR PARA OBTENER INFORMACIÓN DEL LABORATORIO
+const obtenerInfoLaboratorio = async (laboratorio_id) => {
+  try {
+    const [labInfo] = await pool.execute(`
+      SELECT nombre as laboratorio_nombre, ubicacion as laboratorio_ubicacion
+      FROM laboratorios 
+      WHERE id = ?
+    `, [laboratorio_id])
+    
+    return labInfo.length > 0 ? labInfo[0] : { laboratorio_nombre: 'Lab Desconocido', laboratorio_ubicacion: 'N/A' }
+  } catch (error) {
+    console.error('Error obteniendo info laboratorio:', error)
+    return { laboratorio_nombre: 'Error Lab', laboratorio_ubicacion: 'N/A' }
+  }
+}
+
+// 📋 FUNCIÓN AUXILIAR PARA REGISTRAR ACTIVIDAD
+const registrarActividadHorario = async ({ accion, reserva_id, descripcion, usuario_id, ip_address }) => {
+  try {
+    // Crear fecha en zona horaria de Perú
+    const fechaPeru = new Date().toLocaleString('en-CA', { 
+      timeZone: 'America/Lima',
+      year: 'numeric',
+      month: '2-digit', 
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }).replace(', ', ' ')
+    
+    const query = `
+      INSERT INTO actividad_horarios (
+        accion, reserva_id, descripcion, usuario_id, ip_address, fecha_actividad
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `
+    
+    await pool.execute(query, [accion, reserva_id, descripcion, usuario_id, ip_address, fechaPeru])
+    console.log(`📋 Actividad registrada: ${accion} - ${descripcion} (${fechaPeru})`)
+  } catch (error) {
+    console.error('❌ Error al registrar actividad:', error)
+    // No lanzamos el error para no interrumpir la operación principal
+  }
+}
+

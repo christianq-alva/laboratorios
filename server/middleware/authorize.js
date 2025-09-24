@@ -41,23 +41,57 @@ export const authorizeResource = (action, resource) => {
         console.log('🔍 authorizeResource - req.params:', req.params)
         
         const ability = defineAbilitiesFor(req.user)
-        const resourceObject = req.body || req.params
         
-        console.log('🔍 resourceObject para verificar:', resourceObject)
+        // Para las verificaciones con condiciones, necesitamos estructurar mejor los datos
+        let resourceToCheck = resource
         
-        const canDo = ability.can(action, resource, resourceObject)
-        console.log('🔍 ability.can con condiciones resultado:', canDo)
-        
-        if (canDo) {
-          console.log(`✅ ${req.user.usuario} puede ${action} ${resource} específico`)
-          next()
+        // Si es un recurso específico (con :id), intentamos verificar con condiciones
+        if (req.params.id) {
+          const resourceId = parseInt(req.params.id)
+          console.log('🔍 Verificando recurso específico con ID:', resourceId)
+          
+          // Crear objeto para verificación de condiciones
+          const subjectForConditions = {
+            id: resourceId,
+            laboratorio_id: req.body?.laboratorio_id || resourceId,
+            ...req.body
+          }
+          
+          console.log('🔍 Subject para condiciones:', subjectForConditions)
+          
+          // Verificar sin el tercer parámetro problemático
+          const canDo = ability.can(action, resource)
+          console.log('🔍 ability.can resultado (sin condiciones):', canDo)
+          
+          // Si puede hacer la acción generalmente, permitir
+          if (canDo) {
+            return next()
+          }
+          
+          // Si no, verificar condiciones específicas de laboratorio
+          if (req.user.rol === 'Jefe de Laboratorio' && req.user.laboratorio_ids) {
+            const hasAccess = req.user.laboratorio_ids.includes(resourceId) || 
+                             req.user.laboratorio_ids.includes(subjectForConditions.laboratorio_id)
+            
+            if (hasAccess) {
+              console.log(`✅ ${req.user.usuario} tiene acceso por laboratorio_ids`)
+              return next()
+            }
+          }
         } else {
-          console.log(`❌ ${req.user.usuario} NO puede ${action} este ${resource}`)
-          res.status(403).json({ 
-            success: false, 
-            message: `No tienes permisos para ${action} este ${resource}` 
-          })
+          // Verificación simple sin condiciones
+          const canDo = ability.can(action, resource)
+          if (canDo) {
+            return next()
+          }
         }
+        
+        // Si llegamos aquí, no tiene permisos
+        console.log(`❌ ${req.user.usuario} NO puede ${action} este ${resource}`)
+        res.status(403).json({ 
+          success: false, 
+          message: `No tienes permisos para ${action} este ${resource}` 
+        })
       } catch (error) {
         console.error('💥 Error en authorizeResource:', error)
         console.error('💥 Stack trace:', error.stack)

@@ -8,6 +8,7 @@ import {
   updateHorario,
   deleteHorario,
   verificarDisponibilidad,
+  getActividadHorarios, // ← NUEVO
   getEscuelas,      // ← NUEVO
   getCiclos,        // ← NUEVO
   getGrupos,        // ← NUEVO
@@ -22,6 +23,13 @@ router.get('/',
   authenticateToken,
   authorize('read', 'Horario'),
   getHorarios
+)
+
+// 📊 OBTENER ACTIVIDAD DE HORARIOS (debe ir antes de /:id)
+router.get('/actividad', 
+  authenticateToken,
+  authorize('read', 'Horario'),
+  getActividadHorarios
 )
 
 // 🔍 OBTENER HORARIO ESPECÍFICO
