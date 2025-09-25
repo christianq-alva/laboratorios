@@ -101,16 +101,27 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
   const [error, setError] = useState<string | null>(null)
   const [verificandoDisponibilidad, setVerificandoDisponibilidad] = useState(false)
   const [conflictos, setConflictos] = useState<ConflictoHorario[]>([])
+  const [isLoadingHorarioData, setIsLoadingHorarioData] = useState(false)
 
   // Estados de edición
   const isEditing = !!horario
 
+  // Debug: Monitorear cambios en formData
+  useEffect(() => {
+    console.log('📊 formData cambió:', formData)
+  }, [formData])
+
   // Cargar datos iniciales
   useEffect(() => {
     if (open) {
-      loadInitialData()
       if (horario) {
+        // Si estamos editando, cargar datos del horario (que incluye datos iniciales)
+        console.log('🔄 useEffect - Modo edición, cargando horario:', horario.id)
         loadHorarioData(horario)
+      } else {
+        // Si estamos creando nuevo, cargar solo datos iniciales
+        console.log('🔄 useEffect - Modo creación, cargando datos iniciales')
+        loadInitialData()
       }
     }
   }, [open, horario])
@@ -136,19 +147,59 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
 
   const loadHorarioData = async (horarioData: Horario) => {
     try {
+      console.log('🚀 loadHorarioData iniciando para horario:', horarioData.id, 'datos:', {
+        laboratorio_id: horarioData.laboratorio_id,
+        docente_id: horarioData.docente_id,
+        grupo_id: horarioData.grupo_id,
+        escuela: horarioData.escuela,
+        ciclo: horarioData.ciclo
+      })
       setLoadingData(true)
+      setIsLoadingHorarioData(true)
       
-      // Cargar datos relacionados
-      const [escuelasData, ciclosData] = await Promise.all([
+      // Cargar todos los datos necesarios
+      const [laboratoriosData, docentesData, escuelasData, ciclosData] = await Promise.all([
+        laboratorioService.getAll(),
+        horarioService.getDocentes(),
         horarioService.getEscuelas(),
         horarioService.getCiclos()
       ])
       
+      setLaboratorios(laboratoriosData)
+      setDocentes(docentesData)
       setEscuelas(escuelasData)
       setCiclos(ciclosData)
       
-      // Establecer valores del formulario
-      setFormData({
+      // Encontrar IDs de escuela y ciclo
+      let escuelaId = 0
+      let cicloId = 0
+      
+      if (horarioData.escuela) {
+        const escuela = escuelasData.find((e: Escuela) => e.nombre === horarioData.escuela)
+        if (escuela) {
+          escuelaId = escuela.id
+        }
+      }
+      
+      if (horarioData.ciclo) {
+        const ciclo = ciclosData.find((c: Ciclo) => c.nombre === horarioData.ciclo)
+        if (ciclo) {
+          cicloId = ciclo.id
+        }
+      }
+      
+      // Cargar grupos si tenemos escuela y ciclo
+      let gruposData: Grupo[] = []
+      if (escuelaId > 0 && cicloId > 0) {
+        try {
+          gruposData = await horarioService.getGrupos(escuelaId, cicloId)
+        } catch (err: any) {
+          console.error('Error al cargar grupos:', err)
+        }
+      }
+      
+      // Establecer TODOS los valores de una vez
+      const formDataToSet = {
         laboratorio_id: horarioData.laboratorio_id,
         docente_id: horarioData.docente_id,
         grupo_id: horarioData.grupo_id,
@@ -156,42 +207,70 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
         fecha_inicio: horarioData.fecha_inicio,
         fecha_fin: horarioData.fecha_fin,
         insumos: []
+      }
+      
+      console.log('🔧 Estableciendo TODOS los valores de una vez:', {
+        formData: formDataToSet,
+        selectedEscuela: escuelaId,
+        selectedCiclo: cicloId,
+        grupos: gruposData.length
       })
       
-             // Cargar datos en cascada
-       if (horarioData.escuela) {
-         const escuela = escuelasData.find((e: Escuela) => e.nombre === horarioData.escuela)
-         if (escuela) {
-           setSelectedEscuela(escuela.id)
-           await handleEscuelaChange(escuela.id)
-         }
-       }
-       
-       if (horarioData.ciclo) {
-         const ciclo = ciclosData.find((c: Ciclo) => c.nombre === horarioData.ciclo)
-         if (ciclo) {
-           setSelectedCiclo(ciclo.id)
-           await handleCicloChange(ciclo.id)
-         }
-       }
+      // Establecer todos los estados de una vez
+      setFormData(formDataToSet)
+      setSelectedEscuela(escuelaId)
+      setSelectedCiclo(cicloId)
+      setGrupos(gruposData)
       
       // Cargar insumos del laboratorio
       if (horarioData.laboratorio_id) {
-        await handleLaboratorioChange(horarioData.laboratorio_id)
+        try {
+          const insumosData = await horarioService.getInsumosByLaboratorio(horarioData.laboratorio_id)
+          setInsumosDisponibles(insumosData)
+          
+          // Cargar insumos ya seleccionados en el horario
+          if (horarioData.insumos && horarioData.insumos.length > 0) {
+            const insumosSeleccionados = horarioData.insumos.map(insumo => ({
+              insumo_id: insumo.id,
+              nombre: insumo.nombre,
+              cantidad: insumo.cantidad_usada || 1,
+              stock_disponible: insumo.stock_disponible || 0
+            }))
+            setInsumosSeleccionados(insumosSeleccionados)
+          }
+        } catch (err: any) {
+          console.error('Error al cargar insumos:', err)
+        }
       }
       
     } catch (err: any) {
       setError(err.message || 'Error al cargar datos del horario')
     } finally {
       setLoadingData(false)
+      setIsLoadingHorarioData(false)
     }
   }
 
   // Manejo de selección en cascada
-  const handleEscuelaChange = async (escuela_id: number) => {
+  const handleEscuelaChange = async (escuela_id: number, isEditing = false) => {
+    console.log('🏫 handleEscuelaChange ejecutándose - escuela_id:', escuela_id, 'isEditing:', isEditing, 'isLoadingHorarioData:', isLoadingHorarioData)
+    
+    // No ejecutar si estamos cargando datos del horario
+    if (isLoadingHorarioData) {
+      console.log('⏸️ Saltando handleEscuelaChange porque estamos cargando datos del horario')
+      return
+    }
+    
     setSelectedEscuela(escuela_id)
     setSelectedCiclo(0)
-    setFormData(prev => ({ ...prev, grupo_id: 0 }))
+    
+    // Solo resetear grupo_id si no estamos editando
+    if (!isEditing) {
+      console.log('🔄 Reseteando grupo_id porque no estamos editando')
+      setFormData(prev => ({ ...prev, grupo_id: 0 }))
+    } else {
+      console.log('✅ Preservando grupo_id porque estamos editando')
+    }
     setGrupos([])
     
     if (escuela_id > 0) {
@@ -204,9 +283,24 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
     }
   }
 
-  const handleCicloChange = async (ciclo_id: number) => {
+  const handleCicloChange = async (ciclo_id: number, isEditing = false) => {
+    console.log('🔄 handleCicloChange ejecutándose - ciclo_id:', ciclo_id, 'isEditing:', isEditing, 'isLoadingHorarioData:', isLoadingHorarioData)
+    
+    // No ejecutar si estamos cargando datos del horario
+    if (isLoadingHorarioData) {
+      console.log('⏸️ Saltando handleCicloChange porque estamos cargando datos del horario')
+      return
+    }
+    
     setSelectedCiclo(ciclo_id)
-    setFormData(prev => ({ ...prev, grupo_id: 0 }))
+    
+    // Solo resetear grupo_id si no estamos editando
+    if (!isEditing) {
+      console.log('🔄 Reseteando grupo_id porque no estamos editando')
+      setFormData(prev => ({ ...prev, grupo_id: 0 }))
+    } else {
+      console.log('✅ Preservando grupo_id porque estamos editando')
+    }
     
     if (ciclo_id > 0 && selectedEscuela > 0) {
       try {
@@ -345,6 +439,23 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
 
   const handleClose = () => {
     if (!loading) {
+      // Resetear el formulario
+      setFormData({
+        laboratorio_id: 0,
+        docente_id: 0,
+        grupo_id: 0,
+        descripcion: '',
+        fecha_inicio: '',
+        fecha_fin: '',
+        insumos: []
+      })
+      setActiveStep(0)
+      setSelectedEscuela(0)
+      setSelectedCiclo(0)
+      setInsumosSeleccionados([])
+      setInsumosDisponibles([])
+      setError(null)
+      setConflictos([])
       onClose()
     }
   }
@@ -374,7 +485,7 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
                 <FormControl fullWidth>
                   <InputLabel>Laboratorio</InputLabel>
                   <Select
-                    value={formData.laboratorio_id}
+                    value={formData.laboratorio_id || ''}
                     label="Laboratorio"
                     onChange={(e) => handleLaboratorioChange(e.target.value as number)}
                     disabled={loadingData}
@@ -397,7 +508,7 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
                 <FormControl fullWidth>
                   <InputLabel>Docente</InputLabel>
                   <Select
-                    value={formData.docente_id}
+                    value={formData.docente_id || ''}
                     label="Docente"
                     onChange={(e) => setFormData(prev => ({ ...prev, docente_id: e.target.value as number }))}
                     disabled={loadingData}
@@ -423,9 +534,9 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
                 <FormControl fullWidth>
                   <InputLabel>Escuela</InputLabel>
                   <Select
-                    value={selectedEscuela}
+                    value={selectedEscuela || ''}
                     label="Escuela"
-                    onChange={(e) => handleEscuelaChange(e.target.value as number)}
+                    onChange={(e) => handleEscuelaChange(e.target.value as number, isEditing)}
                     disabled={loadingData}
                   >
                     <MenuItem value={0} disabled>Seleccionar escuela</MenuItem>
@@ -446,9 +557,9 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
                 <FormControl fullWidth>
                   <InputLabel>Ciclo</InputLabel>
                   <Select
-                    value={selectedCiclo}
+                    value={selectedCiclo || ''}
                     label="Ciclo"
-                    onChange={(e) => handleCicloChange(e.target.value as number)}
+                    onChange={(e) => handleCicloChange(e.target.value as number, isEditing)}
                     disabled={loadingData || selectedEscuela === 0}
                   >
                     <MenuItem value={0} disabled>Seleccionar ciclo</MenuItem>
@@ -466,7 +577,7 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
                 <FormControl fullWidth>
                   <InputLabel>Grupo</InputLabel>
                   <Select
-                    value={formData.grupo_id}
+                    value={formData.grupo_id || ''}
                     label="Grupo"
                     onChange={(e) => setFormData(prev => ({ ...prev, grupo_id: e.target.value as number }))}
                     disabled={loadingData || grupos.length === 0}

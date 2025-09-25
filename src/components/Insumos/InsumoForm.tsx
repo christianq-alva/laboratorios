@@ -300,22 +300,30 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
             p: 3, 
             backgroundColor: '#f0f7ff', 
             borderRadius: 1.5,
-            border: '1px solid #e3f2fd'
+            border: '1px solid #e3f2fd',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
           }}>
-            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
+            <Typography variant="h6" gutterBottom sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1, 
+              color: 'primary.main',
+              mb: 2,
+              fontWeight: 600
+            }}>
               <Info />
               Información del Insumo
             </Typography>
             
             {userRole === 'Jefe de Laboratorio' && (
-              <Alert severity="info" sx={{ mb: 2, borderRadius: 1 }}>
+              <Alert severity="info" sx={{ mb: 2, borderRadius: 1.5 }}>
                 <Typography variant="body2">
                   Como jefe de laboratorio, puedes agregar insumos a {laboratorios.length === 1 ? 'tu laboratorio' : 'cualquiera de tus laboratorios asignados'}.
                 </Typography>
               </Alert>
             )}
           
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
               <TextField
                 label="Nombre del Insumo"
                 value={formData.nombre}
@@ -334,7 +342,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
               />
             </Box>
 
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
               <FormControl sx={{ minWidth: 250 }}>
                 <InputLabel>Categoría del Insumo</InputLabel>
                 <Select
@@ -373,9 +381,10 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
               multiline
               rows={3}
               placeholder="Descripción opcional del insumo"
+              sx={{ mb: 2 }}
             />
 
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
               <TextField
                 label="Presentación"
                 value={formData.presentacion}
@@ -399,7 +408,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
               </FormControl>
             </Box>
 
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
               <TextField
                 type="date"
                 label="Fecha de Vencimiento"
@@ -427,10 +436,17 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
               p: 3, 
               backgroundColor: '#f0fff4', 
               borderRadius: 1.5,
-              border: '1px solid #e8f5e8'
+              border: '1px solid #e8f5e8',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
             }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'success.main' }}>
+                <Typography variant="h6" sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1, 
+                  color: 'success.main',
+                  fontWeight: 600
+                }}>
                   <LocationOn />
                   Stock por Laboratorio
                 </Typography>
@@ -466,7 +482,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
               </Box>
               
               {userRole === 'Jefe de Laboratorio' && laboratorios.length > 1 && (
-                <Alert severity="success" sx={{ mb: 2, borderRadius: 1 }}>
+                <Alert severity="success" sx={{ mb: 2, borderRadius: 1.5 }}>
                   <Typography variant="body2">
                     Puedes agregar este insumo a cualquiera de tus {laboratorios.length} laboratorios asignados.
                   </Typography>
@@ -567,17 +583,17 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
                   backgroundColor: '#fafffe'
                 }}>
                   <LocationOn sx={{ fontSize: 48, color: 'success.light', mb: 1 }} />
-                  <Typography variant="body1" sx={{ fontWeight: 500, mb: 1 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: 'success.main' }}>
                     Agregar a Laboratorios
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                     Haz clic en "Agregar a Laboratorio" para asignar stock inicial a laboratorios específicos.
                     {userRole === 'Jefe de Laboratorio' && laboratorios.length > 1 && (
                       <><br />Puedes agregar el mismo insumo a múltiples laboratorios con diferentes cantidades.</>
                     )}
                   </Typography>
                   {laboratorios.length === 0 && (
-                    <Alert severity="warning" sx={{ mt: 2, borderRadius: 1 }}>
+                    <Alert severity="warning" sx={{ mt: 2, borderRadius: 1.5 }}>
                       No tienes laboratorios asignados para agregar insumos
                     </Alert>
                   )}
@@ -588,7 +604,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
         </Box>
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, pb: 3 }}>
+      <DialogActions sx={{ px: 3, py: 3, gap: 2 }}>
         <Button onClick={onClose} variant="outlined">
           Cancelar
         </Button>
