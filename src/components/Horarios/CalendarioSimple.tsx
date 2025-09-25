@@ -157,18 +157,12 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
         setHorarios(horariosData)
         setUserRole(result.user_role || '')
         
-        // 🎯 SOLUCIÓN DEFINITIVA: Ajustar semana automáticamente a donde hay horarios
-        if (!initialWeekSet && horariosData.length > 0) {
-          const fechasOrdenadas = horariosData
-            .map((h: Horario) => dayjs(h.fecha_inicio))
-            .sort((a: dayjs.Dayjs, b: dayjs.Dayjs) => b.valueOf() - a.valueOf()) // Más reciente primero
-          
-          if (fechasOrdenadas.length > 0) {
-            const fechaMasReciente = fechasOrdenadas[0].startOf('isoWeek')
-            console.log('🎯 Ajustando calendario simple a la semana más reciente:', fechaMasReciente.format('YYYY-MM-DD'))
-            setCurrentWeek(fechaMasReciente)
-            setInitialWeekSet(true)
-          }
+        // Inicializar con la semana actual
+        if (!initialWeekSet) {
+          const semanaActual = dayjs().startOf('isoWeek')
+          console.log('🎯 Inicializando calendario simple con la semana actual:', semanaActual.format('YYYY-MM-DD'))
+          setCurrentWeek(semanaActual)
+          setInitialWeekSet(true)
         }
       } else {
         setError(result.message || 'Error al cargar horarios')

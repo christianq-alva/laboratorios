@@ -217,19 +217,12 @@ export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
     console.log('📊 Total horarios procesados:', horariosProcesados.length)
     setHorariosCalendario(horariosProcesados)
     
-    // 🎯 SOLUCIÓN DEFINITIVA: Ajustar fecha del calendario automáticamente
-    if (!initialDateSet && horariosProcesados.length > 0) {
-      // Encontrar el horario más reciente o más próximo
-      const fechasOrdenadas = horariosProcesados
-        .map(h => h.start)
-        .sort((a, b) => b.getTime() - a.getTime()) // Más reciente primero
-      
-      if (fechasOrdenadas.length > 0) {
-        const fechaMasReciente = fechasOrdenadas[0]
-        console.log('🎯 Ajustando calendario a la fecha más reciente:', fechaMasReciente.toLocaleString())
-        setCurrentDate(fechaMasReciente)
-        setInitialDateSet(true)
-      }
+    // Inicializar con la fecha actual
+    if (!initialDateSet) {
+      const fechaActual = new Date()
+      console.log('🎯 Inicializando calendario con la fecha actual:', fechaActual.toLocaleString())
+      setCurrentDate(fechaActual)
+      setInitialDateSet(true)
     }
   }, [initialDateSet])
 
@@ -392,6 +385,16 @@ export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
           
           <Button
             variant="outlined"
+            onClick={() => setCurrentDate(new Date())}
+            startIcon={<Schedule />}
+            color="primary"
+            size="small"
+          >
+            Hoy
+          </Button>
+          
+          <Button
+            variant="outlined"
             onClick={() => {
               if (horariosCalendario.length > 0) {
                 const fechasOrdenadas = horariosCalendario
@@ -404,7 +407,7 @@ export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
               }
             }}
             startIcon={<Schedule />}
-            color="primary"
+            color="secondary"
             size="small"
           >
             Ir a Recientes
