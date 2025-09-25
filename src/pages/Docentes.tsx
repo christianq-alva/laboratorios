@@ -96,10 +96,13 @@ export const Docentes: React.FC = () => {
           severity: 'error'
         })
       }
-    } catch (err) {
+    } catch (err: any) {
+      // Extraer el mensaje específico del error si está disponible
+      const errorMessage = err.response?.data?.message || err.message || 'Error de conexión al servidor'
+      
       setSnackbar({
         open: true,
-        message: 'Error de conexión al servidor',
+        message: errorMessage,
         severity: 'error'
       })
     } finally {
