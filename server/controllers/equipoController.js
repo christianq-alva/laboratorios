@@ -65,6 +65,89 @@ export const getEquipos = async (req, res) => {
   }
 }
 
+// Obtener equipos sin agrupar (vista simple para gestión individual)
+export const getEquiposSimple = async (req, res) => {
+  try {
+    const { laboratorio_id } = req.query
+    
+    console.log('🔍 getEquiposSimple - Parámetros:', { 
+      laboratorio_id,
+      user_role: req.user.rol, 
+      user_laboratorio_ids: req.user.laboratorio_ids 
+    })
+    
+    let query = `
+      SELECT 
+        e.id,
+        e.codigo,
+        e.nombre,
+        e.descripcion,
+        e.marca,
+        e.modelo,
+        e.numero_serie,
+        e.estado,
+        e.fecha_ultimo_mantenimiento,
+        e.fecha_proximo_mantenimiento,
+        e.comentarios,
+        e.condicion,
+        e.anio_adquisicion,
+        (SELECT COUNT(*) FROM movimientos_equipos me WHERE me.equipo_id = e.id) as total_movimientos,
+        (SELECT COUNT(*) FROM inventario_equipos ie WHERE ie.equipo_id = e.id) as laboratorios_asignados,
+        (SELECT GROUP_CONCAT(l.nombre SEPARATOR ', ') 
+         FROM inventario_equipos ie 
+         JOIN laboratorios l ON ie.laboratorio_id = l.id 
+         WHERE ie.equipo_id = e.id) as laboratorios_nombres
+      FROM equipos e
+    `
+    
+    const params = []
+    
+    if (req.user.rol === 'Jefe de Laboratorio') {
+      // Solo equipos de sus laboratorios
+      query += ` WHERE EXISTS (
+        SELECT 1 FROM inventario_equipos ie 
+        WHERE ie.equipo_id = e.id 
+        AND ie.laboratorio_id IN (${req.user.laboratorio_ids.join(',')})
+      )`
+    }
+    
+    if (laboratorio_id) {
+      const labId = parseInt(laboratorio_id)
+      if (req.user.rol === 'Administrador' || req.user.laboratorio_ids.includes(labId)) {
+        query += req.user.rol === 'Jefe de Laboratorio' ? ' AND' : ' WHERE'
+        query += ` EXISTS (
+          SELECT 1 FROM inventario_equipos ie 
+          WHERE ie.equipo_id = e.id AND ie.laboratorio_id = ?
+        )`
+        params.push(labId)
+      } else {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'No tienes permisos para ver los equipos de este laboratorio' 
+        })
+      }
+    }
+    
+    query += ' ORDER BY e.codigo, e.nombre'
+    
+    const [equipos] = await pool.execute(query, params)
+    
+    console.log('📊 Equipos simples encontrados:', equipos.length)
+    
+    res.json({ 
+      success: true, 
+      data: equipos,
+      total: equipos.length,
+      vista: 'simple',
+      laboratorio_filtrado: laboratorio_id || null
+    })
+    
+  } catch (error) {
+    console.error('Error en getEquiposSimple:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+}
+
 export const createEquipo = async (req, res) => {
   const connection = await pool.getConnection()
   
@@ -89,9 +172,31 @@ export const createEquipo = async (req, res) => {
     console.log('🔍 Creando equipo:', req.body)
     
     // Generar código único para el equipo
-    const [maxId] = await connection.execute('SELECT MAX(id) as max_id FROM equipos')
-    const nextId = (maxId[0].max_id || 0) + 1
-    const codigo = `EQP-${nextId.toString().padStart(4, '0')}`
+    let codigo
+    let intentos = 0
+    const maxIntentos = 10
+    
+    do {
+      const [maxId] = await connection.execute('SELECT MAX(id) as max_id FROM equipos')
+      const nextId = (maxId[0].max_id || 0) + 1 + intentos
+      codigo = `EQP-${nextId.toString().padStart(4, '0')}`
+      
+      // Verificar si el código ya existe
+      const [existing] = await connection.execute('SELECT id FROM equipos WHERE codigo = ?', [codigo])
+      
+      if (existing.length === 0) {
+        break // Código único encontrado
+      }
+      
+      intentos++
+      console.log(`⚠️ Código ${codigo} ya existe, intentando con siguiente...`)
+    } while (intentos < maxIntentos)
+    
+    if (intentos >= maxIntentos) {
+      throw new Error('No se pudo generar un código único para el equipo')
+    }
+    
+    console.log(`✅ Código único generado: ${codigo}`)
     
     // Crear el equipo
     const [equipoResult] = await connection.execute(`
@@ -264,23 +369,33 @@ export const deleteEquipo = async (req, res) => {
       })
     }
 
-    // Verificar si hay movimientos asociados
+    // Verificar si hay movimientos asociados y obtener información
     const [movimientos] = await connection.execute(
       'SELECT COUNT(*) as total FROM movimientos_equipos WHERE equipo_id = ?',
       [equipoId]
     )
 
-    if (movimientos[0].total > 0) {
+    const [reservasActivas] = await connection.execute(
+      'SELECT COUNT(*) as total FROM detalle_reserva_equipos dre JOIN reservas r ON dre.reserva_id = r.id WHERE dre.equipo_id = ? AND r.fecha_fin > NOW()',
+      [equipoId]
+    )
+
+    // Verificar si el equipo está siendo usado en reservas activas
+    if (reservasActivas[0].total > 0) {
       return res.status(400).json({
         success: false,
-        message: 'No se puede eliminar el equipo porque tiene movimientos registrados'
+        message: 'No se puede eliminar el equipo porque está siendo usado en horarios/reservas activas. Espera a que terminen las reservas.'
       })
     }
 
     // Capturar información del equipo antes de eliminar
     const equipoInfo = existingEquipo[0]
+    const totalMovimientos = movimientos[0].total
     
-    // Eliminar registros relacionados en orden
+    // Eliminar registros relacionados en orden (incluyendo movimientos)
+    console.log(`🗑️ Eliminando ${totalMovimientos} movimientos del equipo ${equipoInfo.codigo}`)
+    await connection.execute('DELETE FROM detalle_reserva_equipos WHERE equipo_id = ?', [equipoId])
+    await connection.execute('DELETE FROM movimientos_equipos WHERE equipo_id = ?', [equipoId])
     await connection.execute('DELETE FROM inventario_equipos WHERE equipo_id = ?', [equipoId])
     await connection.execute('DELETE FROM equipos WHERE id = ?', [equipoId])
     
@@ -290,7 +405,7 @@ export const deleteEquipo = async (req, res) => {
     await registrarActividadEquipo({
       accion: 'eliminar',
       equipo_id: null, // No hay equipo_id porque ya fue eliminado
-      descripcion: `Equipo eliminado: ${equipoInfo.nombre} (${equipoInfo.codigo || 'N/A'}) - Marca: ${equipoInfo.marca || 'N/A'}, Modelo: ${equipoInfo.modelo || 'N/A'}, Estado: ${equipoInfo.estado || 'N/A'}, Condición: ${equipoInfo.condicion || 'N/A'}.`,
+      descripcion: `Equipo eliminado: ${equipoInfo.nombre} (${equipoInfo.codigo || 'N/A'}) - Marca: ${equipoInfo.marca || 'N/A'}, Modelo: ${equipoInfo.modelo || 'N/A'}, Estado: ${equipoInfo.estado || 'N/A'}, Condición: ${equipoInfo.condicion || 'N/A'}. Se eliminaron ${totalMovimientos} movimientos asociados.`,
       usuario_id: req.user.userId,
       ip_address: req.ip || req.connection.remoteAddress
     })
@@ -299,7 +414,7 @@ export const deleteEquipo = async (req, res) => {
     
     res.json({
       success: true,
-      message: 'Equipo eliminado exitosamente'
+      message: `Equipo eliminado exitosamente${totalMovimientos > 0 ? ` (se eliminaron ${totalMovimientos} movimientos asociados)` : ''}`
     })
     
   } catch (error) {
@@ -941,9 +1056,29 @@ export const importacionMasivaEquipos = async (req, res) => {
         }
         
         // Generar código único
-        const [maxId] = await connection.execute('SELECT MAX(id) as max_id FROM equipos')
-        const nextId = (maxId[0].max_id || 0) + procesados + 1
-        const codigo = `EQP-${nextId.toString().padStart(4, '0')}`
+        let codigo
+        let intentos = 0
+        const maxIntentos = 10
+        
+        do {
+          const [maxId] = await connection.execute('SELECT MAX(id) as max_id FROM equipos')
+          const nextId = (maxId[0].max_id || 0) + procesados + 1 + intentos
+          codigo = `EQP-${nextId.toString().padStart(4, '0')}`
+          
+          // Verificar si el código ya existe
+          const [existing] = await connection.execute('SELECT id FROM equipos WHERE codigo = ?', [codigo])
+          
+          if (existing.length === 0) {
+            break // Código único encontrado
+          }
+          
+          intentos++
+        } while (intentos < maxIntentos)
+        
+        if (intentos >= maxIntentos) {
+          errores.push(`Fila ${rowNum}: No se pudo generar un código único para el equipo`)
+          continue
+        }
         
         // Crear el equipo
         const [equipoResult] = await connection.execute(`

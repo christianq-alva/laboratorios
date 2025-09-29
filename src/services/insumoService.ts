@@ -96,7 +96,16 @@ class InsumoService {
       return response.data
     } catch (error: any) {
       console.error('Error al crear insumo:', error)
-      throw new Error(error.response?.data?.message || 'Error al crear insumo')
+      
+      // Manejar errores específicos
+      if (error.response?.data?.message) {
+        if (error.response.data.message.includes('Duplicate entry')) {
+          throw new Error('Error: Ya existe un insumo con ese código. El sistema generará automáticamente un código único.')
+        }
+        throw new Error(error.response.data.message)
+      }
+      
+      throw new Error('Error al crear insumo')
     }
   }
 

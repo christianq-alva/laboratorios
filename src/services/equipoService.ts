@@ -18,6 +18,10 @@ export interface Equipo {
   comentarios?: string
   condicion?: 'Excelente' | 'Bueno' | 'Regular' | 'Malo'
   anio_adquisicion?: number
+  // Campos adicionales para vista simple
+  total_movimientos?: number
+  laboratorios_asignados?: number
+  laboratorios_nombres?: string
 }
 
 export interface ActividadEquipo {
@@ -90,6 +94,17 @@ class EquipoService {
     }
   }
 
+  // Obtener equipos en vista simple (sin agrupar)
+  async getAllSimple(): Promise<EquipoResponse> {
+    try {
+      const response = await api.get('/equipos/simple')
+      return response.data
+    } catch (error: any) {
+      console.error('Error al obtener equipos simples:', error)
+      throw new Error(error.response?.data?.message || 'Error al obtener equipos simples')
+    }
+  }
+
   // Crear nuevo equipo
   async create(equipoData: {
     nombre: string
@@ -114,7 +129,16 @@ class EquipoService {
       return response.data
     } catch (error: any) {
       console.error('Error al crear equipo:', error)
-      throw new Error(error.response?.data?.message || 'Error al crear equipo')
+      
+      // Manejar errores específicos
+      if (error.response?.data?.message) {
+        if (error.response.data.message.includes('Duplicate entry')) {
+          throw new Error('Error: Ya existe un equipo con ese código. El sistema generará automáticamente un código único.')
+        }
+        throw new Error(error.response.data.message)
+      }
+      
+      throw new Error('Error al crear equipo')
     }
   }
 

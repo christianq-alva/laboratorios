@@ -24,7 +24,7 @@ export const Laboratorios: React.FC = () => {
   const [formOpen, setFormOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [selectedLaboratorio, setSelectedLaboratorio] = useState<Laboratorio | null>(null)
-  const [refresh, setRefresh] = useState(false)
+  const [refresh, setRefresh] = useState(0)
   const [deleteLoading, setDeleteLoading] = useState(false)
   
   // Estados para notificaciones
@@ -54,7 +54,7 @@ export const Laboratorios: React.FC = () => {
 
   // Función cuando el formulario tiene éxito
   const handleFormSuccess = () => {
-    setRefresh(prev => !prev)
+    setRefresh(prev => prev + 1)
     setSnackbar({
       open: true,
       message: selectedLaboratorio ? 'Laboratorio actualizado correctamente' : 'Laboratorio creado correctamente',
@@ -66,6 +66,34 @@ export const Laboratorios: React.FC = () => {
   const handleDeleteLaboratorio = (laboratorio: Laboratorio) => {
     setSelectedLaboratorio(laboratorio)
     setDeleteOpen(true)
+  }
+
+  // Función para cambiar estado de laboratorio
+  const handleChangeStatus = async (laboratorio: Laboratorio, estado: 'Activo' | 'En Mantenimiento' | 'Inhabilitado' | 'Baja') => {
+    try {
+      const result = await laboratorioService.changeStatus(laboratorio.id, estado)
+      
+      if (result.success) {
+        setRefresh(prev => prev + 1)
+        setSnackbar({
+          open: true,
+          message: `Estado cambiado a "${estado}" correctamente`,
+          severity: 'success'
+        })
+      } else {
+        setSnackbar({
+          open: true,
+          message: result.message || 'Error al cambiar el estado',
+          severity: 'error'
+        })
+      }
+    } catch (err: any) {
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || 'Error de conexión al cambiar el estado',
+        severity: 'error'
+      })
+    }
   }
 
   // Función para cerrar diálogo de eliminación
@@ -87,7 +115,7 @@ export const Laboratorios: React.FC = () => {
       if (result.success) {
         setDeleteOpen(false)
         setSelectedLaboratorio(null)
-        setRefresh(prev => !prev)
+        setRefresh(prev => prev + 1)
         setSnackbar({
           open: true,
           message: 'Laboratorio eliminado correctamente',
@@ -151,6 +179,7 @@ export const Laboratorios: React.FC = () => {
           <LaboratoriosTable 
             onEdit={handleEditLaboratorio}
             onDelete={handleDeleteLaboratorio}
+            onChangeStatus={handleChangeStatus}
             refresh={refresh}
             onRefreshComplete={handleRefreshComplete}
           />

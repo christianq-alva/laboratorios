@@ -29,6 +29,10 @@ import {
   AccountBalance,
   Search,
   Clear,
+  CheckCircle,
+  Build,
+  Block,
+  RemoveCircle,
 } from '@mui/icons-material'
 import { laboratorioService } from '../../services/laboratorioService'
 import type { Laboratorio } from '../../services/laboratorioService'
@@ -36,13 +40,15 @@ import type { Laboratorio } from '../../services/laboratorioService'
 interface LaboratoriosTableProps {
   onEdit: (laboratorio: Laboratorio) => void
   onDelete: (laboratorio: Laboratorio) => void
-  refresh: boolean
+  onChangeStatus: (laboratorio: Laboratorio, estado: 'Activo' | 'En Mantenimiento' | 'Inhabilitado' | 'Baja') => void
+  refresh: number
   onRefreshComplete: () => void
 }
 
 export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
   onEdit,
   onDelete,
+  onChangeStatus,
   refresh,
   onRefreshComplete,
 }) => {
@@ -78,7 +84,7 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
   }, [])
 
   useEffect(() => {
-    if (refresh) {
+    if (refresh > 0) {
       fetchLaboratorios()
     }
   }, [refresh])
@@ -107,7 +113,30 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
     handleMenuClose()
   }
 
+  const handleChangeStatus = (estado: 'Activo' | 'En Mantenimiento' | 'Inhabilitado' | 'Baja') => {
+    if (selectedLab) {
+      onChangeStatus(selectedLab, estado)
+    }
+    handleMenuClose()
+  }
+
   // Función para filtrar laboratorios por término de búsqueda
+  // Función para obtener el color del estado
+  const getEstadoColor = (estado: string) => {
+    switch (estado) {
+      case 'Activo':
+        return 'success'
+      case 'En Mantenimiento':
+        return 'warning'
+      case 'Inhabilitado':
+        return 'error'
+      case 'Baja':
+        return 'default'
+      default:
+        return 'default'
+    }
+  }
+
   const filteredLaboratorios = laboratorios.filter(lab => {
     if (!searchTerm) return true
     
@@ -270,10 +299,10 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
               {/* Estado */}
               <TableCell>
                 <Chip 
-                  label="Activo" 
-                  color="success" 
+                  label={lab.estado || 'Activo'} 
+                  color={getEstadoColor(lab.estado || 'Activo') as any} 
                   size="small" 
-                  variant="outlined" 
+                  variant="filled" 
                 />
               </TableCell>
 
@@ -310,6 +339,56 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
           </ListItemIcon>
           <ListItemText>Editar</ListItemText>
         </MenuItem>
+        
+        {/* Separador visual */}
+        <MenuItem disabled sx={{ borderTop: 1, borderColor: 'divider', mt: 1, pt: 1 }}>
+          <ListItemText primary="Cambiar Estado:" sx={{ fontSize: '0.875rem', color: 'text.secondary' }} />
+        </MenuItem>
+        
+        <MenuItem 
+          onClick={() => handleChangeStatus('Activo')}
+          disabled={selectedLab?.estado === 'Activo'}
+        >
+          <ListItemIcon>
+            <CheckCircle fontSize="small" color="success" />
+          </ListItemIcon>
+          <ListItemText>Activo</ListItemText>
+        </MenuItem>
+        
+        <MenuItem 
+          onClick={() => handleChangeStatus('En Mantenimiento')}
+          disabled={selectedLab?.estado === 'En Mantenimiento'}
+        >
+          <ListItemIcon>
+            <Build fontSize="small" color="warning" />
+          </ListItemIcon>
+          <ListItemText>En Mantenimiento</ListItemText>
+        </MenuItem>
+        
+        <MenuItem 
+          onClick={() => handleChangeStatus('Inhabilitado')}
+          disabled={selectedLab?.estado === 'Inhabilitado'}
+        >
+          <ListItemIcon>
+            <Block fontSize="small" color="error" />
+          </ListItemIcon>
+          <ListItemText>Inhabilitado</ListItemText>
+        </MenuItem>
+        
+        <MenuItem 
+          onClick={() => handleChangeStatus('Baja')}
+          disabled={selectedLab?.estado === 'Baja'}
+        >
+          <ListItemIcon>
+            <RemoveCircle fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Baja</ListItemText>
+        </MenuItem>
+        
+        {/* Separador para eliminar */}
+        <MenuItem disabled sx={{ borderTop: 1, borderColor: 'divider', mt: 1 }}>
+        </MenuItem>
+        
         <MenuItem onClick={handleDelete}>
           <ListItemIcon>
             <Delete fontSize="small" />

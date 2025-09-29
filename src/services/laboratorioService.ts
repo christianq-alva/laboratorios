@@ -7,14 +7,17 @@ export interface Laboratorio {
   ubicacion: string
   escuela_id: number
   piso: string
+  estado: 'Activo' | 'En Mantenimiento' | 'Inhabilitado' | 'Baja'
   escuela?: string // Para mostrar el nombre de la escuela
 }
 
 export interface CreateLaboratorioData {
+  codigo: string
   nombre: string
   ubicacion: string
   escuela_id: number
   piso: string
+  estado: 'Activo' | 'En Mantenimiento' | 'Inhabilitado' | 'Baja'
 }
 
 export interface UpdateLaboratorioData extends CreateLaboratorioData {}
@@ -58,6 +61,12 @@ export const laboratorioService = {
   // Obtener escuelas disponibles para el selector
   getEscuelas: async () => {
     const response = await api.get('/docentes/utils/escuelas')
+    return response.data
+  },
+
+  // Cambiar estado de un laboratorio
+  changeStatus: async (id: number, estado: 'Activo' | 'En Mantenimiento' | 'Inhabilitado' | 'Baja') => {
+    const response = await api.patch(`/laboratorios/${id}/estado`, { estado })
     return response.data
   }
 } 

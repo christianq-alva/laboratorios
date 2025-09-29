@@ -6,7 +6,8 @@ import {
   createLaboratorio, 
   updateLaboratorio,
   deleteLaboratorio,
-  getEscuelas
+  getEscuelas,
+  changeEstadoLaboratorio
 } from '../controllers/laboratorioController.js'
 
 const router = express.Router()
@@ -37,6 +38,13 @@ router.put('/:id',
   authenticateToken,                         // 1️⃣ JWT
   authorizeResource('update', 'Laboratorio'), // 2️⃣ Admin o Jefe de su lab
   updateLaboratorio
+)
+
+// 🔄 CAMBIAR ESTADO DE LABORATORIO
+router.patch('/:id/estado', 
+  authenticateToken,                         // 1️⃣ JWT
+  authorizeResource('update', 'Laboratorio'), // 2️⃣ Admin o Jefe de su lab
+  changeEstadoLaboratorio
 )
 
 // 🗑️ ELIMINAR LABORATORIO

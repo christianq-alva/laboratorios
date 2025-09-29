@@ -28,12 +28,14 @@ interface LaboratorioFormProps {
 }
 
 export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose, onSuccess, laboratorio }) => {
-  // Estado del formulario incluyendo piso
+  // Estado del formulario incluyendo código, piso y estado
   const [formData, setFormData] = useState<CreateLaboratorioData>({
+    codigo: '',
     nombre: '',
     ubicacion: '',
     escuela_id: 0,
-    piso: ''
+    piso: '',
+    estado: 'Activo'
   })
   
   const [escuelas, setEscuelas] = useState<Escuela[]>([])
@@ -68,20 +70,24 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
       fetchEscuelas()
       
       if (laboratorio) {
-        // Modo edición - cargar datos del laboratorio incluyendo piso
+        // Modo edición - cargar datos del laboratorio incluyendo código, piso y estado
         setFormData({
+          codigo: laboratorio.codigo || '',
           nombre: laboratorio.nombre,
           ubicacion: laboratorio.ubicacion,
           escuela_id: laboratorio.escuela_id,
-          piso: laboratorio.piso?.toString() || ''
+          piso: laboratorio.piso?.toString() || '',
+          estado: laboratorio.estado || 'Activo'
         })
       } else {
         // Modo creación - resetear formulario
         setFormData({
+          codigo: '',
           nombre: '',
           ubicacion: '',
           escuela_id: 0,
-          piso: ''
+          piso: '',
+          estado: 'Activo'
         })
       }
       
@@ -113,6 +119,9 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
 
     try {
       // Validaciones
+      if (!formData.codigo?.trim()) {
+        throw new Error('El código es requerido')
+      }
       if (!formData.nombre?.trim()) {
         throw new Error('El nombre es requerido')
       }
@@ -175,6 +184,18 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
 
           <TextField
             fullWidth
+            label="Código del Laboratorio"
+            value={formData.codigo}
+            onChange={handleChange('codigo')}
+            required
+            disabled={loading}
+            sx={{ mb: 2 }}
+            placeholder="Ej: LAB-001, COMP-01, BIO-A1"
+            helperText="Puedes usar cualquier código que desees. No tiene que ser único."
+          />
+
+          <TextField
+            fullWidth
             label="Nombre del Laboratorio"
             value={formData.nombre}
             onChange={handleChange('nombre')}
@@ -206,7 +227,7 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
             placeholder="Ej: Primer piso, Segundo piso, Planta baja"
           />
 
-          <FormControl fullWidth sx={{ mb: 1 }}>
+          <FormControl fullWidth sx={{ mb: 2 }}>
             <InputLabel>Escuela</InputLabel>
             <Select
               value={formData.escuela_id}
@@ -231,6 +252,22 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
                 </Alert>
               </Box>
             )}
+          </FormControl>
+
+          <FormControl fullWidth sx={{ mb: 1 }}>
+            <InputLabel>Estado del Laboratorio</InputLabel>
+            <Select
+              value={formData.estado}
+              label="Estado del Laboratorio"
+              onChange={(e) => setFormData(prev => ({ ...prev, estado: e.target.value as any }))}
+              required
+              disabled={loading}
+            >
+              <MenuItem value="Activo">Activo</MenuItem>
+              <MenuItem value="En Mantenimiento">En Mantenimiento</MenuItem>
+              <MenuItem value="Inhabilitado">Inhabilitado</MenuItem>
+              <MenuItem value="Baja">Baja</MenuItem>
+            </Select>
           </FormControl>
         </DialogContent>
 

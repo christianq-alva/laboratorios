@@ -29,13 +29,15 @@ interface EquiposTableProps {
   onDelete?: (equipo: Equipo) => void
   refresh?: boolean
   onRefreshComplete?: () => void
+  vistaSimple?: boolean
 }
 
 export const EquiposTable: React.FC<EquiposTableProps> = ({
   onEdit,
   onDelete,
   refresh,
-  onRefreshComplete
+  onRefreshComplete,
+  vistaSimple = false
 }) => {
   const [equipos, setEquipos] = useState<Equipo[]>([])
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
@@ -56,10 +58,16 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
 
       // Cargar equipos
       let equiposResponse
-      if (selectedLaboratorio === 'all') {
-        equiposResponse = await equipoService.getAll()
+      if (vistaSimple) {
+        // Usar vista simple (sin agrupar)
+        equiposResponse = await equipoService.getAllSimple()
       } else {
-        equiposResponse = await equipoService.getByLaboratorio(selectedLaboratorio)
+        // Usar vista normal (agrupada)
+        if (selectedLaboratorio === 'all') {
+          equiposResponse = await equipoService.getAll()
+        } else {
+          equiposResponse = await equipoService.getByLaboratorio(selectedLaboratorio)
+        }
       }
       
       setEquipos(equiposResponse.data)
@@ -83,6 +91,11 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
       loadData()
     }
   }, [refresh])
+
+  // Efecto para recargar cuando cambia la vista
+  useEffect(() => {
+    loadData()
+  }, [vistaSimple])
 
   // Efecto para recargar cuando cambia el laboratorio seleccionado
   useEffect(() => {
@@ -317,16 +330,26 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
               <TableCell sx={{ fontWeight: 600, width: '6%' }}>Año Adq.</TableCell>
               <TableCell sx={{ fontWeight: 600, width: '8%' }}>Último Mant.</TableCell>
               <TableCell sx={{ fontWeight: 600, width: '8%' }}>Próximo Mant.</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '10%' }}>Disponibilidad</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '8%' }}>Inventario por Lab</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '12%' }}>Comentarios</TableCell>
+              {vistaSimple ? (
+                <>
+                  <TableCell sx={{ fontWeight: 600, width: '8%' }}>Movimientos</TableCell>
+                  <TableCell sx={{ fontWeight: 600, width: '10%' }}>Laboratorios</TableCell>
+                  <TableCell sx={{ fontWeight: 600, width: '12%' }}>Comentarios</TableCell>
+                </>
+              ) : (
+                <>
+                  <TableCell sx={{ fontWeight: 600, width: '10%' }}>Disponibilidad</TableCell>
+                  <TableCell sx={{ fontWeight: 600, width: '8%' }}>Inventario por Lab</TableCell>
+                  <TableCell sx={{ fontWeight: 600, width: '12%' }}>Comentarios</TableCell>
+                </>
+              )}
               <TableCell sx={{ fontWeight: 600, width: '3%' }} align="center">Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredEquipos.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={13} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={vistaSimple ? 13 : 13} align="center" sx={{ py: 4 }}>
                   <Box sx={{ textAlign: 'center' }}>
                     <Build sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
                     <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -428,52 +451,101 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell>
-                    {equipo.cantidad_disponible !== undefined && equipo.cantidad_total !== undefined ? (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {vistaSimple ? (
+                    <>
+                      <TableCell>
                         <Chip 
-                          label={`${equipo.cantidad_disponible}/${equipo.cantidad_total}`}
-                          color={getDisponibilidadColor(equipo.cantidad_disponible, equipo.cantidad_total)}
-                          variant="filled"
+                          label={equipo.total_movimientos || 0}
+                          color={equipo.total_movimientos && equipo.total_movimientos > 0 ? "primary" : "default"}
+                          variant="outlined"
                           size="small"
                         />
-                        {equipo.cantidad_en_uso && equipo.cantidad_en_uso > 0 && (
-                          <Typography variant="caption" color="warning.main" sx={{ fontWeight: 600 }}>
-                            {equipo.cantidad_en_uso} EN USO
+                      </TableCell>
+                      <TableCell>
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {equipo.laboratorios_asignados || 0} laboratorio(s)
+                          </Typography>
+                          {equipo.laboratorios_nombres && (
+                            <Typography variant="caption" color="text.secondary">
+                              {equipo.laboratorios_nombres}
+                            </Typography>
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        {equipo.comentarios ? (
+                          <Tooltip title={equipo.comentarios}>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                maxWidth: 150,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                cursor: 'help'
+                              }}
+                            >
+                              {equipo.comentarios}
+                            </Typography>
+                          </Tooltip>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                            Sin comentarios
                           </Typography>
                         )}
-                      </Box>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                        No disponible
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {formatInventarioPorLaboratorio(equipo.inventario_por_laboratorio)}
-                  </TableCell>
-                  <TableCell>
-                    {equipo.comentarios ? (
-                      <Tooltip title={equipo.comentarios}>
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            maxWidth: 150,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            cursor: 'help'
-                          }}
-                        >
-                          {equipo.comentarios}
-                        </Typography>
-                      </Tooltip>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                        Sin comentarios
-                      </Typography>
-                    )}
-                  </TableCell>
+                      </TableCell>
+                    </>
+                  ) : (
+                    <>
+                      <TableCell>
+                        {equipo.cantidad_disponible !== undefined && equipo.cantidad_total !== undefined ? (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Chip 
+                              label={`${equipo.cantidad_disponible}/${equipo.cantidad_total}`}
+                              color={getDisponibilidadColor(equipo.cantidad_disponible, equipo.cantidad_total)}
+                              variant="filled"
+                              size="small"
+                            />
+                            {equipo.cantidad_en_uso && equipo.cantidad_en_uso > 0 && (
+                              <Typography variant="caption" color="warning.main" sx={{ fontWeight: 600 }}>
+                                {equipo.cantidad_en_uso} EN USO
+                              </Typography>
+                            )}
+                          </Box>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                            No disponible
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {formatInventarioPorLaboratorio(equipo.inventario_por_laboratorio)}
+                      </TableCell>
+                      <TableCell>
+                        {equipo.comentarios ? (
+                          <Tooltip title={equipo.comentarios}>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                maxWidth: 150,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                cursor: 'help'
+                              }}
+                            >
+                              {equipo.comentarios}
+                            </Typography>
+                          </Tooltip>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                            Sin comentarios
+                          </Typography>
+                        )}
+                      </TableCell>
+                    </>
+                  )}
                   <TableCell align="center">
                     <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
                       {onEdit && (

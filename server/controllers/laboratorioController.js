@@ -46,7 +46,38 @@ export const getLaboratorios = async (req, res) => {
 
 export const createLaboratorio = async (req, res) => {
   try {
-    const { nombre, ubicacion, escuela_id, piso } = req.body
+    const { codigo, nombre, ubicacion, escuela_id, piso, estado = 'Activo' } = req.body
+
+    console.log('🔍 Creando laboratorio:', { codigo, nombre, ubicacion, escuela_id, piso, estado })
+
+    // Validaciones básicas
+    if (!codigo || !codigo.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'El código del laboratorio es requerido'
+      })
+    }
+
+    if (!nombre || !nombre.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'El nombre del laboratorio es requerido'
+      })
+    }
+
+    if (!ubicacion || !ubicacion.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'La ubicación del laboratorio es requerida'
+      })
+    }
+
+    if (!piso || !piso.toString().trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'El piso del laboratorio es requerido'
+      })
+    }
 
     // Validar que la escuela existe
     const [escuelaCheck] = await pool.execute(
@@ -61,16 +92,14 @@ export const createLaboratorio = async (req, res) => {
       })
     }
 
-    // Generar código único para el laboratorio
-    const [maxId] = await pool.execute('SELECT MAX(id) as max_id FROM laboratorios')
-    const nextId = (maxId[0].max_id || 0) + 1
-    const codigo = `LAB-${nextId.toString().padStart(4, '0')}`
+    // Usar el código proporcionado por el usuario (sin validar unicidad)
+    const codigoFinal = codigo.trim()
 
     // Insertar laboratorio
     const [result] = await pool.execute(`
-      INSERT INTO laboratorios (codigo, nombre, ubicacion, escuela_id, piso) 
-      VALUES (?, ?, ?, ?, ?)
-    `, [codigo, nombre, ubicacion, escuela_id, piso])
+      INSERT INTO laboratorios (codigo, nombre, ubicacion, escuela_id, piso, estado) 
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, [codigoFinal, nombre.trim(), ubicacion.trim(), escuela_id, piso.toString().trim(), estado])
 
     console.log('✅ Laboratorio creado con ID:', result.insertId)
 
@@ -78,11 +107,12 @@ export const createLaboratorio = async (req, res) => {
       success: true,
       data: {
         id: result.insertId,
-        codigo,
-        nombre,
-        ubicacion,
+        codigo: codigoFinal,
+        nombre: nombre.trim(),
+        ubicacion: ubicacion.trim(),
         escuela_id,
-        piso,
+        piso: piso.toString().trim(),
+        estado,
         escuela: escuelaCheck[0].nombre
       },
       message: 'Laboratorio creado correctamente'
@@ -90,6 +120,15 @@ export const createLaboratorio = async (req, res) => {
 
   } catch (error) {
     console.error('Error en createLaboratorio:', error)
+    
+    // Manejar error de duplicado (si aún existe la restricción)
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({
+        success: false,
+        message: 'Ya existe un laboratorio con ese código. Puedes usar el mismo código si es necesario.'
+      })
+    }
+    
     res.status(500).json({
       success: false,
       message: error.message
@@ -100,7 +139,9 @@ export const createLaboratorio = async (req, res) => {
 export const updateLaboratorio = async (req, res) => {
   try {
     const { id } = req.params
-    const { nombre, ubicacion, escuela_id, piso } = req.body
+    const { codigo, nombre, ubicacion, escuela_id, piso, estado } = req.body
+
+    console.log('🔄 Actualizando laboratorio:', { id, codigo, nombre, ubicacion, escuela_id, piso, estado })
 
     // Verificar que el laboratorio existe
     const [labCheck] = await pool.execute(
@@ -138,12 +179,20 @@ export const updateLaboratorio = async (req, res) => {
       }
     }
 
-    // Actualizar laboratorio
+    // Validaciones básicas
+    if (!codigo || !codigo.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'El código del laboratorio es requerido'
+      })
+    }
+
+    // Actualizar laboratorio incluyendo el código y estado
     const [result] = await pool.execute(`
       UPDATE laboratorios 
-      SET nombre = ?, ubicacion = ?, escuela_id = ?, piso = ?
+      SET codigo = ?, nombre = ?, ubicacion = ?, escuela_id = ?, piso = ?, estado = ?
       WHERE id = ?
-    `, [nombre, ubicacion, escuela_id, piso, id])
+    `, [codigo.trim(), nombre, ubicacion, escuela_id, piso, estado || 'Activo', id])
 
     console.log('✅ Laboratorio actualizado:', id)
 
@@ -151,10 +200,12 @@ export const updateLaboratorio = async (req, res) => {
       success: true,
       data: {
         id: parseInt(id),
+        codigo: codigo.trim(),
         nombre,
         ubicacion,
         escuela_id,
         piso,
+        estado: estado || 'Activo',
         escuela: escuelaCheck[0].nombre
       },
       message: 'Laboratorio actualizado correctamente'
@@ -227,5 +278,73 @@ export const getEscuelas = async (req, res) => {
   } catch (error) {
     console.error('Error en getEscuelas:', error)
     res.status(500).json({ success: false, message: error.message })
+  }
+}
+
+// Cambiar estado de un laboratorio
+export const changeEstadoLaboratorio = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { estado } = req.body
+
+    console.log('🔄 Cambiando estado del laboratorio:', { id, estado })
+
+    // Validar que el laboratorio existe
+    const [labCheck] = await pool.execute(
+      'SELECT * FROM laboratorios WHERE id = ?', 
+      [id]
+    )
+    
+    if (labCheck.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Laboratorio no encontrado'
+      })
+    }
+
+    // Validar estado
+    const estadosValidos = ['Activo', 'En Mantenimiento', 'Inhabilitado', 'Baja']
+    if (!estadosValidos.includes(estado)) {
+      return res.status(400).json({
+        success: false,
+        message: `Estado inválido. Debe ser uno de: ${estadosValidos.join(', ')}`
+      })
+    }
+
+    // Verificar permisos para Jefe de Laboratorio
+    if (req.user.rol === 'Jefe de Laboratorio') {
+      if (!req.user.laboratorio_ids.includes(parseInt(id))) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permisos para cambiar el estado de este laboratorio'
+        })
+      }
+    }
+
+    // Actualizar solo el estado
+    const [result] = await pool.execute(`
+      UPDATE laboratorios 
+      SET estado = ?
+      WHERE id = ?
+    `, [estado, id])
+
+    console.log('✅ Estado del laboratorio actualizado:', id)
+
+    res.json({
+      success: true,
+      data: {
+        id: parseInt(id),
+        estado_anterior: labCheck[0].estado,
+        estado_nuevo: estado
+      },
+      message: `Estado cambiado a "${estado}" correctamente`
+    })
+
+  } catch (error) {
+    console.error('Error en changeEstadoLaboratorio:', error)
+    res.status(500).json({
+      success: false,
+      message: error.message
+    })
   }
 }

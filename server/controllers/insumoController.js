@@ -87,9 +87,31 @@ export const createInsumo = async (req, res) => {
       console.log('🔍 Creando insumo con stock:', req.body)
       
       // Generar código único para el insumo
-      const [maxId] = await connection.execute('SELECT MAX(id) as max_id FROM insumos')
-      const nextId = (maxId[0].max_id || 0) + 1
-      const codigo = `INS-${nextId.toString().padStart(4, '0')}`
+      let codigo
+      let intentos = 0
+      const maxIntentos = 10
+      
+      do {
+        const [maxId] = await connection.execute('SELECT MAX(id) as max_id FROM insumos')
+        const nextId = (maxId[0].max_id || 0) + 1 + intentos
+        codigo = `INS-${nextId.toString().padStart(4, '0')}`
+        
+        // Verificar si el código ya existe
+        const [existing] = await connection.execute('SELECT id FROM insumos WHERE codigo = ?', [codigo])
+        
+        if (existing.length === 0) {
+          break // Código único encontrado
+        }
+        
+        intentos++
+        console.log(`⚠️ Código ${codigo} ya existe, intentando con siguiente...`)
+      } while (intentos < maxIntentos)
+      
+      if (intentos >= maxIntentos) {
+        throw new Error('No se pudo generar un código único para el insumo')
+      }
+      
+      console.log(`✅ Código único generado: ${codigo}`)
       
       // 1️⃣ CREAR EL INSUMO (catálogo)
       const [insumoResult] = await connection.execute(`
@@ -1265,9 +1287,29 @@ export const importacionMasiva = async (req, res) => {
         }
         
         // Generar código único
-        const [maxId] = await connection.execute('SELECT MAX(id) as max_id FROM insumos')
-        const nextId = (maxId[0].max_id || 0) + procesados + 1
-        const codigo = `INS-${nextId.toString().padStart(4, '0')}`
+        let codigo
+        let intentos = 0
+        const maxIntentos = 10
+        
+        do {
+          const [maxId] = await connection.execute('SELECT MAX(id) as max_id FROM insumos')
+          const nextId = (maxId[0].max_id || 0) + procesados + 1 + intentos
+          codigo = `INS-${nextId.toString().padStart(4, '0')}`
+          
+          // Verificar si el código ya existe
+          const [existing] = await connection.execute('SELECT id FROM insumos WHERE codigo = ?', [codigo])
+          
+          if (existing.length === 0) {
+            break // Código único encontrado
+          }
+          
+          intentos++
+        } while (intentos < maxIntentos)
+        
+        if (intentos >= maxIntentos) {
+          errores.push(`Fila ${rowNum}: No se pudo generar un código único para el insumo`)
+          continue
+        }
         
         // Crear el insumo
         const [insumoResult] = await connection.execute(`

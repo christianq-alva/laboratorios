@@ -2,7 +2,8 @@ import express from 'express'
 import { authenticateToken } from '../middleware/auth.js'
 import { authorize } from '../middleware/authorize.js'
 import { 
-  getEquipos, 
+  getEquipos,
+  getEquiposSimple,
   createEquipo,
   updateEquipo,
   deleteEquipo,
@@ -24,9 +25,15 @@ const upload = multer({
 const router = express.Router()
 
 router.get('/', 
-  authenticateToken,
-  authorize('read', 'Equipo'),
+  authenticateToken, 
+  authorize('read', 'Equipo'), 
   getEquipos
+)
+
+router.get('/simple', 
+  authenticateToken, 
+  authorize('read', 'Equipo'), 
+  getEquiposSimple
 )
 
 router.post('/', 
