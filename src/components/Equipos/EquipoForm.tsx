@@ -373,7 +373,7 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
                   <TextField
                     fullWidth
                     type="number"
-                    label="Año de adquisición"
+                    label="Fecha de adquisición"
                     value={formData.anio_adquisicion}
                     onChange={(e) => setFormData(prev => ({ ...prev, anio_adquisicion: e.target.value }))}
                     placeholder="Ej: 2023"

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
   DialogActions,
   Button,
@@ -40,7 +39,8 @@ interface CatalogoInsumosModalProps {
   onClose: () => void
   onNewInsumo: () => void
   onEditInsumo: (insumo: Insumo) => void
-  refresh?: boolean
+  refresh?: number
+  embedded?: boolean
 }
 
 export const CatalogoInsumosModal: React.FC<CatalogoInsumosModalProps> = ({
@@ -48,7 +48,8 @@ export const CatalogoInsumosModal: React.FC<CatalogoInsumosModalProps> = ({
   onClose,
   onNewInsumo,
   onEditInsumo,
-  refresh
+  refresh,
+  embedded = false
 }) => {
   const [insumos, setInsumos] = useState<Insumo[]>([])
   const [filteredInsumos, setFilteredInsumos] = useState<Insumo[]>([])
@@ -59,17 +60,17 @@ export const CatalogoInsumosModal: React.FC<CatalogoInsumosModalProps> = ({
 
   // Cargar catálogo de insumos
   useEffect(() => {
-    if (open) {
+    if (open || embedded) {
       loadCatalogo()
     }
-  }, [open])
+  }, [open, embedded])
 
   // Recargar cuando cambia refresh
   useEffect(() => {
-    if (open && refresh !== undefined) {
+    if ((open || embedded) && refresh !== undefined) {
       loadCatalogo()
     }
-  }, [refresh])
+  }, [refresh, open, embedded])
 
   const loadCatalogo = async () => {
     setLoading(true)
@@ -137,22 +138,11 @@ export const CatalogoInsumosModal: React.FC<CatalogoInsumosModalProps> = ({
     }
   }
 
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="lg"
-      fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: 1.5,
-          height: '85vh',
-          maxHeight: '85vh'
-        }
-      }}
-    >
-      <DialogTitle sx={{ pb: 2, backgroundColor: '#f0f7ff' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+  // Contenido común para ambos modos
+  const content = (
+    <Box sx={{ p: embedded ? 0 : 3 }}>
+      {!embedded && (
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, pb: 2, backgroundColor: '#f0f7ff', p: 2, borderRadius: 1.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Inventory color="primary" />
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -180,9 +170,9 @@ export const CatalogoInsumosModal: React.FC<CatalogoInsumosModalProps> = ({
             </IconButton>
           </Box>
         </Box>
-      </DialogTitle>
-
-      <DialogContent sx={{ p: 3 }}>
+      )}
+      
+      <Box>
         {error && (
           <Alert severity="error" sx={{ mb: 2, borderRadius: 1.5 }}>
             {error}
@@ -358,6 +348,32 @@ export const CatalogoInsumosModal: React.FC<CatalogoInsumosModalProps> = ({
             </Table>
           </TableContainer>
         )}
+      </Box>
+    </Box>
+  )
+
+  // Si está en modo embebido, devolver solo el contenido
+  if (embedded) {
+    return content
+  }
+
+  // Si está en modo modal, envolverlo en Dialog
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="lg"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 1.5,
+          height: '85vh',
+          maxHeight: '85vh'
+        }
+      }}
+    >
+      <DialogContent sx={{ p: 0 }}>
+        {content}
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 3 }}>

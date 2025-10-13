@@ -15,6 +15,7 @@ import {
   Incidencias,
   ReportesSimple,
 } from './pages'
+import { CatalogoInsumos } from './pages/CatalogoInsumos'
 import { HorarioPublico } from './components/Public/HorarioPublico'
 
 // Protected Route Component
@@ -64,6 +65,7 @@ function App() {
                     <Route path="/laboratorios" element={<Laboratorios />} />
                     <Route path="/docentes" element={<Docentes />} />
                     <Route path="/horarios" element={<Horarios />} />
+                    <Route path="/catalogo-insumos" element={<CatalogoInsumos />} />
                     <Route path="/insumos" element={<Insumos />} />
                     <Route path="/equipos" element={<Equipos />} />
                     <Route path="/incidencias" element={<Incidencias />} />
