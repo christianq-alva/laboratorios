@@ -256,7 +256,7 @@ export const Insumos: React.FC = () => {
             onClick={handleActividadOpen}
             sx={{ borderRadius: 2, px: 3 }}
           >
-            Actividad
+            Movimiento
           </Button>
           
           <Button
