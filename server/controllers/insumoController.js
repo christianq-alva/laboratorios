@@ -200,8 +200,12 @@ export const getActividadInsumos = async (req, res) => {
         m.id,
         m.fecha_movimiento,
         m.tipo_movimiento,
-        m.cantidad,
+        m.fecha_ingreso,
         m.observaciones,
+        mid.insumo_id,
+        mid.cantidad,
+        mid.lote,
+        mid.fecha_vencimiento,
         i.nombre as insumo_nombre,
         i.unidad_medida,
         l.nombre as laboratorio_nombre,
@@ -211,7 +215,8 @@ export const getActividadInsumos = async (req, res) => {
         r.fecha_inicio as reserva_fecha_inicio,
         r.fecha_fin as reserva_fecha_fin
       FROM movimientos_insumos m
-      INNER JOIN insumos i ON m.insumo_id = i.id
+      LEFT JOIN movimiento_insumo_detalle mid ON m.id = mid.movimiento_id
+      LEFT JOIN insumos i ON mid.insumo_id = i.id
       INNER JOIN laboratorios l ON m.laboratorio_id = l.id
       INNER JOIN usuarios u ON m.usuario_id = u.id
       INNER JOIN roles rol ON u.rol_id = rol.id

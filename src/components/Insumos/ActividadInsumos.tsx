@@ -162,7 +162,7 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
             <History color="primary" />
-            Actividad de Insumos
+            Movimiento de Insumos
           </Typography>
           <IconButton onClick={onClose}>
             <Close />

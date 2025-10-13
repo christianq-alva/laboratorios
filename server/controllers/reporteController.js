@@ -57,12 +57,13 @@ export const getConsumoResumen = async (req, res) => {
         i.categoria,
         i.nombre as insumo_nombre,
         i.unidad_medida,
-        SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN m.cantidad ELSE 0 END) as total_consumido,
-        SUM(CASE WHEN m.tipo_movimiento = 'entrada' THEN m.cantidad ELSE 0 END) as total_ingresado,
+        SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN mid.cantidad ELSE 0 END) as total_consumido,
+        SUM(CASE WHEN m.tipo_movimiento = 'entrada' THEN mid.cantidad ELSE 0 END) as total_ingresado,
         COUNT(DISTINCT CASE WHEN m.tipo_movimiento = 'salida' THEN m.id END) as num_movimientos_salida,
         COUNT(DISTINCT CASE WHEN m.tipo_movimiento = 'entrada' THEN m.id END) as num_movimientos_entrada
       FROM movimientos_insumos m
-      INNER JOIN insumos i ON m.insumo_id = i.id
+      INNER JOIN movimiento_insumo_detalle mid ON m.id = mid.movimiento_id
+      INNER JOIN insumos i ON mid.insumo_id = i.id
       INNER JOIN laboratorios l ON m.laboratorio_id = l.id
       WHERE 1=1
     `
@@ -152,11 +153,12 @@ export const getDashboardEjecutivo = async (req, res) => {
         COUNT(DISTINCT m.laboratorio_id) as total_laboratorios_activos,
         COUNT(DISTINCT i.categoria) as total_categorias,
         COUNT(DISTINCT i.id) as total_insumos_utilizados,
-        SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN m.cantidad ELSE 0 END) as total_consumo,
-        SUM(CASE WHEN m.tipo_movimiento = 'entrada' THEN m.cantidad ELSE 0 END) as total_ingresos,
+        SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN mid.cantidad ELSE 0 END) as total_consumo,
+        SUM(CASE WHEN m.tipo_movimiento = 'entrada' THEN mid.cantidad ELSE 0 END) as total_ingresos,
         COUNT(DISTINCT DATE(m.fecha_movimiento)) as dias_actividad
       FROM movimientos_insumos m
-      INNER JOIN insumos i ON m.insumo_id = i.id
+      INNER JOIN movimiento_insumo_detalle mid ON m.id = mid.movimiento_id
+      INNER JOIN insumos i ON mid.insumo_id = i.id
       INNER JOIN laboratorios l ON m.laboratorio_id = l.id
       WHERE 1=1
     `
@@ -167,11 +169,12 @@ export const getDashboardEjecutivo = async (req, res) => {
         l.id as laboratorio_id,
         l.nombre as laboratorio_nombre,
         l.escuela_id,
-        SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN m.cantidad ELSE 0 END) as total_consumido,
+        SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN mid.cantidad ELSE 0 END) as total_consumido,
         COUNT(DISTINCT i.id) as insumos_diferentes,
         COUNT(DISTINCT DATE(m.fecha_movimiento)) as dias_activo
       FROM movimientos_insumos m
-      INNER JOIN insumos i ON m.insumo_id = i.id
+      INNER JOIN movimiento_insumo_detalle mid ON m.id = mid.movimiento_id
+      INNER JOIN insumos i ON mid.insumo_id = i.id
       INNER JOIN laboratorios l ON m.laboratorio_id = l.id
       WHERE 1=1
     `
@@ -180,11 +183,12 @@ export const getDashboardEjecutivo = async (req, res) => {
     let consumoPorCategoriaQuery = `
       SELECT 
         i.categoria,
-        SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN m.cantidad ELSE 0 END) as total_consumido,
+        SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN mid.cantidad ELSE 0 END) as total_consumido,
         COUNT(DISTINCT i.id) as insumos_diferentes,
         COUNT(DISTINCT m.laboratorio_id) as laboratorios_usuarios
       FROM movimientos_insumos m
-      INNER JOIN insumos i ON m.insumo_id = i.id
+      INNER JOIN movimiento_insumo_detalle mid ON m.id = mid.movimiento_id
+      INNER JOIN insumos i ON mid.insumo_id = i.id
       INNER JOIN laboratorios l ON m.laboratorio_id = l.id
       WHERE 1=1
     `
@@ -193,11 +197,12 @@ export const getDashboardEjecutivo = async (req, res) => {
     let tendenciaMensualQuery = `
       SELECT 
         DATE_FORMAT(m.fecha_movimiento, '%Y-%m') as periodo,
-        SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN m.cantidad ELSE 0 END) as consumo_mes,
-        SUM(CASE WHEN m.tipo_movimiento = 'entrada' THEN m.cantidad ELSE 0 END) as ingreso_mes,
+        SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN mid.cantidad ELSE 0 END) as consumo_mes,
+        SUM(CASE WHEN m.tipo_movimiento = 'entrada' THEN mid.cantidad ELSE 0 END) as ingreso_mes,
         COUNT(DISTINCT m.laboratorio_id) as laboratorios_activos
       FROM movimientos_insumos m
-      INNER JOIN insumos i ON m.insumo_id = i.id
+      INNER JOIN movimiento_insumo_detalle mid ON m.id = mid.movimiento_id
+      INNER JOIN insumos i ON mid.insumo_id = i.id
       INNER JOIN laboratorios l ON m.laboratorio_id = l.id
       WHERE 1=1
     `
@@ -329,13 +334,14 @@ export const getTopInsumosConsumidos = async (req, res) => {
         i.nombre as insumo_nombre,
         i.categoria,
         i.unidad_medida,
-        SUM(m.cantidad) as total_consumido,
+        SUM(mid.cantidad) as total_consumido,
         COUNT(DISTINCT m.laboratorio_id) as laboratorios_usuarios,
         COUNT(DISTINCT DATE(m.fecha_movimiento)) as dias_consumo,
-        AVG(m.cantidad) as promedio_por_movimiento,
+        AVG(mid.cantidad) as promedio_por_movimiento,
         MAX(m.fecha_movimiento) as ultimo_consumo
       FROM movimientos_insumos m
-      INNER JOIN insumos i ON m.insumo_id = i.id
+      INNER JOIN movimiento_insumo_detalle mid ON m.id = mid.movimiento_id
+      INNER JOIN insumos i ON mid.insumo_id = i.id
       INNER JOIN laboratorios l ON m.laboratorio_id = l.id
       WHERE m.tipo_movimiento = 'salida'
     `
@@ -416,23 +422,24 @@ export const getAnalisisEficiencia = async (req, res) => {
         l.nombre as laboratorio_nombre,
         l.escuela_id,
         COUNT(DISTINCT i.id) as variedad_insumos,
-        SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN m.cantidad ELSE 0 END) as total_consumo,
-        SUM(CASE WHEN m.tipo_movimiento = 'entrada' THEN m.cantidad ELSE 0 END) as total_reabastecimiento,
+        SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN mid.cantidad ELSE 0 END) as total_consumo,
+        SUM(CASE WHEN m.tipo_movimiento = 'entrada' THEN mid.cantidad ELSE 0 END) as total_reabastecimiento,
         COUNT(DISTINCT DATE(m.fecha_movimiento)) as dias_actividad,
         COUNT(DISTINCT CASE WHEN m.tipo_movimiento = 'salida' THEN DATE(m.fecha_movimiento) END) as dias_consumo,
         ROUND(
-          SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN m.cantidad ELSE 0 END) / 
+          SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN mid.cantidad ELSE 0 END) / 
           NULLIF(COUNT(DISTINCT CASE WHEN m.tipo_movimiento = 'salida' THEN DATE(m.fecha_movimiento) END), 0),
           2
         ) as consumo_promedio_diario,
         ROUND(
-          SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN m.cantidad ELSE 0 END) / 
-          NULLIF(SUM(CASE WHEN m.tipo_movimiento = 'entrada' THEN m.cantidad ELSE 0 END), 0) * 100,
+          SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN mid.cantidad ELSE 0 END) / 
+          NULLIF(SUM(CASE WHEN m.tipo_movimiento = 'entrada' THEN mid.cantidad ELSE 0 END), 0) * 100,
           2
         ) as porcentaje_utilizacion
       FROM laboratorios l
       LEFT JOIN movimientos_insumos m ON l.id = m.laboratorio_id
-      LEFT JOIN insumos i ON m.insumo_id = i.id
+      LEFT JOIN movimiento_insumo_detalle mid ON m.id = mid.movimiento_id
+      LEFT JOIN insumos i ON mid.insumo_id = i.id
       WHERE 1=1
     `
 
