@@ -48,7 +48,7 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
     fecha_proximo_mantenimiento: '',
     comentarios: '',
     condicion: 'Bueno' as 'Excelente' | 'Bueno' | 'Regular' | 'Malo',
-    anio_adquisicion: ''
+    fecha_adquisicion: ''
   })
   
   const [inventarioInicial, setInventarioInicial] = useState<InventarioInicial[]>([])
@@ -109,7 +109,7 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
       fecha_proximo_mantenimiento: formatDateForInput(equipoData.fecha_proximo_mantenimiento),
       comentarios: equipoData.comentarios || '',
       condicion: equipoData.condicion || 'Bueno',
-      anio_adquisicion: equipoData.anio_adquisicion ? equipoData.anio_adquisicion.toString() : ''
+      fecha_adquisicion: formatDateForInput(equipoData.fecha_adquisicion)
     })
   }
 
@@ -125,7 +125,7 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
       fecha_proximo_mantenimiento: '',
       comentarios: '',
       condicion: 'Bueno',
-      anio_adquisicion: ''
+      fecha_adquisicion: ''
     })
     setInventarioInicial([])
     setError(null)
@@ -169,7 +169,7 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
         modelo: formData.modelo.trim(),
         numero_serie: formData.numero_serie.trim(),
         comentarios: formData.comentarios.trim(),
-        anio_adquisicion: formData.anio_adquisicion && formData.anio_adquisicion.trim() ? parseInt(formData.anio_adquisicion) : null,
+        fecha_adquisicion: formData.fecha_adquisicion && formData.fecha_adquisicion.trim() ? formData.fecha_adquisicion : null,
         inventario_inicial: isEditing ? undefined : inventarioInicial.filter(inv => inv.laboratorio_id > 0 && inv.cantidad_total > 0)
       }
 
@@ -372,17 +372,12 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
 
                   <TextField
                     fullWidth
-                    type="number"
+                    type="date"
                     label="Fecha de adquisición"
-                    value={formData.anio_adquisicion}
-                    onChange={(e) => setFormData(prev => ({ ...prev, anio_adquisicion: e.target.value }))}
-                    placeholder="Ej: 2023"
+                    value={formData.fecha_adquisicion}
+                    onChange={(e) => setFormData(prev => ({ ...prev, fecha_adquisicion: e.target.value }))}
                     disabled={loading}
-                    inputProps={{ 
-                      min: 1900, 
-                      max: new Date().getFullYear() + 1,
-                      step: 1 
-                    }}
+                    InputLabelProps={{ shrink: true }}
                   />
                 </Box>
 

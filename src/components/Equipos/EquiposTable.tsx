@@ -327,7 +327,7 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
               <TableCell sx={{ fontWeight: 600, width: '8%' }}>N° Serie</TableCell>
               <TableCell sx={{ fontWeight: 600, width: '7%' }}>Estado</TableCell>
               <TableCell sx={{ fontWeight: 600, width: '7%' }}>Condición</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '6%' }}>Año Adq.</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '10%' }}>Fecha Adq.</TableCell>
               <TableCell sx={{ fontWeight: 600, width: '8%' }}>Último Mant.</TableCell>
               <TableCell sx={{ fontWeight: 600, width: '8%' }}>Próximo Mant.</TableCell>
               {vistaSimple ? (
@@ -425,9 +425,19 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
                     />
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                      {equipo.anio_adquisicion || 'N/A'}
-                    </Typography>
+                    {equipo.fecha_adquisicion ? (
+                      <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                        {new Date(equipo.fecha_adquisicion).toLocaleDateString('es-ES', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric'
+                        })}
+                      </Typography>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        N/A
+                      </Typography>
+                    )}
                   </TableCell>
                   <TableCell>
                     {equipo.fecha_ultimo_mantenimiento ? (

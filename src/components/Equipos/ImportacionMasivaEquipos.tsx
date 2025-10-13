@@ -61,7 +61,7 @@ interface PreviewDataEquipo {
   fecha_proximo_mantenimiento: string
   comentarios: string
   condicion: string
-  anio_adquisicion: string
+  fecha_adquisicion: string
   inventario_labs: { [key: string]: number }
   errores: string[]
 }
@@ -439,7 +439,7 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
                       <TableCell>Serie</TableCell>
                       <TableCell>Estado</TableCell>
                       <TableCell>Condición</TableCell>
-                      <TableCell>Año</TableCell>
+                      <TableCell>Fecha Adq.</TableCell>
                       <TableCell>Inventario</TableCell>
                       <TableCell>Estado</TableCell>
                     </TableRow>
@@ -490,7 +490,13 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
                           />
                         </TableCell>
                         <TableCell>
-                          {item.anio_adquisicion || 'N/A'}
+                          {item.fecha_adquisicion ? (
+                            new Date(item.fecha_adquisicion).toLocaleDateString('es-ES', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric'
+                            })
+                          ) : 'N/A'}
                         </TableCell>
                         <TableCell>
                           <Box>

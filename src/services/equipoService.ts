@@ -17,7 +17,7 @@ export interface Equipo {
   inventario_por_laboratorio?: string
   comentarios?: string
   condicion?: 'Excelente' | 'Bueno' | 'Regular' | 'Malo'
-  anio_adquisicion?: number
+  fecha_adquisicion?: string
   // Campos adicionales para vista simple
   total_movimientos?: number
   laboratorios_asignados?: number
@@ -117,7 +117,7 @@ class EquipoService {
     fecha_proximo_mantenimiento?: string
     comentarios?: string
     condicion?: string
-    anio_adquisicion?: number | null
+    fecha_adquisicion?: string | null
     inventario_inicial?: Array<{
       laboratorio_id: number
       cantidad_total: number
@@ -154,7 +154,7 @@ class EquipoService {
     fecha_proximo_mantenimiento?: string
     comentarios?: string
     condicion?: string
-    anio_adquisicion?: number | null
+    fecha_adquisicion?: string | null
   }): Promise<{ success: boolean; message: string; data: any }> {
     try {
       const response = await api.put(`/equipos/${id}`, equipoData)
@@ -258,7 +258,7 @@ class EquipoService {
       fecha_proximo_mantenimiento: string
       comentarios: string
       condicion: string
-      anio_adquisicion: string
+      fecha_adquisicion: string
       inventario_labs: { [key: string]: number }
       errores: string[]
     }>

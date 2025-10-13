@@ -46,7 +46,7 @@ export const getEquipos = async (req, res) => {
           FROM equipos e
           LEFT JOIN inventario_equipos ie ON e.id = ie.equipo_id
           LEFT JOIN laboratorios l ON ie.laboratorio_id = l.id
-          GROUP BY e.id, e.codigo, e.nombre, e.descripcion, e.marca, e.modelo, e.numero_serie, e.estado, e.fecha_ultimo_mantenimiento, e.fecha_proximo_mantenimiento, e.comentarios, e.condicion, e.anio_adquisicion
+          GROUP BY e.id, e.codigo, e.nombre, e.descripcion, e.marca, e.modelo, e.numero_serie, e.estado, e.fecha_ultimo_mantenimiento, e.fecha_proximo_mantenimiento, e.comentarios, e.condicion, e.fecha_adquisicion
           ORDER BY e.codigo, e.nombre
         `)
         equipos = rows
@@ -90,7 +90,7 @@ export const getEquiposSimple = async (req, res) => {
         e.fecha_proximo_mantenimiento,
         e.comentarios,
         e.condicion,
-        e.anio_adquisicion,
+        e.fecha_adquisicion,
         (SELECT COUNT(*) FROM movimientos_equipos me WHERE me.equipo_id = e.id) as total_movimientos,
         (SELECT COUNT(*) FROM inventario_equipos ie WHERE ie.equipo_id = e.id) as laboratorios_asignados,
         (SELECT GROUP_CONCAT(l.nombre SEPARATOR ', ') 
@@ -165,7 +165,7 @@ export const createEquipo = async (req, res) => {
       fecha_proximo_mantenimiento,
       comentarios,
       condicion = 'Bueno',
-      anio_adquisicion,
+      fecha_adquisicion,
       inventario_inicial = []
     } = req.body
     
@@ -200,9 +200,9 @@ export const createEquipo = async (req, res) => {
     
     // Crear el equipo
     const [equipoResult] = await connection.execute(`
-      INSERT INTO equipos (codigo, nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios, condicion, anio_adquisicion) 
+      INSERT INTO equipos (codigo, nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios, condicion, fecha_adquisicion) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [codigo, nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios, condicion, anio_adquisicion || null])
+    `, [codigo, nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios, condicion, fecha_adquisicion || null])
     
     const equipo_id = equipoResult.insertId
     console.log('✅ Equipo creado con ID:', equipo_id)
@@ -271,7 +271,7 @@ export const updateEquipo = async (req, res) => {
   try {
     const { id } = req.params
     const equipoId = parseInt(id, 10)
-    const { nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios, condicion, anio_adquisicion } = req.body
+    const { nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios, condicion, fecha_adquisicion } = req.body
     
     console.log('🔄 Actualizando equipo:', { id, equipoId, nombre, marca, modelo })
     
@@ -307,9 +307,9 @@ export const updateEquipo = async (req, res) => {
     // Actualizar equipo
     await pool.execute(`
       UPDATE equipos 
-      SET nombre = ?, descripcion = ?, marca = ?, modelo = ?, numero_serie = ?, estado = ?, fecha_ultimo_mantenimiento = ?, fecha_proximo_mantenimiento = ?, comentarios = ?, condicion = ?, anio_adquisicion = ?
+      SET nombre = ?, descripcion = ?, marca = ?, modelo = ?, numero_serie = ?, estado = ?, fecha_ultimo_mantenimiento = ?, fecha_proximo_mantenimiento = ?, comentarios = ?, condicion = ?, fecha_adquisicion = ?
       WHERE id = ?
-    `, [nombre.trim(), descripcion?.trim() || '', marca?.trim() || '', modelo?.trim() || '', numero_serie?.trim() || '', estado || 'Operativo', fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios?.trim() || '', condicion || 'Bueno', anio_adquisicion || null, equipoId])
+    `, [nombre.trim(), descripcion?.trim() || '', marca?.trim() || '', modelo?.trim() || '', numero_serie?.trim() || '', estado || 'Operativo', fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios?.trim() || '', condicion || 'Bueno', fecha_adquisicion || null, equipoId])
     
     console.log('✅ Equipo actualizado exitosamente:', equipoId)
     
@@ -634,7 +634,7 @@ export const generarPlantillaImportacionEquipos = async (req, res) => {
         'FECHA_PROXIMO_MANTENIMIENTO',
         'COMENTARIOS',
         'CONDICION',
-        'ANIO_ADQUISICION',
+        'FECHA_ADQUISICION',
         'INVENTARIO_LAB_1',
         'INVENTARIO_LAB_2',
         'INVENTARIO_LAB_3'
@@ -728,7 +728,7 @@ export const generarPlantillaImportacionEquipos = async (req, res) => {
       ['• FECHA_PROXIMO_MANTENIMIENTO: Formato YYYY-MM-DD'],
       ['• COMENTARIOS: Observaciones adicionales'],
       ['• CONDICION: Excelente | Bueno | Regular | Malo (por defecto: Bueno)'],
-      ['• ANIO_ADQUISICION: Año de compra (formato YYYY)'],
+      ['• FECHA_ADQUISICION: Fecha de compra (formato YYYY-MM-DD)'],
       ['• INVENTARIO_LAB_X: Cantidad total por laboratorio (números enteros)'],
       [''],
       ['LABORATORIOS DISPONIBLES:'],
@@ -741,7 +741,7 @@ export const generarPlantillaImportacionEquipos = async (req, res) => {
       ['• El inventario por laboratorio es opcional (0 por defecto)'],
       ['• Los estados deben ser: Operativo, En Mantenimiento o Fuera de Servicio'],
       ['• Las condiciones deben ser: Excelente, Bueno, Regular o Malo'],
-      ['• El año de adquisición debe ser un año válido (ej: 2024)'],
+      ['• La fecha de adquisición debe estar en formato YYYY-MM-DD'],
       ['• Los números de serie deben ser únicos'],
       ['• Elimine esta hoja antes de importar el archivo']
     ]
@@ -858,16 +858,16 @@ export const previsualizarImportacionMasivaEquipos = async (req, res) => {
         }
       }
       
-      // Validar año de adquisición
-      let anio_adquisicion = ''
-      if (row.ANIO_ADQUISICION) {
-        const anioStr = row.ANIO_ADQUISICION.toString().trim()
-        if (anioStr) {
-          const anio = parseInt(anioStr)
-          if (isNaN(anio) || anio < 1900 || anio > new Date().getFullYear() + 1) {
-            erroresFila.push(`Año de adquisición inválido (debe ser entre 1900 y ${new Date().getFullYear() + 1})`)
+      // Validar fecha de adquisición
+      let fecha_adquisicion = ''
+      if (row.FECHA_ADQUISICION) {
+        const fechaStr = row.FECHA_ADQUISICION.toString().trim()
+        if (fechaStr) {
+          const fecha = new Date(fechaStr)
+          if (!isNaN(fecha.getTime())) {
+            fecha_adquisicion = fecha.toISOString().split('T')[0]
           } else {
-            anio_adquisicion = anioStr
+            erroresFila.push('Fecha de adquisición inválida (use formato YYYY-MM-DD)')
           }
         }
       }
@@ -911,7 +911,7 @@ export const previsualizarImportacionMasivaEquipos = async (req, res) => {
         fecha_proximo_mantenimiento,
         comentarios,
         condicion,
-        anio_adquisicion,
+        fecha_adquisicion,
         inventario_labs,
         errores: erroresFila
       })
@@ -1027,17 +1027,18 @@ export const importacionMasivaEquipos = async (req, res) => {
           }
         }
         
-        // Validar año de adquisición
-        let anio_adquisicion = null
-        if (row.ANIO_ADQUISICION) {
-          const anioStr = row.ANIO_ADQUISICION.toString().trim()
-          if (anioStr) {
-            const anio = parseInt(anioStr)
-            if (isNaN(anio) || anio < 1900 || anio > new Date().getFullYear() + 1) {
-              errores.push(`Fila ${rowNum}: Año de adquisición inválido (debe ser entre 1900 y ${new Date().getFullYear() + 1})`)
+        // Validar fecha de adquisición
+        let fecha_adquisicion = null
+        if (row.FECHA_ADQUISICION) {
+          const fechaStr = row.FECHA_ADQUISICION.toString().trim()
+          if (fechaStr) {
+            const fecha = new Date(fechaStr)
+            if (!isNaN(fecha.getTime())) {
+              fecha_adquisicion = fecha.toISOString().split('T')[0]
+            } else {
+              errores.push(`Fila ${rowNum}: Fecha de adquisición inválida (use formato YYYY-MM-DD)`)
               continue
             }
-            anio_adquisicion = anio
           }
         }
         
@@ -1082,9 +1083,9 @@ export const importacionMasivaEquipos = async (req, res) => {
         
         // Crear el equipo
         const [equipoResult] = await connection.execute(`
-          INSERT INTO equipos (codigo, nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios, condicion, anio_adquisicion) 
+          INSERT INTO equipos (codigo, nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios, condicion, fecha_adquisicion) 
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [codigo, nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios, condicion, anio_adquisicion])
+        `, [codigo, nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios, condicion, fecha_adquisicion])
         
         const equipo_id = equipoResult.insertId
         
