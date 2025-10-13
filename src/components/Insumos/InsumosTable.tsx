@@ -148,18 +148,6 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
     }
   }
 
-  // Función para obtener el color de la condición
-  const getCondicionColor = (condicion: string) => {
-    switch (condicion) {
-      case 'Excelente': return 'success'
-      case 'Bueno': return 'info'
-      case 'Regular': return 'warning'
-      case 'Malo': return 'error'
-      default: return 'info'
-    }
-  }
-
-
   // Función para limpiar búsqueda
   const handleClearSearch = () => {
     setSearchTerm('')
@@ -329,9 +317,6 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
               <TableCell sx={{ fontWeight: 600 }}>Categoría</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Unidad</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Presentación</TableCell>
-              {!vistaAgrupada && (
-                <TableCell sx={{ fontWeight: 600 }}>Condición</TableCell>
-              )}
               {!vistaAgrupada ? (
                 <>
                   <TableCell sx={{ fontWeight: 600 }}>Lote</TableCell>
@@ -345,16 +330,13 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
                   <TableCell sx={{ fontWeight: 600 }}>Stock Total</TableCell>
                 </>
               )}
-              {!vistaAgrupada && (
-                <TableCell sx={{ fontWeight: 600 }}>Observación</TableCell>
-              )}
               <TableCell sx={{ fontWeight: 600 }} align="center">Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredInsumos.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={vistaAgrupada ? 8 : 12} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={vistaAgrupada ? 8 : 10} align="center" sx={{ py: 4 }}>
                   <Box sx={{ textAlign: 'center' }}>
                     <Inventory sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
                     <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -509,40 +491,10 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
                           {insumo.presentacion || 'N/A'}
                         </Typography>
                       </TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={insumo.condicion || 'Bueno'}
-                          color={getCondicionColor(insumo.condicion || 'Bueno')}
-                          variant="outlined"
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell colSpan={3} align="center">
+                      <TableCell colSpan={4} align="center">
                         <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                           Sin lotes registrados
                         </Typography>
-                      </TableCell>
-                      <TableCell>
-                        {insumo.observacion ? (
-                          <Tooltip title={insumo.observacion}>
-                            <Typography 
-                              variant="body2" 
-                              sx={{ 
-                                maxWidth: 150,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                                cursor: 'help'
-                              }}
-                            >
-                              {insumo.observacion}
-                            </Typography>
-                          </Tooltip>
-                        ) : (
-                          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                            Sin observaciones
-                          </Typography>
-                        )}
                       </TableCell>
                       <TableCell align="center">
                         <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
@@ -634,14 +586,6 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Chip 
-                          label={insumo.condicion || 'Bueno'}
-                          color={getCondicionColor(insumo.condicion || 'Bueno')}
-                          variant="outlined"
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
                         <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace' }}>
                           {lote.lote || 'SIN-LOTE'}
                         </Typography>
@@ -691,28 +635,6 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
                         ) : (
                           <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                             Sin fecha
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {insumo.observacion ? (
-                          <Tooltip title={insumo.observacion}>
-                            <Typography 
-                              variant="body2" 
-                              sx={{ 
-                                maxWidth: 150,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                                cursor: 'help'
-                              }}
-                            >
-                              {insumo.observacion}
-                            </Typography>
-                          </Tooltip>
-                        ) : (
-                          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                            -
                           </Typography>
                         )}
                       </TableCell>

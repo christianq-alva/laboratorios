@@ -137,21 +137,6 @@ export const CatalogoInsumosModal: React.FC<CatalogoInsumosModalProps> = ({
     }
   }
 
-  const getCondicionColor = (condicion: string) => {
-    switch (condicion?.toLowerCase()) {
-      case 'excelente':
-        return 'success'
-      case 'bueno':
-        return 'info'
-      case 'regular':
-        return 'warning'
-      case 'malo':
-        return 'error'
-      default:
-        return 'default'
-    }
-  }
-
   return (
     <Dialog
       open={open}
@@ -290,7 +275,6 @@ export const CatalogoInsumosModal: React.FC<CatalogoInsumosModalProps> = ({
                   <TableCell sx={{ fontWeight: 600, backgroundColor: '#f5f5f5' }}>Categoría</TableCell>
                   <TableCell sx={{ fontWeight: 600, backgroundColor: '#f5f5f5' }}>Unidad</TableCell>
                   <TableCell sx={{ fontWeight: 600, backgroundColor: '#f5f5f5' }}>Presentación</TableCell>
-                  <TableCell sx={{ fontWeight: 600, backgroundColor: '#f5f5f5' }}>Condición</TableCell>
                   <TableCell sx={{ fontWeight: 600, backgroundColor: '#f5f5f5' }}>Descripción</TableCell>
                   <TableCell sx={{ fontWeight: 600, backgroundColor: '#f5f5f5', width: 100 }}>Acciones</TableCell>
                 </TableRow>
@@ -333,14 +317,6 @@ export const CatalogoInsumosModal: React.FC<CatalogoInsumosModalProps> = ({
                       <Typography variant="body2" color="text.secondary">
                         {insumo.presentacion || '-'}
                       </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={insumo.condicion || 'Bueno'}
-                        size="small"
-                        color={getCondicionColor(insumo.condicion || 'Bueno')}
-                        variant="outlined"
-                      />
                     </TableCell>
                     <TableCell>
                       <Tooltip title={insumo.descripcion || ''} placement="top">

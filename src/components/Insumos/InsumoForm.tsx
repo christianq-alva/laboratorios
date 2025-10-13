@@ -38,9 +38,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
     descripcion: '',
     unidad_medida: '',
     categoria: 'Materiales' as 'Reactivos' | 'Materiales' | 'Material_Biologico',
-    presentacion: '',
-    condicion: 'Bueno' as 'Excelente' | 'Bueno' | 'Regular' | 'Malo',
-    observacion: ''
+    presentacion: ''
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -54,9 +52,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
           descripcion: insumo.descripcion || '',
           unidad_medida: insumo.unidad_medida,
           categoria: insumo.categoria || 'Materiales',
-          presentacion: insumo.presentacion || '',
-          condicion: insumo.condicion || 'Bueno',
-          observacion: insumo.observacion || ''
+          presentacion: insumo.presentacion || ''
         })
       } else {
         setFormData({
@@ -64,9 +60,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
           descripcion: '',
           unidad_medida: '',
           categoria: 'Materiales',
-          presentacion: '',
-          condicion: 'Bueno',
-          observacion: ''
+          presentacion: ''
         })
       }
       setError(null)
@@ -107,9 +101,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
         descripcion: formData.descripcion.trim(),
         unidad_medida: formData.unidad_medida.trim(),
         categoria: formData.categoria,
-        presentacion: formData.presentacion.trim(),
-        condicion: formData.condicion,
-        observacion: formData.observacion.trim()
+        presentacion: formData.presentacion.trim()
       }
 
       if (insumo) {
@@ -258,31 +250,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
                 placeholder="ej: Frasco 500ml, Caja x 100 unidades"
                 sx={{ minWidth: 250, flex: 1 }}
               />
-              
-              <FormControl sx={{ minWidth: 200 }}>
-                <InputLabel>Condición</InputLabel>
-                <Select
-                  value={formData.condicion}
-                  label="Condición"
-                  onChange={(e) => handleInputChange('condicion', e.target.value)}
-                >
-                  <MenuItem value="Excelente">Excelente</MenuItem>
-                  <MenuItem value="Bueno">Bueno</MenuItem>
-                  <MenuItem value="Regular">Regular</MenuItem>
-                  <MenuItem value="Malo">Malo</MenuItem>
-                </Select>
-              </FormControl>
             </Box>
-
-            <TextField
-              fullWidth
-              label="Observaciones"
-              value={formData.observacion}
-              onChange={(e) => handleInputChange('observacion', e.target.value)}
-              multiline
-              rows={2}
-              placeholder="Observaciones adicionales sobre el insumo..."
-            />
           </Box>
         </Box>
       </DialogContent>

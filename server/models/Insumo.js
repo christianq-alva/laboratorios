@@ -14,8 +14,6 @@ export const Insumo = {
         i.unidad_medida,
         i.categoria,
         i.presentacion,
-        i.condicion,
-        i.observacion,
         COALESCE(inv.cantidad, 0) as stock_disponible
       FROM insumos i
       LEFT JOIN inventario_insumos inv ON i.id = inv.insumo_id AND inv.laboratorio_id = ?

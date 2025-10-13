@@ -47,7 +47,7 @@ export const getInsumos = async (req, res) => {
           FROM insumos i
           LEFT JOIN inventario_insumos inv ON i.id = inv.insumo_id
           LEFT JOIN laboratorios l ON inv.laboratorio_id = l.id
-          GROUP BY i.id, i.codigo, i.nombre, i.descripcion, i.unidad_medida, i.categoria, i.presentacion, i.condicion, i.observacion
+          GROUP BY i.id, i.codigo, i.nombre, i.descripcion, i.unidad_medida, i.categoria, i.presentacion
           ORDER BY i.categoria, i.codigo, i.nombre
         `)
         
@@ -107,9 +107,7 @@ export const createInsumo = async (req, res) => {
         descripcion, 
         unidad_medida,
         categoria = 'Materiales',
-        presentacion,
-        condicion = 'Bueno',
-        observacion
+        presentacion
       } = req.body
       
       console.log('🔍 Creando insumo maestro:', req.body)
@@ -151,17 +149,15 @@ export const createInsumo = async (req, res) => {
       
       // Crear el insumo maestro (solo catálogo, sin stock)
       const [insumoResult] = await pool.execute(`
-        INSERT INTO insumos (codigo, nombre, descripcion, unidad_medida, categoria, presentacion, condicion, observacion) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO insumos (codigo, nombre, descripcion, unidad_medida, categoria, presentacion) 
+        VALUES (?, ?, ?, ?, ?, ?)
       `, [
         codigo, 
         nombre, 
         descripcion || '', 
         unidad_medida, 
         categoria, 
-        presentacion || '', 
-        condicion, 
-        observacion || ''
+        presentacion || ''
       ])
       
       const insumo_id = insumoResult.insertId
@@ -944,13 +940,11 @@ export const generarPlantillaImportacion = async (req, res) => {
     const plantillaData = [
       [
         'NOMBRE',
-        'DESCRIPCION', 
+        'DESCRIPCION',
         'UNIDAD_MEDIDA',
         'CATEGORIA',
         'PRESENTACION',
-        'CONDICION',
         'FECHA_VENCIMIENTO',
-        'OBSERVACION',
         'STOCK_LAB_1',
         'STOCK_LAB_2',
         'STOCK_LAB_3'
@@ -961,9 +955,7 @@ export const generarPlantillaImportacion = async (req, res) => {
         'Litros',
         'Reactivos',
         'Frasco 1L',
-        'Bueno',
         '2025-12-31',
-        'Mantener en lugar fresco y seco',
         '10',
         '5',
         '0'
@@ -974,9 +966,7 @@ export const generarPlantillaImportacion = async (req, res) => {
         'Unidades',
         'Materiales',
         'Caja x 100 unidades',
-        'Excelente',
         '',
-        'Verificar fecha de vencimiento',
         '200',
         '150',
         '100'
@@ -987,9 +977,7 @@ export const generarPlantillaImportacion = async (req, res) => {
         'Placas',
         'Material_Biologico',
         'Placa Petri',
-        'Bueno',
         '2025-06-30',
-        'Mantener refrigerado a 4°C',
         '5',
         '3',
         '2'
@@ -1005,9 +993,7 @@ export const generarPlantillaImportacion = async (req, res) => {
       { width: 15 }, // UNIDAD_MEDIDA
       { width: 18 }, // CATEGORIA
       { width: 20 }, // PRESENTACION
-      { width: 12 }, // CONDICION
       { width: 18 }, // FECHA_VENCIMIENTO
-      { width: 30 }, // OBSERVACION
       { width: 12 }, // STOCK_LAB_1
       { width: 12 }, // STOCK_LAB_2
       { width: 12 }  // STOCK_LAB_3
@@ -1027,9 +1013,7 @@ export const generarPlantillaImportacion = async (req, res) => {
       ['• DESCRIPCION: Descripción detallada del insumo'],
       ['• CATEGORIA: Reactivos | Materiales | Material_Biologico (por defecto: Materiales)'],
       ['• PRESENTACION: Formato de presentación (ej: Frasco 500ml, Caja x 100)'],
-      ['• CONDICION: Excelente | Bueno | Regular | Malo (por defecto: Bueno)'],
       ['• FECHA_VENCIMIENTO: Formato YYYY-MM-DD (ej: 2025-12-31)'],
-      ['• OBSERVACION: Observaciones adicionales'],
       ['• STOCK_LAB_X: Stock inicial por laboratorio (números enteros)'],
       [''],
       ['LABORATORIOS DISPONIBLES:'],
@@ -1041,7 +1025,6 @@ export const generarPlantillaImportacion = async (req, res) => {
       ['• Las fechas deben estar en formato YYYY-MM-DD'],
       ['• El stock por laboratorio es opcional (0 por defecto)'],
       ['• Las categorías deben ser exactamente: Reactivos, Materiales o Material_Biologico'],
-      ['• Las condiciones deben ser: Excelente, Bueno, Regular o Malo'],
       ['• Elimine esta hoja antes de importar el archivo']
     ]
     
@@ -1120,8 +1103,6 @@ export const previsualizarImportacionMasiva = async (req, res) => {
       const unidad_medida = row.UNIDAD_MEDIDA ? row.UNIDAD_MEDIDA.toString().trim() : ''
       const categoria = row.CATEGORIA ? row.CATEGORIA.toString().trim() : 'Materiales'
       const presentacion = row.PRESENTACION ? row.PRESENTACION.toString().trim() : ''
-      const condicion = row.CONDICION ? row.CONDICION.toString().trim() : 'Bueno'
-      const observacion = row.OBSERVACION ? row.OBSERVACION.toString().trim() : ''
       
       // Validar campos obligatorios
       if (!nombre) {
@@ -1151,12 +1132,6 @@ export const previsualizarImportacionMasiva = async (req, res) => {
         erroresFila.push(`Categoría inválida. Debe ser: ${categoriasValidas.join(', ')}`)
       }
       
-      // Validar condición
-      const condicionesValidas = ['Excelente', 'Bueno', 'Regular', 'Malo']
-      if (!condicionesValidas.includes(condicion)) {
-        erroresFila.push(`Condición inválida. Debe ser: ${condicionesValidas.join(', ')}`)
-      }
-      
       // Procesar stock por laboratorio
       const stock_labs = {}
       for (let labId = 1; labId <= laboratorios.length; labId++) {
@@ -1179,9 +1154,7 @@ export const previsualizarImportacionMasiva = async (req, res) => {
         unidad_medida,
         categoria,
         presentacion,
-        condicion,
         fecha_vencimiento,
-        observacion,
         stock_labs,
         errores: erroresFila
       })
@@ -1263,8 +1236,6 @@ export const importacionMasiva = async (req, res) => {
         const unidad_medida = row.UNIDAD_MEDIDA.toString().trim()
         const categoria = row.CATEGORIA ? row.CATEGORIA.toString().trim() : 'Materiales'
         const presentacion = row.PRESENTACION ? row.PRESENTACION.toString().trim() : ''
-        const condicion = row.CONDICION ? row.CONDICION.toString().trim() : 'Bueno'
-        const observacion = row.OBSERVACION ? row.OBSERVACION.toString().trim() : ''
         
         // Validar fecha de vencimiento
         let fecha_vencimiento = null
@@ -1286,13 +1257,6 @@ export const importacionMasiva = async (req, res) => {
         const categoriasValidas = ['Reactivos', 'Materiales', 'Material_Biologico']
         if (!categoriasValidas.includes(categoria)) {
           errores.push(`Fila ${rowNum}: Categoría inválida. Debe ser: ${categoriasValidas.join(', ')}`)
-          continue
-        }
-        
-        // Validar condición
-        const condicionesValidas = ['Excelente', 'Bueno', 'Regular', 'Malo']
-        if (!condicionesValidas.includes(condicion)) {
-          errores.push(`Fila ${rowNum}: Condición inválida. Debe ser: ${condicionesValidas.join(', ')}`)
           continue
         }
         
@@ -1323,9 +1287,9 @@ export const importacionMasiva = async (req, res) => {
         
         // Crear el insumo (fecha_vencimiento ahora se maneja en movimiento_insumo_detalle)
         const [insumoResult] = await connection.execute(`
-          INSERT INTO insumos (codigo, nombre, descripcion, unidad_medida, categoria, presentacion, condicion, observacion) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `, [codigo, nombre, descripcion, unidad_medida, categoria, presentacion, condicion, observacion])
+          INSERT INTO insumos (codigo, nombre, descripcion, unidad_medida, categoria, presentacion) 
+          VALUES (?, ?, ?, ?, ?, ?)
+        `, [codigo, nombre, descripcion, unidad_medida, categoria, presentacion])
         
         const insumo_id = insumoResult.insertId
         
@@ -1421,14 +1385,13 @@ export const updateInsumo = async (req, res) => {
   try {
     const { id } = req.params
     const insumoId = parseInt(id, 10) // Convertir a número entero
-    const { nombre, descripcion, unidad_medida, categoria, presentacion, condicion, observacion } = req.body
+    const { nombre, descripcion, unidad_medida, categoria, presentacion } = req.body
     
     // Limpiar espacios en blanco
     const nombreLimpio = nombre?.trim()
     const descripcionLimpia = descripcion?.trim()
     const unidadLimpia = unidad_medida?.trim()
     const presentacionLimpia = presentacion?.trim()
-    const observacionLimpia = observacion?.trim()
     
     console.log('🔄 Actualizando insumo:', { id, insumoId, nombre: nombreLimpio, descripcion: descripcionLimpia, unidad_medida: unidadLimpia })
     
@@ -1467,9 +1430,9 @@ export const updateInsumo = async (req, res) => {
     // Actualizar insumo (fecha_vencimiento ahora se maneja en movimiento_insumo_detalle)
     await pool.execute(`
       UPDATE insumos 
-      SET nombre = ?, descripcion = ?, unidad_medida = ?, categoria = ?, presentacion = ?, condicion = ?, observacion = ?
+      SET nombre = ?, descripcion = ?, unidad_medida = ?, categoria = ?, presentacion = ?
       WHERE id = ?
-    `, [nombreLimpio, descripcionLimpia || '', unidadLimpia, categoria || 'Materiales', presentacionLimpia || '', condicion || 'Bueno', observacionLimpia || '', insumoId])
+    `, [nombreLimpio, descripcionLimpia || '', unidadLimpia, categoria || 'Materiales', presentacionLimpia || '', insumoId])
     
     console.log('✅ Insumo actualizado exitosamente:', insumoId)
     
