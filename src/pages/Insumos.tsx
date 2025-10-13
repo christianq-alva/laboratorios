@@ -13,13 +13,14 @@ import {
   DialogActions,
   CircularProgress
 } from '@mui/material'
-import { Add, Warning, History, TrendingUp, CloudUpload, FileUpload } from '@mui/icons-material'
+import { Warning, History, TrendingUp, CloudUpload, FileUpload, LibraryBooks } from '@mui/icons-material'
 import { InsumosTable } from '../components/Insumos/InsumosTable'
 import { InsumoForm } from '../components/Insumos/InsumoForm'
 import { ActividadInsumos } from '../components/Insumos/ActividadInsumos'
 import { ReabastecimientoModal } from '../components/Insumos/ReabastecimientoModal'
 import { CargaMasivaModal } from '../components/Insumos/CargaMasivaModal'
 import { ImportacionMasiva } from '../components/Insumos/ImportacionMasiva'
+import { CatalogoInsumosModal } from '../components/Insumos/CatalogoInsumosModal'
 import { insumoService, type Insumo } from '../services/insumoService'
 
 export const Insumos: React.FC = () => {
@@ -33,6 +34,7 @@ export const Insumos: React.FC = () => {
   const [reabastecimientoOpen, setReabastecimientoOpen] = useState(false)
   const [cargaMasivaOpen, setCargaMasivaOpen] = useState(false)
   const [importacionMasivaOpen, setImportacionMasivaOpen] = useState(false)
+  const [catalogoOpen, setCatalogoOpen] = useState(false)
   
   // Estados para notificaciones
   const [snackbar, setSnackbar] = useState({
@@ -215,6 +217,16 @@ export const Insumos: React.FC = () => {
     })
   }
 
+  // Función para abrir catálogo
+  const handleCatalogoOpen = () => {
+    setCatalogoOpen(true)
+  }
+
+  // Función para cerrar catálogo
+  const handleCatalogoClose = () => {
+    setCatalogoOpen(false)
+  }
+
   return (
     <Box>
       {/* Encabezado */}
@@ -228,6 +240,16 @@ export const Insumos: React.FC = () => {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<LibraryBooks />}
+            onClick={handleCatalogoOpen}
+            sx={{ borderRadius: 2, px: 3 }}
+            color="primary"
+          >
+            Catálogo
+          </Button>
+
           <Button
             variant="outlined"
             startIcon={<History />}
@@ -265,15 +287,6 @@ export const Insumos: React.FC = () => {
             color="secondary"
           >
             Importar Excel
-          </Button>
-          
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={handleNewInsumo}
-            sx={{ borderRadius: 2, px: 3 }}
-          >
-            Nuevo Insumo
           </Button>
         </Box>
       </Box>
@@ -365,6 +378,15 @@ export const Insumos: React.FC = () => {
         open={importacionMasivaOpen}
         onClose={handleImportacionMasivaClose}
         onSuccess={handleImportacionMasivaSuccess}
+      />
+
+      {/* Modal de catálogo de insumos */}
+      <CatalogoInsumosModal
+        open={catalogoOpen}
+        onClose={handleCatalogoClose}
+        onNewInsumo={handleNewInsumo}
+        onEditInsumo={handleEditInsumo}
+        refresh={refresh}
       />
 
       {/* Snackbar para notificaciones */}

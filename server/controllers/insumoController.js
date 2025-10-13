@@ -40,16 +40,50 @@ export const getInsumos = async (req, res) => {
           insumos = [...insumos, ...insumosLab]
         }
       } else if (req.user.rol === 'Administrador') {
-        // Todos los insumos con información de stock
+        // Todos los insumos con información de stock por laboratorio y detalles de lotes
         const [rows] = await pool.execute(`
           SELECT i.*, 
                  GROUP_CONCAT(CONCAT(l.nombre, ':', COALESCE(inv.cantidad, 0)) SEPARATOR '; ') as stock_por_laboratorio
           FROM insumos i
           LEFT JOIN inventario_insumos inv ON i.id = inv.insumo_id
           LEFT JOIN laboratorios l ON inv.laboratorio_id = l.id
-          GROUP BY i.id, i.codigo, i.nombre, i.descripcion, i.unidad_medida, i.categoria, i.presentacion, i.condicion, i.fecha_vencimiento, i.observacion
+          GROUP BY i.id, i.codigo, i.nombre, i.descripcion, i.unidad_medida, i.categoria, i.presentacion, i.condicion, i.observacion
           ORDER BY i.categoria, i.codigo, i.nombre
         `)
+        
+        // Para cada insumo, obtener información detallada de lotes (todos los registros individuales)
+        for (let insumo of rows) {
+          const [lotes] = await pool.execute(`
+            SELECT 
+              mid.id as detalle_id,
+              COALESCE(mid.lote, 'SIN-LOTE') as lote,
+              mid.cantidad,
+              mid.fecha_vencimiento,
+              m.fecha_ingreso,
+              m.fecha_movimiento,
+              l.nombre as laboratorio_nombre,
+              l.id as laboratorio_id
+            FROM movimiento_insumo_detalle mid
+            INNER JOIN movimientos_insumos m ON mid.movimiento_id = m.id
+            INNER JOIN laboratorios l ON m.laboratorio_id = l.id
+            WHERE mid.insumo_id = ? AND m.tipo_movimiento = 'entrada'
+            ORDER BY m.fecha_ingreso DESC, mid.fecha_vencimiento ASC
+          `, [insumo.id])
+          
+          insumo.lotes = lotes
+          insumo.total_lotes = lotes.length
+          
+          // Calcular stock total de todos los lotes
+          insumo.stock_total_lotes = lotes.reduce((sum, lote) => sum + (lote.cantidad || 0), 0)
+          
+          // Lotes próximos a vencer (dentro de 30 días)
+          insumo.lotes_proximos_vencer = lotes.filter(l => {
+            if (!l.fecha_vencimiento) return false
+            const diasParaVencer = Math.ceil((new Date(l.fecha_vencimiento) - new Date()) / (1000 * 60 * 60 * 24))
+            return diasParaVencer <= 30 && diasParaVencer >= 0
+          }).length
+        }
+        
         insumos = rows
       }
     }
@@ -67,24 +101,26 @@ export const getInsumos = async (req, res) => {
 }
 
 export const createInsumo = async (req, res) => {
-    const connection = await pool.getConnection()
-    
     try {
-      await connection.beginTransaction()
-      
       const { 
         nombre, 
         descripcion, 
         unidad_medida,
-        categoria = 'Materiales', // ← NUEVO: Categoría del insumo
+        categoria = 'Materiales',
         presentacion,
         condicion = 'Bueno',
-        fecha_vencimiento,
-        observacion,
-        stock_inicial = [] // ← NUEVO: Array de stock por laboratorio
+        observacion
       } = req.body
       
-      console.log('🔍 Creando insumo con stock:', req.body)
+      console.log('🔍 Creando insumo maestro:', req.body)
+      
+      // Validar campos requeridos
+      if (!nombre || !unidad_medida) {
+        return res.status(400).json({
+          success: false,
+          message: 'Nombre y unidad de medida son requeridos'
+        })
+      }
       
       // Generar código único para el insumo
       let codigo
@@ -92,12 +128,12 @@ export const createInsumo = async (req, res) => {
       const maxIntentos = 10
       
       do {
-        const [maxId] = await connection.execute('SELECT MAX(id) as max_id FROM insumos')
+        const [maxId] = await pool.execute('SELECT MAX(id) as max_id FROM insumos')
         const nextId = (maxId[0].max_id || 0) + 1 + intentos
         codigo = `INS-${nextId.toString().padStart(4, '0')}`
         
         // Verificar si el código ya existe
-        const [existing] = await connection.execute('SELECT id FROM insumos WHERE codigo = ?', [codigo])
+        const [existing] = await pool.execute('SELECT id FROM insumos WHERE codigo = ?', [codigo])
         
         if (existing.length === 0) {
           break // Código único encontrado
@@ -113,75 +149,39 @@ export const createInsumo = async (req, res) => {
       
       console.log(`✅ Código único generado: ${codigo}`)
       
-      // 1️⃣ CREAR EL INSUMO (catálogo)
-      const [insumoResult] = await connection.execute(`
-        INSERT INTO insumos (codigo, nombre, descripcion, unidad_medida, categoria, presentacion, condicion, fecha_vencimiento, observacion) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [codigo, nombre, descripcion, unidad_medida, categoria, presentacion, condicion, fecha_vencimiento || null, observacion])
+      // Crear el insumo maestro (solo catálogo, sin stock)
+      const [insumoResult] = await pool.execute(`
+        INSERT INTO insumos (codigo, nombre, descripcion, unidad_medida, categoria, presentacion, condicion, observacion) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        codigo, 
+        nombre, 
+        descripcion || '', 
+        unidad_medida, 
+        categoria, 
+        presentacion || '', 
+        condicion, 
+        observacion || ''
+      ])
       
       const insumo_id = insumoResult.insertId
-      console.log('✅ Insumo creado con ID:', insumo_id)
-      
-      // 2️⃣ AGREGAR STOCK INICIAL (si se proporciona)
-      if (stock_inicial && stock_inicial.length > 0) {
-        for (const stock of stock_inicial) {
-          const { laboratorio_id, cantidad, observaciones = 'Stock inicial' } = stock
-          
-          // Verificar permisos del laboratorio
-          if (req.user.rol === 'Jefe de Laboratorio') {
-            if (!req.user.laboratorio_ids.includes(parseInt(laboratorio_id))) {
-              await connection.rollback()
-              return res.status(403).json({ 
-                success: false, 
-                message: `No puedes agregar stock al laboratorio ${laboratorio_id}` 
-              })
-            }
-          }
-          
-          console.log(`🔄 Agregando stock: Lab ${laboratorio_id}, Cantidad ${cantidad}`)
-          
-          // Crear entrada en inventario
-          await connection.execute(`
-            INSERT INTO inventario_insumos (insumo_id, laboratorio_id, cantidad)
-            VALUES (?, ?, ?)
-          `, [insumo_id, laboratorio_id, cantidad])
-          
-          // Crear fecha en zona horaria de Perú
-          const fechaPeru = new Date().toLocaleString('en-CA', { 
-            timeZone: 'America/Lima',
-            year: 'numeric',
-            month: '2-digit', 
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
-          }).replace(', ', ' ')
-
-          // Registrar movimiento de entrada
-          await connection.execute(`
-            INSERT INTO movimientos_insumos 
-            (insumo_id, laboratorio_id, usuario_id, tipo_movimiento, cantidad, observaciones, fecha_movimiento)
-            VALUES (?, ?, ?, 'entrada', ?, ?, ?)
-          `, [insumo_id, laboratorio_id, req.user.userId, cantidad, observaciones, fechaPeru])
-        }
-      }
-      
-      await connection.commit()
+      console.log('✅ Insumo maestro creado con ID:', insumo_id)
       
       res.json({ 
         success: true, 
-        message: 'Insumo creado con stock inicial',
-        insumo_id: insumo_id,
-        laboratorios_con_stock: stock_inicial.length
+        message: 'Insumo creado exitosamente',
+        data: {
+          id: insumo_id,
+          codigo,
+          nombre,
+          unidad_medida,
+          categoria
+        }
       })
       
     } catch (error) {
-      await connection.rollback()
       console.error('Error en createInsumo:', error)
       res.status(500).json({ success: false, message: error.message })
-    } finally {
-      connection.release()
     }
   }
 
@@ -327,11 +327,33 @@ export const reabastecimientoInsumos = async (req, res) => {
     const laboratorioNombre = labCheck[0].nombre
     let insumosActualizados = 0
     
-    // Procesar cada insumo
+    // Crear fecha en zona horaria de Perú para el movimiento
+    const fechaPeru = new Date().toLocaleString('en-CA', { 
+      timeZone: 'America/Lima',
+      year: 'numeric',
+      month: '2-digit', 
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }).replace(', ', ' ')
+    
+    // Crear el movimiento principal (cabecera)
+    const [movimientoResult] = await connection.execute(`
+      INSERT INTO movimientos_insumos 
+      (laboratorio_id, tipo_movimiento, usuario_id, fecha_movimiento, fecha_ingreso)
+      VALUES (?, 'entrada', ?, ?, ?)
+    `, [laboratorio_id, userId, fechaPeru, fechaPeru])
+    
+    const movimiento_id = movimientoResult.insertId
+    console.log('✅ Movimiento principal creado con ID:', movimiento_id)
+    
+    // Procesar cada insumo del reabastecimiento
     for (const insumoData of insumos) {
-      const { insumo_id, cantidad, observaciones } = insumoData
+      const { insumo_id, cantidad, observaciones, lote, fecha_vencimiento, fecha_ingreso } = insumoData
       
-      console.log('🔍 Procesando insumo:', { insumo_id, cantidad, observaciones })
+      console.log('🔍 Procesando insumo:', { insumo_id, cantidad, lote, fecha_vencimiento, fecha_ingreso })
       
       if (!insumo_id || cantidad <= 0) {
         console.log('⚠️ Saltando insumo con datos inválidos:', insumoData)
@@ -348,6 +370,20 @@ export const reabastecimientoInsumos = async (req, res) => {
         console.log('⚠️ Insumo no encontrado:', insumo_id)
         continue
       }
+      
+      // Crear el detalle del movimiento con lote y fechas
+      await connection.execute(`
+        INSERT INTO movimiento_insumo_detalle 
+        (movimiento_id, insumo_id, cantidad, lote, fecha_vencimiento)
+        VALUES (?, ?, ?, ?, ?)
+      `, [
+        movimiento_id, 
+        insumo_id, 
+        cantidad, 
+        lote || null, 
+        fecha_vencimiento || null
+      ])
+      console.log('✅ Detalle del movimiento registrado')
       
       // Verificar si ya existe stock para este insumo en este laboratorio
       const [stockExistente] = await connection.execute(
@@ -374,32 +410,6 @@ export const reabastecimientoInsumos = async (req, res) => {
           VALUES (?, ?, ?)
         `, [insumo_id, laboratorio_id, cantidad])
         console.log('✅ Nuevo stock creado')
-      }
-      
-      // Crear fecha en zona horaria de Perú
-      const fechaPeru = new Date().toLocaleString('en-CA', { 
-        timeZone: 'America/Lima',
-        year: 'numeric',
-        month: '2-digit', 
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      }).replace(', ', ' ')
-
-      // Registrar movimiento en el historial
-      console.log('📝 Registrando movimiento...', { insumo_id, laboratorio_id, cantidad, userId })
-      try {
-        await connection.execute(`
-          INSERT INTO movimientos_insumos 
-          (insumo_id, laboratorio_id, tipo_movimiento, cantidad, observaciones, usuario_id, fecha_movimiento)
-          VALUES (?, ?, 'entrada', ?, ?, ?, ?)
-        `, [insumo_id, laboratorio_id, cantidad, observaciones || motivo_general, userId || 1, fechaPeru])
-        console.log('✅ Movimiento registrado')
-      } catch (movError) {
-        console.error('❌ Error al registrar movimiento:', movError.message)
-        // Continuar sin fallar el reabastecimiento
       }
       
       insumosActualizados++
@@ -1311,11 +1321,11 @@ export const importacionMasiva = async (req, res) => {
           continue
         }
         
-        // Crear el insumo
+        // Crear el insumo (fecha_vencimiento ahora se maneja en movimiento_insumo_detalle)
         const [insumoResult] = await connection.execute(`
-          INSERT INTO insumos (codigo, nombre, descripcion, unidad_medida, categoria, presentacion, condicion, fecha_vencimiento, observacion) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [codigo, nombre, descripcion, unidad_medida, categoria, presentacion, condicion, fecha_vencimiento, observacion])
+          INSERT INTO insumos (codigo, nombre, descripcion, unidad_medida, categoria, presentacion, condicion, observacion) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `, [codigo, nombre, descripcion, unidad_medida, categoria, presentacion, condicion, observacion])
         
         const insumo_id = insumoResult.insertId
         
@@ -1411,7 +1421,7 @@ export const updateInsumo = async (req, res) => {
   try {
     const { id } = req.params
     const insumoId = parseInt(id, 10) // Convertir a número entero
-    const { nombre, descripcion, unidad_medida, categoria, presentacion, condicion, fecha_vencimiento, observacion } = req.body
+    const { nombre, descripcion, unidad_medida, categoria, presentacion, condicion, observacion } = req.body
     
     // Limpiar espacios en blanco
     const nombreLimpio = nombre?.trim()
@@ -1454,12 +1464,12 @@ export const updateInsumo = async (req, res) => {
     // Validación de duplicados deshabilitada para permitir edición libre
     console.log('ℹ️ Validación de duplicados omitida - permitiendo edición libre')
     
-    // Actualizar insumo
+    // Actualizar insumo (fecha_vencimiento ahora se maneja en movimiento_insumo_detalle)
     await pool.execute(`
       UPDATE insumos 
-      SET nombre = ?, descripcion = ?, unidad_medida = ?, categoria = ?, presentacion = ?, condicion = ?, fecha_vencimiento = ?, observacion = ?
+      SET nombre = ?, descripcion = ?, unidad_medida = ?, categoria = ?, presentacion = ?, condicion = ?, observacion = ?
       WHERE id = ?
-    `, [nombreLimpio, descripcionLimpia || '', unidadLimpia, categoria || 'Materiales', presentacionLimpia || '', condicion || 'Bueno', fecha_vencimiento || null, observacionLimpia || '', insumoId])
+    `, [nombreLimpio, descripcionLimpia || '', unidadLimpia, categoria || 'Materiales', presentacionLimpia || '', condicion || 'Bueno', observacionLimpia || '', insumoId])
     
     console.log('✅ Insumo actualizado exitosamente:', insumoId)
     

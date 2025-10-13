@@ -21,7 +21,7 @@ import {
   TextField,
   Button
 } from '@mui/material'
-import { Edit, Delete, Inventory, Science, Info, Search, Clear, CloudUpload } from '@mui/icons-material'
+import { Edit, Delete, Inventory, Science, Info, Search, Clear, CloudUpload, ViewList, ViewStream } from '@mui/icons-material'
 import { insumoService, type Insumo } from '../../services/insumoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
 
@@ -46,6 +46,7 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
   const [selectedLaboratorio, setSelectedLaboratorio] = useState<number | 'all'>('all')
   const [selectedCategoria, setSelectedCategoria] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
+  const [vistaAgrupada, setVistaAgrupada] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -147,75 +148,6 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
     }
   }
 
-  // Función para formatear el stock por laboratorio
-  const formatStockPorLaboratorio = (stockString?: string, unidadMedida?: string) => {
-    if (!stockString) {
-      return (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-            Sin stock registrado
-          </Typography>
-        </Box>
-      )
-    }
-    
-    const stocks = stockString.split('; ').map(item => {
-      const [lab, cantidad] = item.split(':')
-      return { laboratorio: lab, cantidad: parseInt(cantidad) || 0 }
-    })
-    
-    // Ordenar por cantidad (mayor a menor)
-    stocks.sort((a, b) => b.cantidad - a.cantidad)
-    
-    return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-        {stocks.map((stock, index) => (
-          <Box 
-            key={index} 
-            sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              p: 1,
-              borderRadius: 1,
-              bgcolor: 'grey.50',
-              border: 1,
-              borderColor: 'grey.200'
-            }}
-          >
-            <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary' }}>
-              {stock.laboratorio}
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Chip 
-                label={`${stock.cantidad} ${unidadMedida || ''}`}
-                size="small"
-                color={getStockColor(stock.cantidad)}
-                variant="filled"
-                sx={{ 
-                  minWidth: 'auto',
-                  '& .MuiChip-label': { px: 1 }
-                }}
-              />
-              {stock.cantidad === 0 && (
-                <Typography variant="caption" color="error" sx={{ fontWeight: 600 }}>
-                  AGOTADO
-                </Typography>
-              )}
-            </Box>
-          </Box>
-        ))}
-      </Box>
-    )
-  }
-
-  // Función para obtener el color del chip según el stock
-  const getStockColor = (stock: number) => {
-    if (stock === 0) return 'error'
-    if (stock < 10) return 'warning'
-    return 'success'
-  }
-
   // Función para obtener el color de la condición
   const getCondicionColor = (condicion: string) => {
     switch (condicion) {
@@ -313,6 +245,17 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
                 </Button>
               </Tooltip>
             )}
+            
+            <Tooltip title={vistaAgrupada ? "Ver lotes individuales" : "Agrupar por insumo"}>
+              <Button
+                variant={vistaAgrupada ? "contained" : "outlined"}
+                startIcon={vistaAgrupada ? <ViewList /> : <ViewStream />}
+                onClick={() => setVistaAgrupada(!vistaAgrupada)}
+                color="secondary"
+              >
+                {vistaAgrupada ? "Vista Agrupada" : "Vista Expandida"}
+              </Button>
+            </Tooltip>
           </Box>
           
           {/* Resumen de stock */}
@@ -381,24 +324,37 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: 'grey.50' }}>
-              <TableCell sx={{ fontWeight: 600, width: '6%' }}>Código</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '12%' }}>Insumo</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '8%' }}>Categoría</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '12%' }}>Descripción</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '6%' }}>Unidad</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '10%' }}>Presentación</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '7%' }}>Condición</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '8%' }}>F. Vencimiento</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '8%' }}>Stock Disponible</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '15%' }}>Stock por Lab</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '12%' }}>Observación</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '4%' }} align="center">Acciones</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Código</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Insumo</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Categoría</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Unidad</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Presentación</TableCell>
+              {!vistaAgrupada && (
+                <TableCell sx={{ fontWeight: 600 }}>Condición</TableCell>
+              )}
+              {!vistaAgrupada ? (
+                <>
+                  <TableCell sx={{ fontWeight: 600 }}>Lote</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Cantidad</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>F. Vencimiento</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>F. Ingreso</TableCell>
+                </>
+              ) : (
+                <>
+                  <TableCell sx={{ fontWeight: 600 }}>Total Lotes</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Stock Total</TableCell>
+                </>
+              )}
+              {!vistaAgrupada && (
+                <TableCell sx={{ fontWeight: 600 }}>Observación</TableCell>
+              )}
+              <TableCell sx={{ fontWeight: 600 }} align="center">Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredInsumos.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={12} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={vistaAgrupada ? 8 : 12} align="center" sx={{ py: 4 }}>
                   <Box sx={{ textAlign: 'center' }}>
                     <Inventory sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
                     <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -415,7 +371,8 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
                   </Box>
                 </TableCell>
               </TableRow>
-            ) : (
+            ) : vistaAgrupada ? (
+              // Vista Agrupada: Una fila por insumo con totales
               filteredInsumos.map((insumo) => (
                 <TableRow key={insumo.id} hover>
                   <TableCell>
@@ -448,11 +405,6 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
                     />
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" color="text.secondary">
-                      {insumo.descripcion || 'Sin descripción'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
                     <Chip 
                       label={insumo.unidad_medida} 
                       size="small" 
@@ -465,78 +417,21 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Chip 
-                      label={insumo.condicion || 'Bueno'}
-                      color={getCondicionColor(insumo.condicion || 'Bueno')}
-                      variant="outlined"
+                    <Chip
+                      label={`${insumo.total_lotes || 0} registro${(insumo.total_lotes || 0) !== 1 ? 's' : ''}`}
                       size="small"
+                      color="info"
+                      variant="outlined"
                     />
                   </TableCell>
                   <TableCell>
-                    {insumo.fecha_vencimiento ? (
-                      <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                        {new Date(insumo.fecha_vencimiento).toLocaleDateString('es-ES')}
-                      </Typography>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                        Sin fecha
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {insumo.stock_disponible !== undefined ? (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Chip 
-                          label={`${insumo.stock_disponible} ${insumo.unidad_medida}`}
-                          color={getStockColor(insumo.stock_disponible)}
-                          variant="filled"
-                          size="small"
-                          sx={{ 
-                            minWidth: 'auto',
-                            '& .MuiChip-label': { px: 1.5 }
-                          }}
-                        />
-                        {insumo.stock_disponible === 0 && (
-                          <Typography variant="caption" color="error" sx={{ fontWeight: 600 }}>
-                            AGOTADO
-                          </Typography>
-                        )}
-                        {insumo.stock_disponible > 0 && insumo.stock_disponible < 10 && (
-                          <Typography variant="caption" color="warning.main" sx={{ fontWeight: 600 }}>
-                            BAJO
-                          </Typography>
-                        )}
-                      </Box>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                        No disponible
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {formatStockPorLaboratorio(insumo.stock_por_laboratorio, insumo.unidad_medida)}
-                  </TableCell>
-                  <TableCell>
-                    {insumo.observacion ? (
-                      <Tooltip title={insumo.observacion}>
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            maxWidth: 150,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            cursor: 'help'
-                          }}
-                        >
-                          {insumo.observacion}
-                        </Typography>
-                      </Tooltip>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                        Sin observaciones
-                      </Typography>
-                    )}
+                    <Chip
+                      label={`${insumo.stock_total_lotes || 0} ${insumo.unidad_medida}`}
+                      size="small"
+                      color="success"
+                      variant="filled"
+                      sx={{ fontWeight: 600 }}
+                    />
                   </TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
@@ -566,6 +461,291 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
                   </TableCell>
                 </TableRow>
               ))
+            ) : (
+              // Vista Expandida: Una fila por lote
+              filteredInsumos.flatMap((insumo) => {
+                // Si el insumo no tiene lotes, mostrar una fila sin información de lote
+                if (!insumo.lotes || insumo.lotes.length === 0) {
+                  return [(
+                    <TableRow key={`${insumo.id}-no-lotes`} hover>
+                      <TableCell>
+                        <Chip 
+                          label={insumo.codigo || 'N/A'} 
+                          size="small" 
+                          color="primary"
+                          variant="outlined"
+                          sx={{ fontFamily: 'monospace', fontWeight: 600 }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Science color="primary" />
+                          <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                            {insumo.nombre}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={getCategoriaName(insumo.categoria)}
+                          size="small"
+                          sx={{
+                            backgroundColor: getCategoriaColor(insumo.categoria),
+                            color: 'white',
+                            fontWeight: 600,
+                            fontSize: '0.75rem'
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={insumo.unidad_medida} 
+                          size="small" 
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {insumo.presentacion || 'N/A'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={insumo.condicion || 'Bueno'}
+                          color={getCondicionColor(insumo.condicion || 'Bueno')}
+                          variant="outlined"
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell colSpan={3} align="center">
+                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                          Sin lotes registrados
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        {insumo.observacion ? (
+                          <Tooltip title={insumo.observacion}>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                maxWidth: 150,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                cursor: 'help'
+                              }}
+                            >
+                              {insumo.observacion}
+                            </Typography>
+                          </Tooltip>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                            Sin observaciones
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                          {onEdit && (
+                            <Tooltip title="Editar insumo">
+                              <IconButton 
+                                size="small" 
+                                onClick={() => onEdit(insumo)}
+                                color="primary"
+                              >
+                                <Edit />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          {onDelete && (
+                            <Tooltip title="Eliminar insumo">
+                              <IconButton 
+                                size="small" 
+                                onClick={() => onDelete(insumo)}
+                                color="error"
+                              >
+                                <Delete />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  )]
+                }
+                
+                // Si el insumo tiene lotes, crear una fila por cada lote
+                return insumo.lotes.map((lote, loteIndex) => {
+                  const diasParaVencer = lote.fecha_vencimiento 
+                    ? Math.ceil((new Date(lote.fecha_vencimiento).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+                    : null
+                  const proximoAVencer = diasParaVencer !== null && diasParaVencer <= 30 && diasParaVencer >= 0
+                  
+                  return (
+                    <TableRow 
+                      key={`${insumo.id}-lote-${lote.detalle_id || loteIndex}`} 
+                      hover
+                      sx={{
+                        backgroundColor: proximoAVencer ? 'warning.light' : 'inherit',
+                        '&:hover': {
+                          backgroundColor: proximoAVencer ? 'warning.main' : 'action.hover',
+                        }
+                      }}
+                    >
+                      <TableCell>
+                        <Chip 
+                          label={insumo.codigo || 'N/A'} 
+                          size="small" 
+                          color="primary"
+                          variant="outlined"
+                          sx={{ fontFamily: 'monospace', fontWeight: 600 }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Science color="primary" />
+                          <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                            {insumo.nombre}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={getCategoriaName(insumo.categoria)}
+                          size="small"
+                          sx={{
+                            backgroundColor: getCategoriaColor(insumo.categoria),
+                            color: 'white',
+                            fontWeight: 600,
+                            fontSize: '0.75rem'
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={insumo.unidad_medida} 
+                          size="small" 
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {insumo.presentacion || 'N/A'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={insumo.condicion || 'Bueno'}
+                          color={getCondicionColor(insumo.condicion || 'Bueno')}
+                          variant="outlined"
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace' }}>
+                          {lote.lote || 'SIN-LOTE'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={`${lote.cantidad} ${insumo.unidad_medida}`}
+                          size="small"
+                          color="primary"
+                          variant="filled"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {lote.fecha_vencimiento ? (
+                          <Box>
+                            <Typography variant="body2">
+                              {new Date(lote.fecha_vencimiento).toLocaleDateString('es-ES', { 
+                                day: '2-digit',
+                                month: 'short', 
+                                year: 'numeric' 
+                              })}
+                            </Typography>
+                            {proximoAVencer && (
+                              <Chip
+                                label={`${diasParaVencer} días`}
+                                size="small"
+                                color="warning"
+                                sx={{ mt: 0.5 }}
+                              />
+                            )}
+                          </Box>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                            Sin fecha
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {lote.fecha_ingreso ? (
+                          <Typography variant="body2">
+                            {new Date(lote.fecha_ingreso).toLocaleDateString('es-ES', { 
+                              day: '2-digit',
+                              month: 'short', 
+                              year: 'numeric' 
+                            })}
+                          </Typography>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                            Sin fecha
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {insumo.observacion ? (
+                          <Tooltip title={insumo.observacion}>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                maxWidth: 150,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                cursor: 'help'
+                              }}
+                            >
+                              {insumo.observacion}
+                            </Typography>
+                          </Tooltip>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                            -
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                          {onEdit && (
+                            <Tooltip title="Editar insumo">
+                              <IconButton 
+                                size="small" 
+                                onClick={() => onEdit(insumo)}
+                                color="primary"
+                              >
+                                <Edit />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          {onDelete && (
+                            <Tooltip title="Eliminar insumo">
+                              <IconButton 
+                                size="small" 
+                                onClick={() => onDelete(insumo)}
+                                color="error"
+                              >
+                                <Delete />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              })
             )}
           </TableBody>
         </Table>

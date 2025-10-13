@@ -1,5 +1,16 @@
 import { api } from './api'
 
+export interface LoteInsumo {
+  detalle_id: number
+  lote: string | null
+  cantidad: number
+  fecha_vencimiento: string | null
+  fecha_ingreso: string | null
+  fecha_movimiento: string | null
+  laboratorio_nombre?: string
+  laboratorio_id?: number
+}
+
 export interface Insumo {
   id: number
   codigo: string
@@ -13,6 +24,10 @@ export interface Insumo {
   condicion?: 'Excelente' | 'Bueno' | 'Regular' | 'Malo'
   fecha_vencimiento?: string
   observacion?: string
+  lotes?: LoteInsumo[]
+  total_lotes?: number
+  stock_total_lotes?: number
+  lotes_proximos_vencer?: number
 }
 
 export interface InsumoResponse {

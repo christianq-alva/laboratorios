@@ -15,13 +15,42 @@ export const Insumo = {
         i.categoria,
         i.presentacion,
         i.condicion,
-        i.fecha_vencimiento,
         i.observacion,
         COALESCE(inv.cantidad, 0) as stock_disponible
       FROM insumos i
       LEFT JOIN inventario_insumos inv ON i.id = inv.insumo_id AND inv.laboratorio_id = ?
       ORDER BY i.categoria, i.codigo, i.nombre
     `, [laboratorio_id])
+    
+    // Para cada insumo, obtener información detallada de lotes (todos los registros individuales)
+    for (let insumo of rows) {
+      const [lotes] = await pool.execute(`
+        SELECT 
+          mid.id as detalle_id,
+          COALESCE(mid.lote, 'SIN-LOTE') as lote,
+          mid.cantidad,
+          mid.fecha_vencimiento,
+          m.fecha_ingreso,
+          m.fecha_movimiento
+        FROM movimiento_insumo_detalle mid
+        INNER JOIN movimientos_insumos m ON mid.movimiento_id = m.id
+        WHERE mid.insumo_id = ? AND m.laboratorio_id = ? AND m.tipo_movimiento = 'entrada'
+        ORDER BY m.fecha_ingreso DESC, mid.fecha_vencimiento ASC
+      `, [insumo.id, laboratorio_id])
+      
+      insumo.lotes = lotes
+      insumo.total_lotes = lotes.length
+      
+      // Calcular stock total de todos los lotes
+      insumo.stock_total_lotes = lotes.reduce((sum, lote) => sum + (lote.cantidad || 0), 0)
+      
+      // Lotes próximos a vencer (dentro de 30 días)
+      insumo.lotes_proximos_vencer = lotes.filter(l => {
+        if (!l.fecha_vencimiento) return false
+        const diasParaVencer = Math.ceil((new Date(l.fecha_vencimiento) - new Date()) / (1000 * 60 * 60 * 24))
+        return diasParaVencer <= 30 && diasParaVencer >= 0
+      }).length
+    }
     
     console.log('📦 Insumos encontrados para laboratorio', laboratorio_id, ':', rows.length)
     console.log('📋 Primeros 3 insumos:', rows.slice(0, 3))

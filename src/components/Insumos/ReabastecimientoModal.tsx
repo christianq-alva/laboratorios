@@ -50,6 +50,9 @@ interface InsumoReabastecimiento {
   stock_actual: number
   cantidad_agregar: number
   observaciones: string
+  lote: string
+  fecha_vencimiento: string
+  fecha_ingreso: string
 }
 
 export const ReabastecimientoModal: React.FC<ReabastecimientoModalProps> = ({
@@ -132,13 +135,19 @@ export const ReabastecimientoModal: React.FC<ReabastecimientoModalProps> = ({
       return
     }
 
+    // Fecha actual en formato YYYY-MM-DD para los inputs de fecha
+    const fechaActual = new Date().toISOString().split('T')[0]
+
     const nuevoInsumo: InsumoReabastecimiento = {
       insumo_id: insumo.id,
       nombre: insumo.nombre,
       unidad_medida: insumo.unidad_medida,
       stock_actual: insumo.stock_disponible || 0,
       cantidad_agregar: 0,
-      observaciones: motivoGeneral
+      observaciones: motivoGeneral,
+      lote: '',
+      fecha_vencimiento: '',
+      fecha_ingreso: fechaActual
     }
 
     setInsumosReabastecimiento(prev => [...prev, nuevoInsumo])
@@ -160,6 +169,36 @@ export const ReabastecimientoModal: React.FC<ReabastecimientoModalProps> = ({
       prev.map(item => 
         item.insumo_id === insumoId 
           ? { ...item, observaciones }
+          : item
+      )
+    )
+  }
+
+  const actualizarLote = (insumoId: number, lote: string) => {
+    setInsumosReabastecimiento(prev => 
+      prev.map(item => 
+        item.insumo_id === insumoId 
+          ? { ...item, lote }
+          : item
+      )
+    )
+  }
+
+  const actualizarFechaVencimiento = (insumoId: number, fecha_vencimiento: string) => {
+    setInsumosReabastecimiento(prev => 
+      prev.map(item => 
+        item.insumo_id === insumoId 
+          ? { ...item, fecha_vencimiento }
+          : item
+      )
+    )
+  }
+
+  const actualizarFechaIngreso = (insumoId: number, fecha_ingreso: string) => {
+    setInsumosReabastecimiento(prev => 
+      prev.map(item => 
+        item.insumo_id === insumoId 
+          ? { ...item, fecha_ingreso }
           : item
       )
     )
@@ -197,7 +236,10 @@ export const ReabastecimientoModal: React.FC<ReabastecimientoModalProps> = ({
         insumos: insumosConCantidad.map(insumo => ({
           insumo_id: insumo.insumo_id,
           cantidad: insumo.cantidad_agregar,
-          observaciones: insumo.observaciones.trim() || motivoGeneral.trim()
+          observaciones: insumo.observaciones.trim() || motivoGeneral.trim(),
+          lote: insumo.lote.trim() || null,
+          fecha_vencimiento: insumo.fecha_vencimiento || null,
+          fecha_ingreso: insumo.fecha_ingreso || null
         }))
       }
 
@@ -543,7 +585,7 @@ export const ReabastecimientoModal: React.FC<ReabastecimientoModalProps> = ({
                           </IconButton>
                         </Box>
                         
-                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}>
+                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end', mb: 2 }}>
                           <TextField
                             label="Cantidad a agregar"
                             type="number"
@@ -580,6 +622,40 @@ export const ReabastecimientoModal: React.FC<ReabastecimientoModalProps> = ({
                             </IconButton>
                           </Box>
                         </Box>
+
+                        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                          <TextField
+                            label="Lote"
+                            value={insumo.lote}
+                            onChange={(e) => actualizarLote(insumo.insumo_id, e.target.value)}
+                            size="small"
+                            sx={{ flex: 1 }}
+                            placeholder="ej: LOTE-2024-001"
+                          />
+                          
+                          <TextField
+                            label="Fecha de Ingreso"
+                            type="date"
+                            value={insumo.fecha_ingreso}
+                            onChange={(e) => actualizarFechaIngreso(insumo.insumo_id, e.target.value)}
+                            size="small"
+                            sx={{ flex: 1 }}
+                            InputLabelProps={{ shrink: true }}
+                          />
+                        </Box>
+
+                        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                          <TextField
+                            label="Fecha de Vencimiento"
+                            type="date"
+                            value={insumo.fecha_vencimiento}
+                            onChange={(e) => actualizarFechaVencimiento(insumo.insumo_id, e.target.value)}
+                            size="small"
+                            sx={{ flex: 1 }}
+                            InputLabelProps={{ shrink: true }}
+                            helperText="Opcional"
+                          />
+                        </Box>
                         
                         <TextField
                           fullWidth
@@ -587,7 +663,6 @@ export const ReabastecimientoModal: React.FC<ReabastecimientoModalProps> = ({
                           value={insumo.observaciones}
                           onChange={(e) => actualizarObservaciones(insumo.insumo_id, e.target.value)}
                           size="small"
-                          sx={{ mt: 2 }}
                           placeholder="Motivo específico para este insumo"
                         />
                         
