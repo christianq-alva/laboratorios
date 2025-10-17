@@ -156,7 +156,8 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
         numero_serie: formData.numero_serie.trim(),
         comentarios: formData.comentarios.trim(),
         fecha_adquisicion: formData.fecha_adquisicion && formData.fecha_adquisicion.trim() ? formData.fecha_adquisicion : null,
-        tipo_equipo_id: formData.tipo_equipo_id > 0 ? formData.tipo_equipo_id : null
+        tipo_equipo_id: formData.tipo_equipo_id > 0 ? formData.tipo_equipo_id : null,
+        laboratorio_id: formData.laboratorio_id > 0 ? formData.laboratorio_id : null
       }
 
       let result

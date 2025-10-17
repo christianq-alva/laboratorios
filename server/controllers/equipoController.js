@@ -283,7 +283,7 @@ export const updateEquipo = async (req, res) => {
   try {
     const { id } = req.params
     const equipoId = parseInt(id, 10)
-    const { nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios, condicion, fecha_adquisicion, tipo_equipo_id } = req.body
+    const { nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios, condicion, fecha_adquisicion, tipo_equipo_id, laboratorio_id } = req.body
     
     console.log('🔄 Actualizando equipo:', { id, equipoId, nombre, marca, modelo })
     

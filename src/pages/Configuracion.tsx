@@ -24,7 +24,7 @@ import {
   IconButton,
   Tooltip
 } from '@mui/material'
-import { Add, Category, Person, LibraryBooks, Edit, School } from '@mui/icons-material'
+import { Add, Category, Person, LibraryBooks, Edit, School, Delete } from '@mui/icons-material'
 import { TiposEquipoTable } from '../components/Configuracion/TiposEquipoTable'
 import { TipoEquipoForm } from '../components/Configuracion/TipoEquipoForm'
 import { DocentesTable } from '../components/Docentes/DocentesTable'
@@ -79,6 +79,8 @@ export const Configuracion: React.FC = () => {
   const [loadingInsumos, setLoadingInsumos] = useState(false)
   const [insumoFormOpen, setInsumoFormOpen] = useState(false)
   const [editingInsumo, setEditingInsumo] = useState<Insumo | null>(null)
+  const [insumoDeleteDialogOpen, setInsumoDeleteDialogOpen] = useState(false)
+  const [insumoToDelete, setInsumoToDelete] = useState<Insumo | null>(null)
   
   // Estado para Laboratorios
   const [laboratorioFormOpen, setLaboratorioFormOpen] = useState(false)
@@ -295,6 +297,35 @@ export const Configuracion: React.FC = () => {
       message: editingInsumo ? 'Insumo actualizado exitosamente' : 'Insumo creado exitosamente',
       severity: 'success'
     })
+  }
+
+  const handleDeleteInsumoClick = (insumo: Insumo) => {
+    setInsumoToDelete(insumo)
+    setInsumoDeleteDialogOpen(true)
+  }
+
+  const handleDeleteInsumoConfirm = async () => {
+    if (!insumoToDelete) return
+
+    try {
+      await insumoService.delete(insumoToDelete.id)
+      setSnackbar({
+        open: true,
+        message: 'Insumo eliminado exitosamente',
+        severity: 'success'
+      })
+      loadCatalogoInsumos()
+    } catch (error: any) {
+      console.error('Error al eliminar insumo:', error)
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || 'Error al eliminar insumo',
+        severity: 'error'
+      })
+    } finally {
+      setInsumoDeleteDialogOpen(false)
+      setInsumoToDelete(null)
+    }
   }
 
   // Handlers para Laboratorios
@@ -616,15 +647,26 @@ export const Configuracion: React.FC = () => {
                         <TableCell>{insumo.unidad_medida}</TableCell>
                         <TableCell>{insumo.presentacion || '-'}</TableCell>
                         <TableCell align="center">
-                          <Tooltip title="Editar">
-                            <IconButton
-                              size="small"
-                              color="primary"
-                              onClick={() => handleEditInsumo(insumo)}
-                            >
-                              <Edit fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
+                          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                            <Tooltip title="Editar">
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() => handleEditInsumo(insumo)}
+                              >
+                                <Edit fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Eliminar">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleDeleteInsumoClick(insumo)}
+                              >
+                                <Delete fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -779,6 +821,34 @@ export const Configuracion: React.FC = () => {
           </Button>
           <Button 
             onClick={handleDeleteLaboratorioConfirm} 
+            color="error"
+            variant="contained"
+          >
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Diálogo de confirmación de eliminación - Insumo */}
+      <Dialog
+        open={insumoDeleteDialogOpen}
+        onClose={() => setInsumoDeleteDialogOpen(false)}
+      >
+        <DialogTitle>Confirmar Eliminación</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            ¿Está seguro que desea eliminar el insumo "{insumoToDelete?.nombre}"?
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              Esta acción no se puede deshacer. El insumo será eliminado permanentemente del catálogo.
+            </Alert>
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setInsumoDeleteDialogOpen(false)}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleDeleteInsumoConfirm} 
             color="error"
             variant="contained"
           >
