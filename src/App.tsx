@@ -7,7 +7,6 @@ import { Login } from './components/Login/Login'
 import { MainLayout } from './components/Layout/MainLayout'
 import {
   Dashboard,
-  Laboratorios,
   Horarios,
   Insumos,
   Equipos,
@@ -15,7 +14,6 @@ import {
   ReportesSimple,
   Configuracion,
 } from './pages'
-import { CatalogoInsumos } from './pages/CatalogoInsumos'
 import { HorarioPublico } from './components/Public/HorarioPublico'
 
 // Protected Route Component
@@ -62,9 +60,7 @@ function App() {
                 <MainLayout>
                   <Routes>
                     <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/laboratorios" element={<Laboratorios />} />
                     <Route path="/horarios" element={<Horarios />} />
-                    <Route path="/catalogo-insumos" element={<CatalogoInsumos />} />
                     <Route path="/insumos" element={<Insumos />} />
                     <Route path="/equipos" element={<Equipos />} />
                     <Route path="/incidencias" element={<Incidencias />} />

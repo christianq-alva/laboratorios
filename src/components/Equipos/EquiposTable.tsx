@@ -114,17 +114,6 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
     }
   }
 
-  // Función para obtener el color de la condición
-  const getCondicionColor = (condicion: string) => {
-    switch (condicion) {
-      case 'Excelente': return 'success'
-      case 'Bueno': return 'info'
-      case 'Regular': return 'warning'
-      case 'Malo': return 'error'
-      default: return 'default'
-    }
-  }
-
   // Función para filtrar equipos por término de búsqueda
   const filteredEquipos = equipos.filter(equipo => {
     if (!searchTerm) return true
@@ -253,10 +242,10 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
               <TableCell sx={{ fontWeight: 600, width: '6%' }}>Cod. Activo</TableCell>
               <TableCell sx={{ fontWeight: 600, width: '15%' }}>Equipo</TableCell>
               <TableCell sx={{ fontWeight: 600, width: '10%' }}>Tipo</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '10%' }}>Ubicación (Lab)</TableCell>
               <TableCell sx={{ fontWeight: 600, width: '10%' }}>Marca/Modelo</TableCell>
               <TableCell sx={{ fontWeight: 600, width: '8%' }}>N° Serie</TableCell>
               <TableCell sx={{ fontWeight: 600, width: '7%' }}>Estado</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '7%' }}>Condición</TableCell>
               <TableCell sx={{ fontWeight: 600, width: '10%' }}>Fecha Adq.</TableCell>
               <TableCell sx={{ fontWeight: 600, width: '8%' }}>Último Mant.</TableCell>
               <TableCell sx={{ fontWeight: 600, width: '8%' }}>Próximo Mant.</TableCell>
@@ -327,6 +316,15 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
                     />
                   </TableCell>
                   <TableCell>
+                    <Chip 
+                      label={equipo.laboratorio_nombre || 'Sin asignar'}
+                      size="small"
+                      color={equipo.laboratorio_nombre ? 'primary' : 'default'}
+                      variant="outlined"
+                      sx={{ fontWeight: 500 }}
+                    />
+                  </TableCell>
+                  <TableCell>
                     <Box>
                       <Typography variant="body2" sx={{ fontWeight: 500 }}>
                         {equipo.marca || 'Sin marca'}
@@ -350,24 +348,12 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
                     />
                   </TableCell>
                   <TableCell>
-                    <Chip 
-                      label={equipo.condicion || 'Bueno'}
-                      color={getCondicionColor(equipo.condicion || 'Bueno')}
-                      variant="outlined"
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
                     {equipo.fecha_adquisicion ? (
                       <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                        {new Date(equipo.fecha_adquisicion).toLocaleDateString('es-ES', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric'
-                        })}
+                        {new Date(equipo.fecha_adquisicion).toLocaleDateString('es-ES')}
                       </Typography>
                     ) : (
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                         N/A
                       </Typography>
                     )}

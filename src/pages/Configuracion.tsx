@@ -13,15 +13,29 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  DialogContentText
+  DialogContentText,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Chip,
+  IconButton,
+  Tooltip
 } from '@mui/material'
-import { Add, Category, Person } from '@mui/icons-material'
+import { Add, Category, Person, LibraryBooks, Edit, School } from '@mui/icons-material'
 import { TiposEquipoTable } from '../components/Configuracion/TiposEquipoTable'
 import { TipoEquipoForm } from '../components/Configuracion/TipoEquipoForm'
 import { DocentesTable } from '../components/Docentes/DocentesTable'
 import { DocenteForm } from '../components/Docentes/DocenteForm'
+import { InsumoForm } from '../components/Insumos/InsumoForm'
+import { LaboratoriosTable } from '../components/Laboratorios/LaboratoriosTable'
+import { LaboratorioForm } from '../components/Laboratorios/LaboratorioForm'
 import { tipoEquipoService, type TipoEquipo } from '../services/tipoEquipoService'
 import { docenteService, type Docente } from '../services/docenteService'
+import { insumoService, type Insumo } from '../services/insumoService'
+import { laboratorioService, type Laboratorio } from '../services/laboratorioService'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -59,6 +73,19 @@ export const Configuracion: React.FC = () => {
   const [docenteDeleteDialogOpen, setDocenteDeleteDialogOpen] = useState(false)
   const [docenteToDelete, setDocenteToDelete] = useState<Docente | null>(null)
   const [refreshDocentes, setRefreshDocentes] = useState(false)
+  
+  // Estado para Catálogo de Insumos
+  const [insumos, setInsumos] = useState<Insumo[]>([])
+  const [loadingInsumos, setLoadingInsumos] = useState(false)
+  const [insumoFormOpen, setInsumoFormOpen] = useState(false)
+  const [editingInsumo, setEditingInsumo] = useState<Insumo | null>(null)
+  
+  // Estado para Laboratorios
+  const [laboratorioFormOpen, setLaboratorioFormOpen] = useState(false)
+  const [editingLaboratorio, setEditingLaboratorio] = useState<Laboratorio | null>(null)
+  const [laboratorioDeleteDialogOpen, setLaboratorioDeleteDialogOpen] = useState(false)
+  const [laboratorioToDelete, setLaboratorioToDelete] = useState<Laboratorio | null>(null)
+  const [refreshLaboratorios, setRefreshLaboratorios] = useState(0)
   
   // Snackbar
   const [snackbar, setSnackbar] = useState({
@@ -110,10 +137,30 @@ export const Configuracion: React.FC = () => {
     }
   }
 
+  // Cargar catálogo de insumos
+  const loadCatalogoInsumos = async () => {
+    setLoadingInsumos(true)
+    try {
+      const response = await insumoService.getAll()
+      setInsumos(response.data || [])
+    } catch (error) {
+      console.error('Error al cargar catálogo de insumos:', error)
+      setSnackbar({
+        open: true,
+        message: 'Error al cargar catálogo de insumos',
+        severity: 'error'
+      })
+    } finally {
+      setLoadingInsumos(false)
+    }
+  }
+
   // Cargar datos al montar o cambiar de tab
   useEffect(() => {
     if (tabValue === 0) {
       loadTiposEquipo()
+    } else if (tabValue === 2) {
+      loadCatalogoInsumos()
     }
   }, [tabValue])
 
@@ -225,8 +272,132 @@ export const Configuracion: React.FC = () => {
     }
   }
 
+  // Handlers para Catálogo de Insumos
+  const handleOpenInsumoForm = () => {
+    setEditingInsumo(null)
+    setInsumoFormOpen(true)
+  }
+
+  const handleEditInsumo = (insumo: Insumo) => {
+    setEditingInsumo(insumo)
+    setInsumoFormOpen(true)
+  }
+
+  const handleCloseInsumoForm = () => {
+    setInsumoFormOpen(false)
+    setEditingInsumo(null)
+  }
+
+  const handleInsumoFormSuccess = () => {
+    loadCatalogoInsumos()
+    setSnackbar({
+      open: true,
+      message: editingInsumo ? 'Insumo actualizado exitosamente' : 'Insumo creado exitosamente',
+      severity: 'success'
+    })
+  }
+
+  // Handlers para Laboratorios
+  const handleOpenLaboratorioForm = () => {
+    setEditingLaboratorio(null)
+    setLaboratorioFormOpen(true)
+  }
+
+  const handleEditLaboratorio = (laboratorio: Laboratorio) => {
+    setEditingLaboratorio(laboratorio)
+    setLaboratorioFormOpen(true)
+  }
+
+  const handleCloseLaboratorioForm = () => {
+    setLaboratorioFormOpen(false)
+    setEditingLaboratorio(null)
+  }
+
+  const handleLaboratorioFormSuccess = () => {
+    setRefreshLaboratorios(prev => prev + 1)
+    setSnackbar({
+      open: true,
+      message: editingLaboratorio ? 'Laboratorio actualizado exitosamente' : 'Laboratorio creado exitosamente',
+      severity: 'success'
+    })
+  }
+
+  const handleDeleteLaboratorioClick = (laboratorio: Laboratorio) => {
+    setLaboratorioToDelete(laboratorio)
+    setLaboratorioDeleteDialogOpen(true)
+  }
+
+  const handleChangeLaboratorioStatus = async (laboratorio: Laboratorio, estado: 'Activo' | 'En Mantenimiento' | 'Inhabilitado' | 'Baja') => {
+    try {
+      const result = await laboratorioService.changeStatus(laboratorio.id, estado)
+      
+      if (result.success) {
+        setRefreshLaboratorios(prev => prev + 1)
+        setSnackbar({
+          open: true,
+          message: `Estado cambiado a "${estado}" correctamente`,
+          severity: 'success'
+        })
+      } else {
+        setSnackbar({
+          open: true,
+          message: result.message || 'Error al cambiar el estado',
+          severity: 'error'
+        })
+      }
+    } catch (error: any) {
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || 'Error de conexión al cambiar el estado',
+        severity: 'error'
+      })
+    }
+  }
+
+  const handleDeleteLaboratorioConfirm = async () => {
+    if (!laboratorioToDelete) return
+
+    try {
+      const result = await laboratorioService.delete(laboratorioToDelete.id)
+      
+      if (result.success) {
+        setSnackbar({
+          open: true,
+          message: 'Laboratorio eliminado exitosamente',
+          severity: 'success'
+        })
+        setRefreshLaboratorios(prev => prev + 1)
+      } else {
+        setSnackbar({
+          open: true,
+          message: result.message || 'Error al eliminar el laboratorio',
+          severity: 'error'
+        })
+      }
+    } catch (error: any) {
+      console.error('Error al eliminar laboratorio:', error)
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || 'Error al eliminar laboratorio',
+        severity: 'error'
+      })
+    } finally {
+      setLaboratorioDeleteDialogOpen(false)
+      setLaboratorioToDelete(null)
+    }
+  }
+
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false })
+  }
+  
+  const getCategoriaColor = (categoria?: string) => {
+    switch (categoria) {
+      case 'Reactivos': return '#ff9800'
+      case 'Materiales': return '#2196f3'
+      case 'Material_Biologico': return '#4caf50'
+      default: return '#9e9e9e'
+    }
   }
 
   return (
@@ -265,6 +436,20 @@ export const Configuracion: React.FC = () => {
               label="Docentes" 
               id="config-tab-1"
               aria-controls="config-tabpanel-1"
+            />
+            <Tab 
+              icon={<LibraryBooks />} 
+              iconPosition="start" 
+              label="Catálogo de Insumos" 
+              id="config-tab-2"
+              aria-controls="config-tabpanel-2"
+            />
+            <Tab 
+              icon={<School />} 
+              iconPosition="start" 
+              label="Laboratorios" 
+              id="config-tab-3"
+              aria-controls="config-tabpanel-3"
             />
           </Tabs>
         </Box>
@@ -337,6 +522,151 @@ export const Configuracion: React.FC = () => {
             />
           </Box>
         </TabPanel>
+
+        {/* Tab Panel: Catálogo de Insumos */}
+        <TabPanel value={tabValue} index={2}>
+          <Box sx={{ px: 3 }}>
+            {/* Header con botón */}
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              mb: 3
+            }}>
+              <Typography variant="h6" fontWeight={600}>
+                Catálogo de Insumos
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={handleOpenInsumoForm}
+              >
+                Nuevo Insumo
+              </Button>
+            </Box>
+
+            {/* Tabla */}
+            {loadingInsumos ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                <CircularProgress />
+              </Box>
+            ) : insumos.length === 0 ? (
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: 'column',
+                alignItems: 'center', 
+                justifyContent: 'center',
+                py: 8,
+                color: 'text.secondary'
+              }}>
+                <LibraryBooks sx={{ fontSize: 64, mb: 2, opacity: 0.3 }} />
+                <Typography variant="h6" gutterBottom>
+                  No hay insumos registrados
+                </Typography>
+                <Typography variant="body2">
+                  Crea el primer insumo para empezar
+                </Typography>
+              </Box>
+            ) : (
+              <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 2 }}>
+                <Table>
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: 'primary.main' }}>
+                      <TableCell sx={{ color: 'white', fontWeight: 600 }}>Código</TableCell>
+                      <TableCell sx={{ color: 'white', fontWeight: 600 }}>Nombre</TableCell>
+                      <TableCell sx={{ color: 'white', fontWeight: 600 }}>Categoría</TableCell>
+                      <TableCell sx={{ color: 'white', fontWeight: 600 }}>Unidad</TableCell>
+                      <TableCell sx={{ color: 'white', fontWeight: 600 }}>Presentación</TableCell>
+                      <TableCell sx={{ color: 'white', fontWeight: 600 }} align="center">Acciones</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {insumos.map((insumo) => (
+                      <TableRow key={insumo.id} hover>
+                        <TableCell>
+                          <Chip 
+                            label={insumo.codigo || 'N/A'} 
+                            size="small" 
+                            color="primary"
+                            variant="outlined"
+                            sx={{ fontFamily: 'monospace', fontWeight: 600 }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight={500}>
+                            {insumo.nombre}
+                          </Typography>
+                          {insumo.descripcion && (
+                            <Typography variant="caption" color="text.secondary">
+                              {insumo.descripcion}
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={insumo.categoria?.replace('_', ' ')} 
+                            size="small"
+                            sx={{ 
+                              backgroundColor: getCategoriaColor(insumo.categoria),
+                              color: 'white',
+                              fontWeight: 500
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>{insumo.unidad_medida}</TableCell>
+                        <TableCell>{insumo.presentacion || '-'}</TableCell>
+                        <TableCell align="center">
+                          <Tooltip title="Editar">
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={() => handleEditInsumo(insumo)}
+                            >
+                              <Edit fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </Box>
+        </TabPanel>
+
+        {/* Tab Panel: Laboratorios */}
+        <TabPanel value={tabValue} index={3}>
+          <Box sx={{ px: 3 }}>
+            {/* Header con botón */}
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              mb: 3
+            }}>
+              <Typography variant="h6" fontWeight={600}>
+                Gestión de Laboratorios
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={handleOpenLaboratorioForm}
+              >
+                Nuevo Laboratorio
+              </Button>
+            </Box>
+
+            {/* Tabla de laboratorios */}
+            <LaboratoriosTable
+              onEdit={handleEditLaboratorio}
+              onDelete={handleDeleteLaboratorioClick}
+              onChangeStatus={handleChangeLaboratorioStatus}
+              refresh={refreshLaboratorios}
+              onRefreshComplete={() => {}}
+            />
+          </Box>
+        </TabPanel>
       </Paper>
 
       {/* Formulario de Tipo de Equipo */}
@@ -353,6 +683,22 @@ export const Configuracion: React.FC = () => {
         onClose={handleCloseDocenteForm}
         onSuccess={handleDocenteFormSuccess}
         docente={editingDocente}
+      />
+
+      {/* Formulario de Insumo */}
+      <InsumoForm
+        open={insumoFormOpen}
+        onClose={handleCloseInsumoForm}
+        onSuccess={handleInsumoFormSuccess}
+        insumo={editingInsumo}
+      />
+
+      {/* Formulario de Laboratorio */}
+      <LaboratorioForm
+        open={laboratorioFormOpen}
+        onClose={handleCloseLaboratorioForm}
+        onSuccess={handleLaboratorioFormSuccess}
+        laboratorio={editingLaboratorio}
       />
 
       {/* Diálogo de confirmación de eliminación - Tipo de Equipo */}
@@ -405,6 +751,34 @@ export const Configuracion: React.FC = () => {
           </Button>
           <Button 
             onClick={handleDeleteDocenteConfirm} 
+            color="error"
+            variant="contained"
+          >
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Diálogo de confirmación de eliminación - Laboratorio */}
+      <Dialog
+        open={laboratorioDeleteDialogOpen}
+        onClose={() => setLaboratorioDeleteDialogOpen(false)}
+      >
+        <DialogTitle>Confirmar Eliminación</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            ¿Está seguro que desea eliminar el laboratorio "{laboratorioToDelete?.nombre}"?
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              Esta acción no se puede deshacer. El laboratorio será eliminado permanentemente del sistema.
+            </Alert>
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLaboratorioDeleteDialogOpen(false)}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleDeleteLaboratorioConfirm} 
             color="error"
             variant="contained"
           >

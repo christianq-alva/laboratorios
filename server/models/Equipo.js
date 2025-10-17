@@ -22,12 +22,15 @@ export class Equipo {
           e.condicion,
           e.fecha_adquisicion,
           e.tipo_equipo_id,
+          e.laboratorio_id,
           te.nombre as tipo_equipo_nombre,
+          l.nombre as laboratorio_nombre,
           COALESCE(ie.cantidad_disponible, 0) as cantidad_disponible,
           COALESCE(ie.cantidad_total, 0) as cantidad_total,
           COALESCE(ie.cantidad_en_uso, 0) as cantidad_en_uso
         FROM equipos e
         LEFT JOIN tipos_equipo te ON e.tipo_equipo_id = te.id
+        LEFT JOIN laboratorios l ON e.laboratorio_id = l.id
         LEFT JOIN inventario_equipos ie ON e.id = ie.equipo_id AND ie.laboratorio_id = ?
         WHERE ie.laboratorio_id = ? OR ie.laboratorio_id IS NULL
         ORDER BY e.codigo, e.nombre

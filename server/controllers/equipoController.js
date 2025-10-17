@@ -43,12 +43,14 @@ export const getEquipos = async (req, res) => {
         const [rows] = await pool.execute(`
           SELECT e.*, 
                  te.nombre as tipo_equipo_nombre,
+                 lab_principal.nombre as laboratorio_nombre,
                  GROUP_CONCAT(CONCAT(l.nombre, ':', COALESCE(ie.cantidad_disponible, 0), '/', COALESCE(ie.cantidad_total, 0)) SEPARATOR '; ') as inventario_por_laboratorio
           FROM equipos e
           LEFT JOIN tipos_equipo te ON e.tipo_equipo_id = te.id
+          LEFT JOIN laboratorios lab_principal ON e.laboratorio_id = lab_principal.id
           LEFT JOIN inventario_equipos ie ON e.id = ie.equipo_id
           LEFT JOIN laboratorios l ON ie.laboratorio_id = l.id
-          GROUP BY e.id, e.codigo, e.nombre, e.descripcion, e.marca, e.modelo, e.numero_serie, e.estado, e.fecha_ultimo_mantenimiento, e.fecha_proximo_mantenimiento, e.comentarios, e.condicion, e.fecha_adquisicion, e.tipo_equipo_id, te.nombre
+          GROUP BY e.id, e.codigo, e.nombre, e.descripcion, e.marca, e.modelo, e.numero_serie, e.estado, e.fecha_ultimo_mantenimiento, e.fecha_proximo_mantenimiento, e.comentarios, e.condicion, e.fecha_adquisicion, e.tipo_equipo_id, e.laboratorio_id, te.nombre, lab_principal.nombre
           ORDER BY e.codigo, e.nombre
         `)
         equipos = rows
@@ -94,7 +96,9 @@ export const getEquiposSimple = async (req, res) => {
         e.condicion,
         e.fecha_adquisicion,
         e.tipo_equipo_id,
+        e.laboratorio_id,
         te.nombre as tipo_equipo_nombre,
+        lab.nombre as laboratorio_nombre,
         (SELECT COUNT(*) FROM movimientos_equipos me WHERE me.equipo_id = e.id) as total_movimientos,
         (SELECT COUNT(*) FROM inventario_equipos ie WHERE ie.equipo_id = e.id) as laboratorios_asignados,
         (SELECT GROUP_CONCAT(l.nombre SEPARATOR ', ') 
@@ -103,6 +107,7 @@ export const getEquiposSimple = async (req, res) => {
          WHERE ie.equipo_id = e.id) as laboratorios_nombres
       FROM equipos e
       LEFT JOIN tipos_equipo te ON e.tipo_equipo_id = te.id
+      LEFT JOIN laboratorios lab ON e.laboratorio_id = lab.id
     `
     
     const params = []
@@ -172,6 +177,7 @@ export const createEquipo = async (req, res) => {
       condicion = 'Bueno',
       fecha_adquisicion,
       tipo_equipo_id,
+      laboratorio_id,
       inventario_inicial = []
     } = req.body
     
@@ -206,9 +212,9 @@ export const createEquipo = async (req, res) => {
     
     // Crear el equipo
     const [equipoResult] = await connection.execute(`
-      INSERT INTO equipos (codigo, nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios, condicion, fecha_adquisicion, tipo_equipo_id) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [codigo, nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios, condicion, fecha_adquisicion || null, tipo_equipo_id || null])
+      INSERT INTO equipos (codigo, nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios, condicion, fecha_adquisicion, tipo_equipo_id, laboratorio_id) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [codigo, nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios, condicion, fecha_adquisicion || null, tipo_equipo_id || null, laboratorio_id || null])
     
     const equipo_id = equipoResult.insertId
     console.log('✅ Equipo creado con ID:', equipo_id)
@@ -313,9 +319,9 @@ export const updateEquipo = async (req, res) => {
     // Actualizar equipo
     await pool.execute(`
       UPDATE equipos 
-      SET nombre = ?, descripcion = ?, marca = ?, modelo = ?, numero_serie = ?, estado = ?, fecha_ultimo_mantenimiento = ?, fecha_proximo_mantenimiento = ?, comentarios = ?, condicion = ?, fecha_adquisicion = ?, tipo_equipo_id = ?
+      SET nombre = ?, descripcion = ?, marca = ?, modelo = ?, numero_serie = ?, estado = ?, fecha_ultimo_mantenimiento = ?, fecha_proximo_mantenimiento = ?, comentarios = ?, condicion = ?, fecha_adquisicion = ?, tipo_equipo_id = ?, laboratorio_id = ?
       WHERE id = ?
-    `, [nombre.trim(), descripcion?.trim() || '', marca?.trim() || '', modelo?.trim() || '', numero_serie?.trim() || '', estado || 'Operativo', fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios?.trim() || '', condicion || 'Bueno', fecha_adquisicion || null, tipo_equipo_id || null, equipoId])
+    `, [nombre.trim(), descripcion?.trim() || '', marca?.trim() || '', modelo?.trim() || '', numero_serie?.trim() || '', estado || 'Operativo', fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios?.trim() || '', condicion || 'Bueno', fecha_adquisicion || null, tipo_equipo_id || null, laboratorio_id || null, equipoId])
     
     console.log('✅ Equipo actualizado exitosamente:', equipoId)
     

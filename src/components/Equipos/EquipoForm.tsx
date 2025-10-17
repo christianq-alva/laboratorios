@@ -20,6 +20,7 @@ import {
 import { Close, Build } from '@mui/icons-material'
 import { equipoService, type Equipo } from '../../services/equipoService'
 import { tipoEquipoService, type TipoEquipo } from '../../services/tipoEquipoService'
+import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
 
 interface EquipoFormProps {
   open: boolean
@@ -41,10 +42,12 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
     comentarios: '',
     condicion: 'Bueno' as 'Excelente' | 'Bueno' | 'Regular' | 'Malo',
     fecha_adquisicion: '',
-    tipo_equipo_id: 0
+    tipo_equipo_id: 0,
+    laboratorio_id: 0
   })
   
   const [tiposEquipo, setTiposEquipo] = useState<TipoEquipo[]>([])
+  const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -66,13 +69,19 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
   const loadInitialData = async () => {
     try {
       setLoadingData(true)
-      const tiposResult = await tipoEquipoService.getActivos()
+      const [tiposResult, laboratoriosResult] = await Promise.all([
+        tipoEquipoService.getActivos(),
+        laboratorioService.getAll()
+      ])
       if (tiposResult.success) {
         setTiposEquipo(tiposResult.data || [])
       }
+      if (laboratoriosResult.success) {
+        setLaboratorios(laboratoriosResult.data || [])
+      }
     } catch (err) {
       console.error('Error loading initial data:', err)
-      setError('Error al cargar tipos de equipo')
+      setError('Error al cargar datos iniciales')
     } finally {
       setLoadingData(false)
     }
@@ -102,7 +111,8 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
       comentarios: equipoData.comentarios || '',
       condicion: equipoData.condicion || 'Bueno',
       fecha_adquisicion: formatDateForInput(equipoData.fecha_adquisicion),
-      tipo_equipo_id: equipoData.tipo_equipo_id || 0
+      tipo_equipo_id: equipoData.tipo_equipo_id || 0,
+      laboratorio_id: equipoData.laboratorio_id || 0
     })
   }
 
@@ -119,7 +129,8 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
       comentarios: '',
       condicion: 'Bueno',
       fecha_adquisicion: '',
-      tipo_equipo_id: 0
+      tipo_equipo_id: 0,
+      laboratorio_id: 0
     })
     setError(null)
   }
@@ -309,6 +320,25 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
                     </Select>
                   </FormControl>
 
+                  <FormControl fullWidth required>
+                    <InputLabel>Laboratorio (Ubicación)</InputLabel>
+                    <Select
+                      value={formData.laboratorio_id}
+                      label="Laboratorio (Ubicación)"
+                      onChange={(e) => setFormData(prev => ({ ...prev, laboratorio_id: e.target.value as number }))}
+                      disabled={loading}
+                    >
+                      <MenuItem value={0} disabled>Seleccionar laboratorio</MenuItem>
+                      {laboratorios.map((lab) => (
+                        <MenuItem key={lab.id} value={lab.id}>
+                          {lab.nombre} {lab.codigo && `(${lab.codigo})`}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 2 }}>
                   <FormControl fullWidth>
                     <InputLabel>Estado</InputLabel>
                     <Select

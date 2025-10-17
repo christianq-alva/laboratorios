@@ -20,6 +20,8 @@ export interface Equipo {
   fecha_adquisicion?: string
   tipo_equipo_id?: number
   tipo_equipo_nombre?: string
+  laboratorio_id?: number
+  laboratorio_nombre?: string
   // Campos adicionales para vista simple
   total_movimientos?: number
   laboratorios_asignados?: number

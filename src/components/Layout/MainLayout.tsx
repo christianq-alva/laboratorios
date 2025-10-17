@@ -16,10 +16,8 @@ import {
 import {
   Menu as MenuIcon,
   Dashboard,
-  School,
   Schedule,
   Inventory,
-  LibraryBooks,
   Build,
   ReportProblem,
   Assessment,
@@ -37,9 +35,7 @@ interface MainLayoutProps {
 
 const menuItems = [
   { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['Administrador', 'Jefe de Laboratorio'] },
-  { text: 'Laboratorios', icon: <School />, path: '/laboratorios', roles: ['Administrador', 'Jefe de Laboratorio'] },
   { text: 'Horarios', icon: <Schedule />, path: '/horarios', roles: ['Administrador', 'Jefe de Laboratorio'] },
-  { text: 'Catálogo de Insumos', icon: <LibraryBooks />, path: '/catalogo-insumos', roles: ['Administrador', 'Jefe de Laboratorio'] },
   { text: 'Insumos', icon: <Inventory />, path: '/insumos', roles: ['Administrador', 'Jefe de Laboratorio'] },
   { text: 'Equipos', icon: <Build />, path: '/equipos', roles: ['Administrador', 'Jefe de Laboratorio'] },
   { text: 'Incidencias', icon: <ReportProblem />, path: '/incidencias', roles: ['Administrador', 'Jefe de Laboratorio'] },
