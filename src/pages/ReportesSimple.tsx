@@ -3,7 +3,6 @@ import {
   Box,
   Container,
   Typography,
-  Paper,
   Card,
   CardContent,
   Button,
@@ -178,21 +177,20 @@ const ReportesSimple: React.FC = () => {
   const metricas = data?.metricas_generales
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      {/* Header */}
-      <Paper elevation={1} sx={{ p: 3, mb: 3, background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)' }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Box>
-            <Typography variant="h4" component="h1" sx={{ color: 'white', fontWeight: 700, mb: 1 }}>
-              Reportes de Consumo
-            </Typography>
-            <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.9)' }}>
-              Análisis de consumo de insumos por laboratorio
-            </Typography>
-          </Box>
-          <AssessmentIcon sx={{ fontSize: 60, color: 'rgba(255,255,255,0.7)' }} />
+    <Box>
+      {/* Encabezado */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box>
+          <Typography variant="h4" component="h1" sx={{ fontWeight: 600, mb: 1 }}>
+            Reportes
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Análisis de consumo de insumos por laboratorio
+          </Typography>
         </Box>
-      </Paper>
+      </Box>
+
+      <Container maxWidth="xl" sx={{ px: 0 }}>
 
       {/* Métricas principales */}
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
@@ -474,7 +472,8 @@ const ReportesSimple: React.FC = () => {
           })}
         </Typography>
       </Box>
-    </Container>
+      </Container>
+    </Box>
   )
 }
 

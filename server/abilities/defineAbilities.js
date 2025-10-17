@@ -31,6 +31,7 @@ export const defineAbilitiesFor = (user) => {
     // Permisos generales (sin condiciones de laboratorio)
     can(['create', 'read', 'update', 'delete'], 'Docente')
     can('read', 'Horario') // ← Permitir leer horarios en general
+    can('read', 'TipoEquipo') // ← Permitir leer tipos de equipo
     
     return build()
   }

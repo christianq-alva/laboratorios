@@ -8,12 +8,12 @@ import { MainLayout } from './components/Layout/MainLayout'
 import {
   Dashboard,
   Laboratorios,
-  Docentes,
   Horarios,
   Insumos,
   Equipos,
   Incidencias,
   ReportesSimple,
+  Configuracion,
 } from './pages'
 import { CatalogoInsumos } from './pages/CatalogoInsumos'
 import { HorarioPublico } from './components/Public/HorarioPublico'
@@ -63,13 +63,13 @@ function App() {
                   <Routes>
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/laboratorios" element={<Laboratorios />} />
-                    <Route path="/docentes" element={<Docentes />} />
                     <Route path="/horarios" element={<Horarios />} />
                     <Route path="/catalogo-insumos" element={<CatalogoInsumos />} />
                     <Route path="/insumos" element={<Insumos />} />
                     <Route path="/equipos" element={<Equipos />} />
                     <Route path="/incidencias" element={<Incidencias />} />
                     <Route path="/reportes" element={<ReportesSimple />} />
+                    <Route path="/configuracion" element={<Configuracion />} />
                     
                     {/* Default redirect */}
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />

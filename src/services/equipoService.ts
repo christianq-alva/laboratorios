@@ -18,6 +18,8 @@ export interface Equipo {
   comentarios?: string
   condicion?: 'Excelente' | 'Bueno' | 'Regular' | 'Malo'
   fecha_adquisicion?: string
+  tipo_equipo_id?: number
+  tipo_equipo_nombre?: string
   // Campos adicionales para vista simple
   total_movimientos?: number
   laboratorios_asignados?: number

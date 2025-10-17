@@ -36,7 +36,7 @@ import type { Docente } from '../../services/docenteService'
 interface DocentesTableProps {
   onEdit: (docente: Docente) => void
   onDelete: (docente: Docente) => void
-  onViewHorarios: (docente: Docente) => void
+  onViewHorarios?: (docente: Docente) => void
   refresh: boolean
   onRefreshComplete: () => void
 }
@@ -109,7 +109,7 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
   }
 
   const handleViewHorarios = () => {
-    if (selectedDocente) {
+    if (selectedDocente && onViewHorarios) {
       onViewHorarios(selectedDocente)
     }
     handleMenuClose()
@@ -234,12 +234,14 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
-        <MenuItem onClick={handleViewHorarios}>
-          <ListItemIcon>
-            <Visibility fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Ver Horarios</ListItemText>
-        </MenuItem>
+        {onViewHorarios && (
+          <MenuItem onClick={handleViewHorarios}>
+            <ListItemIcon>
+              <Visibility fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Ver Horarios</ListItemText>
+          </MenuItem>
+        )}
         <MenuItem onClick={handleEdit}>
           <ListItemIcon>
             <Edit fontSize="small" />

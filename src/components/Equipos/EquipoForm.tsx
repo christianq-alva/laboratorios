@@ -15,25 +15,17 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Paper,
-  List,
-  ListItem
+  Paper
 } from '@mui/material'
-import { Close, Build, Add, Remove } from '@mui/icons-material'
+import { Close, Build } from '@mui/icons-material'
 import { equipoService, type Equipo } from '../../services/equipoService'
-import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
+import { tipoEquipoService, type TipoEquipo } from '../../services/tipoEquipoService'
 
 interface EquipoFormProps {
   open: boolean
   onClose: () => void
   onSuccess: () => void
   equipo?: Equipo | null
-}
-
-interface InventarioInicial {
-  laboratorio_id: number
-  cantidad_total: number
-  observaciones?: string
 }
 
 export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess, equipo }) => {
@@ -48,11 +40,11 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
     fecha_proximo_mantenimiento: '',
     comentarios: '',
     condicion: 'Bueno' as 'Excelente' | 'Bueno' | 'Regular' | 'Malo',
-    fecha_adquisicion: ''
+    fecha_adquisicion: '',
+    tipo_equipo_id: 0
   })
   
-  const [inventarioInicial, setInventarioInicial] = useState<InventarioInicial[]>([])
-  const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
+  const [tiposEquipo, setTiposEquipo] = useState<TipoEquipo[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -74,13 +66,13 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
   const loadInitialData = async () => {
     try {
       setLoadingData(true)
-      const laboratoriosResult = await laboratorioService.getAll()
-      if (laboratoriosResult.success) {
-        setLaboratorios(laboratoriosResult.data || [])
+      const tiposResult = await tipoEquipoService.getActivos()
+      if (tiposResult.success) {
+        setTiposEquipo(tiposResult.data || [])
       }
     } catch (err) {
       console.error('Error loading initial data:', err)
-      setError('Error al cargar datos iniciales')
+      setError('Error al cargar tipos de equipo')
     } finally {
       setLoadingData(false)
     }
@@ -109,7 +101,8 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
       fecha_proximo_mantenimiento: formatDateForInput(equipoData.fecha_proximo_mantenimiento),
       comentarios: equipoData.comentarios || '',
       condicion: equipoData.condicion || 'Bueno',
-      fecha_adquisicion: formatDateForInput(equipoData.fecha_adquisicion)
+      fecha_adquisicion: formatDateForInput(equipoData.fecha_adquisicion),
+      tipo_equipo_id: equipoData.tipo_equipo_id || 0
     })
   }
 
@@ -125,28 +118,10 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
       fecha_proximo_mantenimiento: '',
       comentarios: '',
       condicion: 'Bueno',
-      fecha_adquisicion: ''
+      fecha_adquisicion: '',
+      tipo_equipo_id: 0
     })
-    setInventarioInicial([])
     setError(null)
-  }
-
-  const agregarInventario = () => {
-    setInventarioInicial(prev => [...prev, {
-      laboratorio_id: 0,
-      cantidad_total: 1,
-      observaciones: ''
-    }])
-  }
-
-  const actualizarInventario = (index: number, field: keyof InventarioInicial, value: any) => {
-    setInventarioInicial(prev => 
-      prev.map((item, i) => i === index ? { ...item, [field]: value } : item)
-    )
-  }
-
-  const eliminarInventario = (index: number) => {
-    setInventarioInicial(prev => prev.filter((_, i) => i !== index))
   }
 
   const handleSubmit = async () => {
@@ -170,7 +145,7 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
         numero_serie: formData.numero_serie.trim(),
         comentarios: formData.comentarios.trim(),
         fecha_adquisicion: formData.fecha_adquisicion && formData.fecha_adquisicion.trim() ? formData.fecha_adquisicion : null,
-        inventario_inicial: isEditing ? undefined : inventarioInicial.filter(inv => inv.laboratorio_id > 0 && inv.cantidad_total > 0)
+        tipo_equipo_id: formData.tipo_equipo_id > 0 ? formData.tipo_equipo_id : null
       }
 
       let result
@@ -307,15 +282,32 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
                   />
                 </Box>
 
+                <TextField
+                  fullWidth
+                  label="Número de serie"
+                  value={formData.numero_serie}
+                  onChange={(e) => setFormData(prev => ({ ...prev, numero_serie: e.target.value }))}
+                  placeholder="Número de serie único"
+                  disabled={loading}
+                />
+
                 <Box sx={{ display: 'flex', gap: 2 }}>
-                  <TextField
-                    fullWidth
-                    label="Número de serie"
-                    value={formData.numero_serie}
-                    onChange={(e) => setFormData(prev => ({ ...prev, numero_serie: e.target.value }))}
-                    placeholder="Número de serie único"
-                    disabled={loading}
-                  />
+                  <FormControl fullWidth required>
+                    <InputLabel>Tipo de Equipo</InputLabel>
+                    <Select
+                      value={formData.tipo_equipo_id}
+                      label="Tipo de Equipo"
+                      onChange={(e) => setFormData(prev => ({ ...prev, tipo_equipo_id: e.target.value as number }))}
+                      disabled={loading}
+                    >
+                      <MenuItem value={0} disabled>Seleccionar tipo</MenuItem>
+                      {tiposEquipo.map((tipo) => (
+                        <MenuItem key={tipo.id} value={tipo.id}>
+                          {tipo.nombre}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
 
                   <FormControl fullWidth>
                     <InputLabel>Estado</InputLabel>
@@ -393,87 +385,6 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
                 />
               </Box>
             </Paper>
-
-            {/* Inventario inicial (solo para creación) */}
-            {!isEditing && (
-              <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid #e0e0e0' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="h6" sx={{ color: 'secondary.main' }}>
-                    Inventario Inicial (Opcional)
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    startIcon={<Add />}
-                    onClick={agregarInventario}
-                    size="small"
-                    disabled={loading}
-                  >
-                    Agregar Laboratorio
-                  </Button>
-                </Box>
-
-                {inventarioInicial.length === 0 ? (
-                  <Alert severity="info" sx={{ borderRadius: 2 }}>
-                    Puedes agregar el inventario inicial por laboratorio o hacerlo después desde el módulo de equipos.
-                  </Alert>
-                ) : (
-                  <List>
-                    {inventarioInicial.map((inv, index) => (
-                      <ListItem key={index} sx={{ border: '1px solid #e0e0e0', borderRadius: 1, mb: 1 }}>
-                        <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                            <FormControl sx={{ flex: 1 }}>
-                              <InputLabel>Laboratorio</InputLabel>
-                              <Select
-                                value={inv.laboratorio_id}
-                                label="Laboratorio"
-                                onChange={(e) => actualizarInventario(index, 'laboratorio_id', e.target.value)}
-                                disabled={loading}
-                              >
-                                <MenuItem value={0} disabled>Seleccionar laboratorio</MenuItem>
-                                {laboratorios.map((lab) => (
-                                  <MenuItem key={lab.id} value={lab.id}>
-                                    {lab.nombre}
-                                  </MenuItem>
-                                ))}
-                              </Select>
-                            </FormControl>
-
-                            <TextField
-                              type="number"
-                              label="Cantidad"
-                              value={inv.cantidad_total}
-                              onChange={(e) => actualizarInventario(index, 'cantidad_total', parseInt(e.target.value) || 0)}
-                              disabled={loading}
-                              inputProps={{ min: 1 }}
-                              sx={{ width: 120 }}
-                            />
-
-                            <IconButton
-                              onClick={() => eliminarInventario(index)}
-                              color="error"
-                              disabled={loading}
-                            >
-                              <Remove />
-                            </IconButton>
-                          </Box>
-
-                          <TextField
-                            fullWidth
-                            label="Observaciones"
-                            value={inv.observaciones}
-                            onChange={(e) => actualizarInventario(index, 'observaciones', e.target.value)}
-                            placeholder="Observaciones adicionales..."
-                            disabled={loading}
-                            size="small"
-                          />
-                        </Box>
-                      </ListItem>
-                    ))}
-                  </List>
-                )}
-              </Paper>
-            )}
           </Box>
         )}
       </DialogContent>
