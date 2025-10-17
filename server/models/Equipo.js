@@ -32,7 +32,7 @@ export class Equipo {
         LEFT JOIN tipos_equipo te ON e.tipo_equipo_id = te.id
         LEFT JOIN laboratorios l ON e.laboratorio_id = l.id
         LEFT JOIN inventario_equipos ie ON e.id = ie.equipo_id AND ie.laboratorio_id = ?
-        WHERE ie.laboratorio_id = ? OR ie.laboratorio_id IS NULL
+        WHERE e.laboratorio_id = ?
         ORDER BY e.codigo, e.nombre
       `, [laboratorio_id, laboratorio_id])
       

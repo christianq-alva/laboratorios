@@ -1514,8 +1514,6 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                         <List dense>
                           {equiposDisponibles.map((equipo) => {
                             const yaSeleccionado = equiposSeleccionados.some(e => e.equipo_id === equipo.id)
-                            const disponibilidadColor = (equipo.cantidad_disponible || 0) === 0 ? 'error' : 
-                                                       (equipo.cantidad_disponible || 0) < 5 ? 'warning' : 'success'
                             return (
                               <ListItem
                                 key={equipo.id}
@@ -1531,21 +1529,9 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                               >
                                 <ListItemText
                                   primary={
-                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                        {equipo.nombre}
-                                      </Typography>
-                                      <Chip 
-                                        label={`${equipo.cantidad_disponible || 0} disp.`}
-                                        size="small"
-                                        color={disponibilidadColor}
-                                        variant="filled"
-                                        sx={{ 
-                                          minWidth: 'auto',
-                                          '& .MuiChip-label': { px: 1, fontSize: '0.75rem' }
-                                        }}
-                                      />
-                                    </Box>
+                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                      {equipo.nombre}
+                                    </Typography>
                                   }
                                   secondary={
                                     <Typography variant="caption" color="text.secondary">
@@ -1556,7 +1542,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                                 <IconButton
                                   size="small"
                                   onClick={() => agregarEquipo(equipo)}
-                                  disabled={yaSeleccionado || (equipo.cantidad_disponible || 0) === 0}
+                                  disabled={yaSeleccionado}
                                   color="primary"
                                   sx={{ ml: 1 }}
                                 >
