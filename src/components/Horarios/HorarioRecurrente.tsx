@@ -15,7 +15,6 @@ import {
   InputLabel,
   Select,
   Paper,
-  Divider,
   List,
   ListItem,
   ListItemText,
@@ -28,7 +27,8 @@ import {
   Info,
   CheckCircle,
   Add,
-  Repeat
+  Repeat,
+  Close
 } from '@mui/icons-material'
 
 import { horarioService, type CreateHorarioData } from '../../services/horarioService'
@@ -357,195 +357,229 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
   }
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Repeat color="primary" />
-          Crear Horarios Recurrentes
+    <Dialog 
+      open={open} 
+      onClose={handleClose} 
+      maxWidth="md" 
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: { xs: 0, md: 2 },
+          maxHeight: '90vh'
+        }
+      }}
+    >
+      <DialogTitle sx={{ pb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Repeat color="primary" />
+            <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>
+              Crear Horarios Recurrentes
+            </Typography>
+          </Box>
+          <IconButton onClick={handleClose} disabled={loading} sx={{ color: 'grey.500' }}>
+            <Close />
+          </IconButton>
         </Box>
       </DialogTitle>
       
-      <DialogContent>
+      <DialogContent sx={{ pt: 2 }}>
         {loadingData ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 4 }}>
             <CircularProgress />
+            <Typography variant="body2" sx={{ ml: 2 }}>
+              Cargando datos...
+            </Typography>
           </Box>
         ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {/* Información básica */}
-            <Typography variant="h6" gutterBottom>
-              📋 Información Básica
-            </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {/* Información del curso y grupo */}
+            <Paper elevation={0} sx={{ p: 3, bgcolor: 'grey.50', borderRadius: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 3 }}>
+                Información del Curso
+              </Typography>
 
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <FormControl sx={{ minWidth: 200 }} required>
-                <InputLabel>Laboratorio</InputLabel>
-                <Select
-                  value={formData.laboratorio_id}
-                  onChange={(e) => setFormData(prev => ({ ...prev, laboratorio_id: Number(e.target.value) }))}
-                  label="Laboratorio"
-                >
-                  {laboratorios.map(lab => (
-                    <MenuItem key={lab.id} value={lab.id}>
-                      {lab.nombre} - {lab.ubicacion}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              {/* Descripción y cantidad de alumnos */}
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+                <TextField
+                  sx={{ flex: 1, minWidth: 250 }}
+                  required
+                  label="Descripción del Curso"
+                  value={formData.descripcion}
+                  onChange={(e) => setFormData(prev => ({ ...prev, descripcion: e.target.value }))}
+                  placeholder="Ej: Algoritmos y Estructuras de Datos"
+                />
 
-              <FormControl sx={{ minWidth: 200 }} required>
-                <InputLabel>Docente</InputLabel>
-                <Select
-                  value={formData.docente_id}
-                  onChange={(e) => setFormData(prev => ({ ...prev, docente_id: Number(e.target.value) }))}
-                  label="Docente"
-                >
-                  {docentes.map(docente => (
-                    <MenuItem key={docente.id} value={docente.id}>
-                      {docente.nombre}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
+                <TextField
+                  sx={{ minWidth: 160 }}
+                  required
+                  type="number"
+                  label="Cantidad de Alumnos"
+                  value={formData.cantidad_alumnos}
+                  onChange={(e) => setFormData(prev => ({ ...prev, cantidad_alumnos: Number(e.target.value) }))}
+                  inputProps={{ min: 1, max: 50 }}
+                />
+              </Box>
 
-            {/* Selección de grupo */}
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <FormControl sx={{ minWidth: 150 }} required>
-                <InputLabel>Escuela</InputLabel>
-                <Select
-                  value={selectedEscuela}
-                  onChange={(e) => setSelectedEscuela(Number(e.target.value))}
-                  label="Escuela"
-                >
-                  {escuelas.map(escuela => (
-                    <MenuItem key={escuela.id} value={escuela.id}>
-                      {escuela.nombre}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <FormControl sx={{ minWidth: 150 }} required>
-                <InputLabel>Ciclo</InputLabel>
-                <Select
-                  value={selectedCiclo}
-                  onChange={(e) => setSelectedCiclo(Number(e.target.value))}
-                  label="Ciclo"
-                  disabled={!selectedEscuela}
-                >
-                  {[...ciclos]
-                    .sort((a, b) => {
-                      const numA = parseInt(a.nombre.replace(/[^\d]/g, '')) || 0;
-                      const numB = parseInt(b.nombre.replace(/[^\d]/g, '')) || 0;
-                      return numA - numB;
-                    })
-                    .map(ciclo => (
-                      <MenuItem key={ciclo.id} value={ciclo.id}>
-                        {ciclo.nombre}
+              {/* Selección de grupo académico */}
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+                <FormControl sx={{ minWidth: 180, flex: 1 }} required>
+                  <InputLabel>Escuela</InputLabel>
+                  <Select
+                    value={selectedEscuela}
+                    onChange={(e) => setSelectedEscuela(Number(e.target.value))}
+                    label="Escuela"
+                  >
+                    {escuelas.map(escuela => (
+                      <MenuItem key={escuela.id} value={escuela.id}>
+                        {escuela.nombre}
                       </MenuItem>
                     ))}
-                </Select>
-              </FormControl>
+                  </Select>
+                </FormControl>
 
-              <FormControl sx={{ minWidth: 150 }} required>
-                <InputLabel>Grupo</InputLabel>
-                <Select
-                  value={formData.grupo_id}
-                  onChange={(e) => setFormData(prev => ({ ...prev, grupo_id: Number(e.target.value) }))}
-                  label="Grupo"
-                  disabled={!selectedEscuela || !selectedCiclo}
-                >
-                  {grupos.map(grupo => (
-                    <MenuItem key={grupo.id} value={grupo.id}>
-                      {grupo.nombre}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
+                <FormControl sx={{ minWidth: 140 }} required>
+                  <InputLabel>Ciclo</InputLabel>
+                  <Select
+                    value={selectedCiclo}
+                    onChange={(e) => setSelectedCiclo(Number(e.target.value))}
+                    label="Ciclo"
+                    disabled={!selectedEscuela}
+                  >
+                    {[...ciclos]
+                      .sort((a, b) => {
+                        const numA = parseInt(a.nombre.replace(/[^\d]/g, '')) || 0;
+                        const numB = parseInt(b.nombre.replace(/[^\d]/g, '')) || 0;
+                        return numA - numB;
+                      })
+                      .map(ciclo => (
+                        <MenuItem key={ciclo.id} value={ciclo.id}>
+                          {ciclo.nombre}
+                        </MenuItem>
+                      ))}
+                  </Select>
+                </FormControl>
 
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <TextField
-                sx={{ minWidth: 300 }}
-                required
-                label="Descripción del Curso"
-                value={formData.descripcion}
-                onChange={(e) => setFormData(prev => ({ ...prev, descripcion: e.target.value }))}
-                placeholder="Ej: Algoritmos y Estructuras de Datos"
-              />
+                <FormControl sx={{ minWidth: 140 }} required>
+                  <InputLabel>Grupo</InputLabel>
+                  <Select
+                    value={formData.grupo_id}
+                    onChange={(e) => setFormData(prev => ({ ...prev, grupo_id: Number(e.target.value) }))}
+                    label="Grupo"
+                    disabled={!selectedEscuela || !selectedCiclo}
+                  >
+                    {grupos.map(grupo => (
+                      <MenuItem key={grupo.id} value={grupo.id}>
+                        {grupo.nombre}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
 
-              <TextField
-                sx={{ minWidth: 150 }}
-                required
-                type="number"
-                label="Cantidad de Alumnos"
-                value={formData.cantidad_alumnos}
-                onChange={(e) => setFormData(prev => ({ ...prev, cantidad_alumnos: Number(e.target.value) }))}
-                inputProps={{ min: 1, max: 50 }}
-              />
-            </Box>
+              {/* Laboratorio y docente */}
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <FormControl sx={{ minWidth: 220, flex: 1 }} required>
+                  <InputLabel>Laboratorio</InputLabel>
+                  <Select
+                    value={formData.laboratorio_id}
+                    onChange={(e) => setFormData(prev => ({ ...prev, laboratorio_id: Number(e.target.value) }))}
+                    label="Laboratorio"
+                  >
+                    {laboratorios.map(lab => (
+                      <MenuItem key={lab.id} value={lab.id}>
+                        {lab.nombre} - {lab.ubicacion}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
-            {/* Horarios */}
-            <Divider sx={{ my: 2 }} />
-            <Typography variant="h6" gutterBottom>
-              🕐 Horarios
-            </Typography>
+                <FormControl sx={{ minWidth: 220, flex: 1 }} required>
+                  <InputLabel>Docente</InputLabel>
+                  <Select
+                    value={formData.docente_id}
+                    onChange={(e) => setFormData(prev => ({ ...prev, docente_id: Number(e.target.value) }))}
+                    label="Docente"
+                  >
+                    {docentes.map(docente => (
+                      <MenuItem key={docente.id} value={docente.id}>
+                        {docente.nombre}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            </Paper>
 
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <FormControl sx={{ minWidth: 150 }} required>
-                <InputLabel>Hora de Inicio</InputLabel>
-                <Select
-                  value={formData.start_time}
-                  onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
-                  label="Hora de Inicio"
-                >
-                  {TIME_BLOCKS.map(block => (
-                    <MenuItem key={block.id} value={block.start}>
-                      {block.label} - {block.start}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+            {/* Horarios y color */}
+            <Paper elevation={0} sx={{ p: 3, bgcolor: 'grey.50', borderRadius: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 3 }}>
+                Horario y Color
+              </Typography>
 
-              <FormControl sx={{ minWidth: 150 }} required>
-                <InputLabel>Hora de Fin</InputLabel>
-                <Select
-                  value={formData.end_time}
-                  onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
-                  label="Hora de Fin"
-                >
-                  {TIME_BLOCKS.map(block => (
-                    <MenuItem key={block.id} value={block.end}>
-                      {block.label} - {block.end}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                <FormControl sx={{ minWidth: 180, flex: 1 }} required>
+                  <InputLabel>Hora de Inicio</InputLabel>
+                  <Select
+                    value={formData.start_time}
+                    onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value, end_time: '' }))}
+                    label="Hora de Inicio"
+                  >
+                    {TIME_BLOCKS.map(block => (
+                      <MenuItem key={block.id} value={block.start}>
+                        {block.label} - {block.start}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
-              <TextField
-                sx={{ minWidth: 100 }}
-                type="color"
-                label="Color del Horario"
-                value={formData.color}
-                onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
-              />
-            </Box>
+                <FormControl sx={{ minWidth: 180, flex: 1 }} required disabled={!formData.start_time}>
+                  <InputLabel>Hora de Fin</InputLabel>
+                  <Select
+                    value={formData.end_time}
+                    onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
+                    label="Hora de Fin"
+                  >
+                    {TIME_BLOCKS.map((block, index) => {
+                      // Encontrar el índice del bloque de inicio
+                      const startIndex = TIME_BLOCKS.findIndex(b => b.start === formData.start_time)
+                      // Deshabilitar bloques anteriores al de inicio
+                      const isDisabled = Boolean(formData.start_time && index < startIndex)
+                      
+                      return (
+                        <MenuItem key={block.id} value={block.end} disabled={isDisabled}>
+                          {block.label} - {block.end}
+                        </MenuItem>
+                      )
+                    })}
+                  </Select>
+                </FormControl>
+
+                <TextField
+                  sx={{ minWidth: 120 }}
+                  type="color"
+                  label="Color"
+                  value={formData.color}
+                  onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
+                  helperText="Color del horario en el calendario"
+                />
+              </Box>
+            </Paper>
 
             {/* Selección de fechas */}
-            <Divider sx={{ my: 2 }} />
-            <Typography variant="h6" gutterBottom>
-              📅 Seleccionar Fechas
-            </Typography>
+            <Paper elevation={0} sx={{ p: 3, bgcolor: 'grey.50', borderRadius: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 3 }}>
+                Seleccionar Fechas
+              </Typography>
             
-            <Alert severity="info" sx={{ mb: 2 }}>
+            <Alert severity="info" sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Info fontSize="small" />
                 Selecciona una fecha y haz clic en "Agregar" para añadirla a la lista.
               </Box>
             </Alert>
 
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 3 }}>
               <TextField
                 type="date"
                 label="Nueva Fecha"
@@ -566,29 +600,40 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
               </Button>
             </Box>
 
-            <Paper sx={{ p: 2, minHeight: 200, maxHeight: 300, overflowY: 'auto' }}>
-              <Typography variant="subtitle1" gutterBottom>
+            <Paper variant="outlined" sx={{ p: 2.5, minHeight: 200, maxHeight: 300, overflowY: 'auto', bgcolor: 'background.paper' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
                 Fechas Seleccionadas ({selectedDates.length})
               </Typography>
               {selectedDates.length === 0 ? (
-                <Alert severity="warning">
+                <Alert severity="warning" sx={{ borderRadius: 1 }}>
                   No has seleccionado ninguna fecha. Agrega fechas usando el selector de arriba.
                 </Alert>
               ) : (
-                <List dense>
+                <List dense sx={{ pt: 1 }}>
                   {selectedDates.map((date, index) => (
-                    <ListItem key={index}>
+                    <ListItem 
+                      key={index}
+                      sx={{ 
+                        bgcolor: 'action.hover',
+                        borderRadius: 1,
+                        mb: 1,
+                        px: 2,
+                        py: 1
+                      }}
+                    >
                       <ListItemText
                         primary={formatDate(date)}
                         secondary={date}
+                        primaryTypographyProps={{ fontWeight: 500 }}
                       />
                       <ListItemSecondaryAction>
                         <IconButton
                           edge="end"
                           onClick={() => removeDate(date)}
                           color="error"
+                          size="small"
                         >
-                          <Delete />
+                          <Delete fontSize="small" />
                         </IconButton>
                       </ListItemSecondaryAction>
                     </ListItem>
@@ -596,23 +641,30 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
                 </List>
               )}
             </Paper>
+            </Paper>
 
             {error && (
-              <Alert severity="error">{error}</Alert>
+              <Alert severity="error" sx={{ borderRadius: 2 }}>{error}</Alert>
             )}
           </Box>
         )}
       </DialogContent>
 
-      <DialogActions>
-        <Button onClick={handleClose} disabled={loading}>
+      <DialogActions sx={{ px: 3, py: 2, gap: 1 }}>
+        <Button 
+          onClick={handleClose} 
+          disabled={loading}
+          variant="outlined"
+          sx={{ minWidth: 100 }}
+        >
           Cancelar
         </Button>
         <Button
           onClick={handleSubmit}
           disabled={loading || !canSubmit()}
           variant="contained"
-          startIcon={loading ? <CircularProgress size={20} /> : <Schedule />}
+          startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <Schedule />}
+          sx={{ minWidth: 150 }}
         >
           {loading ? 'Creando...' : `Crear ${selectedDates.length} Horario${selectedDates.length !== 1 ? 's' : ''}`}
         </Button>
