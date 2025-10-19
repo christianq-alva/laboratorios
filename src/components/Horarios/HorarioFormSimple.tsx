@@ -475,12 +475,12 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
   // Manejo de equipos
   const agregarEquipo = (equipo: Equipo) => {
     const yaSeleccionado = equiposSeleccionados.find(e => e.equipo_id === equipo.id)
-    if (!yaSeleccionado && (equipo.cantidad_disponible || 0) > 0) {
+    if (!yaSeleccionado) {
       const nuevoEquipo: EquipoSeleccionado = {
         equipo_id: equipo.id,
         nombre: equipo.nombre,
         cantidad: 1,
-        cantidad_disponible: equipo.cantidad_disponible || 0
+        cantidad_disponible: 1 // Valor fijo ya que los equipos no manejan cantidad
       }
       setEquiposSeleccionados(prev => [...prev, nuevoEquipo])
     }
