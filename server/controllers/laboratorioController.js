@@ -247,7 +247,62 @@ export const deleteLaboratorio = async (req, res) => {
       }
     }
 
-    // TODO: Verificar si tiene reservas activas antes de eliminar
+    // Verificar si tiene relaciones antes de eliminar
+    const [equiposCount] = await pool.execute(
+      'SELECT COUNT(*) as total FROM equipos WHERE laboratorio_id = ?',
+      [id]
+    )
+    
+    const [horariosCount] = await pool.execute(
+      'SELECT COUNT(*) as total FROM horarios WHERE laboratorio_id = ?',
+      [id]
+    )
+
+    const [insumosCount] = await pool.execute(
+      'SELECT COUNT(*) as total FROM insumos WHERE laboratorio_id = ?',
+      [id]
+    )
+
+    const [incidenciasCount] = await pool.execute(
+      'SELECT COUNT(*) as total FROM incidencias WHERE laboratorio_id = ?',
+      [id]
+    )
+
+    const [jefesCount] = await pool.execute(
+      'SELECT COUNT(*) as total FROM jefe_laboratorio WHERE laboratorio_id = ?',
+      [id]
+    )
+
+    // Si tiene relaciones, informar al usuario
+    const totalRelaciones = equiposCount[0].total + horariosCount[0].total + 
+                           insumosCount[0].total + incidenciasCount[0].total + 
+                           jefesCount[0].total
+
+    if (totalRelaciones > 0) {
+      const relaciones = []
+      if (equiposCount[0].total > 0) {
+        relaciones.push(`${equiposCount[0].total} equipo(s)`)
+      }
+      if (insumosCount[0].total > 0) {
+        relaciones.push(`${insumosCount[0].total} insumo(s)`)
+      }
+      if (horariosCount[0].total > 0) {
+        relaciones.push(`${horariosCount[0].total} horario(s)`)
+      }
+      if (incidenciasCount[0].total > 0) {
+        relaciones.push(`${incidenciasCount[0].total} incidencia(s)`)
+      }
+      if (jefesCount[0].total > 0) {
+        relaciones.push(`${jefesCount[0].total} jefe(s) asignado(s)`)
+      }
+
+      return res.status(400).json({
+        success: false,
+        message: `No se puede eliminar el laboratorio "${labCheck[0].nombre}" porque está relacionado con otras tablas del sistema y tiene datos asociados: ${relaciones.join(', ')}. Primero debes eliminar o reasignar estos registros para poder eliminar el laboratorio.`
+      })
+    }
+
+    // Si no tiene relaciones, proceder con la eliminación
     const [result] = await pool.execute('DELETE FROM laboratorios WHERE id = ?', [id])
 
     console.log('✅ Laboratorio eliminado:', id)
@@ -259,9 +314,19 @@ export const deleteLaboratorio = async (req, res) => {
 
   } catch (error) {
     console.error('Error en deleteLaboratorio:', error)
+    
+    // Manejar errores de restricción de clave foránea
+    if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.code === 'ER_ROW_IS_REFERENCED') {
+      return res.status(400).json({
+        success: false,
+        message: 'No se puede eliminar el laboratorio porque está relacionado con otras tablas del sistema y tiene datos asociados (equipos, insumos, horarios, incidencias u otros registros). Primero debes eliminar o reasignar estos registros para poder eliminar el laboratorio.'
+      })
+    }
+    
+    // Error genérico pero con contexto de posibles relaciones
     res.status(500).json({
       success: false,
-      message: error.message
+      message: 'No se puede eliminar el laboratorio porque está relacionado con otras tablas del sistema y tiene datos asociados. Primero debes eliminar o reasignar los registros relacionados (equipos, insumos, horarios, etc.) antes de poder eliminar el laboratorio.'
     })
   }
 }

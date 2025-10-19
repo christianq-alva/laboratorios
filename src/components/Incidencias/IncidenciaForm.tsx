@@ -131,12 +131,12 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
       setError('La descripción es obligatoria')
       return false
     }
-    if (titulo.trim().length < 5) {
-      setError('El título debe tener al menos 5 caracteres')
+    if (titulo.trim().length < 30) {
+      setError('El título debe tener al menos 30 caracteres')
       return false
     }
-    if (descripcion.trim().length < 10) {
-      setError('La descripción debe tener al menos 10 caracteres')
+    if (descripcion.trim().length < 50) {
+      setError('La descripción debe tener al menos 50 caracteres')
       return false
     }
     return true
@@ -384,8 +384,14 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
             size="small"
             sx={{ mb: 2 }}
             placeholder="Ej: Equipo de computación no funciona"
-            helperText="Describe brevemente el problema"
-            error={titulo.length > 0 && titulo.trim().length < 5}
+            helperText={
+              titulo.length === 0
+                ? "Describe brevemente el problema (mínimo 30 caracteres)"
+                : titulo.trim().length < 30
+                ? `Faltan ${30 - titulo.trim().length} caracteres para alcanzar el mínimo (${titulo.trim().length}/30)`
+                : `${titulo.trim().length} caracteres ✓`
+            }
+            error={titulo.length > 0 && titulo.trim().length < 30}
           />
           
           <TextField
@@ -397,8 +403,14 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
             rows={4}
             size="small"
             placeholder="Describe en detalle qué sucedió, qué equipos están afectados, etc."
-            helperText="Proporciona todos los detalles relevantes para resolver el problema"
-            error={descripcion.length > 0 && descripcion.trim().length < 10}
+            helperText={
+              descripcion.length === 0
+                ? "Proporciona todos los detalles relevantes (mínimo 50 caracteres)"
+                : descripcion.trim().length < 50
+                ? `Faltan ${50 - descripcion.trim().length} caracteres para alcanzar el mínimo (${descripcion.trim().length}/50)`
+                : `${descripcion.trim().length} caracteres ✓`
+            }
+            error={descripcion.length > 0 && descripcion.trim().length < 50}
           />
         </Box>
 

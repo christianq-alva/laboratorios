@@ -228,11 +228,11 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
               </Box>
             </Paper>
 
-            {/* Insumos utilizados */}
+            {/* Insumos requeridos */}
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Inventory color="primary" />
-                Insumos Utilizados
+                Insumos Requeridos
                 {horario.insumos && horario.insumos.length > 0 && (
                   <Chip 
                     label={horario.insumos.length} 
@@ -287,11 +287,11 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
               )}
             </Paper>
 
-            {/* Equipos utilizados */}
+            {/* Equipos requeridos */}
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Build color="primary" />
-                Equipos Utilizados
+                Equipos Requeridos
                 {horario.equipos && horario.equipos.length > 0 && (
                   <Chip 
                     label={horario.equipos.length} 

@@ -19,11 +19,13 @@ import {
   IconButton,
   Tooltip,
   TextField,
-  Button
+  Button,
+  TablePagination
 } from '@mui/material'
-import { Edit, Delete, Inventory, Science, Info, Search, Clear, CloudUpload, ViewList, ViewStream } from '@mui/icons-material'
-import { insumoService, type Insumo } from '../../services/insumoService'
+import { Edit, Delete, Inventory, Science, Info, Search, Clear, CloudUpload, ViewList, ViewStream, Settings } from '@mui/icons-material'
+import { insumoService, type Insumo, type LoteInsumo } from '../../services/insumoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
+import { ConfigStockMinimoDialog } from './ConfigStockMinimoDialog'
 
 interface InsumosTableProps {
   onEdit?: (insumo: Insumo) => void
@@ -49,6 +51,12 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
   const [vistaAgrupada, setVistaAgrupada] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
+  
+  // Estados para configuración de stock mínimo
+  const [configStockDialogOpen, setConfigStockDialogOpen] = useState(false)
+  const [insumoParaConfigurar, setInsumoParaConfigurar] = useState<Insumo | null>(null)
 
   // Cargar datos
   const loadData = async () => {
@@ -151,6 +159,86 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
   // Función para limpiar búsqueda
   const handleClearSearch = () => {
     setSearchTerm('')
+    setPage(0)
+  }
+
+  // Funciones para manejar la paginación
+  const handleChangePage = (_event: unknown, newPage: number) => {
+    setPage(newPage)
+  }
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10))
+    setPage(0)
+  }
+
+  // Handler para abrir el diálogo de configuración de stock mínimo
+  const handleOpenConfigStock = (insumo: Insumo) => {
+    setInsumoParaConfigurar(insumo)
+    setConfigStockDialogOpen(true)
+  }
+
+  const handleCloseConfigStock = () => {
+    setConfigStockDialogOpen(false)
+    setInsumoParaConfigurar(null)
+  }
+
+  const handleConfigStockSuccess = () => {
+    // Opcional: Recargar datos si es necesario
+    loadData()
+  }
+
+  // Calcular los insumos a mostrar según la página actual
+  // En vista expandida, necesitamos manejar la paginación diferente
+  const getPaginatedData = () => {
+    if (vistaAgrupada) {
+      // Vista agrupada: paginar por insumo
+      return filteredInsumos.slice(
+        page * rowsPerPage,
+        page * rowsPerPage + rowsPerPage
+      )
+    } else {
+      // Vista expandida: paginar por lote
+      type ExpandedItem = { insumo: Insumo; lote: LoteInsumo | null }
+      const expandedData: ExpandedItem[] = filteredInsumos.flatMap<ExpandedItem>((insumo) => {
+        if (!insumo.lotes || insumo.lotes.length === 0) {
+          return [{ insumo, lote: null }]
+        }
+        return insumo.lotes.map((lote) => ({ insumo, lote }))
+      })
+      
+      const paginatedExpanded = expandedData.slice(
+        page * rowsPerPage,
+        page * rowsPerPage + rowsPerPage
+      )
+      
+      // Agrupar de vuelta por insumo para mantener la estructura
+      const insumosMap = new Map<number, Insumo>()
+      paginatedExpanded.forEach((item: ExpandedItem) => {
+        if (!insumosMap.has(item.insumo.id)) {
+          insumosMap.set(item.insumo.id, { ...item.insumo, lotes: [] })
+        }
+        if (item.lote) {
+          insumosMap.get(item.insumo.id)!.lotes!.push(item.lote)
+        }
+      })
+      
+      return Array.from(insumosMap.values())
+    }
+  }
+
+  const paginatedInsumos = getPaginatedData()
+  
+  // Calcular el total de items para la paginación
+  const getTotalCount = () => {
+    if (vistaAgrupada) {
+      return filteredInsumos.length
+    } else {
+      // Contar el total de lotes
+      return filteredInsumos.reduce((total, insumo) => {
+        return total + (insumo.lotes?.length || 1)
+      }, 0)
+    }
   }
 
   if (loading) {
@@ -238,7 +326,10 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
               <Button
                 variant={vistaAgrupada ? "contained" : "outlined"}
                 startIcon={vistaAgrupada ? <ViewList /> : <ViewStream />}
-                onClick={() => setVistaAgrupada(!vistaAgrupada)}
+                onClick={() => {
+                  setVistaAgrupada(!vistaAgrupada)
+                  setPage(0)
+                }}
                 color="secondary"
               >
                 {vistaAgrupada ? "Vista Agrupada" : "Vista Expandida"}
@@ -281,7 +372,10 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
           <TextField
             placeholder="Buscar insumos por código, nombre, descripción o unidad..."
             value={searchTerm}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              setSearchTerm(e.target.value)
+              setPage(0)
+            }}
             size="small"
             sx={{ flexGrow: 1 }}
             InputProps={{
@@ -355,7 +449,7 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
               </TableRow>
             ) : vistaAgrupada ? (
               // Vista Agrupada: Una fila por insumo con totales
-              filteredInsumos.map((insumo) => (
+              paginatedInsumos.map((insumo) => (
                 <TableRow key={insumo.id} hover>
                   <TableCell>
                     <Chip 
@@ -439,13 +533,22 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
                           </IconButton>
                         </Tooltip>
                       )}
+                      <Tooltip title="Configurar stock mínimo">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleOpenConfigStock(insumo)}
+                          color="secondary"
+                        >
+                          <Settings />
+                        </IconButton>
+                      </Tooltip>
                     </Box>
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               // Vista Expandida: Una fila por lote
-              filteredInsumos.flatMap((insumo) => {
+              paginatedInsumos.flatMap((insumo) => {
                 // Si el insumo no tiene lotes, mostrar una fila sin información de lote
                 if (!insumo.lotes || insumo.lotes.length === 0) {
                   return [(
@@ -520,6 +623,15 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
                               </IconButton>
                             </Tooltip>
                           )}
+                          <Tooltip title="Configurar stock mínimo">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleOpenConfigStock(insumo)}
+                              color="secondary"
+                            >
+                              <Settings />
+                            </IconButton>
+                          </Tooltip>
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -662,6 +774,15 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
                               </IconButton>
                             </Tooltip>
                           )}
+                          <Tooltip title="Configurar stock mínimo">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleOpenConfigStock(insumo)}
+                              color="secondary"
+                            >
+                              <Settings />
+                            </IconButton>
+                          </Tooltip>
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -673,22 +794,49 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
         </Table>
       </TableContainer>
 
-      {/* Información adicional */}
+      {/* Paginación */}
       {filteredInsumos.length > 0 && (
-        <Box sx={{ p: 2, backgroundColor: 'grey.50', borderTop: 1, borderColor: 'divider' }}>
-          <Typography variant="body2" color="text.secondary">
-            Mostrando {filteredInsumos.length} de {insumos.length} insumo{insumos.length !== 1 ? 's' : ''}
-            {selectedLaboratorio !== 'all' && laboratorios.length > 0 && (
-              <> en {laboratorios.find(l => l.id === selectedLaboratorio)?.nombre}</>
-            )}
-            {searchTerm && (
-              <> que coinciden con "{searchTerm}"</>
-            )}
-            {selectedCategoria !== 'all' && (
-              <> de categoría {getCategoriaName(selectedCategoria)}</>
-            )}
-          </Typography>
-        </Box>
+        <Paper sx={{ borderTop: 1, borderColor: 'divider' }}>
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25, 50]}
+            component="div"
+            count={getTotalCount()}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            labelRowsPerPage="Filas por página:"
+            labelDisplayedRows={({ from, to, count }) => 
+              `${from}-${to} de ${count !== -1 ? count : `más de ${to}`} ${vistaAgrupada ? 'insumos' : 'lotes'}`
+            }
+          />
+          {/* Información adicional */}
+          <Box sx={{ p: 2, backgroundColor: 'grey.50' }}>
+            <Typography variant="body2" color="text.secondary">
+              Total: {filteredInsumos.length} de {insumos.length} insumo{insumos.length !== 1 ? 's' : ''}
+              {selectedLaboratorio !== 'all' && laboratorios.length > 0 && (
+                <> en {laboratorios.find(l => l.id === selectedLaboratorio)?.nombre}</>
+              )}
+              {searchTerm && (
+                <> que coinciden con "{searchTerm}"</>
+              )}
+              {selectedCategoria !== 'all' && (
+                <> de categoría {getCategoriaName(selectedCategoria)}</>
+              )}
+            </Typography>
+          </Box>
+        </Paper>
+      )}
+
+      {/* Diálogo de Configuración de Stock Mínimo */}
+      {insumoParaConfigurar && (
+        <ConfigStockMinimoDialog
+          open={configStockDialogOpen}
+          onClose={handleCloseConfigStock}
+          insumoId={insumoParaConfigurar.id}
+          insumoNombre={insumoParaConfigurar.nombre}
+          onSuccess={handleConfigStockSuccess}
+        />
       )}
     </Box>
   )

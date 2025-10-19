@@ -24,7 +24,6 @@ import {
   Schedule,
   LocationOn,
   Person,
-  Group,
   Edit,
   Delete,
   Visibility,
@@ -121,7 +120,6 @@ export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
   // Estados para filtros
   const [filtroLaboratorio, setFiltroLaboratorio] = useState<string>('')
   const [filtroDocente, setFiltroDocente] = useState<string>('')
-  const [filtroGrupo, setFiltroGrupo] = useState<string>('')
   const [filtroTipo, setFiltroTipo] = useState<string>('')
   const [mostrarFiltros, setMostrarFiltros] = useState(false)
 
@@ -233,14 +231,12 @@ export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
         (horario.laboratorio && horario.laboratorio.toLowerCase().includes(filtroLaboratorio.toLowerCase()))
       const cumpleDocente = !filtroDocente || 
         (horario.docente && horario.docente.toLowerCase().includes(filtroDocente.toLowerCase()))
-      const cumpleGrupo = !filtroGrupo || 
-        (horario.grupo && horario.grupo.toLowerCase().includes(filtroGrupo.toLowerCase()))
       const cumpleTipo = !filtroTipo || 
         (horario.descripcion && horario.descripcion.toLowerCase().includes(filtroTipo.toLowerCase()))
       
-      return cumpleLaboratorio && cumpleDocente && cumpleGrupo && cumpleTipo
+      return cumpleLaboratorio && cumpleDocente && cumpleTipo
     })
-  }, [horariosCalendario, filtroLaboratorio, filtroDocente, filtroGrupo, filtroTipo])
+  }, [horariosCalendario, filtroLaboratorio, filtroDocente, filtroTipo])
 
   // Componente personalizado para eventos
   const EventComponent = ({ event }: { event: HorarioCalendario }) => (
@@ -301,7 +297,6 @@ export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
   const limpiarFiltros = () => {
     setFiltroLaboratorio('')
     setFiltroDocente('')
-    setFiltroGrupo('')
     setFiltroTipo('')
   }
 
@@ -460,19 +455,6 @@ export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
               }}
             />
             
-            <TextField
-              label="Grupo"
-              value={filtroGrupo}
-              onChange={(e) => setFiltroGrupo(e.target.value)}
-              size="small"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Group fontSize="small" />
-                  </InputAdornment>
-                ),
-              }}
-            />
             
             <TextField
               label="Tipo de actividad"

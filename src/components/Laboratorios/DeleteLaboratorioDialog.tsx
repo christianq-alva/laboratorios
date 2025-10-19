@@ -80,8 +80,18 @@ export const DeleteLaboratorioDialog: React.FC<DeleteLaboratorioDialogProps> = (
 
       <DialogContent>
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mb: 3,
+              '& .MuiAlert-message': {
+                width: '100%'
+              }
+            }}
+          >
+            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+              {error}
+            </Typography>
           </Alert>
         )}
 

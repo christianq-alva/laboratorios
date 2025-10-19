@@ -8,6 +8,7 @@ export const Docente = {
         d.id,
         d.nombre,
         d.correo,
+        d.escuela_id,
         e.nombre as escuela,
         COUNT(r.id) as total_horarios
       FROM docentes d
@@ -20,7 +21,7 @@ export const Docente = {
     // 🔴 ADMIN: Todos los docentes
     // No hay restricciones por laboratorio para docentes
 
-    query += ` GROUP BY d.id, d.nombre, d.correo, e.nombre
+    query += ` GROUP BY d.id, d.nombre, d.correo, d.escuela_id, e.nombre
                ORDER BY d.nombre ASC`
 
     const [rows] = await pool.execute(query, params)

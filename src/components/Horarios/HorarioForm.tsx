@@ -284,7 +284,14 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
       if (horarioData.laboratorio_id) {
         try {
           const insumosData = await horarioService.getInsumosByLaboratorio(horarioData.laboratorio_id)
-          setInsumosDisponibles(insumosData)
+          console.log('📦 Insumos cargados (edición):', insumosData)
+          // Filtrar solo insumos con stock
+          const insumosConStock = insumosData.filter((insumo: any) => {
+            const stock = insumo.stock_total_lotes || insumo.stock_disponible || 0
+            return stock > 0
+          })
+          console.log(`✅ Insumos con stock: ${insumosConStock.length} de ${insumosData.length}`)
+          setInsumosDisponibles(insumosConStock)
           
           // Cargar insumos ya seleccionados en el horario
           if (horarioData.insumos && horarioData.insumos.length > 0) {
@@ -404,7 +411,15 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
     if (laboratorio_id > 0) {
       try {
         const insumosData = await horarioService.getInsumosByLaboratorio(laboratorio_id)
-        setInsumosDisponibles(insumosData)
+        console.log('📦 Insumos cargados (nuevo):', insumosData)
+        // Filtrar solo insumos con stock
+        const insumosConStock = insumosData.filter((insumo: any) => {
+          const stock = insumo.stock_total_lotes || insumo.stock_disponible || 0
+          console.log(`- ${insumo.nombre}: stock_total_lotes=${insumo.stock_total_lotes}, stock_disponible=${insumo.stock_disponible}`)
+          return stock > 0
+        })
+        console.log(`✅ Insumos con stock: ${insumosConStock.length} de ${insumosData.length}`)
+        setInsumosDisponibles(insumosConStock)
       } catch (err: any) {
         console.error('Error al cargar insumos:', err)
       }
@@ -490,7 +505,7 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
         insumo_id: insumo.id,
         nombre: insumo.nombre,
         cantidad: 1,
-        stock_disponible: insumo.stock_disponible || 0
+        stock_disponible: insumo.stock_total_lotes || insumo.stock_disponible || 0
       }
       setInsumosSeleccionados(prev => [...prev, nuevoInsumo])
     }
@@ -874,31 +889,41 @@ export const HorarioForm: React.FC<HorarioFormProps> = ({ open, onClose, onSucce
                 </Typography>
                 <Paper sx={{ maxHeight: 300, overflow: 'auto' }}>
                   <List dense>
-                    {insumosDisponibles.map((insumo) => (
-                      <ListItem 
-                        key={insumo.id}
-                        onClick={() => agregarInsumo(insumo)}
-                        sx={{ 
-                          cursor: 'pointer',
-                          opacity: insumosSeleccionados.some(i => i.insumo_id === insumo.id) ? 0.5 : 1,
-                          pointerEvents: insumosSeleccionados.some(i => i.insumo_id === insumo.id) ? 'none' : 'auto'
-                        }}
-                      >
-                        <ListItemText
-                          primary={insumo.nombre}
-                          secondary={`Stock disponible: ${insumo.stock_disponible || 0}`}
+                    {insumosDisponibles.length === 0 ? (
+                      <ListItem>
+                        <ListItemText 
+                          primary="No hay insumos con stock disponible"
+                          secondary="Todos los insumos de este laboratorio están agotados"
                         />
-                        <ListItemSecondaryAction>
-                          <IconButton
-                            edge="end"
-                            onClick={() => agregarInsumo(insumo)}
-                            disabled={insumosSeleccionados.some(i => i.insumo_id === insumo.id)}
-                          >
-                            <Add />
-                          </IconButton>
-                        </ListItemSecondaryAction>
                       </ListItem>
-                    ))}
+                    ) : (
+                      insumosDisponibles
+                        .map((insumo) => (
+                        <ListItem 
+                          key={insumo.id}
+                          onClick={() => agregarInsumo(insumo)}
+                          sx={{ 
+                            cursor: 'pointer',
+                            opacity: insumosSeleccionados.some(i => i.insumo_id === insumo.id) ? 0.5 : 1,
+                            pointerEvents: insumosSeleccionados.some(i => i.insumo_id === insumo.id) ? 'none' : 'auto'
+                          }}
+                        >
+                          <ListItemText
+                            primary={insumo.nombre}
+                            secondary={`Stock disponible: ${insumo.stock_total_lotes || insumo.stock_disponible || 0}`}
+                          />
+                          <ListItemSecondaryAction>
+                            <IconButton
+                              edge="end"
+                              onClick={() => agregarInsumo(insumo)}
+                              disabled={insumosSeleccionados.some(i => i.insumo_id === insumo.id)}
+                            >
+                              <Add />
+                            </IconButton>
+                          </ListItemSecondaryAction>
+                        </ListItem>
+                      ))
+                    )}
                   </List>
                 </Paper>
               </Box>

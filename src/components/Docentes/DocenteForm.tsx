@@ -59,16 +59,35 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
     }
   }
 
-  // Cargar datos del docente para edición
+  // Cargar escuelas cuando se abre el modal
   useEffect(() => {
     if (open) {
       fetchEscuelas()
-      
+    }
+  }, [open])
+
+  // Cargar datos del docente para edición después de que las escuelas estén cargadas
+  useEffect(() => {
+    if (open && escuelas.length > 0) {
       if (docente) {
+        // Asegurar que escuela_id sea un número
+        const escuelaIdNumber = typeof docente.escuela_id === 'string' 
+          ? parseInt(docente.escuela_id) 
+          : docente.escuela_id || 0
+        
+        console.log('📝 Cargando datos del docente para edición:', {
+          nombre: docente.nombre,
+          escuela_id_original: docente.escuela_id,
+          escuela_id_parseado: escuelaIdNumber,
+          tipo_original: typeof docente.escuela_id,
+          escuela: docente.escuela,
+          escuelas_disponibles: escuelas.length
+        })
+        
         setFormData({
           nombre: docente.nombre,
           correo: docente.correo || '',
-          escuela_id: docente.escuela_id,
+          escuela_id: escuelaIdNumber,
         })
       } else {
         setFormData({
@@ -79,7 +98,7 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
       }
       setError(null)
     }
-  }, [docente, open])
+  }, [docente, open, escuelas])
 
   const handleChange = (field: keyof CreateDocenteData) => (
     event: React.ChangeEvent<HTMLInputElement>
@@ -92,11 +111,22 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
   }
 
   const handleSelectChange = (event: any) => {
+    console.log('🔄 Cambiando escuela:', {
+      nuevo_valor: event.target.value,
+      tipo: typeof event.target.value
+    })
     setFormData(prev => ({
       ...prev,
       escuela_id: event.target.value
     }))
   }
+
+  // Log para monitorear cambios en formData
+  useEffect(() => {
+    if (open) {
+      console.log('📊 FormData actual:', formData)
+    }
+  }, [formData, open])
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -192,7 +222,7 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
             helperText="El correo es opcional. Déjalo vacío si no está disponible."
           />
 
-          <FormControl fullWidth sx={{ mb: 1 }}>
+          <FormControl fullWidth sx={{ mb: 2 }}>
             <InputLabel>Escuela</InputLabel>
             <Select
               value={formData.escuela_id}
@@ -210,6 +240,11 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
                 </MenuItem>
               ))}
             </Select>
+            {formData.escuela_id > 0 && (
+              <Box sx={{ mt: 1, fontSize: '0.75rem', color: 'text.secondary' }}>
+                Escuela seleccionada: ID {formData.escuela_id} - {escuelas.find(e => e.id === formData.escuela_id)?.nombre || 'Cargando...'}
+              </Box>
+            )}
           </FormControl>
         </DialogContent>
 

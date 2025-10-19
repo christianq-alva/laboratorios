@@ -48,11 +48,12 @@ export const getInsumos = async (req, res) => {
           LEFT JOIN inventario_insumos inv ON i.id = inv.insumo_id
           LEFT JOIN laboratorios l ON inv.laboratorio_id = l.id
           GROUP BY i.id, i.codigo, i.nombre, i.descripcion, i.unidad_medida, i.categoria, i.presentacion
-          ORDER BY i.categoria, i.codigo, i.nombre
+          ORDER BY i.nombre ASC
         `)
         
         // Para cada insumo, obtener información detallada de lotes (todos los registros individuales)
         for (let insumo of rows) {
+          // Obtener lotes solo de entrada para información detallada
           const [lotes] = await pool.execute(`
             SELECT 
               mid.id as detalle_id,
@@ -73,8 +74,22 @@ export const getInsumos = async (req, res) => {
           insumo.lotes = lotes
           insumo.total_lotes = lotes.length
           
-          // Calcular stock total de todos los lotes
-          insumo.stock_total_lotes = lotes.reduce((sum, lote) => sum + (lote.cantidad || 0), 0)
+          // Calcular stock total REAL sumando todos los laboratorios (entradas - salidas)
+          const [stockReal] = await pool.execute(`
+            SELECT 
+              COALESCE(SUM(
+                CASE 
+                  WHEN m.tipo_movimiento = 'entrada' THEN mid.cantidad
+                  WHEN m.tipo_movimiento = 'salida' THEN -mid.cantidad
+                  ELSE 0
+                END
+              ), 0) as stock_total_real
+            FROM movimiento_insumo_detalle mid
+            INNER JOIN movimientos_insumos m ON mid.movimiento_id = m.id
+            WHERE mid.insumo_id = ?
+          `, [insumo.id])
+          
+          insumo.stock_total_lotes = stockReal[0]?.stock_total_real || 0
           
           // Lotes próximos a vencer (dentro de 30 días)
           insumo.lotes_proximos_vencer = lotes.filter(l => {
@@ -888,20 +903,45 @@ export const deleteInsumo = async (req, res) => {
       })
     }
 
-    // Verificar si hay movimientos asociados
+    // Verificar si hay relaciones antes de eliminar
     const [movimientos] = await connection.execute(
       'SELECT COUNT(*) as total FROM movimientos_insumos WHERE insumo_id = ?',
       [insumoId]
     )
 
-    if (movimientos[0].total > 0) {
+    const [detalleMovimientos] = await connection.execute(
+      'SELECT COUNT(*) as total FROM movimiento_insumo_detalle WHERE insumo_id = ?',
+      [insumoId]
+    )
+
+    const [inventario] = await connection.execute(
+      'SELECT COUNT(*) as total FROM inventario_insumos WHERE insumo_id = ?',
+      [insumoId]
+    )
+
+    // Si tiene relaciones, informar al usuario
+    const totalRelaciones = movimientos[0].total + detalleMovimientos[0].total + inventario[0].total
+
+    if (totalRelaciones > 0) {
+      const relaciones = []
+      if (movimientos[0].total > 0) {
+        relaciones.push(`${movimientos[0].total} movimiento(s)`)
+      }
+      if (detalleMovimientos[0].total > 0) {
+        relaciones.push(`${detalleMovimientos[0].total} registro(s) de lotes`)
+      }
+      if (inventario[0].total > 0) {
+        relaciones.push(`${inventario[0].total} registro(s) de inventario`)
+      }
+
+      await connection.rollback()
       return res.status(400).json({
         success: false,
-        message: 'No se puede eliminar el insumo porque tiene movimientos registrados'
+        message: `No se puede eliminar el insumo "${existingInsumo[0].nombre}" porque está siendo usado en el sistema y tiene datos asociados: ${relaciones.join(', ')}. Primero debes eliminar estos registros relacionados para poder eliminar el insumo.`
       })
     }
 
-    // Eliminar registros relacionados en orden
+    // Si no tiene relaciones, proceder con la eliminación
     await connection.execute('DELETE FROM inventario_insumos WHERE insumo_id = ?', [insumoId])
     await connection.execute('DELETE FROM insumos WHERE id = ?', [insumoId])
     
@@ -917,9 +957,19 @@ export const deleteInsumo = async (req, res) => {
   } catch (error) {
     await connection.rollback()
     console.error('❌ Error al eliminar insumo:', error)
+    
+    // Manejar errores de restricción de clave foránea
+    if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.code === 'ER_ROW_IS_REFERENCED') {
+      return res.status(400).json({
+        success: false,
+        message: 'No se puede eliminar el insumo porque está siendo usado en el sistema y tiene información relacionada (movimientos, lotes, inventario u otros registros). Primero debes eliminar o modificar estos registros para poder eliminar el insumo.'
+      })
+    }
+    
+    // Error genérico pero más descriptivo
     res.status(500).json({
       success: false,
-      message: 'Error interno al eliminar el insumo'
+      message: 'Error al eliminar el insumo. Es posible que esté siendo usado en el sistema. Verifica que no tenga movimientos, lotes o registros de inventario asociados antes de eliminarlo.'
     })
   } finally {
     connection.release()
@@ -1452,6 +1502,460 @@ export const updateInsumo = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor'
+    })
+  }
+}
+
+// ================================================================
+// NUEVOS ENDPOINTS - SISTEMA DE STOCK MÍNIMO
+// ================================================================
+
+/**
+ * Obtener stock actual de un insumo en un laboratorio específico
+ * Calcula desde movimientos (sin usar inventario_insumos)
+ */
+export const getStockActual = async (req, res) => {
+  try {
+    const { insumo_id, laboratorio_id } = req.params
+    
+    console.log('📊 Consultando stock actual:', { insumo_id, laboratorio_id })
+    
+    // Usar la misma lógica que en Insumo.getByLaboratorio para consistencia
+    const [insumoInfo] = await pool.execute(`
+      SELECT 
+        i.id as insumo_id,
+        i.codigo,
+        i.nombre,
+        i.categoria,
+        i.unidad_medida,
+        l.id as laboratorio_id,
+        l.nombre as laboratorio_nombre
+      FROM insumos i
+      CROSS JOIN laboratorios l
+      WHERE i.id = ? AND l.id = ?
+    `, [insumo_id, laboratorio_id])
+    
+    if (insumoInfo.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Insumo o laboratorio no encontrado'
+      })
+    }
+    
+    // Calcular stock real: suma entradas y resta salidas (igual que en getByLaboratorio)
+    const [stockCalculo] = await pool.execute(`
+      SELECT 
+        COALESCE(SUM(
+          CASE 
+            WHEN m.tipo_movimiento = 'entrada' THEN mid.cantidad
+            WHEN m.tipo_movimiento = 'salida' THEN -mid.cantidad
+            ELSE 0
+          END
+        ), 0) as stock_real,
+        COUNT(DISTINCT mid.lote) as total_lotes,
+        MIN(mid.fecha_vencimiento) as proximo_vencimiento
+      FROM movimiento_insumo_detalle mid
+      INNER JOIN movimientos_insumos m ON mid.movimiento_id = m.id
+      WHERE mid.insumo_id = ? AND m.laboratorio_id = ?
+    `, [insumo_id, laboratorio_id])
+    
+    const stockData = {
+      ...insumoInfo[0],
+      stock_actual: stockCalculo[0]?.stock_real || 0,
+      total_lotes: stockCalculo[0]?.total_lotes || 0,
+      proximo_vencimiento: stockCalculo[0]?.proximo_vencimiento || null
+    }
+    
+    console.log('✅ Stock calculado:', stockData)
+    
+    res.json({ 
+      success: true, 
+      data: stockData
+    })
+  } catch (error) {
+    console.error('❌ Error al obtener stock actual:', error)
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error al obtener stock actual',
+      error: error.message 
+    })
+  }
+}
+
+/**
+ * Configurar o actualizar stock mínimo de un insumo en un laboratorio
+ */
+export const configurarStockMinimo = async (req, res) => {
+  try {
+    const { 
+      insumo_id, 
+      laboratorio_id, 
+      stock_minimo, 
+      stock_maximo, 
+      punto_reorden, 
+      observaciones 
+    } = req.body
+    
+    console.log('⚙️ Configurando stock mínimo:', req.body)
+    
+    // Validaciones
+    if (!insumo_id || !laboratorio_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'insumo_id y laboratorio_id son requeridos'
+      })
+    }
+    
+    if (stock_minimo === undefined || stock_minimo < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'stock_minimo debe ser un valor numérico >= 0'
+      })
+    }
+    
+    // Verificar que existan el insumo y laboratorio
+    const [insumoCheck] = await pool.execute('SELECT id FROM insumos WHERE id = ?', [insumo_id])
+    const [labCheck] = await pool.execute('SELECT id FROM laboratorios WHERE id = ?', [laboratorio_id])
+    
+    if (insumoCheck.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Insumo no encontrado'
+      })
+    }
+    
+    if (labCheck.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Laboratorio no encontrado'
+      })
+    }
+    
+    // Insertar o actualizar configuración
+    await pool.execute(`
+      INSERT INTO config_stock_laboratorio 
+        (insumo_id, laboratorio_id, stock_minimo, stock_maximo, punto_reorden, observaciones)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE 
+        stock_minimo = VALUES(stock_minimo),
+        stock_maximo = VALUES(stock_maximo),
+        punto_reorden = VALUES(punto_reorden),
+        observaciones = VALUES(observaciones),
+        fecha_actualizacion = CURRENT_TIMESTAMP
+    `, [
+      insumo_id, 
+      laboratorio_id, 
+      stock_minimo, 
+      stock_maximo || null, 
+      punto_reorden || null, 
+      observaciones || null
+    ])
+    
+    console.log('✅ Configuración de stock guardada exitosamente')
+    
+    res.json({ 
+      success: true, 
+      message: 'Configuración de stock guardada exitosamente',
+      data: {
+        insumo_id,
+        laboratorio_id,
+        stock_minimo,
+        stock_maximo,
+        punto_reorden
+      }
+    })
+  } catch (error) {
+    console.error('❌ Error al configurar stock mínimo:', error)
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error al configurar stock mínimo',
+      error: error.message 
+    })
+  }
+}
+
+/**
+ * Obtener configuración de stock de un insumo en todos los laboratorios
+ */
+export const getConfiguracionStock = async (req, res) => {
+  try {
+    const { insumo_id } = req.params
+    
+    const [configs] = await pool.execute(`
+      SELECT 
+        c.id,
+        c.insumo_id,
+        i.codigo as insumo_codigo,
+        i.nombre as insumo_nombre,
+        c.laboratorio_id,
+        l.nombre as laboratorio_nombre,
+        l.codigo as laboratorio_codigo,
+        c.stock_minimo,
+        c.stock_maximo,
+        c.punto_reorden,
+        c.observaciones,
+        c.fecha_configuracion,
+        c.fecha_actualizacion,
+        -- Stock actual desde v_stock_actual
+        COALESCE((
+          SELECT stock_actual 
+          FROM v_stock_actual 
+          WHERE insumo_id = c.insumo_id AND laboratorio_id = c.laboratorio_id
+        ), 0) as stock_actual
+      FROM config_stock_laboratorio c
+      INNER JOIN insumos i ON c.insumo_id = i.id
+      INNER JOIN laboratorios l ON c.laboratorio_id = l.id
+      WHERE c.insumo_id = ?
+      ORDER BY l.nombre ASC
+    `, [insumo_id])
+    
+    res.json({ 
+      success: true, 
+      data: configs,
+      total: configs.length
+    })
+  } catch (error) {
+    console.error('❌ Error al obtener configuración de stock:', error)
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error al obtener configuración de stock',
+      error: error.message 
+    })
+  }
+}
+
+/**
+ * Reporte: Insumos con stock bajo (por debajo del mínimo)
+ */
+export const getInsumosStockBajo = async (req, res) => {
+  try {
+    const { laboratorio_id } = req.query
+    
+    console.log('📉 Generando reporte de stock bajo:', { laboratorio_id })
+    
+    let query = `
+      SELECT 
+        insumo_id,
+        insumo_codigo,
+        insumo_nombre,
+        categoria,
+        unidad_medida,
+        laboratorio_id,
+        laboratorio_nombre,
+        stock_actual,
+        stock_minimo,
+        punto_reorden,
+        diferencia_minimo,
+        porcentaje_stock_minimo,
+        estado_stock,
+        observaciones,
+        ultima_actualizacion
+      FROM v_stock_completo
+      WHERE estado_stock IN ('AGOTADO', 'BAJO', 'REORDENAR')
+    `
+    let params = []
+    
+    // Filtrar por laboratorio si se especifica
+    if (laboratorio_id) {
+      query += ` AND laboratorio_id = ?`
+      params.push(laboratorio_id)
+    }
+    
+    // Verificar permisos según rol
+    if (req.user.rol === 'Jefe de Laboratorio') {
+      query += ` AND laboratorio_id IN (${req.user.laboratorio_ids.join(',')})`
+    }
+    
+    query += ` ORDER BY 
+      CASE estado_stock
+        WHEN 'AGOTADO' THEN 1
+        WHEN 'BAJO' THEN 2
+        WHEN 'REORDENAR' THEN 3
+        ELSE 4
+      END ASC,
+      diferencia_minimo ASC,
+      laboratorio_nombre ASC
+    `
+    
+    const [insumos] = await pool.execute(query, params)
+    
+    // Estadísticas del reporte
+    const estadisticas = {
+      total_alertas: insumos.length,
+      agotados: insumos.filter(i => i.estado_stock === 'AGOTADO').length,
+      bajo_stock: insumos.filter(i => i.estado_stock === 'BAJO').length,
+      reordenar: insumos.filter(i => i.estado_stock === 'REORDENAR').length,
+      laboratorios_afectados: [...new Set(insumos.map(i => i.laboratorio_id))].length
+    }
+    
+    console.log('✅ Reporte generado:', estadisticas)
+    
+    res.json({ 
+      success: true, 
+      data: insumos,
+      estadisticas,
+      mensaje: insumos.length === 0 
+        ? 'No hay insumos con stock bajo' 
+        : `Se encontraron ${insumos.length} insumo(s) con stock bajo`
+    })
+  } catch (error) {
+    console.error('❌ Error al obtener insumos con stock bajo:', error)
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error al generar reporte de stock bajo',
+      error: error.message 
+    })
+  }
+}
+
+/**
+ * Reporte: Insumos próximos a vencer
+ */
+export const getInsumosProximosVencer = async (req, res) => {
+  try {
+    const { laboratorio_id, dias = 90 } = req.query
+    
+    console.log('📅 Generando reporte de insumos próximos a vencer:', { laboratorio_id, dias })
+    
+    let query = `
+      SELECT 
+        i.id as insumo_id,
+        i.codigo as insumo_codigo,
+        i.nombre as insumo_nombre,
+        i.categoria,
+        i.unidad_medida,
+        l.id as laboratorio_id,
+        l.nombre as laboratorio_nombre,
+        mid.id as detalle_id,
+        mid.lote,
+        mid.cantidad,
+        mid.fecha_vencimiento,
+        m.fecha_ingreso,
+        m.fecha_movimiento,
+        DATEDIFF(mid.fecha_vencimiento, CURDATE()) as dias_restantes,
+        ROUND(DATEDIFF(CURDATE(), m.fecha_ingreso) / 30, 1) as meses_almacenado,
+        CASE 
+          WHEN DATEDIFF(mid.fecha_vencimiento, CURDATE()) < 0 THEN 'VENCIDO'
+          WHEN DATEDIFF(mid.fecha_vencimiento, CURDATE()) = 0 THEN 'VENCE_HOY'
+          WHEN DATEDIFF(mid.fecha_vencimiento, CURDATE()) <= 7 THEN 'URGENTE'
+          WHEN DATEDIFF(mid.fecha_vencimiento, CURDATE()) <= 30 THEN 'PROXIMO'
+          WHEN DATEDIFF(mid.fecha_vencimiento, CURDATE()) <= 90 THEN 'ADVERTENCIA'
+          ELSE 'NORMAL'
+        END as estado_vencimiento,
+        CASE 
+          WHEN DATEDIFF(mid.fecha_vencimiento, CURDATE()) < 0 THEN 1
+          WHEN DATEDIFF(mid.fecha_vencimiento, CURDATE()) = 0 THEN 2
+          WHEN DATEDIFF(mid.fecha_vencimiento, CURDATE()) <= 7 THEN 3
+          WHEN DATEDIFF(mid.fecha_vencimiento, CURDATE()) <= 30 THEN 4
+          WHEN DATEDIFF(mid.fecha_vencimiento, CURDATE()) <= 90 THEN 5
+          ELSE 6
+        END as prioridad
+      FROM movimiento_insumo_detalle mid
+      INNER JOIN movimientos_insumos m ON mid.movimiento_id = m.id
+      INNER JOIN insumos i ON mid.insumo_id = i.id
+      INNER JOIN laboratorios l ON m.laboratorio_id = l.id
+      WHERE m.tipo_movimiento = 'entrada'
+        AND mid.fecha_vencimiento IS NOT NULL
+        AND mid.cantidad > 0
+        AND DATEDIFF(mid.fecha_vencimiento, CURDATE()) <= ?
+    `
+    let params = [parseInt(dias)]
+    
+    // Filtrar por laboratorio si se especifica
+    if (laboratorio_id) {
+      query += ` AND m.laboratorio_id = ?`
+      params.push(laboratorio_id)
+    }
+    
+    // Verificar permisos según rol
+    if (req.user.rol === 'Jefe de Laboratorio') {
+      query += ` AND m.laboratorio_id IN (${req.user.laboratorio_ids.join(',')})`
+    }
+    
+    query += ` ORDER BY prioridad ASC, mid.fecha_vencimiento ASC, l.nombre ASC`
+    
+    const [insumos] = await pool.execute(query, params)
+    
+    // Estadísticas del reporte
+    const estadisticas = {
+      total_lotes: insumos.length,
+      vencidos: insumos.filter(i => i.estado_vencimiento === 'VENCIDO').length,
+      vence_hoy: insumos.filter(i => i.estado_vencimiento === 'VENCE_HOY').length,
+      urgente: insumos.filter(i => i.estado_vencimiento === 'URGENTE').length,
+      proximo: insumos.filter(i => i.estado_vencimiento === 'PROXIMO').length,
+      advertencia: insumos.filter(i => i.estado_vencimiento === 'ADVERTENCIA').length,
+      laboratorios_afectados: [...new Set(insumos.map(i => i.laboratorio_id))].length,
+      insumos_unicos: [...new Set(insumos.map(i => i.insumo_id))].length
+    }
+    
+    console.log('✅ Reporte generado:', estadisticas)
+    
+    res.json({ 
+      success: true, 
+      data: insumos,
+      estadisticas,
+      mensaje: insumos.length === 0 
+        ? 'No hay insumos próximos a vencer en el periodo especificado' 
+        : `Se encontraron ${insumos.length} lote(s) próximo(s) a vencer`
+    })
+  } catch (error) {
+    console.error('❌ Error al obtener insumos próximos a vencer:', error)
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error al generar reporte de insumos próximos a vencer',
+      error: error.message 
+    })
+  }
+}
+
+/**
+ * Obtener resumen de alertas para dashboard
+ */
+export const getResumenAlertas = async (req, res) => {
+  try {
+    const { laboratorio_id } = req.query
+    
+    let query = `SELECT * FROM v_alertas_insumos`
+    let params = []
+    
+    if (laboratorio_id) {
+      query += ` WHERE laboratorio_id = ?`
+      params.push(laboratorio_id)
+    }
+    
+    // Verificar permisos según rol
+    if (req.user.rol === 'Jefe de Laboratorio') {
+      if (laboratorio_id) {
+        query += ` AND laboratorio_id IN (${req.user.laboratorio_ids.join(',')})`
+      } else {
+        query += ` WHERE laboratorio_id IN (${req.user.laboratorio_ids.join(',')})`
+      }
+    }
+    
+    const [alertas] = await pool.execute(query, params)
+    
+    // Totales generales
+    const totales = {
+      total_insumos_agotados: alertas.reduce((sum, a) => sum + a.insumos_agotados, 0),
+      total_bajo_stock: alertas.reduce((sum, a) => sum + a.insumos_bajo_stock, 0),
+      total_lotes_vencidos: alertas.reduce((sum, a) => sum + a.lotes_vencidos, 0),
+      total_vence_semana: alertas.reduce((sum, a) => sum + a.vence_esta_semana, 0),
+      total_vence_mes: alertas.reduce((sum, a) => sum + a.vence_este_mes, 0),
+      total_alertas_criticas: alertas.reduce((sum, a) => sum + a.total_alertas_criticas, 0),
+      laboratorios_monitoreados: alertas.length
+    }
+    
+    res.json({ 
+      success: true, 
+      data: alertas,
+      totales
+    })
+  } catch (error) {
+    console.error('❌ Error al obtener resumen de alertas:', error)
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error al obtener resumen de alertas',
+      error: error.message 
     })
   }
 }

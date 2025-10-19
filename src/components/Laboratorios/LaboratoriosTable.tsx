@@ -19,6 +19,7 @@ import {
   Alert,
   Tooltip,
   TextField,
+  TablePagination,
 } from '@mui/material'
 import {
   MoreVert,
@@ -58,6 +59,8 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [selectedLab, setSelectedLab] = useState<Laboratorio | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
 
   const fetchLaboratorios = async () => {
     try {
@@ -152,7 +155,24 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
   // Función para limpiar búsqueda
   const handleClearSearch = () => {
     setSearchTerm('')
+    setPage(0) // Resetear a la primera página
   }
+
+  // Funciones para manejar la paginación
+  const handleChangePage = (_event: unknown, newPage: number) => {
+    setPage(newPage)
+  }
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10))
+    setPage(0) // Resetear a la primera página cuando cambia el número de filas
+  }
+
+  // Calcular los laboratorios a mostrar según la página actual
+  const paginatedLaboratorios = filteredLaboratorios.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  )
 
   if (loading) {
     return (
@@ -191,7 +211,10 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
         <TextField
           placeholder="Buscar laboratorios por código, nombre, ubicación o escuela..."
           value={searchTerm}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+            setSearchTerm(e.target.value)
+            setPage(0) // Resetear a la primera página al buscar
+          }}
           size="small"
           sx={{ flexGrow: 1 }}
           InputProps={{
@@ -248,7 +271,7 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
               </TableCell>
             </TableRow>
           ) : (
-            filteredLaboratorios.map((lab) => (
+            paginatedLaboratorios.map((lab) => (
             <TableRow key={lab.id} hover>
               {/* Código */}
               <TableCell>
@@ -324,6 +347,25 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
         </TableBody>
       </Table>
       </TableContainer>
+
+      {/* Paginación */}
+      <TablePagination
+        rowsPerPageOptions={[5, 10, 25, 50]}
+        component="div"
+        count={filteredLaboratorios.length}
+        rowsPerPage={rowsPerPage}
+        page={page}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        labelRowsPerPage="Filas por página:"
+        labelDisplayedRows={({ from, to, count }) => 
+          `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
+        }
+        sx={{
+          borderTop: '1px solid',
+          borderColor: 'divider',
+        }}
+      />
 
       {/* Menu contextual */}
       <Menu

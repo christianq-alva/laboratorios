@@ -490,21 +490,6 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     setEquiposSeleccionados(prev => prev.filter(e => e.equipo_id !== equipo_id))
   }
 
-  const actualizarCantidadEquipo = (equipo_id: number, cantidad: number) => {
-    const equipo = equiposSeleccionados.find(e => e.equipo_id === equipo_id)
-    if (!equipo) return
-
-    // Validar límites
-    if (cantidad <= 0) {
-      eliminarEquipo(equipo_id)
-    } else if (cantidad <= equipo.cantidad_disponible) {
-      setEquiposSeleccionados(prev => 
-        prev.map(e => e.equipo_id === equipo_id ? { ...e, cantidad } : e)
-      )
-    }
-    // Si la cantidad excede la disponible, no hacer nada
-  }
-
   // Submit del formulario
   const handleSubmit = async () => {
     if (conflictos.length > 0) {
@@ -1582,9 +1567,6 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                     <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
                       <List dense>
                         {equiposSeleccionados.map((equipo) => {
-                          const disponibleRestante = equipo.cantidad_disponible - equipo.cantidad
-                          const disponibilidadColor = disponibleRestante === 0 ? 'error' : 
-                                                     disponibleRestante < 3 ? 'warning' : 'success'
                           return (
                             <ListItem
                               key={equipo.equipo_id}
@@ -1592,54 +1574,22 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                                 border: '1px solid #e8f5e8',
                                 borderRadius: 1,
                                 mb: 1,
-                                backgroundColor: '#f9fff9'
+                                backgroundColor: '#f9fff9',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
                               }}
                             >
                               <ListItemText
                                 primary={
-                                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                      {equipo.nombre}
-                                    </Typography>
-                                    <Chip 
-                                      label={`${disponibleRestante} restantes`}
-                                      size="small"
-                                      color={disponibilidadColor}
-                                      variant="outlined"
-                                      sx={{ 
-                                        minWidth: 'auto',
-                                        '& .MuiChip-label': { px: 1, fontSize: '0.75rem' }
-                                      }}
-                                    />
-                                  </Box>
+                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                    {equipo.nombre}
+                                  </Typography>
                                 }
                                 secondary={
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <IconButton
-                                      size="small"
-                                      onClick={() => actualizarCantidadEquipo(equipo.equipo_id, equipo.cantidad - 1)}
-                                      disabled={equipo.cantidad <= 1}
-                                      color="primary"
-                                    >
-                                      <Remove />
-                                    </IconButton>
-                                    <Typography variant="body2" sx={{ 
-                                      minWidth: 40, 
-                                      textAlign: 'center',
-                                      fontWeight: 600,
-                                      color: 'primary.main'
-                                    }}>
-                                      {equipo.cantidad}
-                                    </Typography>
-                                    <IconButton
-                                      size="small"
-                                      onClick={() => actualizarCantidadEquipo(equipo.equipo_id, equipo.cantidad + 1)}
-                                      disabled={equipo.cantidad >= equipo.cantidad_disponible}
-                                      color="primary"
-                                    >
-                                      <Add />
-                                    </IconButton>
-                                  </Box>
+                                  <Typography variant="caption" color="text.secondary">
+                                    Equipo reservado
+                                  </Typography>
                                 }
                               />
                               <Tooltip title="Eliminar equipo">

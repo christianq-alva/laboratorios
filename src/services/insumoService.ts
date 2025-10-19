@@ -397,6 +397,212 @@ class InsumoService {
       throw new Error(error.response?.data?.message || 'Error en la importación masiva')
     }
   }
+
+  // ================================================================
+  // NUEVOS MÉTODOS - SISTEMA DE STOCK MÍNIMO
+  // ================================================================
+
+  // Obtener stock actual de un insumo en un laboratorio
+  async getStockActual(insumoId: number, laboratorioId: number): Promise<{
+    success: boolean
+    data: {
+      insumo_id: number
+      codigo: string
+      nombre: string
+      categoria: string
+      unidad_medida: string
+      laboratorio_id: number
+      laboratorio_nombre: string
+      stock_actual: number
+      total_lotes: number
+      proximo_vencimiento: string | null
+    }
+  }> {
+    try {
+      const response = await api.get(`/insumos/stock-actual/${insumoId}/${laboratorioId}`)
+      return response.data
+    } catch (error: any) {
+      console.error('Error al obtener stock actual:', error)
+      throw new Error(error.response?.data?.message || 'Error al obtener stock actual')
+    }
+  }
+
+  // Configurar stock mínimo
+  async configurarStockMinimo(data: {
+    insumo_id: number
+    laboratorio_id: number
+    stock_minimo: number
+    stock_maximo?: number
+    punto_reorden?: number
+    observaciones?: string
+  }): Promise<{
+    success: boolean
+    message: string
+    data: any
+  }> {
+    try {
+      const response = await api.post('/insumos/config-stock', data)
+      return response.data
+    } catch (error: any) {
+      console.error('Error al configurar stock mínimo:', error)
+      throw new Error(error.response?.data?.message || 'Error al configurar stock mínimo')
+    }
+  }
+
+  // Obtener configuración de stock de un insumo
+  async getConfiguracionStock(insumoId: number): Promise<{
+    success: boolean
+    data: Array<{
+      id: number
+      insumo_id: number
+      insumo_codigo: string
+      insumo_nombre: string
+      laboratorio_id: number
+      laboratorio_nombre: string
+      laboratorio_codigo: string
+      stock_minimo: number
+      stock_maximo: number | null
+      punto_reorden: number | null
+      observaciones: string | null
+      fecha_configuracion: string
+      fecha_actualizacion: string
+      stock_actual: number
+    }>
+    total: number
+  }> {
+    try {
+      const response = await api.get(`/insumos/config-stock/${insumoId}`)
+      return response.data
+    } catch (error: any) {
+      console.error('Error al obtener configuración de stock:', error)
+      throw new Error(error.response?.data?.message || 'Error al obtener configuración de stock')
+    }
+  }
+
+  // Reporte: Insumos con stock bajo
+  async getInsumosStockBajo(laboratorioId?: number): Promise<{
+    success: boolean
+    data: Array<{
+      insumo_id: number
+      insumo_codigo: string
+      insumo_nombre: string
+      categoria: string
+      unidad_medida: string
+      laboratorio_id: number
+      laboratorio_nombre: string
+      stock_actual: number
+      stock_minimo: number
+      punto_reorden: number | null
+      diferencia_minimo: number
+      porcentaje_stock_minimo: number | null
+      estado_stock: 'AGOTADO' | 'BAJO' | 'REORDENAR'
+      observaciones: string | null
+      ultima_actualizacion: string | null
+    }>
+    estadisticas: {
+      total_alertas: number
+      agotados: number
+      bajo_stock: number
+      reordenar: number
+      laboratorios_afectados: number
+    }
+    mensaje: string
+  }> {
+    try {
+      const params = laboratorioId ? `?laboratorio_id=${laboratorioId}` : ''
+      const response = await api.get(`/insumos/stock-bajo${params}`)
+      return response.data
+    } catch (error: any) {
+      console.error('Error al obtener insumos con stock bajo:', error)
+      throw new Error(error.response?.data?.message || 'Error al obtener insumos con stock bajo')
+    }
+  }
+
+  // Reporte: Insumos próximos a vencer
+  async getInsumosProximosVencer(laboratorioId?: number, dias?: number): Promise<{
+    success: boolean
+    data: Array<{
+      insumo_id: number
+      insumo_codigo: string
+      insumo_nombre: string
+      categoria: string
+      unidad_medida: string
+      laboratorio_id: number
+      laboratorio_nombre: string
+      detalle_id: number
+      lote: string
+      cantidad: number
+      fecha_vencimiento: string
+      fecha_ingreso: string
+      fecha_movimiento: string
+      dias_restantes: number
+      meses_almacenado: number
+      estado_vencimiento: 'VENCIDO' | 'VENCE_HOY' | 'URGENTE' | 'PROXIMO' | 'ADVERTENCIA'
+      prioridad: number
+    }>
+    estadisticas: {
+      total_lotes: number
+      vencidos: number
+      vence_hoy: number
+      urgente: number
+      proximo: number
+      advertencia: number
+      laboratorios_afectados: number
+      insumos_unicos: number
+    }
+    mensaje: string
+  }> {
+    try {
+      const params = new URLSearchParams()
+      if (laboratorioId) params.append('laboratorio_id', laboratorioId.toString())
+      if (dias) params.append('dias', dias.toString())
+      
+      const response = await api.get(`/insumos/proximos-vencer?${params.toString()}`)
+      return response.data
+    } catch (error: any) {
+      console.error('Error al obtener insumos próximos a vencer:', error)
+      throw new Error(error.response?.data?.message || 'Error al obtener insumos próximos a vencer')
+    }
+  }
+
+  // Obtener resumen de alertas
+  async getResumenAlertas(laboratorioId?: number): Promise<{
+    success: boolean
+    data: Array<{
+      laboratorio_id: number
+      laboratorio_nombre: string
+      laboratorio_codigo: string
+      insumos_agotados: number
+      insumos_bajo_stock: number
+      insumos_reordenar: number
+      insumos_exceso: number
+      insumos_sin_configurar: number
+      lotes_vencidos: number
+      vence_esta_semana: number
+      vence_este_mes: number
+      vence_trimestre: number
+      total_alertas_criticas: number
+      total_insumos: number
+    }>
+    totales: {
+      total_insumos_agotados: number
+      total_bajo_stock: number
+      total_lotes_vencidos: number
+      total_vence_semana: number
+      total_vence_mes: number
+      total_alertas_criticas: number
+      laboratorios_monitoreados: number
+    }
+  }> {
+    try {
+      const params = laboratorioId ? `?laboratorio_id=${laboratorioId}` : ''
+      const response = await api.get(`/insumos/resumen-alertas${params}`)
+      return response.data
+    } catch (error: any) {
+      console.error('Error al obtener resumen de alertas:', error)
+      throw new Error(error.response?.data?.message || 'Error al obtener resumen de alertas')
+    }
+  }
 }
 
 export const insumoService = new InsumoService() 

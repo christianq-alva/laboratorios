@@ -22,17 +22,22 @@ import {
   TableRow,
   Chip,
   IconButton,
-  Tooltip
+  Tooltip,
+  TablePagination
 } from '@mui/material'
-import { Add, Category, Person, LibraryBooks, Edit, School, Delete } from '@mui/icons-material'
+import { Add, Category, Person, LibraryBooks, Edit, School, Delete, AccountBalance, Inventory } from '@mui/icons-material'
 import { TiposEquipoTable } from '../components/Configuracion/TiposEquipoTable'
 import { TipoEquipoForm } from '../components/Configuracion/TipoEquipoForm'
+import { EscuelasTable } from '../components/Configuracion/EscuelasTable'
+import { EscuelaForm } from '../components/Configuracion/EscuelaForm'
+import { ConfigStockTable } from '../components/Configuracion/ConfigStockTable'
 import { DocentesTable } from '../components/Docentes/DocentesTable'
 import { DocenteForm } from '../components/Docentes/DocenteForm'
 import { InsumoForm } from '../components/Insumos/InsumoForm'
 import { LaboratoriosTable } from '../components/Laboratorios/LaboratoriosTable'
 import { LaboratorioForm } from '../components/Laboratorios/LaboratorioForm'
 import { tipoEquipoService, type TipoEquipo } from '../services/tipoEquipoService'
+import { escuelaService, type Escuela } from '../services/escuelaService'
 import { docenteService, type Docente } from '../services/docenteService'
 import { insumoService, type Insumo } from '../services/insumoService'
 import { laboratorioService, type Laboratorio } from '../services/laboratorioService'
@@ -81,6 +86,8 @@ export const Configuracion: React.FC = () => {
   const [editingInsumo, setEditingInsumo] = useState<Insumo | null>(null)
   const [insumoDeleteDialogOpen, setInsumoDeleteDialogOpen] = useState(false)
   const [insumoToDelete, setInsumoToDelete] = useState<Insumo | null>(null)
+  const [insumoPage, setInsumoPage] = useState(0)
+  const [insumoRowsPerPage, setInsumoRowsPerPage] = useState(10)
   
   // Estado para Laboratorios
   const [laboratorioFormOpen, setLaboratorioFormOpen] = useState(false)
@@ -88,6 +95,14 @@ export const Configuracion: React.FC = () => {
   const [laboratorioDeleteDialogOpen, setLaboratorioDeleteDialogOpen] = useState(false)
   const [laboratorioToDelete, setLaboratorioToDelete] = useState<Laboratorio | null>(null)
   const [refreshLaboratorios, setRefreshLaboratorios] = useState(0)
+  
+  // Estado para Escuelas
+  const [escuelas, setEscuelas] = useState<Escuela[]>([])
+  const [loadingEscuelas, setLoadingEscuelas] = useState(false)
+  const [escuelaFormOpen, setEscuelaFormOpen] = useState(false)
+  const [editingEscuela, setEditingEscuela] = useState<Escuela | null>(null)
+  const [escuelaDeleteDialogOpen, setEscuelaDeleteDialogOpen] = useState(false)
+  const [escuelaToDelete, setEscuelaToDelete] = useState<Escuela | null>(null)
   
   // Snackbar
   const [snackbar, setSnackbar] = useState({
@@ -157,12 +172,32 @@ export const Configuracion: React.FC = () => {
     }
   }
 
+  // Cargar escuelas
+  const loadEscuelas = async () => {
+    setLoadingEscuelas(true)
+    try {
+      const response = await escuelaService.getAll()
+      setEscuelas(response.data || [])
+    } catch (error) {
+      console.error('Error al cargar escuelas:', error)
+      setSnackbar({
+        open: true,
+        message: 'Error al cargar escuelas',
+        severity: 'error'
+      })
+    } finally {
+      setLoadingEscuelas(false)
+    }
+  }
+
   // Cargar datos al montar o cambiar de tab
   useEffect(() => {
     if (tabValue === 0) {
       loadTiposEquipo()
     } else if (tabValue === 2) {
       loadCatalogoInsumos()
+    } else if (tabValue === 4) {
+      loadEscuelas()
     }
   }, [tabValue])
 
@@ -418,6 +453,69 @@ export const Configuracion: React.FC = () => {
     }
   }
 
+  // Handlers para Escuelas
+  const handleOpenEscuelaForm = () => {
+    setEditingEscuela(null)
+    setEscuelaFormOpen(true)
+  }
+
+  const handleEditEscuela = (escuela: Escuela) => {
+    setEditingEscuela(escuela)
+    setEscuelaFormOpen(true)
+  }
+
+  const handleCloseEscuelaForm = () => {
+    setEscuelaFormOpen(false)
+    setEditingEscuela(null)
+  }
+
+  const handleEscuelaFormSuccess = () => {
+    loadEscuelas()
+    setSnackbar({
+      open: true,
+      message: editingEscuela ? 'Escuela actualizada exitosamente' : 'Escuela creada exitosamente',
+      severity: 'success'
+    })
+  }
+
+  const handleDeleteEscuelaClick = (escuela: Escuela) => {
+    setEscuelaToDelete(escuela)
+    setEscuelaDeleteDialogOpen(true)
+  }
+
+  const handleDeleteEscuelaConfirm = async () => {
+    if (!escuelaToDelete) return
+
+    try {
+      const result = await escuelaService.delete(escuelaToDelete.id)
+      
+      if (result.success) {
+        setSnackbar({
+          open: true,
+          message: 'Escuela eliminada exitosamente',
+          severity: 'success'
+        })
+        loadEscuelas()
+      } else {
+        setSnackbar({
+          open: true,
+          message: result.message || 'Error al eliminar la escuela',
+          severity: 'error'
+        })
+      }
+    } catch (error: any) {
+      console.error('Error al eliminar escuela:', error)
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || 'Error al eliminar escuela',
+        severity: 'error'
+      })
+    } finally {
+      setEscuelaDeleteDialogOpen(false)
+      setEscuelaToDelete(null)
+    }
+  }
+
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false })
   }
@@ -430,6 +528,22 @@ export const Configuracion: React.FC = () => {
       default: return '#9e9e9e'
     }
   }
+
+  // Funciones para manejar la paginación de insumos
+  const handleInsumoPageChange = (_event: unknown, newPage: number) => {
+    setInsumoPage(newPage)
+  }
+
+  const handleInsumoRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setInsumoRowsPerPage(parseInt(event.target.value, 10))
+    setInsumoPage(0)
+  }
+
+  // Calcular los insumos paginados
+  const paginatedInsumos = insumos.slice(
+    insumoPage * insumoRowsPerPage,
+    insumoPage * insumoRowsPerPage + insumoRowsPerPage
+  )
 
   return (
     <Box>
@@ -481,6 +595,20 @@ export const Configuracion: React.FC = () => {
               label="Laboratorios" 
               id="config-tab-3"
               aria-controls="config-tabpanel-3"
+            />
+            <Tab 
+              icon={<AccountBalance />} 
+              iconPosition="start" 
+              label="Escuelas" 
+              id="config-tab-4"
+              aria-controls="config-tabpanel-4"
+            />
+            <Tab 
+              icon={<Inventory />} 
+              iconPosition="start" 
+              label="Stock Mínimo" 
+              id="config-tab-5"
+              aria-controls="config-tabpanel-5"
             />
           </Tabs>
         </Box>
@@ -612,7 +740,7 @@ export const Configuracion: React.FC = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {insumos.map((insumo) => (
+                    {paginatedInsumos.map((insumo) => (
                       <TableRow key={insumo.id} hover>
                         <TableCell>
                           <Chip 
@@ -672,6 +800,19 @@ export const Configuracion: React.FC = () => {
                     ))}
                   </TableBody>
                 </Table>
+                <TablePagination
+                  rowsPerPageOptions={[5, 10, 25, 50]}
+                  component="div"
+                  count={insumos.length}
+                  rowsPerPage={insumoRowsPerPage}
+                  page={insumoPage}
+                  onPageChange={handleInsumoPageChange}
+                  onRowsPerPageChange={handleInsumoRowsPerPageChange}
+                  labelRowsPerPage="Filas por página:"
+                  labelDisplayedRows={({ from, to, count }) => 
+                    `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
+                  }
+                />
               </TableContainer>
             )}
           </Box>
@@ -709,6 +850,50 @@ export const Configuracion: React.FC = () => {
             />
           </Box>
         </TabPanel>
+
+        {/* Tab Panel: Escuelas */}
+        <TabPanel value={tabValue} index={4}>
+          <Box sx={{ px: 3 }}>
+            {/* Header con botón */}
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              mb: 3
+            }}>
+              <Typography variant="h6" fontWeight={600}>
+                Gestión de Escuelas
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={handleOpenEscuelaForm}
+              >
+                Nueva Escuela
+              </Button>
+            </Box>
+
+            {/* Tabla */}
+            {loadingEscuelas ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <EscuelasTable
+                escuelas={escuelas}
+                onEdit={handleEditEscuela}
+                onDelete={handleDeleteEscuelaClick}
+              />
+            )}
+          </Box>
+        </TabPanel>
+
+        {/* Tab Panel: Stock Mínimo */}
+        <TabPanel value={tabValue} index={5}>
+          <Box sx={{ px: 3 }}>
+            <ConfigStockTable />
+          </Box>
+        </TabPanel>
       </Paper>
 
       {/* Formulario de Tipo de Equipo */}
@@ -743,6 +928,14 @@ export const Configuracion: React.FC = () => {
         laboratorio={editingLaboratorio}
       />
 
+      {/* Formulario de Escuela */}
+      <EscuelaForm
+        open={escuelaFormOpen}
+        onClose={handleCloseEscuelaForm}
+        onSuccess={handleEscuelaFormSuccess}
+        escuela={editingEscuela}
+      />
+
       {/* Diálogo de confirmación de eliminación - Tipo de Equipo */}
       <Dialog
         open={deleteDialogOpen}
@@ -752,12 +945,12 @@ export const Configuracion: React.FC = () => {
         <DialogContent>
           <DialogContentText>
             ¿Está seguro que desea eliminar el tipo de equipo "{tipoToDelete?.nombre}"?
-            {tipoToDelete?.count_equipos && tipoToDelete.count_equipos > 0 && (
-              <Alert severity="warning" sx={{ mt: 2 }}>
-                Este tipo tiene {tipoToDelete.count_equipos} equipo(s) asociado(s) y no podrá ser eliminado.
-              </Alert>
-            )}
           </DialogContentText>
+          {(tipoToDelete?.count_equipos || 0) > 0 && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              Este tipo tiene {tipoToDelete?.count_equipos} equipo(s) asociado(s) y no podrá ser eliminado.
+            </Alert>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>
@@ -838,10 +1031,10 @@ export const Configuracion: React.FC = () => {
         <DialogContent>
           <DialogContentText>
             ¿Está seguro que desea eliminar el insumo "{insumoToDelete?.nombre}"?
-            <Alert severity="warning" sx={{ mt: 2 }}>
-              Esta acción no se puede deshacer. El insumo será eliminado permanentemente del catálogo.
-            </Alert>
           </DialogContentText>
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            Esta acción no se puede deshacer. El insumo será eliminado permanentemente del catálogo.
+          </Alert>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setInsumoDeleteDialogOpen(false)}>
@@ -849,6 +1042,34 @@ export const Configuracion: React.FC = () => {
           </Button>
           <Button 
             onClick={handleDeleteInsumoConfirm} 
+            color="error"
+            variant="contained"
+          >
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Diálogo de confirmación de eliminación - Escuela */}
+      <Dialog
+        open={escuelaDeleteDialogOpen}
+        onClose={() => setEscuelaDeleteDialogOpen(false)}
+      >
+        <DialogTitle>Confirmar Eliminación</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            ¿Está seguro que desea eliminar la escuela "{escuelaToDelete?.nombre}"?
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              Si esta escuela tiene laboratorios o docentes asignados, no podrá ser eliminada.
+            </Alert>
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEscuelaDeleteDialogOpen(false)}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleDeleteEscuelaConfirm} 
             color="error"
             variant="contained"
           >

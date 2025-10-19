@@ -15,11 +15,15 @@ import {
 import {
   Dashboard as DashboardIcon,
   Timeline as TimelineIcon,
-  TrendingUp as TrendingUpIcon
+  TrendingUp as TrendingUpIcon,
+  Inventory as InventoryIcon,
+  EventBusy as EventBusyIcon
 } from '@mui/icons-material'
 import DashboardEjecutivo from '../components/Reportes/DashboardEjecutivo'
 import ConsumoDetallado from '../components/Reportes/ConsumoDetallado'
 import TopInsumos from '../components/Reportes/TopInsumos'
+import { ReporteStockBajo } from '../components/Reportes/ReporteStockBajo'
+import { ReporteProximosVencer } from '../components/Reportes/ReporteProximosVencer'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -81,6 +85,22 @@ const Reportes: React.FC = () => {
       icon: <TrendingUpIcon />,
       color: '#ed6c02',
       componente: <TopInsumos />
+    },
+    {
+      id: 3,
+      titulo: 'Insumos con Stock Bajo',
+      descripcion: 'Alertas de insumos agotados, con stock bajo o que necesitan reorden',
+      icon: <InventoryIcon />,
+      color: '#f57c00',
+      componente: <ReporteStockBajo />
+    },
+    {
+      id: 4,
+      titulo: 'Insumos Próximos a Vencer',
+      descripcion: 'Lotes de insumos vencidos o próximos a vencer clasificados por urgencia',
+      icon: <EventBusyIcon />,
+      color: '#c62828',
+      componente: <ReporteProximosVencer />
     }
   ]
 

@@ -207,11 +207,11 @@ export const HorarioDetallePublico: React.FC<HorarioDetallePublicoProps> = ({
               </Box>
             </Paper>
 
-            {/* Insumos utilizados */}
+            {/* Insumos requeridos */}
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Inventory color="primary" />
-                Insumos Utilizados
+                Insumos Requeridos
                 {horario.insumos && horario.insumos.length > 0 && (
                   <Chip 
                     label={horario.insumos.length} 

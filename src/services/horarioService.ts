@@ -120,6 +120,7 @@ export interface Insumo {
   nombre: string
   descripcion?: string
   stock_disponible?: number
+  stock_total_lotes?: number
 }
 
 export interface ConflictoHorario {

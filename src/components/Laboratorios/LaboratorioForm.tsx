@@ -213,7 +213,7 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
             required
             disabled={loading}
             sx={{ mb: 2 }}
-            placeholder="Ej: Edificio A - Aula 201"
+            placeholder="Ej: Pabellón A, Pabellón B, Pabellón C, etc"
           />
 
           <TextField
@@ -224,7 +224,7 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
             required
             disabled={loading}
             sx={{ mb: 2 }}
-            placeholder="Ej: Primer piso, Segundo piso, Planta baja"
+            placeholder="Ej: 1, 2, 3, 4, etc"
           />
 
           <FormControl fullWidth sx={{ mb: 2 }}>

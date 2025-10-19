@@ -17,11 +17,29 @@ export const Insumo = {
         COALESCE(inv.cantidad, 0) as stock_disponible
       FROM insumos i
       LEFT JOIN inventario_insumos inv ON i.id = inv.insumo_id AND inv.laboratorio_id = ?
-      ORDER BY i.categoria, i.codigo, i.nombre
+      ORDER BY i.nombre ASC
     `, [laboratorio_id])
     
-    // Para cada insumo, obtener información detallada de lotes (todos los registros individuales)
+    // Para cada insumo, calcular el stock real (entradas - salidas)
     for (let insumo of rows) {
+      // Calcular stock real: suma entradas y resta salidas
+      const [stockCalculo] = await pool.execute(`
+        SELECT 
+          COALESCE(SUM(
+            CASE 
+              WHEN m.tipo_movimiento = 'entrada' THEN mid.cantidad
+              WHEN m.tipo_movimiento = 'salida' THEN -mid.cantidad
+              ELSE 0
+            END
+          ), 0) as stock_real
+        FROM movimiento_insumo_detalle mid
+        INNER JOIN movimientos_insumos m ON mid.movimiento_id = m.id
+        WHERE mid.insumo_id = ? AND m.laboratorio_id = ?
+      `, [insumo.id, laboratorio_id])
+      
+      insumo.stock_total_lotes = stockCalculo[0]?.stock_real || 0
+      
+      // Obtener lotes solo de entrada para información detallada
       const [lotes] = await pool.execute(`
         SELECT 
           mid.id as detalle_id,
@@ -39,9 +57,6 @@ export const Insumo = {
       insumo.lotes = lotes
       insumo.total_lotes = lotes.length
       
-      // Calcular stock total de todos los lotes
-      insumo.stock_total_lotes = lotes.reduce((sum, lote) => sum + (lote.cantidad || 0), 0)
-      
       // Lotes próximos a vencer (dentro de 30 días)
       insumo.lotes_proximos_vencer = lotes.filter(l => {
         if (!l.fecha_vencimiento) return false
@@ -51,26 +66,39 @@ export const Insumo = {
     }
     
     console.log('📦 Insumos encontrados para laboratorio', laboratorio_id, ':', rows.length)
-    console.log('📋 Primeros 3 insumos:', rows.slice(0, 3))
+    console.log('📋 Primeros 3 insumos con stock:', rows.slice(0, 3).map(i => ({
+      nombre: i.nombre,
+      stock_disponible: i.stock_disponible,
+      stock_total_lotes: i.stock_total_lotes
+    })))
     
     return rows
   },
 
-  // Verificar stock disponible
+  // Verificar stock disponible (calculado desde movimientos reales)
   checkStock: async (insumo_id, laboratorio_id, cantidad_requerida) => {
     const [rows] = await pool.execute(`
-      SELECT cantidad 
-      FROM inventario_insumos 
-      WHERE insumo_id = ? AND laboratorio_id = ?
+      SELECT 
+        COALESCE(SUM(
+          CASE 
+            WHEN m.tipo_movimiento = 'entrada' THEN mid.cantidad
+            WHEN m.tipo_movimiento = 'salida' THEN -mid.cantidad
+            ELSE 0
+          END
+        ), 0) as stock_real
+      FROM movimiento_insumo_detalle mid
+      INNER JOIN movimientos_insumos m ON mid.movimiento_id = m.id
+      WHERE mid.insumo_id = ? AND m.laboratorio_id = ?
     `, [insumo_id, laboratorio_id])
     
-    const stock_actual = rows[0]?.cantidad || 0
+    const stock_actual = rows[0]?.stock_real || 0
+    console.log(`🔍 CheckStock - Insumo ${insumo_id}, Lab ${laboratorio_id}: Stock=${stock_actual}, Requerido=${cantidad_requerida}`)
     return stock_actual >= cantidad_requerida
   },
 
   // Reducir stock (con transacción)
   reducirStock: async (connection, insumo_id, laboratorio_id, cantidad, usuario_id, reserva_id) => {
-    // Actualizar inventario
+    // Actualizar inventario (legacy - para compatibilidad)
     await connection.execute(`
       UPDATE inventario_insumos 
       SET cantidad = cantidad - ? 
@@ -89,11 +117,20 @@ export const Insumo = {
       hour12: false
     }).replace(', ', ' ')
 
-    // Registrar movimiento
-    await connection.execute(`
+    // Registrar movimiento de salida (estructura correcta)
+    const [movimientoResult] = await connection.execute(`
       INSERT INTO movimientos_insumos 
-      (insumo_id, laboratorio_id, usuario_id, tipo_movimiento, cantidad, reserva_id, observaciones, fecha_movimiento)
-      VALUES (?, ?, ?, 'salida', ?, ?, 'Consumo por reserva', ?)
-    `, [insumo_id, laboratorio_id, usuario_id, cantidad, reserva_id, fechaPeru])
+      (laboratorio_id, usuario_id, tipo_movimiento, reserva_id, observaciones, fecha_movimiento)
+      VALUES (?, ?, 'salida', ?, 'Consumo por reserva', ?)
+    `, [laboratorio_id, usuario_id, reserva_id, fechaPeru])
+    
+    const movimiento_id = movimientoResult.insertId
+    
+    // Registrar detalle del movimiento
+    await connection.execute(`
+      INSERT INTO movimiento_insumo_detalle 
+      (movimiento_id, insumo_id, cantidad, lote)
+      VALUES (?, ?, ?, 'SALIDA-RESERVA')
+    `, [movimiento_id, insumo_id, cantidad])
   }
 }

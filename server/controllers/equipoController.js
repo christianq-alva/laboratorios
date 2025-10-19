@@ -183,6 +183,20 @@ export const createEquipo = async (req, res) => {
     
     console.log('🔍 Creando equipo:', req.body)
     
+    // Validar fechas de mantenimiento
+    if (fecha_ultimo_mantenimiento && fecha_proximo_mantenimiento) {
+      const fechaUltimo = new Date(fecha_ultimo_mantenimiento)
+      const fechaProximo = new Date(fecha_proximo_mantenimiento)
+      
+      if (fechaProximo < fechaUltimo) {
+        await connection.rollback()
+        return res.status(400).json({
+          success: false,
+          message: 'La fecha del próximo mantenimiento no puede ser anterior a la fecha del último mantenimiento'
+        })
+      }
+    }
+    
     // Generar código único para el equipo
     let codigo
     let intentos = 0
@@ -214,7 +228,7 @@ export const createEquipo = async (req, res) => {
     const [equipoResult] = await connection.execute(`
       INSERT INTO equipos (codigo, nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios, condicion, fecha_adquisicion, tipo_equipo_id, laboratorio_id) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [codigo, nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios, condicion, fecha_adquisicion || null, tipo_equipo_id || null, laboratorio_id || null])
+    `, [codigo, nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento || null, fecha_proximo_mantenimiento || null, comentarios, condicion, fecha_adquisicion || null, tipo_equipo_id || null, laboratorio_id || null])
     
     const equipo_id = equipoResult.insertId
     console.log('✅ Equipo creado con ID:', equipo_id)
@@ -303,6 +317,19 @@ export const updateEquipo = async (req, res) => {
       })
     }
     
+    // Validar fechas de mantenimiento
+    if (fecha_ultimo_mantenimiento && fecha_proximo_mantenimiento) {
+      const fechaUltimo = new Date(fecha_ultimo_mantenimiento)
+      const fechaProximo = new Date(fecha_proximo_mantenimiento)
+      
+      if (fechaProximo < fechaUltimo) {
+        return res.status(400).json({
+          success: false,
+          message: 'La fecha del próximo mantenimiento no puede ser anterior a la fecha del último mantenimiento'
+        })
+      }
+    }
+    
     // Verificar que el equipo existe
     const [existingEquipo] = await pool.execute(
       'SELECT id FROM equipos WHERE id = ?',
@@ -321,7 +348,7 @@ export const updateEquipo = async (req, res) => {
       UPDATE equipos 
       SET nombre = ?, descripcion = ?, marca = ?, modelo = ?, numero_serie = ?, estado = ?, fecha_ultimo_mantenimiento = ?, fecha_proximo_mantenimiento = ?, comentarios = ?, condicion = ?, fecha_adquisicion = ?, tipo_equipo_id = ?, laboratorio_id = ?
       WHERE id = ?
-    `, [nombre.trim(), descripcion?.trim() || '', marca?.trim() || '', modelo?.trim() || '', numero_serie?.trim() || '', estado || 'Operativo', fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios?.trim() || '', condicion || 'Bueno', fecha_adquisicion || null, tipo_equipo_id || null, laboratorio_id || null, equipoId])
+    `, [nombre.trim(), descripcion?.trim() || '', marca?.trim() || '', modelo?.trim() || '', numero_serie?.trim() || '', estado || 'Operativo', fecha_ultimo_mantenimiento || null, fecha_proximo_mantenimiento || null, comentarios?.trim() || '', condicion || 'Bueno', fecha_adquisicion || null, tipo_equipo_id || null, laboratorio_id || null, equipoId])
     
     console.log('✅ Equipo actualizado exitosamente:', equipoId)
     

@@ -33,7 +33,6 @@ import {
   Schedule,
   LocationOn,
   Person,
-  Group,
   Edit,
   Delete,
   Visibility,
@@ -123,7 +122,6 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
   // Estados para filtros
   const [filtroLaboratorio, setFiltroLaboratorio] = useState<string>('')
   const [filtroDocente, setFiltroDocente] = useState<string>('')
-  const [filtroGrupo, setFiltroGrupo] = useState<string>('')
   const [mostrarFiltros, setMostrarFiltros] = useState(false)
 
   // Cargar laboratorios del usuario
@@ -200,12 +198,10 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
         horario.laboratorio?.toLowerCase().includes(filtroLaboratorio.toLowerCase())
       const cumpleDocente = !filtroDocente || 
         horario.docente?.toLowerCase().includes(filtroDocente.toLowerCase())
-      const cumpleGrupo = !filtroGrupo || 
-        horario.grupo?.toLowerCase().includes(filtroGrupo.toLowerCase())
       
-      return cumpleLaboratorio && cumpleDocente && cumpleGrupo
+      return cumpleLaboratorio && cumpleDocente
     })
-  }, [horarios, currentWeek, selectedLaboratorio, laboratorios, filtroLaboratorio, filtroDocente, filtroGrupo])
+  }, [horarios, currentWeek, selectedLaboratorio, laboratorios, filtroLaboratorio, filtroDocente])
 
   // Organizar eventos por día y hora
   const eventosPorDiaYHora = useMemo(() => {
@@ -278,7 +274,6 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
   const limpiarFiltros = () => {
     setFiltroLaboratorio('')
     setFiltroDocente('')
-    setFiltroGrupo('')
     // Resetear el selector de laboratorio para admin y jefes con múltiples labs
     if ((userRole === 'Jefe de Laboratorio' && laboratorios.length > 1) ||
         (userRole === 'Administrador' && laboratorios.length > 0)) {
@@ -524,20 +519,6 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
               }}
             />
             
-            <TextField
-              label="Grupo"
-              value={filtroGrupo}
-              onChange={(e) => setFiltroGrupo(e.target.value)}
-              size="small"
-              sx={{ minWidth: 200 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Group fontSize="small" />
-                  </InputAdornment>
-                ),
-              }}
-            />
             
             <Button
               variant="outlined"

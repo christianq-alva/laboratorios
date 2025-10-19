@@ -989,12 +989,21 @@ export const getHorarios = async (req, res) => {
           )
         `, [insumoActual.cantidad_usada, insumoActual.insumo_id, horarioId])
         
-        // Registrar movimiento de devolución
-        await connection.execute(`
+        // Registrar movimiento de devolución con estructura correcta
+        const [movimientoResult] = await connection.execute(`
           INSERT INTO movimientos_insumos 
-          (insumo_id, laboratorio_id, usuario_id, tipo_movimiento, cantidad, reserva_id, observaciones)
-          VALUES (?, (SELECT laboratorio_id FROM reservas WHERE id = ?), ?, 'entrada', ?, ?, 'Devolución por edición de horario')
-        `, [insumoActual.insumo_id, horarioId, req.user.userId, insumoActual.cantidad_usada, horarioId])
+          (laboratorio_id, usuario_id, tipo_movimiento, reserva_id, observaciones)
+          VALUES ((SELECT laboratorio_id FROM reservas WHERE id = ?), ?, 'entrada', ?, 'Devolución por edición de horario')
+        `, [horarioId, req.user.userId, horarioId])
+        
+        const movimiento_id = movimientoResult.insertId
+        
+        // Registrar detalle de la devolución
+        await connection.execute(`
+          INSERT INTO movimiento_insumo_detalle 
+          (movimiento_id, insumo_id, cantidad, lote)
+          VALUES (?, ?, ?, 'DEVOLUCION-EDICION')
+        `, [movimiento_id, insumoActual.insumo_id, insumoActual.cantidad_usada])
       }
       
       // 5️⃣ ELIMINAR REGISTROS ANTIGUOS DE INSUMOS Y EQUIPOS
@@ -1233,12 +1242,21 @@ export const getHorarios = async (req, res) => {
           WHERE insumo_id = ? AND laboratorio_id = ?
         `, [insumo.cantidad_usada, insumo.insumo_id, horario.laboratorio_id])
         
-        // Registrar movimiento de devolución
-        await connection.execute(`
+        // Registrar movimiento de devolución con estructura correcta
+        const [movimientoResult] = await connection.execute(`
           INSERT INTO movimientos_insumos 
-          (insumo_id, laboratorio_id, usuario_id, tipo_movimiento, cantidad, reserva_id, observaciones)
-          VALUES (?, ?, ?, 'entrada', ?, ?, 'Devolución por eliminación de horario')
-        `, [insumo.insumo_id, horario.laboratorio_id, req.user.userId, insumo.cantidad_usada, horarioId])
+          (laboratorio_id, usuario_id, tipo_movimiento, reserva_id, observaciones)
+          VALUES (?, ?, 'entrada', ?, 'Devolución por eliminación de horario')
+        `, [horario.laboratorio_id, req.user.userId, horarioId])
+        
+        const movimiento_id = movimientoResult.insertId
+        
+        // Registrar detalle de la devolución
+        await connection.execute(`
+          INSERT INTO movimiento_insumo_detalle 
+          (movimiento_id, insumo_id, cantidad, lote)
+          VALUES (?, ?, ?, 'DEVOLUCION-ELIMINACION')
+        `, [movimiento_id, insumo.insumo_id, insumo.cantidad_usada])
       }
       
       // 7️⃣ ELIMINAR REGISTROS EN ORDEN

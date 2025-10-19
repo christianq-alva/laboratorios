@@ -14,7 +14,14 @@ import {
   generarPlantillaImportacion,
   previsualizarImportacionMasiva,
   importacionMasiva,
-  upload
+  upload,
+  // Nuevos endpoints para stock mínimo
+  getStockActual,
+  configurarStockMinimo,
+  getConfiguracionStock,
+  getInsumosStockBajo,
+  getInsumosProximosVencer,
+  getResumenAlertas
 } from '../controllers/insumoController.js'
 
 const router = express.Router()
@@ -94,6 +101,50 @@ router.post('/importacion-masiva',
   authorize('create', 'Insumo'),
   upload.single('archivo_excel'),
   importacionMasiva
+)
+
+// ================================================================
+// NUEVAS RUTAS - SISTEMA DE STOCK MÍNIMO
+// ================================================================
+
+// Obtener stock actual de un insumo en un laboratorio
+router.get('/stock-actual/:insumo_id/:laboratorio_id',
+  authenticateToken,
+  authorize('read', 'Insumo'),
+  getStockActual
+)
+
+// Configurar stock mínimo
+router.post('/config-stock',
+  authenticateToken,
+  authorize('update', 'Insumo'),
+  configurarStockMinimo
+)
+
+// Obtener configuración de stock de un insumo
+router.get('/config-stock/:insumo_id',
+  authenticateToken,
+  authorize('read', 'Insumo'),
+  getConfiguracionStock
+)
+
+// Reportes
+router.get('/stock-bajo',
+  authenticateToken,
+  authorize('read', 'Insumo'),
+  getInsumosStockBajo
+)
+
+router.get('/proximos-vencer',
+  authenticateToken,
+  authorize('read', 'Insumo'),
+  getInsumosProximosVencer
+)
+
+router.get('/resumen-alertas',
+  authenticateToken,
+  authorize('read', 'Insumo'),
+  getResumenAlertas
 )
 
 export default router

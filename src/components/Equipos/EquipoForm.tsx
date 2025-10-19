@@ -54,17 +54,21 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
 
   const isEditing = Boolean(equipo)
 
-  // Cargar datos iniciales
+  // Cargar datos iniciales (tipos de equipo y laboratorios)
   useEffect(() => {
     if (open) {
       loadInitialData()
-      if (equipo) {
-        loadEquipoData(equipo)
-      } else {
-        resetForm()
-      }
     }
-  }, [open, equipo])
+  }, [open])
+
+  // Cargar datos del equipo después de que los laboratorios estén cargados
+  useEffect(() => {
+    if (open && equipo && laboratorios.length > 0) {
+      loadEquipoData(equipo)
+    } else if (open && !equipo) {
+      resetForm()
+    }
+  }, [open, equipo, laboratorios.length])
 
   const loadInitialData = async () => {
     try {
@@ -146,6 +150,18 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
         return
       }
 
+      // Validar fechas de mantenimiento
+      if (formData.fecha_ultimo_mantenimiento && formData.fecha_proximo_mantenimiento) {
+        const fechaUltimo = new Date(formData.fecha_ultimo_mantenimiento)
+        const fechaProximo = new Date(formData.fecha_proximo_mantenimiento)
+        
+        if (fechaProximo < fechaUltimo) {
+          setError('La fecha del próximo mantenimiento no puede ser anterior a la fecha del último mantenimiento')
+          setLoading(false)
+          return
+        }
+      }
+
       // Preparar datos
       const equipoData = {
         ...formData,
@@ -155,9 +171,11 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
         modelo: formData.modelo.trim(),
         numero_serie: formData.numero_serie.trim(),
         comentarios: formData.comentarios.trim(),
-        fecha_adquisicion: formData.fecha_adquisicion && formData.fecha_adquisicion.trim() ? formData.fecha_adquisicion : null,
-        tipo_equipo_id: formData.tipo_equipo_id > 0 ? formData.tipo_equipo_id : null,
-        laboratorio_id: formData.laboratorio_id > 0 ? formData.laboratorio_id : null
+        fecha_adquisicion: formData.fecha_adquisicion && formData.fecha_adquisicion.trim() ? formData.fecha_adquisicion : undefined,
+        fecha_ultimo_mantenimiento: formData.fecha_ultimo_mantenimiento && formData.fecha_ultimo_mantenimiento.trim() ? formData.fecha_ultimo_mantenimiento : undefined,
+        fecha_proximo_mantenimiento: formData.fecha_proximo_mantenimiento && formData.fecha_proximo_mantenimiento.trim() ? formData.fecha_proximo_mantenimiento : undefined,
+        tipo_equipo_id: formData.tipo_equipo_id > 0 ? formData.tipo_equipo_id : undefined,
+        laboratorio_id: formData.laboratorio_id > 0 ? formData.laboratorio_id : undefined
       }
 
       let result
@@ -359,21 +377,30 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
                   <TextField
                     fullWidth
                     type="date"
-                    label="Fecha último mantenimiento"
+                    label="Fecha último mantenimiento (opcional)"
                     value={formData.fecha_ultimo_mantenimiento}
                     onChange={(e) => setFormData(prev => ({ ...prev, fecha_ultimo_mantenimiento: e.target.value }))}
                     InputLabelProps={{ shrink: true }}
                     disabled={loading}
+                    helperText="Dejar vacío si no aplica"
                   />
 
                   <TextField
                     fullWidth
                     type="date"
-                    label="Fecha próximo mantenimiento"
+                    label="Fecha próximo mantenimiento (opcional)"
                     value={formData.fecha_proximo_mantenimiento}
                     onChange={(e) => setFormData(prev => ({ ...prev, fecha_proximo_mantenimiento: e.target.value }))}
                     InputLabelProps={{ shrink: true }}
                     disabled={loading}
+                    inputProps={{
+                      min: formData.fecha_ultimo_mantenimiento || undefined
+                    }}
+                    helperText={
+                      formData.fecha_ultimo_mantenimiento 
+                        ? "Debe ser posterior a la fecha del último mantenimiento"
+                        : "Dejar vacío si no aplica"
+                    }
                   />
                 </Box>
 
