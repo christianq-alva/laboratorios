@@ -40,7 +40,7 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
     fecha_ultimo_mantenimiento: '',
     fecha_proximo_mantenimiento: '',
     comentarios: '',
-    condicion: 'Bueno' as 'Excelente' | 'Bueno' | 'Regular' | 'Malo',
+    condicion: 'Excelente' as 'Excelente' | 'Bueno' | 'Regular' | 'Malo',
     fecha_adquisicion: '',
     tipo_equipo_id: 0,
     laboratorio_id: 0
@@ -113,7 +113,7 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
       fecha_ultimo_mantenimiento: formatDateForInput(equipoData.fecha_ultimo_mantenimiento),
       fecha_proximo_mantenimiento: formatDateForInput(equipoData.fecha_proximo_mantenimiento),
       comentarios: equipoData.comentarios || '',
-      condicion: equipoData.condicion || 'Bueno',
+      condicion: equipoData.condicion || 'Excelente',
       fecha_adquisicion: formatDateForInput(equipoData.fecha_adquisicion),
       tipo_equipo_id: equipoData.tipo_equipo_id || 0,
       laboratorio_id: equipoData.laboratorio_id || 0
@@ -131,7 +131,7 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
       fecha_ultimo_mantenimiento: '',
       fecha_proximo_mantenimiento: '',
       comentarios: '',
-      condicion: 'Bueno',
+      condicion: 'Excelente',
       fecha_adquisicion: '',
       tipo_equipo_id: 0,
       laboratorio_id: 0
@@ -377,6 +377,34 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
                   <TextField
                     fullWidth
                     type="date"
+                    label="Fecha de adquisición"
+                    value={formData.fecha_adquisicion}
+                    onChange={(e) => setFormData(prev => ({ ...prev, fecha_adquisicion: e.target.value }))}
+                    disabled={loading}
+                    InputLabelProps={{ shrink: true }}
+                    required
+                  />
+
+                  <FormControl fullWidth>
+                    <InputLabel>Condición</InputLabel>
+                    <Select
+                      value={formData.condicion}
+                      label="Condición"
+                      onChange={(e) => setFormData(prev => ({ ...prev, condicion: e.target.value as any }))}
+                      disabled={loading}
+                    >
+                      <MenuItem value="Excelente">Excelente</MenuItem>
+                      <MenuItem value="Bueno">Bueno</MenuItem>
+                      <MenuItem value="Regular">Regular</MenuItem>
+                      <MenuItem value="Malo">Malo</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <TextField
+                    fullWidth
+                    type="date"
                     label="Fecha último mantenimiento (opcional)"
                     value={formData.fecha_ultimo_mantenimiento}
                     onChange={(e) => setFormData(prev => ({ ...prev, fecha_ultimo_mantenimiento: e.target.value }))}
@@ -401,33 +429,6 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
                         ? "Debe ser posterior a la fecha del último mantenimiento"
                         : "Dejar vacío si no aplica"
                     }
-                  />
-                </Box>
-
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  <FormControl fullWidth>
-                    <InputLabel>Condición</InputLabel>
-                    <Select
-                      value={formData.condicion}
-                      label="Condición"
-                      onChange={(e) => setFormData(prev => ({ ...prev, condicion: e.target.value as any }))}
-                      disabled={loading}
-                    >
-                      <MenuItem value="Excelente">Excelente</MenuItem>
-                      <MenuItem value="Bueno">Bueno</MenuItem>
-                      <MenuItem value="Regular">Regular</MenuItem>
-                      <MenuItem value="Malo">Malo</MenuItem>
-                    </Select>
-                  </FormControl>
-
-                  <TextField
-                    fullWidth
-                    type="date"
-                    label="Fecha de adquisición"
-                    value={formData.fecha_adquisicion}
-                    onChange={(e) => setFormData(prev => ({ ...prev, fecha_adquisicion: e.target.value }))}
-                    disabled={loading}
-                    InputLabelProps={{ shrink: true }}
                   />
                 </Box>
 

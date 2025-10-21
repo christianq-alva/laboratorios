@@ -13,7 +13,7 @@ import {
   DialogActions,
   CircularProgress
 } from '@mui/material'
-import { Add, Warning, History, FileUpload, ViewList, ViewModule } from '@mui/icons-material'
+import { Add, Warning, History, FileUpload } from '@mui/icons-material'
 import { EquiposTable } from '../components/Equipos/EquiposTable'
 import { EquipoForm } from '../components/Equipos/EquipoForm'
 import { ActividadEquipos } from '../components/Equipos/ActividadEquipos'
@@ -29,7 +29,6 @@ export const Equipos: React.FC = () => {
   const [selectedEquipo, setSelectedEquipo] = useState<Equipo | null>(null)
   const [refresh, setRefresh] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
-  const [vistaSimple, setVistaSimple] = useState(false)
   
   // Estados para notificaciones
   const [snackbar, setSnackbar] = useState({
@@ -185,15 +184,6 @@ export const Equipos: React.FC = () => {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
-            variant={vistaSimple ? "contained" : "outlined"}
-            startIcon={vistaSimple ? <ViewList /> : <ViewModule />}
-            onClick={() => setVistaSimple(!vistaSimple)}
-            sx={{ borderRadius: 2, px: 3 }}
-            color={vistaSimple ? "primary" : "inherit"}
-          >
-            {vistaSimple ? "Vista Simple" : "Vista Agrupada"}
-          </Button>
 
           <Button
             variant="outlined"
@@ -233,7 +223,6 @@ export const Equipos: React.FC = () => {
             onDelete={handleDeleteEquipo}
             refresh={refresh}
             onRefreshComplete={handleRefreshComplete}
-            vistaSimple={vistaSimple}
           />
         </CardContent>
       </Card>

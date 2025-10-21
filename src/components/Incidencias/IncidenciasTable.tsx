@@ -238,33 +238,6 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
             Incidencias Reportadas
           </Typography>
           
-          {/* Resumen de incidencias */}
-          {incidencias.length > 0 && (
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-              <Chip 
-                label={`${filteredIncidencias.length} de ${incidencias.length} incidencia${incidencias.length !== 1 ? 's' : ''}`}
-                color="primary"
-                variant="outlined"
-                size="small"
-              />
-              <Chip 
-                label={`${incidencias.filter(i => dayjs().diff(dayjs(i.fecha_reporte), 'day') <= 1).length} recientes`}
-                color="error"
-                variant="outlined"
-                size="small"
-              />
-              {(searchTerm || filtroFecha || filtroFechaInicio || filtroFechaFin || filtroLaboratorio || filtroDocente || filtroReportadoPor) && (
-                <Chip 
-                  label="Filtros activos"
-                  color="warning"
-                  variant="filled"
-                  size="small"
-                  onDelete={limpiarFiltros}
-                  deleteIcon={<Clear />}
-                />
-              )}
-            </Box>
-          )}
         </Box>
 
         {/* Barra de búsqueda y filtros */}
