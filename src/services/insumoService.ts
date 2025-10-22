@@ -4,6 +4,7 @@ export interface LoteInsumo {
   detalle_id: number
   lote: string | null
   cantidad: number
+  saldo?: number | null
   fecha_vencimiento: string | null
   fecha_ingreso: string | null
   fecha_movimiento: string | null
@@ -601,6 +602,60 @@ class InsumoService {
     } catch (error: any) {
       console.error('Error al obtener resumen de alertas:', error)
       throw new Error(error.response?.data?.message || 'Error al obtener resumen de alertas')
+    }
+  }
+
+  // Obtener lotes con saldo disponible por laboratorio e insumo
+  async getLotesConSaldo(laboratorioId: number, insumoId?: number): Promise<{
+    success: boolean
+    data: Array<{
+      detalle_id: number
+      insumo_id: number
+      insumo_nombre: string
+      insumo_codigo: string
+      unidad_medida: string
+      lote: string
+      cantidad_original: number
+      saldo: number
+      fecha_vencimiento: string | null
+      fecha_ingreso: string
+      dias_para_vencer: number | null
+    }>
+  }> {
+    try {
+      const params = new URLSearchParams()
+      params.append('laboratorio_id', laboratorioId.toString())
+      if (insumoId) params.append('insumo_id', insumoId.toString())
+      
+      const response = await api.get(`/insumos/lotes-con-saldo?${params.toString()}`)
+      return response.data
+    } catch (error: any) {
+      console.error('Error al obtener lotes con saldo:', error)
+      throw new Error(error.response?.data?.message || 'Error al obtener lotes con saldo')
+    }
+  }
+
+  // Registrar movimiento manual (entrada o salida)
+  async registrarMovimiento(data: {
+    laboratorio_id: number
+    tipo_movimiento: 'entrada' | 'salida'
+    observaciones?: string | null
+    reserva_id?: number | nulls
+    detalles: Array<{
+      insumo_id: number
+      cantidad: number
+      lote?: string | null
+      fecha_vencimiento?: string | null
+      entrada_detalle_id?: number | null  // Para salidas: ID del lote de entrada a reducir
+    }>
+  }): Promise<{ success: boolean; message: string; movimiento_id: number }> {
+    try {
+      console.log('📝 Registrando movimiento manual:', data)
+      const response = await api.post('/insumos/movimiento-manual', data)
+      return response.data
+    } catch (error: any) {
+      console.error('Error al registrar movimiento:', error)
+      throw new Error(error.response?.data?.message || 'Error al registrar movimiento')
     }
   }
 }

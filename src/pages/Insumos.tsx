@@ -13,13 +13,14 @@ import {
   DialogActions,
   CircularProgress
 } from '@mui/material'
-import { Warning, History, TrendingUp, CloudUpload, FileUpload } from '@mui/icons-material'
+import { Warning, History, TrendingUp, CloudUpload, FileUpload, SwapHoriz } from '@mui/icons-material'
 import { InsumosTable } from '../components/Insumos/InsumosTable'
 import { InsumoForm } from '../components/Insumos/InsumoForm'
 import { ActividadInsumos } from '../components/Insumos/ActividadInsumos'
 import { ReabastecimientoModal } from '../components/Insumos/ReabastecimientoModal'
 import { CargaMasivaModal } from '../components/Insumos/CargaMasivaModal'
 import { ImportacionMasiva } from '../components/Insumos/ImportacionMasiva'
+import { NuevoMovimientoModal } from '../components/Insumos/NuevoMovimientoModal'
 import { insumoService, type Insumo } from '../services/insumoService'
 
 export const Insumos: React.FC = () => {
@@ -33,6 +34,7 @@ export const Insumos: React.FC = () => {
   const [reabastecimientoOpen, setReabastecimientoOpen] = useState(false)
   const [cargaMasivaOpen, setCargaMasivaOpen] = useState(false)
   const [importacionMasivaOpen, setImportacionMasivaOpen] = useState(false)
+  const [nuevoMovimientoOpen, setNuevoMovimientoOpen] = useState(false)
   
   // Estados para notificaciones
   const [snackbar, setSnackbar] = useState({
@@ -209,6 +211,26 @@ export const Insumos: React.FC = () => {
     })
   }
 
+  // Función para abrir nuevo movimiento
+  const handleNuevoMovimientoOpen = () => {
+    setNuevoMovimientoOpen(true)
+  }
+
+  // Función para cerrar nuevo movimiento
+  const handleNuevoMovimientoClose = () => {
+    setNuevoMovimientoOpen(false)
+  }
+
+  // Función para éxito de nuevo movimiento
+  const handleNuevoMovimientoSuccess = () => {
+    setRefresh(prev => !prev)
+    setSnackbar({
+      open: true,
+      message: 'Movimiento registrado correctamente',
+      severity: 'success'
+    })
+  }
+
   return (
     <Box>
       {/* Encabezado */}
@@ -222,6 +244,16 @@ export const Insumos: React.FC = () => {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="contained"
+            startIcon={<SwapHoriz />}
+            onClick={handleNuevoMovimientoOpen}
+            sx={{ borderRadius: 2, px: 3 }}
+            color="primary"
+          >
+            Nuevo Movimiento
+          </Button>
+
           <Button
             variant="outlined"
             startIcon={<History />}
@@ -350,6 +382,13 @@ export const Insumos: React.FC = () => {
         open={importacionMasivaOpen}
         onClose={handleImportacionMasivaClose}
         onSuccess={handleImportacionMasivaSuccess}
+      />
+
+      {/* Modal de nuevo movimiento */}
+      <NuevoMovimientoModal
+        open={nuevoMovimientoOpen}
+        onClose={handleNuevoMovimientoClose}
+        onSuccess={handleNuevoMovimientoSuccess}
       />
 
       {/* Snackbar para notificaciones */}

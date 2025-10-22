@@ -13,7 +13,8 @@ import {
   getCiclos,        // ← NUEVO
   getGrupos,        // ← NUEVO
   debugHorarios,    // ← DEBUG
-  diagnosticarZonaHoraria  // ← DIAGNÓSTICO ZONA HORARIA
+  diagnosticarZonaHoraria,  // ← DIAGNÓSTICO ZONA HORARIA
+  cerrarHorario     // ← CERRAR HORARIO
 } from '../controllers/horarioController.js'
 
 const router = express.Router()
@@ -100,6 +101,13 @@ router.get('/debug',
 router.get('/diagnostico/timezone', 
   authenticateToken,
   diagnosticarZonaHoraria
+)
+
+// ✅ CERRAR HORARIO Y REGISTRAR CONSUMO
+router.post('/:id/cerrar', 
+  authenticateToken,
+  authorize('update', 'Horario'),
+  cerrarHorario
 )
 
 export default router

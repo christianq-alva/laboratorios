@@ -315,5 +315,22 @@ export const horarioService = {
       console.error('❌ Error en debug:', error)
       return { success: false, message: 'Error en debug' }
     }
+  },
+
+  // Cerrar horario y registrar consumo de insumos
+  cerrarHorario: async (horarioId: number, data: {
+    consumos_insumos: Array<{
+      insumo_id: number
+      entrada_detalle_id: number
+      cantidad: number
+    }>
+  }) => {
+    try {
+      const response = await api.post(`/horarios/${horarioId}/cerrar`, data)
+      return response.data
+    } catch (error: any) {
+      console.error('❌ Error al cerrar horario:', error)
+      throw new Error(error.response?.data?.message || 'Error al cerrar el horario')
+    }
   }
 } 

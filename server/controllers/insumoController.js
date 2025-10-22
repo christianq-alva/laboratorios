@@ -812,7 +812,7 @@ export const ejecutarReabastecimientoMasivo = async (req, res) => {
           second: '2-digit',
           hour12: false
         }).replace(', ', ' ')
-
+        
         // Registrar movimiento
         await connection.execute(`
           INSERT INTO movimientos_insumos 
@@ -924,7 +924,7 @@ export const deleteInsumo = async (req, res) => {
 
     if (totalRelaciones > 0) {
       const relaciones = []
-      if (movimientos[0].total > 0) {
+    if (movimientos[0].total > 0) {
         relaciones.push(`${movimientos[0].total} movimiento(s)`)
       }
       if (detalleMovimientos[0].total > 0) {
@@ -1957,5 +1957,258 @@ export const getResumenAlertas = async (req, res) => {
       message: 'Error al obtener resumen de alertas',
       error: error.message 
     })
+  }
+}
+
+// Obtener lotes con saldo disponible por laboratorio
+export const getLotesConSaldo = async (req, res) => {
+  try {
+    const { laboratorio_id, insumo_id } = req.query
+    
+    if (!laboratorio_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'El laboratorio_id es requerido'
+      })
+    }
+
+    const labId = parseInt(laboratorio_id)
+    
+    // Verificar permisos
+    if (req.user.rol !== 'Administrador' && !req.user.laboratorio_ids.includes(labId)) {
+      return res.status(403).json({
+        success: false,
+        message: 'No tienes permisos para ver los lotes de este laboratorio'
+      })
+    }
+
+    let query = `
+      SELECT 
+        mid.id as detalle_id,
+        mid.insumo_id,
+        i.nombre as insumo_nombre,
+        i.codigo as insumo_codigo,
+        i.unidad_medida,
+        COALESCE(mid.lote, 'SIN-LOTE') as lote,
+        mid.cantidad as cantidad_original,
+        COALESCE(mid.saldo, 0) as saldo,
+        mid.fecha_vencimiento,
+        mi.fecha_ingreso,
+        CASE 
+          WHEN mid.fecha_vencimiento IS NULL THEN NULL
+          WHEN mid.fecha_vencimiento < CURDATE() THEN 0
+          ELSE DATEDIFF(mid.fecha_vencimiento, CURDATE())
+        END as dias_para_vencer
+      FROM movimiento_insumo_detalle mid
+      INNER JOIN movimientos_insumos mi ON mid.movimiento_id = mi.id
+      INNER JOIN insumos i ON mid.insumo_id = i.id
+      WHERE mi.laboratorio_id = ?
+        AND mi.tipo_movimiento = 'entrada'
+        AND COALESCE(mid.saldo, 0) > 0
+    `
+
+    const params = [labId]
+    
+    if (insumo_id) {
+      query += ' AND mid.insumo_id = ?'
+      params.push(parseInt(insumo_id))
+    }
+
+    query += `
+      ORDER BY 
+        mid.fecha_vencimiento IS NULL,
+        mid.fecha_vencimiento ASC,
+        mi.fecha_ingreso ASC
+    `
+
+    const [lotes] = await pool.execute(query, params)
+
+    res.json({
+      success: true,
+      data: lotes
+    })
+  } catch (error) {
+    console.error('❌ Error al obtener lotes con saldo:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener lotes con saldo',
+      error: error.message
+    })
+  }
+}
+
+// Registrar movimiento manual (entrada o salida)
+export const registrarMovimientoManual = async (req, res) => {
+  const connection = await pool.getConnection()
+  
+  try {
+    const { laboratorio_id, tipo_movimiento, observaciones, reserva_id, detalles } = req.body
+
+    // 🐛 DEBUG: Ver qué está llegando desde el frontend
+    console.log('📦 Datos recibidos en registrarMovimientoManual:')
+    console.log('  - laboratorio_id:', laboratorio_id, typeof laboratorio_id)
+    console.log('  - tipo_movimiento:', tipo_movimiento, typeof tipo_movimiento)
+    console.log('  - observaciones:', observaciones, typeof observaciones)
+    console.log('  - reserva_id:', reserva_id, typeof reserva_id)
+    console.log('  - detalles:', JSON.stringify(detalles, null, 2))
+
+    // Validaciones
+    if (!laboratorio_id || !tipo_movimiento || !detalles || detalles.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Datos incompletos: laboratorio_id, tipo_movimiento y detalles son requeridos'
+      })
+    }
+
+    // Verificar permisos
+    if (req.user.rol !== 'Administrador' && !req.user.laboratorio_ids.includes(laboratorio_id)) {
+      return res.status(403).json({
+        success: false,
+        message: 'No tienes permisos para registrar movimientos en este laboratorio'
+      })
+    }
+
+    await connection.beginTransaction()
+
+    // 1. Crear el movimiento principal
+    // Normalizar valores undefined/null/vacío
+    const observacionesNormalizadas = (observaciones !== undefined && observaciones !== null && observaciones.trim() !== '') 
+      ? observaciones.trim() 
+      : null
+    const reservaIdNormalizado = (reserva_id !== undefined && reserva_id !== null && reserva_id > 0) 
+      ? reserva_id 
+      : null
+
+    console.log('🔧 Valores normalizados para INSERT:')
+    console.log('  - observaciones:', observacionesNormalizadas, typeof observacionesNormalizadas)
+    console.log('  - reserva_id:', reservaIdNormalizado, typeof reservaIdNormalizado)
+
+    const [movimientoResult] = await connection.execute(
+      `INSERT INTO movimientos_insumos 
+       (laboratorio_id, usuario_id, tipo_movimiento, fecha_movimiento, fecha_ingreso, observaciones, reserva_id)
+       VALUES (?, ?, ?, NOW(), NOW(), ?, ?)`,
+      [
+        laboratorio_id, 
+        req.user.id, 
+        tipo_movimiento, 
+        observacionesNormalizadas, 
+        reservaIdNormalizado
+      ]
+    )
+
+    const movimientoId = movimientoResult.insertId
+
+    // 2. Procesar cada detalle
+    for (const detalle of detalles) {
+      const { insumo_id, cantidad, lote, fecha_vencimiento, entrada_detalle_id } = detalle
+
+      if (tipo_movimiento === 'entrada') {
+        // ENTRADA: Crear nuevo lote con saldo = cantidad
+        // Normalizar valores: cadena vacía '', undefined o null -> valor por defecto
+        const loteNormalizado = (lote !== undefined && lote !== null && lote.trim() !== '') 
+          ? lote.trim() 
+          : `LOTE-${Date.now()}-${insumo_id}`
+        
+        const fechaVencimientoNormalizada = (fecha_vencimiento !== undefined && fecha_vencimiento !== null && fecha_vencimiento.trim() !== '') 
+          ? fecha_vencimiento.trim() 
+          : null
+        
+        await connection.execute(
+          `INSERT INTO movimiento_insumo_detalle 
+           (movimiento_id, insumo_id, cantidad, saldo, lote, fecha_vencimiento)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            movimientoId,
+            insumo_id,
+            cantidad,
+            cantidad, // saldo inicial = cantidad
+            loteNormalizado,
+            fechaVencimientoNormalizada
+          ]
+        )
+
+        // Actualizar inventario_insumos (aumentar)
+        await connection.execute(
+          `INSERT INTO inventario_insumos (laboratorio_id, insumo_id, stock_disponible)
+           VALUES (?, ?, ?)
+           ON DUPLICATE KEY UPDATE stock_disponible = stock_disponible + ?`,
+          [laboratorio_id, insumo_id, cantidad, cantidad]
+        )
+
+      } else if (tipo_movimiento === 'salida') {
+        // SALIDA: Reducir saldo del lote de entrada seleccionado
+        if (!entrada_detalle_id) {
+          throw new Error(`El insumo ${insumo_id} requiere entrada_detalle_id para salidas`)
+        }
+
+        // Verificar que el lote tiene saldo suficiente
+        const [loteCheck] = await connection.execute(
+          `SELECT mid.saldo, mi.laboratorio_id
+           FROM movimiento_insumo_detalle mid
+           INNER JOIN movimientos_insumos mi ON mid.movimiento_id = mi.id
+           WHERE mid.id = ? AND mid.insumo_id = ?`,
+          [entrada_detalle_id, insumo_id]
+        )
+
+        if (loteCheck.length === 0) {
+          throw new Error(`Lote de entrada ${entrada_detalle_id} no encontrado`)
+        }
+
+        if (loteCheck[0].laboratorio_id !== laboratorio_id) {
+          throw new Error(`El lote pertenece a otro laboratorio`)
+        }
+
+        const saldoActual = loteCheck[0].saldo || 0
+        if (saldoActual < cantidad) {
+          throw new Error(`Saldo insuficiente en el lote ${entrada_detalle_id}. Disponible: ${saldoActual}, Solicitado: ${cantidad}`)
+        }
+
+        // Reducir saldo del lote de entrada
+        await connection.execute(
+          `UPDATE movimiento_insumo_detalle 
+           SET saldo = saldo - ?
+           WHERE id = ?`,
+          [cantidad, entrada_detalle_id]
+        )
+
+        // Registrar el detalle de salida (sin saldo, ya que es salida)
+        await connection.execute(
+          `INSERT INTO movimiento_insumo_detalle 
+           (movimiento_id, insumo_id, cantidad, saldo, lote)
+           VALUES (?, ?, ?, NULL, 
+             (SELECT lote FROM movimiento_insumo_detalle WHERE id = ?))`,
+          [movimientoId, insumo_id, cantidad, entrada_detalle_id]
+        )
+
+        // Actualizar inventario_insumos (reducir)
+        await connection.execute(
+          `UPDATE inventario_insumos 
+           SET stock_disponible = stock_disponible - ?
+           WHERE laboratorio_id = ? AND insumo_id = ?`,
+          [cantidad, laboratorio_id, insumo_id]
+        )
+      }
+    }
+
+    await connection.commit()
+
+    console.log(`✅ Movimiento ${tipo_movimiento} registrado exitosamente: ID ${movimientoId}`)
+
+    res.json({
+      success: true,
+      message: `Movimiento de ${tipo_movimiento} registrado correctamente`,
+      movimiento_id: movimientoId
+    })
+
+  } catch (error) {
+    await connection.rollback()
+    console.error('❌ Error al registrar movimiento manual:', error)
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error al registrar el movimiento',
+      error: error.message
+    })
+  } finally {
+    connection.release()
   }
 }

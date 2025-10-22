@@ -28,9 +28,11 @@ import {
   Inventory,
   Build,
   CalendarToday,
-  People
+  People,
+  CheckCircle
 } from '@mui/icons-material'
 import { horarioService, type Horario } from '../../services/horarioService'
+import { CerrarHorarioModal } from './CerrarHorarioModal'
 import dayjs from 'dayjs'
 
 interface HorarioDetalleProps {
@@ -47,6 +49,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
   const [horario, setHorario] = useState<Horario | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [cerrarHorarioOpen, setCerrarHorarioOpen] = useState(false)
 
   // Cargar detalles del horario
   const loadHorario = async () => {
@@ -82,6 +85,17 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
     setHorario(null)
     setError(null)
     onClose()
+  }
+
+  // Función para abrir modal de cerrar horario
+  const handleOpenCerrarHorario = () => {
+    setCerrarHorarioOpen(true)
+  }
+
+  // Función para cerrar modal y recargar
+  const handleCerrarHorarioSuccess = () => {
+    setCerrarHorarioOpen(false)
+    loadHorario() // Recargar datos
   }
 
   // Función para formatear hora
@@ -374,11 +388,29 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
         )}
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, pb: 3 }}>
+      <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
         <Button onClick={handleClose} variant="outlined">
           Cerrar
         </Button>
+        {horario && horario.insumos && horario.insumos.length > 0 && (
+          <Button 
+            variant="contained" 
+            color="success"
+            startIcon={<CheckCircle />}
+            onClick={handleOpenCerrarHorario}
+          >
+            Cerrar Horario
+          </Button>
+        )}
       </DialogActions>
+
+      {/* Modal para cerrar horario */}
+      <CerrarHorarioModal
+        open={cerrarHorarioOpen}
+        onClose={() => setCerrarHorarioOpen(false)}
+        onSuccess={handleCerrarHorarioSuccess}
+        horarioId={horarioId}
+      />
     </Dialog>
   )
 } 

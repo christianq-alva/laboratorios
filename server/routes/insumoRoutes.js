@@ -21,7 +21,10 @@ import {
   getConfiguracionStock,
   getInsumosStockBajo,
   getInsumosProximosVencer,
-  getResumenAlertas
+  getResumenAlertas,
+  // Nuevos endpoints para movimientos manuales
+  getLotesConSaldo,
+  registrarMovimientoManual
 } from '../controllers/insumoController.js'
 
 const router = express.Router()
@@ -145,6 +148,24 @@ router.get('/resumen-alertas',
   authenticateToken,
   authorize('read', 'Insumo'),
   getResumenAlertas
+)
+
+// ================================================================
+// NUEVAS RUTAS - MOVIMIENTOS MANUALES CON SELECCIÓN DE LOTES
+// ================================================================
+
+// Obtener lotes con saldo disponible
+router.get('/lotes-con-saldo',
+  authenticateToken,
+  authorize('read', 'Insumo'),
+  getLotesConSaldo
+)
+
+// Registrar movimiento manual (entrada o salida)
+router.post('/movimiento-manual',
+  authenticateToken,
+  authorize('create', 'Insumo'),
+  registrarMovimientoManual
 )
 
 export default router

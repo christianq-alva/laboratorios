@@ -1625,3 +1625,116 @@ const registrarActividadHorario = async ({ accion, reserva_id, descripcion, usua
   }
 }
 
+
+// Cerrar horario y registrar consumo de insumos
+export const cerrarHorario = async (req, res) => {
+  const connection = await pool.getConnection()
+  
+  try {
+    const { id } = req.params
+    const { consumos_insumos } = req.body
+
+    if (!consumos_insumos || consumos_insumos.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Debe proporcionar los consumos de insumos'
+      })
+    }
+
+    // Obtener datos del horario
+    const [horarios] = await connection.execute(
+      'SELECT * FROM reservas WHERE id = ?',
+      [id]
+    )
+
+    if (horarios.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Horario no encontrado'
+      })
+    }
+
+    const horario = horarios[0]
+
+    await connection.beginTransaction()
+
+    // 1. Crear movimiento de salida principal
+    const [movimientoResult] = await connection.execute(
+      `INSERT INTO movimientos_insumos 
+       (laboratorio_id, usuario_id, tipo_movimiento, fecha_movimiento, fecha_ingreso, observaciones, reserva_id)
+       VALUES (?, ?, 'salida', NOW(), NOW(), 'Consumo de clase', ?)`,
+      [horario.laboratorio_id, req.user.id, id]
+    )
+
+    const movimientoId = movimientoResult.insertId
+
+    // 2. Registrar cada consumo de insumo
+    for (const consumo of consumos_insumos) {
+      const { insumo_id, entrada_detalle_id, cantidad } = consumo
+
+      // Verificar saldo del lote
+      const [loteCheck] = await connection.execute(
+        `SELECT mid.saldo, mid.lote, mi.laboratorio_id
+         FROM movimiento_insumo_detalle mid
+         INNER JOIN movimientos_insumos mi ON mid.movimiento_id = mi.id
+         WHERE mid.id = ? AND mid.insumo_id = ?`,
+        [entrada_detalle_id, insumo_id]
+      )
+
+      if (loteCheck.length === 0) {
+        throw new Error(`Lote ${entrada_detalle_id} no encontrado`)
+      }
+
+      if (loteCheck[0].laboratorio_id !== horario.laboratorio_id) {
+        throw new Error(`El lote no pertenece al laboratorio del horario`)
+      }
+
+      const saldoActual = loteCheck[0].saldo || 0
+      if (saldoActual < cantidad) {
+        throw new Error(`Saldo insuficiente en lote ${loteCheck[0].lote}`)
+      }
+
+      // Reducir saldo del lote
+      await connection.execute(
+        'UPDATE movimiento_insumo_detalle SET saldo = saldo - ? WHERE id = ?',
+        [cantidad, entrada_detalle_id]
+      )
+
+      // Registrar detalle de salida
+      await connection.execute(
+        `INSERT INTO movimiento_insumo_detalle 
+         (movimiento_id, insumo_id, cantidad, saldo, lote)
+         VALUES (?, ?, ?, NULL, ?)`,
+        [movimientoId, insumo_id, cantidad, loteCheck[0].lote]
+      )
+
+      // Actualizar inventario
+      await connection.execute(
+        `UPDATE inventario_insumos 
+         SET stock_disponible = stock_disponible - ?
+         WHERE laboratorio_id = ? AND insumo_id = ?`,
+        [cantidad, horario.laboratorio_id, insumo_id]
+      )
+    }
+
+    await connection.commit()
+
+    console.log(`✅ Horario ${id} cerrado con ${consumos_insumos.length} consumos registrados`)
+
+    res.json({
+      success: true,
+      message: 'Horario cerrado correctamente',
+      movimiento_id: movimientoId
+    })
+
+  } catch (error) {
+    await connection.rollback()
+    console.error('❌ Error al cerrar horario:', error)
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error al cerrar el horario'
+    })
+  } finally {
+    connection.release()
+  }
+}
