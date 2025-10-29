@@ -32,7 +32,7 @@ import {
   Edit,
   Add
 } from '@mui/icons-material'
-import { insumoService, type Insumo } from '../../services/insumoService'
+import { insumoService, type Insumo, type Insumo2 } from '../../services/insumoService'
 
 interface CatalogoInsumosModalProps {
   open: boolean
@@ -51,8 +51,8 @@ export const CatalogoInsumosModal: React.FC<CatalogoInsumosModalProps> = ({
   refresh,
   embedded = false
 }) => {
-  const [insumos, setInsumos] = useState<Insumo[]>([])
-  const [filteredInsumos, setFilteredInsumos] = useState<Insumo[]>([])
+  const [insumos, setInsumos] = useState<Insumo2[]>([])
+  const [filteredInsumos, setFilteredInsumos] = useState<Insumo2[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategoria, setSelectedCategoria] = useState<string>('all')
   const [loading, setLoading] = useState(false)
@@ -68,6 +68,7 @@ export const CatalogoInsumosModal: React.FC<CatalogoInsumosModalProps> = ({
   // Recargar cuando cambia refresh
   useEffect(() => {
     if ((open || embedded) && refresh !== undefined) {
+      console.log('Cargando Catalogo')
       loadCatalogo()
     }
   }, [refresh, open, embedded])
@@ -76,8 +77,8 @@ export const CatalogoInsumosModal: React.FC<CatalogoInsumosModalProps> = ({
     setLoading(true)
     setError(null)
     try {
-      const response = await insumoService.getAll()
-      if (response.success) {
+      const response = await insumoService.getAllInsumos()
+      if (response.data) {
         setInsumos(response.data || [])
         setFilteredInsumos(response.data || [])
       }

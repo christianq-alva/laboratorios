@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -20,7 +20,11 @@ import {
   TableRow,
   Paper,
   Chip,
-  TextField
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material'
 import {
   CloudUpload,
@@ -32,6 +36,8 @@ import {
   Refresh
 } from '@mui/icons-material'
 import { insumoService } from '../../services/insumoService'
+import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
+import dayjs from 'dayjs'
 
 interface CargaMasivaModalProps {
   open: boolean
@@ -39,16 +45,18 @@ interface CargaMasivaModalProps {
   onSuccess?: () => void
 }
 
-interface DatoValidado {
+export interface DatoValidado {
   fila: number
   insumo_id: number
   insumo_codigo: string
   insumo_nombre: string
   insumo_unidad: string
   cantidad: number
-  laboratorio_id: number
-  laboratorio_codigo: string
-  laboratorio_nombre: string
+  //laboratorio_id: number
+  //laboratorio_codigo: string
+  //laboratorio_nombre: string
+  insumo_lote: string
+  insumo_fecha_venc: string
 }
 
 interface ResultadoProcesamiento {
@@ -65,12 +73,17 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
   onClose,
   onSuccess
 }) => {
+  //Encabezado de modal
+  const [fechaMovimiento, setFechaMovimiento] = useState<string | null>(null);
+  const [comentario, setComentario] = useState('');
+  const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
+  const [laboratorioId, setLaboratorioId] = useState<number>(0);
+  const [loadingData, setLoadingData] = useState(false);
   const [activeStep, setActiveStep] = useState(0)
   const [archivo, setArchivo] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [resultado, setResultado] = useState<ResultadoProcesamiento | null>(null)
-  const [motivoGeneral, setMotivoGeneral] = useState('Carga masiva desde Excel')
   const [procesando, setProcesando] = useState(false)
 
   const steps = [
@@ -80,28 +93,52 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
     'Confirmar Reabastecimiento'
   ]
 
+  useEffect(() => {
+    if (open) {
+      loadInitialData()
+    } else {
+      handleClose
+    }
+  }, [open])
+
+  const loadInitialData = async () => {
+    setLoadingData(true)
+    try {
+      setFechaMovimiento(new Date().toISOString().split('T')[0])
+      const response = await laboratorioService.getAll()
+      setLaboratorios(response.data || [])
+    } catch (error: any) {
+      setError('Error al cargar laboratorios')
+      console.error('Error:', error)
+    } finally {
+      setLoadingData(false)
+    }
+  }
+
   const handleClose = () => {
     setActiveStep(0)
     setArchivo(null)
     setError(null)
     setResultado(null)
-    setMotivoGeneral('Carga masiva desde Excel')
+    setComentario('')
     setProcesando(false)
     onClose()
+    setLaboratorioId(0)
+    setFechaMovimiento(null)
   }
 
   const descargarPlantilla = async () => {
     try {
       setLoading(true)
       setError(null)
-      
+
       const response = await insumoService.descargarPlantillaExcel()
-      
+
       // Crear un blob y descargarlo
       const blob = new Blob([response.data], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       })
-      
+
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
@@ -110,7 +147,7 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
       link.click()
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
-      
+
       setActiveStep(1)
     } catch (err: any) {
       setError(err.message || 'Error al descargar la plantilla')
@@ -140,7 +177,9 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
       const formData = new FormData()
       formData.append('archivo_excel', archivo)
 
-      const response = await insumoService.procesarArchivoExcel(formData)
+      const response = await insumoService.procesarArchivoExcel(formData,
+        laboratorioId
+      )
       setResultado(response.data)
       setActiveStep(2)
     } catch (err: any) {
@@ -161,8 +200,17 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
       setError(null)
 
       await insumoService.ejecutarReabastecimientoMasivo({
-        datos_reabastecimiento: resultado.datos_validados,
-        motivo_general: motivoGeneral
+        //conversión
+        datos_reabastecimiento: resultado.datos_validados.map(d => ({
+          insumo_id: d.insumo_id,
+          cantidad: d.cantidad,
+          lote: d.insumo_lote,
+          fecha_vencimiento: dayjs(d.insumo_fecha_venc).format('YYYY-MM-DD'),
+          entrada_detalle_id: null
+        })),
+        fecha_movimiento: fechaMovimiento,
+        motivo_general: comentario,
+        laboratorio_id: laboratorioId
       })
 
       setActiveStep(3)
@@ -225,7 +273,7 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
                   Seleccionar Archivo Excel
                 </Button>
               </label>
-              
+
               {archivo && (
                 <Box sx={{ mt: 2 }}>
                   <Chip
@@ -303,16 +351,6 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
                   </Alert>
                 )}
 
-                {/* Campo para motivo */}
-                <TextField
-                  fullWidth
-                  label="Motivo del reabastecimiento"
-                  value={motivoGeneral}
-                  onChange={(e) => setMotivoGeneral(e.target.value)}
-                  sx={{ mb: 3 }}
-                  helperText="Describe el motivo de este reabastecimiento masivo"
-                />
-
                 {/* Tabla de datos válidos */}
                 {resultado.datos_validados.length > 0 && (
                   <>
@@ -324,32 +362,41 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
                         <TableHead>
                           <TableRow>
                             <TableCell>Fila</TableCell>
-                            <TableCell>Código Insumo</TableCell>
-                            <TableCell>Insumo</TableCell>
-                            <TableCell>Cantidad</TableCell>
-                            <TableCell>Unidad</TableCell>
+                            {/* 
                             <TableCell>Código Lab</TableCell>
                             <TableCell>Laboratorio</TableCell>
+                            */}
+                            <TableCell>Código Insumo</TableCell>
+                            <TableCell>Insumo</TableCell>
+                            <TableCell>Unidad</TableCell>
+                            <TableCell>Lote</TableCell>
+                            <TableCell>Fecha Vencimiento</TableCell>
+                            <TableCell>Cantidad</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {resultado.datos_validados.map((dato, index) => (
                             <TableRow key={index} hover>
                               <TableCell>{dato.fila}</TableCell>
+                              {/* 
+                              <TableCell>
+                                <Chip label={dato.laboratorio_codigo} size="small" color="secondary" variant="outlined" />
+                              </TableCell>
+                              <TableCell>{dato.laboratorio_nombre}</TableCell>
+                              */}
                               <TableCell>
                                 <Chip label={dato.insumo_codigo} size="small" color="primary" variant="outlined" />
                               </TableCell>
+                              
                               <TableCell>{dato.insumo_nombre}</TableCell>
+                              <TableCell>{dato.insumo_unidad}</TableCell>
+                              <TableCell>{dato.insumo_lote}</TableCell>
+                              <TableCell>{dato.insumo_fecha_venc}</TableCell>
                               <TableCell>
                                 <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
                                   +{dato.cantidad}
                                 </Typography>
                               </TableCell>
-                              <TableCell>{dato.insumo_unidad}</TableCell>
-                              <TableCell>
-                                <Chip label={dato.laboratorio_codigo} size="small" color="secondary" variant="outlined" />
-                              </TableCell>
-                              <TableCell>{dato.laboratorio_nombre}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -418,9 +465,43 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
         </Box>
       </DialogTitle>
 
+
       <DialogContent>
+        {/* Campos del encabezado */}
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', flexWrap: 'nowrap', overflow: 'auto', gap: 2, mb: 2, p: 2 }}>
+          <FormControl sx={{ minWidth: 220, flex: 1 }} required>
+            <InputLabel>Laboratorio</InputLabel>
+            <Select
+              value={laboratorioId}
+              onChange={(e) => setLaboratorioId(Number(e.target.value))}
+              label="Laboratorio"
+            >
+              {laboratorios.map(lab => (
+                <MenuItem key={lab.id} value={lab.id}>
+                  {lab.nombre} - {lab.ubicacion}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            sx={{ minWidth: 180 }}
+            type="date"
+            label="Fecha del Movimiento"
+            value={fechaMovimiento}
+            onChange={(e) => setFechaMovimiento(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            required
+          />
+          <TextField
+            fullWidth
+            label="Referencia"
+            value={comentario}
+            onChange={(e) => setComentario(e.target.value)}
+            placeholder="Referencia del reabastecimiento"
+          />
+        </Box>
         {/* Stepper */}
-        <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+        <Stepper activeStep={activeStep} sx={{ mb: 4, pl: 2, pr: 2 }}>
           {steps.map((label) => (
             <Step key={label}>
               <StepLabel>{label}</StepLabel>

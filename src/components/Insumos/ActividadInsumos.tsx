@@ -39,6 +39,7 @@ import {
 } from '@mui/icons-material'
 import { insumoService, type ActividadInsumo } from '../../services/insumoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
+import dayjs from 'dayjs'
 
 interface ActividadInsumosProps {
   open: boolean
@@ -270,13 +271,12 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
             <Table>
               <TableHead>
                 <TableRow sx={{ backgroundColor: 'grey.50' }}>
-                  <TableCell sx={{ fontWeight: 600 }}>Fecha</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Fecha de Movimiento</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Tipo</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Insumo</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Cantidad</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Laboratorio</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Usuario</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Observaciones</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Usuario</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Fecha de Sistema</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -301,7 +301,7 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Schedule fontSize="small" color="action" />
                           <Typography variant="body2">
-                            {formatFecha(movimiento.fecha_movimiento)}
+                            {movimiento.fecha_movimiento}
                           </Typography>
                         </Box>
                       </TableCell>
@@ -318,28 +318,26 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
                       
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Inventory fontSize="small" color="primary" />
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                            {movimiento.insumo_nombre}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      
-                      <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {movimiento.cantidad} {movimiento.unidad_medida}
-                        </Typography>
-                      </TableCell>
-                      
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <LocationOn fontSize="small" color="action" />
                           <Typography variant="body2">
                             {movimiento.laboratorio_nombre}
                           </Typography>
                         </Box>
                       </TableCell>
-                      
+
+                      <TableCell>
+                        <Tooltip title={movimiento.observaciones} arrow>
+                          <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {movimiento.observaciones}
+                          </Typography>
+                        </Tooltip>
+                        {movimiento.reserva_descripcion && (
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            Reserva: {movimiento.reserva_descripcion}
+                          </Typography>
+                        )}
+                      </TableCell>
+
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Person fontSize="small" color="action" />
@@ -353,18 +351,13 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
                           </Box>
                         </Box>
                       </TableCell>
-                      
                       <TableCell>
-                        <Tooltip title={movimiento.observaciones} arrow>
-                          <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {movimiento.observaciones}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Schedule fontSize="small" color="action" />
+                          <Typography variant="body2">
+                            {formatFecha(movimiento.fecha_ingreso)}
                           </Typography>
-                        </Tooltip>
-                        {movimiento.reserva_descripcion && (
-                          <Typography variant="caption" color="text.secondary" display="block">
-                            Reserva: {movimiento.reserva_descripcion}
-                          </Typography>
-                        )}
+                        </Box>
                       </TableCell>
                     </TableRow>
                   ))

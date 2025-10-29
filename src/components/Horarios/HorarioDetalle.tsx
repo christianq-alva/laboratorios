@@ -410,6 +410,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
         onClose={() => setCerrarHorarioOpen(false)}
         onSuccess={handleCerrarHorarioSuccess}
         horarioId={horarioId}
+        fecha= {dayjs(horario?.fecha_inicio).format('YYYY-MM-DD')}
       />
     </Dialog>
   )

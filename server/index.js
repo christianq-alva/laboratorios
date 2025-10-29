@@ -7,6 +7,7 @@ import authRoutes from './routes/authRoutes.js'
 import laboratorioRoutes from './routes/laboratorioRoutes.js'
 import horarioRoutes from './routes/horarioRoutes.js'
 import insumoRoutes from './routes/insumoRoutes.js'
+import inventarioRoutes from './routes/inventarioRoutes.js'
 import equipoRoutes from './routes/equipoRoutes.js'
 import incidenciaRoutes from './routes/incidenciaRoutes.js'
 import docenteRoutes from './routes/docenteRoutes.js'
@@ -45,6 +46,7 @@ app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/laboratorios', laboratorioRoutes)
 app.use('/api/horarios', horarioRoutes)
 app.use('/api/insumos', insumoRoutes)
+app.use('/api/inventario', inventarioRoutes)
 app.use('/api/equipos', equipoRoutes)
 app.use('/api/incidencias', incidenciaRoutes)
 app.use('/api/docentes', docenteRoutes)

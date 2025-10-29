@@ -19,31 +19,21 @@ import {
   IconButton,
   Tooltip,
   TextField,
-  Button,
   TablePagination
 } from '@mui/material'
-import { Edit, Delete, Inventory, Science, Search, Clear, CloudUpload, Settings } from '@mui/icons-material'
-import { insumoService, type Insumo} from '../../services/insumoService'
+import { Inventory, Science, Search, Clear, Visibility } from '@mui/icons-material'
+import { insumoService, type InsumoSaldo } from '../../services/insumoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
-import { ConfigStockMinimoDialog } from './ConfigStockMinimoDialog'
 
-interface InsumosTableProps {
-  onEdit?: (insumo: Insumo) => void
-  onDelete?: (insumo: Insumo) => void
-  onCargaMasiva?: () => void
+interface InventarioTableProps {
   refresh?: boolean
-  onRefreshComplete?: () => void
 }
 
-export const InsumosTable: React.FC<InsumosTableProps> = ({
-  onEdit,
-  onDelete,
-  onCargaMasiva,
+export const InventarioTable: React.FC<InventarioTableProps> = ({
   refresh,
-  onRefreshComplete
 }) => {
-  const [insumos, setInsumos] = useState<Insumo[]>([])
-  const [filteredInsumos, setFilteredInsumos] = useState<Insumo[]>([])
+  const [insumos, setInsumos] = useState<InsumoSaldo[]>([])
+  const [filteredInsumos, setFilteredInsumos] = useState<InsumoSaldo[]>([])
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
   const [selectedLaboratorio, setSelectedLaboratorio] = useState<number | 'all'>('all')
   const [selectedCategoria, setSelectedCategoria] = useState<string>('all')
@@ -52,16 +42,12 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
-  
-  // Estados para configuración de stock mínimo
-  const [configStockDialogOpen, setConfigStockDialogOpen] = useState(false)
-  const [insumoParaConfigurar, setInsumoParaConfigurar] = useState<Insumo | null>(null)
 
   // Cargar datos
   const loadData = async () => {
     setLoading(true)
     setError(null)
-    
+
     try {
       // Cargar laboratorios para el filtro
       const laboratoriosResponse = await laboratorioService.getAll()
@@ -70,19 +56,17 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
       // Cargar insumos
       let insumosResponse
       if (selectedLaboratorio === 'all') {
-        insumosResponse = await insumoService.getAll()
+        insumosResponse = await insumoService.getAllWithStock()
       } else {
-        insumosResponse = await insumoService.getByLaboratorio(selectedLaboratorio)
+        insumosResponse = await insumoService.getWithStock(selectedLaboratorio)
       }
-      
+
       setInsumos(insumosResponse.data)
-      setFilteredInsumos(insumosResponse.data)
     } catch (err: any) {
       setError(err.message)
       console.error('Error al cargar datos:', err)
     } finally {
       setLoading(false)
-      onRefreshComplete?.()
     }
   }
 
@@ -112,9 +96,9 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
     // Filtro por búsqueda
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase()
-      filtered = filtered.filter(insumo => 
+      filtered = filtered.filter(insumo =>
         insumo.nombre.toLowerCase().includes(searchLower) ||
-        insumo.descripcion.toLowerCase().includes(searchLower) ||
+        //insumo.descripcion.toLowerCase().includes(searchLower) ||
         insumo.codigo.toLowerCase().includes(searchLower)
       )
     }
@@ -171,28 +155,12 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
     setPage(0)
   }
 
-  // Handler para abrir el diálogo de configuración de stock mínimo
-  const handleOpenConfigStock = (insumo: Insumo) => {
-    setInsumoParaConfigurar(insumo)
-    setConfigStockDialogOpen(true)
-  }
-
-  const handleCloseConfigStock = () => {
-    setConfigStockDialogOpen(false)
-    setInsumoParaConfigurar(null)
-  }
-
-  const handleConfigStockSuccess = () => {
-    // Opcional: Recargar datos si es necesario
-    loadData()
-  }
-
   // Calcular los insumos a mostrar según la página actual
   const paginatedInsumos = filteredInsumos.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   )
-  
+
   // Calcular el total de items para la paginación
   const getTotalCount = () => {
     return filteredInsumos.length
@@ -265,22 +233,7 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
                 </MenuItem>
               </Select>
             </FormControl>
-            
-            {onCargaMasiva && (
-              <Tooltip title="Cargar stock masivamente desde Excel">
-                <Button
-                  variant="outlined"
-                  startIcon={<CloudUpload />}
-                  onClick={onCargaMasiva}
-                  color="primary"
-                >
-                  Carga Masiva
-                </Button>
-              </Tooltip>
-            )}
-            
           </Box>
-          
         </Box>
 
         {/* Segunda fila: Barra de búsqueda */}
@@ -342,9 +295,9 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
                       No hay insumos registrados
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {searchTerm 
+                      {searchTerm
                         ? `No se encontraron insumos que coincidan con "${searchTerm}"`
-                        : selectedLaboratorio === 'all' 
+                        : selectedLaboratorio === 'all'
                           ? 'No se han registrado insumos en el sistema'
                           : 'No hay insumos registrados en este laboratorio'
                       }
@@ -357,9 +310,9 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
               paginatedInsumos.map((insumo) => (
                 <TableRow key={insumo.id} hover>
                   <TableCell>
-                    <Chip 
-                      label={insumo.codigo || 'N/A'} 
-                      size="small" 
+                    <Chip
+                      label={insumo.codigo || 'N/A'}
+                      size="small"
                       color="primary"
                       variant="outlined"
                       sx={{ fontFamily: 'monospace', fontWeight: 600 }}
@@ -386,9 +339,9 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
                     />
                   </TableCell>
                   <TableCell>
-                    <Chip 
-                      label={insumo.unidad_medida} 
-                      size="small" 
+                    <Chip
+                      label={insumo.unidad_medida}
+                      size="small"
                       variant="outlined"
                     />
                   </TableCell>
@@ -407,7 +360,7 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={`${insumo.stock_total_lotes || 0} ${insumo.unidad_medida}`}
+                      label={`${insumo.stock_disponible || 0} ${insumo.unidad_medida}`}
                       size="small"
                       color="success"
                       variant="filled"
@@ -416,37 +369,15 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
                   </TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                      {onEdit && (
-                        <Tooltip title="Editar insumo">
-                          <IconButton 
-                            size="small" 
-                            onClick={() => onEdit(insumo)}
+                        <Tooltip title="Ver detalle">
+                          <IconButton
+                            size="small"
+                            //onClick={() => onEdit(insumo)}
                             color="primary"
                           >
-                            <Edit />
+                            <Visibility />
                           </IconButton>
                         </Tooltip>
-                      )}
-                      {onDelete && (
-                        <Tooltip title="Eliminar insumo">
-                          <IconButton 
-                            size="small" 
-                            onClick={() => onDelete(insumo)}
-                            color="error"
-                          >
-                            <Delete />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      <Tooltip title="Configurar stock mínimo">
-                        <IconButton 
-                          size="small" 
-                          onClick={() => handleOpenConfigStock(insumo)}
-                          color="secondary"
-                        >
-                          <Settings />
-                        </IconButton>
-                      </Tooltip>
                     </Box>
                   </TableCell>
                 </TableRow>
@@ -468,7 +399,7 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
             onPageChange={handleChangePage}
             onRowsPerPageChange={handleChangeRowsPerPage}
             labelRowsPerPage="Filas por página:"
-            labelDisplayedRows={({ from, to, count }) => 
+            labelDisplayedRows={({ from, to, count }) =>
               `${from}-${to} de ${count !== -1 ? count : `más de ${to}`} insumos`
             }
           />
@@ -488,17 +419,6 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
             </Typography>
           </Box>
         </Paper>
-      )}
-
-      {/* Diálogo de Configuración de Stock Mínimo */}
-      {insumoParaConfigurar && (
-        <ConfigStockMinimoDialog
-          open={configStockDialogOpen}
-          onClose={handleCloseConfigStock}
-          insumoId={insumoParaConfigurar.id}
-          insumoNombre={insumoParaConfigurar.nombre}
-          onSuccess={handleConfigStockSuccess}
-        />
       )}
     </Box>
   )

@@ -25,7 +25,7 @@ import {
   Tooltip,
   TablePagination
 } from '@mui/material'
-import { Add, Category, Person, LibraryBooks, Edit, School, Delete, AccountBalance, Inventory } from '@mui/icons-material'
+import { Add, Category, Person, LibraryBooks, Edit, School, Delete, AccountBalance, Inventory, FileUpload } from '@mui/icons-material'
 import { TiposEquipoTable } from '../components/Configuracion/TiposEquipoTable'
 import { TipoEquipoForm } from '../components/Configuracion/TipoEquipoForm'
 import { EscuelasTable } from '../components/Configuracion/EscuelasTable'
@@ -39,8 +39,9 @@ import { LaboratorioForm } from '../components/Laboratorios/LaboratorioForm'
 import { tipoEquipoService, type TipoEquipo } from '../services/tipoEquipoService'
 import { escuelaService, type Escuela } from '../services/escuelaService'
 import { docenteService, type Docente } from '../services/docenteService'
-import { insumoService, type Insumo } from '../services/insumoService'
+import { insumoService, type Insumo, type Insumo2 } from '../services/insumoService'
 import { laboratorioService, type Laboratorio } from '../services/laboratorioService'
+import { ImportacionMasiva } from '../components/Insumos/ImportacionMasiva'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -63,7 +64,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => {
 
 export const Configuracion: React.FC = () => {
   const [tabValue, setTabValue] = useState(0)
-  
+
   // Estado para Tipos de Equipo
   const [tiposEquipo, setTiposEquipo] = useState<TipoEquipo[]>([])
   const [loadingTipos, setLoadingTipos] = useState(false)
@@ -71,31 +72,36 @@ export const Configuracion: React.FC = () => {
   const [editingTipo, setEditingTipo] = useState<TipoEquipo | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [tipoToDelete, setTipoToDelete] = useState<TipoEquipo | null>(null)
-  
+
   // Estado para Docentes
   const [docenteFormOpen, setDocenteFormOpen] = useState(false)
   const [editingDocente, setEditingDocente] = useState<Docente | null>(null)
   const [docenteDeleteDialogOpen, setDocenteDeleteDialogOpen] = useState(false)
   const [docenteToDelete, setDocenteToDelete] = useState<Docente | null>(null)
   const [refreshDocentes, setRefreshDocentes] = useState(false)
-  
+
   // Estado para Catálogo de Insumos
-  const [insumos, setInsumos] = useState<Insumo[]>([])
+  const [insumos, setInsumos] = useState<Insumo2[]>([])
   const [loadingInsumos, setLoadingInsumos] = useState(false)
   const [insumoFormOpen, setInsumoFormOpen] = useState(false)
-  const [editingInsumo, setEditingInsumo] = useState<Insumo | null>(null)
+  const [editingInsumo, setEditingInsumo] = useState<Insumo2 | null>(null)
   const [insumoDeleteDialogOpen, setInsumoDeleteDialogOpen] = useState(false)
-  const [insumoToDelete, setInsumoToDelete] = useState<Insumo | null>(null)
+  const [insumoToDelete, setInsumoToDelete] = useState<Insumo2 | null>(null)
   const [insumoPage, setInsumoPage] = useState(0)
   const [insumoRowsPerPage, setInsumoRowsPerPage] = useState(10)
-  
+
+  //Importación masiva
+  const [refresh, setRefresh] = useState(false)
+  const [importacionMasivaOpen, setImportacionMasivaOpen] = useState(false)
+
+
   // Estado para Laboratorios
   const [laboratorioFormOpen, setLaboratorioFormOpen] = useState(false)
   const [editingLaboratorio, setEditingLaboratorio] = useState<Laboratorio | null>(null)
   const [laboratorioDeleteDialogOpen, setLaboratorioDeleteDialogOpen] = useState(false)
   const [laboratorioToDelete, setLaboratorioToDelete] = useState<Laboratorio | null>(null)
   const [refreshLaboratorios, setRefreshLaboratorios] = useState(0)
-  
+
   // Estado para Escuelas
   const [escuelas, setEscuelas] = useState<Escuela[]>([])
   const [loadingEscuelas, setLoadingEscuelas] = useState(false)
@@ -103,7 +109,7 @@ export const Configuracion: React.FC = () => {
   const [editingEscuela, setEditingEscuela] = useState<Escuela | null>(null)
   const [escuelaDeleteDialogOpen, setEscuelaDeleteDialogOpen] = useState(false)
   const [escuelaToDelete, setEscuelaToDelete] = useState<Escuela | null>(null)
-  
+
   // Snackbar
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -118,14 +124,14 @@ export const Configuracion: React.FC = () => {
       console.log('🔄 Cargando tipos de equipo...')
       const response = await tipoEquipoService.getAll()
       console.log('📦 Response:', response)
-      
+
       if (!response || !response.data) {
         console.error('❌ Response inválida:', response)
         throw new Error('Respuesta inválida del servidor')
       }
-      
+
       console.log('📊 Tipos recibidos:', response.data.length)
-      
+
       // Obtener el conteo de equipos para cada tipo
       const tiposConConteo = await Promise.all(
         response.data.map(async (tipo) => {
@@ -138,7 +144,7 @@ export const Configuracion: React.FC = () => {
           }
         })
       )
-      
+
       console.log('✅ Tipos con conteo:', tiposConConteo)
       setTiposEquipo(tiposConConteo)
     } catch (error: any) {
@@ -158,7 +164,7 @@ export const Configuracion: React.FC = () => {
   const loadCatalogoInsumos = async () => {
     setLoadingInsumos(true)
     try {
-      const response = await insumoService.getAll()
+      const response = await insumoService.getAllInsumos()
       setInsumos(response.data || [])
     } catch (error) {
       console.error('Error al cargar catálogo de insumos:', error)
@@ -311,11 +317,10 @@ export const Configuracion: React.FC = () => {
 
   // Handlers para Catálogo de Insumos
   const handleOpenInsumoForm = () => {
-    setEditingInsumo(null)
     setInsumoFormOpen(true)
   }
 
-  const handleEditInsumo = (insumo: Insumo) => {
+  const handleEditInsumo = (insumo: Insumo2) => {
     setEditingInsumo(insumo)
     setInsumoFormOpen(true)
   }
@@ -334,7 +339,7 @@ export const Configuracion: React.FC = () => {
     })
   }
 
-  const handleDeleteInsumoClick = (insumo: Insumo) => {
+  const handleDeleteInsumoClick = (insumo: Insumo2) => {
     setInsumoToDelete(insumo)
     setInsumoDeleteDialogOpen(true)
   }
@@ -396,7 +401,7 @@ export const Configuracion: React.FC = () => {
   const handleChangeLaboratorioStatus = async (laboratorio: Laboratorio, estado: 'Activo' | 'En Mantenimiento' | 'Inhabilitado' | 'Baja') => {
     try {
       const result = await laboratorioService.changeStatus(laboratorio.id, estado)
-      
+
       if (result.success) {
         setRefreshLaboratorios(prev => prev + 1)
         setSnackbar({
@@ -425,7 +430,7 @@ export const Configuracion: React.FC = () => {
 
     try {
       const result = await laboratorioService.delete(laboratorioToDelete.id)
-      
+
       if (result.success) {
         setSnackbar({
           open: true,
@@ -488,7 +493,7 @@ export const Configuracion: React.FC = () => {
 
     try {
       const result = await escuelaService.delete(escuelaToDelete.id)
-      
+
       if (result.success) {
         setSnackbar({
           open: true,
@@ -519,7 +524,7 @@ export const Configuracion: React.FC = () => {
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false })
   }
-  
+
   const getCategoriaColor = (categoria?: string) => {
     switch (categoria) {
       case 'Reactivos': return '#ff9800'
@@ -545,6 +550,26 @@ export const Configuracion: React.FC = () => {
     insumoPage * insumoRowsPerPage + insumoRowsPerPage
   )
 
+  // Función para abrir importación masiva
+  const handleImportacionMasivaOpen = () => {
+    setImportacionMasivaOpen(true)
+  }
+
+  // Función para cerrar importación masiva
+  const handleImportacionMasivaClose = () => {
+    setImportacionMasivaOpen(false)
+  }
+
+  // Función para éxito de importación masiva
+  const handleImportacionMasivaSuccess = () => {
+    setRefresh(prev => !prev)
+    setSnackbar({
+      open: true,
+      message: 'Importación masiva completada correctamente',
+      severity: 'success'
+    })
+  }
+
   return (
     <Box>
       {/* Encabezado */}
@@ -562,51 +587,51 @@ export const Configuracion: React.FC = () => {
       {/* Tabs */}
       <Paper elevation={2} sx={{ borderRadius: 2 }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs 
-            value={tabValue} 
+          <Tabs
+            value={tabValue}
             onChange={(_, newValue) => setTabValue(newValue)}
             aria-label="configuración tabs"
             sx={{ px: 2 }}
           >
-            <Tab 
-              icon={<Category />} 
-              iconPosition="start" 
-              label="Tipos de Equipo" 
+            <Tab
+              icon={<Category />}
+              iconPosition="start"
+              label="Tipos de Equipo"
               id="config-tab-0"
               aria-controls="config-tabpanel-0"
             />
-            <Tab 
-              icon={<Person />} 
-              iconPosition="start" 
-              label="Docentes" 
+            <Tab
+              icon={<Person />}
+              iconPosition="start"
+              label="Docentes"
               id="config-tab-1"
               aria-controls="config-tabpanel-1"
             />
-            <Tab 
-              icon={<LibraryBooks />} 
-              iconPosition="start" 
-              label="Catálogo de Insumos" 
+            <Tab
+              icon={<LibraryBooks />}
+              iconPosition="start"
+              label="Catálogo de Insumos"
               id="config-tab-2"
               aria-controls="config-tabpanel-2"
             />
-            <Tab 
-              icon={<School />} 
-              iconPosition="start" 
-              label="Laboratorios" 
+            <Tab
+              icon={<School />}
+              iconPosition="start"
+              label="Laboratorios"
               id="config-tab-3"
               aria-controls="config-tabpanel-3"
             />
-            <Tab 
-              icon={<AccountBalance />} 
-              iconPosition="start" 
-              label="Escuelas" 
+            <Tab
+              icon={<AccountBalance />}
+              iconPosition="start"
+              label="Escuelas"
               id="config-tab-4"
               aria-controls="config-tabpanel-4"
             />
-            <Tab 
-              icon={<Inventory />} 
-              iconPosition="start" 
-              label="Stock Mínimo" 
+            <Tab
+              icon={<Inventory />}
+              iconPosition="start"
+              label="Stock Mínimo"
               id="config-tab-5"
               aria-controls="config-tabpanel-5"
             />
@@ -617,9 +642,9 @@ export const Configuracion: React.FC = () => {
         <TabPanel value={tabValue} index={0}>
           <Box sx={{ px: 3 }}>
             {/* Header con botón */}
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
               alignItems: 'center',
               mb: 3
             }}>
@@ -654,9 +679,9 @@ export const Configuracion: React.FC = () => {
         <TabPanel value={tabValue} index={1}>
           <Box sx={{ px: 3 }}>
             {/* Header con botón */}
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
               alignItems: 'center',
               mb: 3
             }}>
@@ -686,23 +711,37 @@ export const Configuracion: React.FC = () => {
         <TabPanel value={tabValue} index={2}>
           <Box sx={{ px: 3 }}>
             {/* Header con botón */}
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              mb: 3
-            }}>
+            <Box
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              mb={2}
+            >
               <Typography variant="h6" fontWeight={600}>
                 Catálogo de Insumos
               </Typography>
-              <Button
-                variant="contained"
-                startIcon={<Add />}
-                onClick={handleOpenInsumoForm}
-              >
-                Nuevo Insumo
-              </Button>
+
+              <Box display="flex" gap={2}>
+                <Button
+                  variant="contained"
+                  startIcon={<Add />}
+                  onClick={handleOpenInsumoForm}
+                >
+                  Nuevo Insumo
+                </Button>
+
+                <Button
+                  variant="outlined"
+                  startIcon={<FileUpload />}
+                  onClick={handleImportacionMasivaOpen}
+                  sx={{ borderRadius: 2, px: 3 }}
+                  color="secondary"
+                >
+                  Importar Excel
+                </Button>
+              </Box>
             </Box>
+
 
             {/* Tabla */}
             {loadingInsumos ? (
@@ -710,10 +749,10 @@ export const Configuracion: React.FC = () => {
                 <CircularProgress />
               </Box>
             ) : insumos.length === 0 ? (
-              <Box sx={{ 
-                display: 'flex', 
+              <Box sx={{
+                display: 'flex',
                 flexDirection: 'column',
-                alignItems: 'center', 
+                alignItems: 'center',
                 justifyContent: 'center',
                 py: 8,
                 color: 'text.secondary'
@@ -743,9 +782,9 @@ export const Configuracion: React.FC = () => {
                     {paginatedInsumos.map((insumo) => (
                       <TableRow key={insumo.id} hover>
                         <TableCell>
-                          <Chip 
-                            label={insumo.codigo || 'N/A'} 
-                            size="small" 
+                          <Chip
+                            label={insumo.codigo || 'N/A'}
+                            size="small"
                             color="primary"
                             variant="outlined"
                             sx={{ fontFamily: 'monospace', fontWeight: 600 }}
@@ -762,10 +801,10 @@ export const Configuracion: React.FC = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Chip 
-                            label={insumo.categoria?.replace('_', ' ')} 
+                          <Chip
+                            label={insumo.categoria?.replace('_', ' ')}
                             size="small"
-                            sx={{ 
+                            sx={{
                               backgroundColor: getCategoriaColor(insumo.categoria),
                               color: 'white',
                               fontWeight: 500
@@ -809,7 +848,7 @@ export const Configuracion: React.FC = () => {
                   onPageChange={handleInsumoPageChange}
                   onRowsPerPageChange={handleInsumoRowsPerPageChange}
                   labelRowsPerPage="Filas por página:"
-                  labelDisplayedRows={({ from, to, count }) => 
+                  labelDisplayedRows={({ from, to, count }) =>
                     `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
                   }
                 />
@@ -822,9 +861,9 @@ export const Configuracion: React.FC = () => {
         <TabPanel value={tabValue} index={3}>
           <Box sx={{ px: 3 }}>
             {/* Header con botón */}
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
               alignItems: 'center',
               mb: 3
             }}>
@@ -846,7 +885,7 @@ export const Configuracion: React.FC = () => {
               onDelete={handleDeleteLaboratorioClick}
               onChangeStatus={handleChangeLaboratorioStatus}
               refresh={refreshLaboratorios}
-              onRefreshComplete={() => {}}
+              onRefreshComplete={() => { }}
             />
           </Box>
         </TabPanel>
@@ -855,9 +894,9 @@ export const Configuracion: React.FC = () => {
         <TabPanel value={tabValue} index={4}>
           <Box sx={{ px: 3 }}>
             {/* Header con botón */}
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
               alignItems: 'center',
               mb: 3
             }}>
@@ -936,6 +975,13 @@ export const Configuracion: React.FC = () => {
         escuela={editingEscuela}
       />
 
+      {/* Importación masiva*/}
+      <ImportacionMasiva
+        open={importacionMasivaOpen}
+        onClose={handleImportacionMasivaClose}
+        onSuccess={handleImportacionMasivaSuccess}
+      />
+
       {/* Diálogo de confirmación de eliminación - Tipo de Equipo */}
       <Dialog
         open={deleteDialogOpen}
@@ -956,8 +1002,8 @@ export const Configuracion: React.FC = () => {
           <Button onClick={() => setDeleteDialogOpen(false)}>
             Cancelar
           </Button>
-          <Button 
-            onClick={handleDeleteConfirm} 
+          <Button
+            onClick={handleDeleteConfirm}
             color="error"
             variant="contained"
           >
@@ -984,8 +1030,8 @@ export const Configuracion: React.FC = () => {
           <Button onClick={() => setDocenteDeleteDialogOpen(false)}>
             Cancelar
           </Button>
-          <Button 
-            onClick={handleDeleteDocenteConfirm} 
+          <Button
+            onClick={handleDeleteDocenteConfirm}
             color="error"
             variant="contained"
           >
@@ -1012,8 +1058,8 @@ export const Configuracion: React.FC = () => {
           <Button onClick={() => setLaboratorioDeleteDialogOpen(false)}>
             Cancelar
           </Button>
-          <Button 
-            onClick={handleDeleteLaboratorioConfirm} 
+          <Button
+            onClick={handleDeleteLaboratorioConfirm}
             color="error"
             variant="contained"
           >
@@ -1040,8 +1086,8 @@ export const Configuracion: React.FC = () => {
           <Button onClick={() => setInsumoDeleteDialogOpen(false)}>
             Cancelar
           </Button>
-          <Button 
-            onClick={handleDeleteInsumoConfirm} 
+          <Button
+            onClick={handleDeleteInsumoConfirm}
             color="error"
             variant="contained"
           >
@@ -1068,8 +1114,8 @@ export const Configuracion: React.FC = () => {
           <Button onClick={() => setEscuelaDeleteDialogOpen(false)}>
             Cancelar
           </Button>
-          <Button 
-            onClick={handleDeleteEscuelaConfirm} 
+          <Button
+            onClick={handleDeleteEscuelaConfirm}
             color="error"
             variant="contained"
           >
@@ -1085,8 +1131,8 @@ export const Configuracion: React.FC = () => {
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert 
-          onClose={handleCloseSnackbar} 
+        <Alert
+          onClose={handleCloseSnackbar}
           severity={snackbar.severity}
           sx={{ width: '100%' }}
         >

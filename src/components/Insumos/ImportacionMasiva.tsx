@@ -56,10 +56,6 @@ interface PreviewData {
   unidad_medida: string
   categoria: string
   presentacion: string
-  condicion: string
-  fecha_vencimiento: string
-  observacion: string
-  stock_labs: { [key: string]: number }
   errores: string[]
 }
 
@@ -81,7 +77,6 @@ interface ResultadoImportacion {
     codigo: string
     nombre: string
     categoria: string
-    stock: string
   }>
 }
 
@@ -122,18 +117,18 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'application/vnd.ms-excel'
       ]
-      
+
       if (!validTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls)$/i)) {
         setError('Por favor selecciona un archivo Excel válido (.xlsx o .xls)')
         return
       }
-      
+
       // Validar tamaño (máximo 5MB)
       if (file.size > 5 * 1024 * 1024) {
         setError('El archivo es demasiado grande. Máximo 5MB.')
         return
       }
-      
+
       setSelectedFile(file)
       setError(null)
     }
@@ -141,15 +136,15 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
 
   const handlePrevisualizarArchivo = async () => {
     if (!selectedFile) return
-    
+
     try {
       setLoading(true)
       setError(null)
-      
+
       const previewData = await insumoService.previsualizarImportacion(selectedFile)
       setPreview(previewData)
       setShowPreview(true)
-      
+
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -164,18 +159,18 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
 
   const handleProcesarArchivo = async () => {
     if (!selectedFile) return
-    
+
     try {
       setLoading(true)
       setError(null)
-      
+
       const resultado = await insumoService.importacionMasiva(selectedFile)
       setResultado(resultado)
-      
+
       if (resultado.success && resultado.procesados > 0) {
         onSuccess() // Refrescar la tabla de insumos
       }
-      
+
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -242,7 +237,7 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                   Descarga la plantilla Excel con todas las columnas, ejemplos e instrucciones.
                 </Typography>
-                
+
                 <Button
                   variant="contained"
                   startIcon={<GetApp />}
@@ -321,7 +316,7 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                     </Button>
                   </Box>
                 </Box>
-                
+
                 {loading && (
                   <Box sx={{ mt: 2 }}>
                     <LinearProgress />
@@ -340,10 +335,10 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                   📋 La plantilla incluye:
                 </Typography>
                 <Typography variant="body2" component="div">
-                  • Todas las columnas del módulo de insumos<br/>
-                  • Ejemplos de reactivos y materiales<br/>
-                  • Instrucciones detalladas de validaciones<br/>
-                  • Lista de laboratorios disponibles<br/>
+                  • Todas las columnas del módulo de insumos<br />
+                  • Ejemplos de reactivos y materiales<br />
+                  • Instrucciones detalladas de validaciones<br />
+                  • Lista de laboratorios disponibles<br />
                   • Formatos requeridos para fechas y categorías
                 </Typography>
               </Paper>
@@ -353,10 +348,10 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                   ⚠️ Requisitos del archivo:
                 </Typography>
                 <Typography variant="body2" component="div">
-                  • Formato: .xlsx o .xls<br/>
-                  • Tamaño máximo: 5MB<br/>
-                  • Usar la plantilla descargada<br/>
-                  • No modificar los nombres de las columnas<br/>
+                  • Formato: .xlsx o .xls<br />
+                  • Tamaño máximo: 5MB<br />
+                  • Usar la plantilla descargada<br />
+                  • No modificar los nombres de las columnas<br />
                   • Eliminar la hoja "INSTRUCCIONES" antes de cargar
                 </Typography>
               </Paper>
@@ -401,7 +396,7 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                   </Button>
                 </Box>
               </Box>
-              
+
               {loading && (
                 <Box sx={{ mt: 2 }}>
                   <LinearProgress />
@@ -422,15 +417,12 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                       <TableCell>Nombre</TableCell>
                       <TableCell>Unidad</TableCell>
                       <TableCell>Categoría</TableCell>
-                      <TableCell>Condición</TableCell>
-                      <TableCell>F. Vencimiento</TableCell>
-                      <TableCell>Stock por Labs</TableCell>
                       <TableCell>Estado</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {preview.data.map((item, index) => (
-                      <TableRow key={index} sx={{ 
+                      <TableRow key={index} sx={{
                         bgcolor: item.errores.length > 0 ? 'error.50' : 'inherit'
                       }}>
                         <TableCell>{item.fila}</TableCell>
@@ -448,49 +440,18 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                         </TableCell>
                         <TableCell>{item.unidad_medida || 'N/A'}</TableCell>
                         <TableCell>
-                          <Chip 
+                          <Chip
                             icon={<Science />}
-                            label={item.categoria} 
-                            size="small" 
+                            label={item.categoria}
+                            size="small"
                             color={getCategoriaColor(item.categoria)}
                             variant="outlined"
                           />
                         </TableCell>
                         <TableCell>
-                          <Chip 
-                            label={item.condicion} 
-                            size="small" 
-                            color={item.condicion === 'Excelente' ? 'success' : 
-                                   item.condicion === 'Bueno' ? 'info' :
-                                   item.condicion === 'Regular' ? 'warning' : 'error'}
-                            variant="outlined"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          {item.fecha_vencimiento || 'N/A'}
-                        </TableCell>
-                        <TableCell>
-                          <Box>
-                            {Object.entries(item.stock_labs).map(([lab, cantidad]) => (
-                              <Chip 
-                                key={lab}
-                                label={`${lab}: ${cantidad}`}
-                                size="small"
-                                variant="outlined"
-                                sx={{ mr: 0.5, mb: 0.5 }}
-                              />
-                            ))}
-                            {Object.keys(item.stock_labs).length === 0 && (
-                              <Typography variant="caption" color="text.secondary">
-                                Sin stock inicial
-                              </Typography>
-                            )}
-                          </Box>
-                        </TableCell>
-                        <TableCell>
                           {item.errores.length > 0 ? (
                             <Tooltip title={item.errores.join(', ')}>
-                              <Chip 
+                              <Chip
                                 icon={<Error />}
                                 label={`${item.errores.length} error(es)`}
                                 size="small"
@@ -499,7 +460,7 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                               />
                             </Tooltip>
                           ) : (
-                            <Chip 
+                            <Chip
                               icon={<CheckCircle />}
                               label="Válido"
                               size="small"
@@ -604,7 +565,6 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                           <TableCell>Código</TableCell>
                           <TableCell>Nombre</TableCell>
                           <TableCell>Categoría</TableCell>
-                          <TableCell>Stock Inicial</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -612,11 +572,11 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                           <TableRow key={item.fila}>
                             <TableCell>{item.fila}</TableCell>
                             <TableCell>
-                              <Chip 
+                              <Chip
                                 icon={<Inventory />}
-                                label={item.codigo} 
-                                size="small" 
-                                variant="outlined" 
+                                label={item.codigo}
+                                size="small"
+                                variant="outlined"
                               />
                             </TableCell>
                             <TableCell>
@@ -625,18 +585,13 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                               </Typography>
                             </TableCell>
                             <TableCell>
-                              <Chip 
+                              <Chip
                                 icon={<Science />}
-                                label={item.categoria} 
-                                size="small" 
+                                label={item.categoria}
+                                size="small"
                                 color={getCategoriaColor(item.categoria)}
                                 variant="outlined"
                               />
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">
-                                {item.stock}
-                              </Typography>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -663,7 +618,7 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                         <ListItem>
                           <ListItemText
                             primary={error}
-                            primaryTypographyProps={{ 
+                            primaryTypographyProps={{
                               variant: 'body2',
                               color: 'error.main'
                             }}

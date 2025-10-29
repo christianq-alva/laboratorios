@@ -34,7 +34,7 @@ import {
   Search
 } from '@mui/icons-material'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
-import { insumoService, type Insumo } from '../../services/insumoService'
+import { insumoService, type Insumo, type InsumoSaldo } from '../../services/insumoService'
 
 interface NuevoMovimientoModalProps {
   open: boolean
@@ -72,26 +72,31 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
   onSuccess
 }) => {
   const [laboratorioId, setLaboratorioId] = useState<number>(0)
+  const [fechaMovimiento, setFechaMovimiento] = useState<string | null>(null)
   const [tipoMovimiento, setTipoMovimiento] = useState<'entrada' | 'salida'>('entrada')
   const [observaciones, setObservaciones] = useState('')
   const [detalles, setDetalles] = useState<DetalleMovimiento[]>([])
-  
+
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
-  const [insumos, setInsumos] = useState<Insumo[]>([])
+  const [insumos, setInsumos] = useState<InsumoSaldo[]>([])
   const [lotesDisponibles, setLotesDisponibles] = useState<LoteDisponible[]>([])
-  
+
+  const [insumosSaldo, setInsumosSaldo] = useState<InsumoSaldo[]>([])
+
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   const [insumoSeleccionado, setInsumoSeleccionado] = useState<number>(0)
   const [cantidadInput, setCantidadInput] = useState<number>(1)
   const [loteInput, setLoteInput] = useState('')
   const [fechaVencimientoInput, setFechaVencimientoInput] = useState('')
-  
+
   // Para salidas: selección de lote disponible
   const [loteDisponibleSeleccionado, setLoteDisponibleSeleccionado] = useState<number>(0)
 
+
+  //Al abrir o cerrar el modal
   useEffect(() => {
     if (open) {
       loadInitialData()
@@ -100,26 +105,34 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
     }
   }, [open])
 
+  //Al elegir el laboratorio ID
   useEffect(() => {
     if (laboratorioId > 0) {
-      loadInsumos()
-      if (tipoMovimiento === 'salida') {
-        loadLotesDisponibles()
+      setInsumoSeleccionado(0)
+      setLoteDisponibleSeleccionado(0)
+      if (tipoMovimiento === 'entrada') {
+        loadInsumos()
+      } else if (tipoMovimiento === 'salida') {
+        loadInsumosDisponibles()
       }
     }
   }, [laboratorioId, tipoMovimiento])
 
+  //Al elegir el laboratorio ID
+  useEffect(() => {
+    if (tipoMovimiento === 'salida' && laboratorioId > 0 && insumoSeleccionado > 0) {
+      loadLotesDisponibles()
+    }
+  }, [laboratorioId, tipoMovimiento, insumoSeleccionado])
+
   const loadInitialData = async () => {
     setLoadingData(true)
     try {
-      const [labsRes, insumosRes] = await Promise.all([
-        laboratorioService.getAll(),
-        insumoService.getAll()
-      ])
-      setLaboratorios(labsRes.data || [])
-      setInsumos(insumosRes.data || [])
+      setFechaMovimiento(new Date().toISOString().split('T')[0])
+      const response = await laboratorioService.getAll()
+      setLaboratorios(response.data || [])
     } catch (error: any) {
-      setError('Error al cargar datos iniciales')
+      setError('Error al cargar laboratorios')
       console.error('Error:', error)
     } finally {
       setLoadingData(false)
@@ -128,16 +141,28 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
 
   const loadInsumos = async () => {
     try {
-      const response = await insumoService.getByLaboratorio(laboratorioId)
+      const response = await insumoService.getWithStock(laboratorioId)
+      console.log(response);
       setInsumos(response.data || [])
     } catch (error: any) {
       console.error('Error al cargar insumos:', error)
     }
   }
 
+  const loadInsumosDisponibles = async () => {
+    try {
+      console.log('Pidiendo insumos con saldo',);
+      const response = await insumoService.getWithPositiveStock(laboratorioId)
+      console.log(response);
+      setInsumosSaldo(response.data || []);
+    } catch (error: any) {
+      console.error('Error al cargar insumos disponibles:', error)
+    }
+  }
+
   const loadLotesDisponibles = async () => {
     try {
-      const response = await insumoService.getLotesConSaldo(laboratorioId)
+      const response = await insumoService.getLotesConSaldo(laboratorioId, insumoSeleccionado)
       setLotesDisponibles(response.data || [])
     } catch (error: any) {
       console.error('Error al cargar lotes disponibles:', error)
@@ -155,6 +180,7 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
     setFechaVencimientoInput('')
     setLoteDisponibleSeleccionado(0)
     setError(null)
+    setFechaMovimiento(null)
   }
 
   const handleAgregarDetalle = () => {
@@ -172,13 +198,13 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
         insumo_id: insumoSeleccionado,
         insumo_nombre: insumo.nombre,
         cantidad: cantidadInput,
-        lote: loteInput || `LOTE-${Date.now()}`,
+        lote: loteInput,
         fecha_vencimiento: fechaVencimientoInput || ''
       }])
-    } else {
+    } else if (tipoMovimiento === 'salida') {
       // Para salidas, agregar con referencia al lote de entrada
       const loteSeleccionado = lotesDisponibles.find(l => l.detalle_id === loteDisponibleSeleccionado)
-      
+
       if (!loteSeleccionado) {
         setError('Selecciona un lote disponible para la salida')
         return
@@ -229,6 +255,7 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
     try {
       await insumoService.registrarMovimiento({
         laboratorio_id: laboratorioId,
+        fecha_movimiento: fechaMovimiento,
         tipo_movimiento: tipoMovimiento,
         observaciones: observaciones.trim() || null,
         reserva_id: null,
@@ -248,10 +275,6 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
     } finally {
       setLoading(false)
     }
-  }
-
-  const getLotesDelInsumo = (insumoId: number) => {
-    return lotesDisponibles.filter(l => l.insumo_id === insumoId)
   }
 
   const getTipoMovimientoColor = () => {
@@ -327,7 +350,15 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
                     ))}
                   </Select>
                 </FormControl>
-
+                <TextField
+                  sx={{ minWidth: 180 }}
+                  type="date"
+                  label="Fecha del Movimiento"
+                  value={fechaMovimiento}
+                  onChange={(e) => setFechaMovimiento(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  required
+                />
                 <FormControl sx={{ minWidth: 180 }} required>
                   <InputLabel>Tipo de Movimiento</InputLabel>
                   <Select
@@ -381,14 +412,51 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
                       }}
                       label="Insumo"
                     >
-                      {insumos.map(ins => (
-                        <MenuItem key={ins.id} value={ins.id}>
-                          {ins.codigo} - {ins.nombre}
-                        </MenuItem>
-                      ))}
+                      {
+                        tipoMovimiento == 'entrada' ?
+                          insumos.map(ins => (
+                            <MenuItem key={ins.id} value={ins.id}>
+                              {ins.codigo} - {ins.nombre}
+                            </MenuItem>
+                          ))
+                          :
+                          insumosSaldo.map(inssaldo => (
+                            <MenuItem key={inssaldo.id} value={inssaldo.id}>
+                              {inssaldo.codigo} - {inssaldo.nombre}
+                            </MenuItem>
+                          ))
+                      }
                     </Select>
                   </FormControl>
-
+                  {tipoMovimiento === 'salida' ? (
+                    <FormControl sx={{ minWidth: 280, flex: 1 }} required>
+                      <InputLabel>Lote a Reducir</InputLabel>
+                      <Select
+                        value={loteDisponibleSeleccionado}
+                        onChange={(e) => setLoteDisponibleSeleccionado(Number(e.target.value))}
+                        label="Lote a Reducir"
+                        disabled={!insumoSeleccionado}
+                      >
+                        {lotesDisponibles.map(lote => (
+                          <MenuItem key={lote.detalle_id} value={lote.detalle_id}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                              <Typography variant="body2">
+                                {lote.lote}
+                              </Typography>
+                              <Typography variant="body2">
+                                {lote.fecha_vencimiento}
+                              </Typography>
+                              <Chip
+                                label={`Saldo: ${lote.saldo}`}
+                                size="small"
+                                color={lote.saldo < 10 ? 'warning' : 'success'}
+                              />
+                            </Box>
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  ) : ''}
                   <TextField
                     sx={{ minWidth: 120 }}
                     type="number"
@@ -417,32 +485,7 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
                         InputLabelProps={{ shrink: true }}
                       />
                     </>
-                  ) : (
-                    <FormControl sx={{ minWidth: 280, flex: 1 }} required>
-                      <InputLabel>Lote a Reducir</InputLabel>
-                      <Select
-                        value={loteDisponibleSeleccionado}
-                        onChange={(e) => setLoteDisponibleSeleccionado(Number(e.target.value))}
-                        label="Lote a Reducir"
-                        disabled={!insumoSeleccionado}
-                      >
-                        {getLotesDelInsumo(insumoSeleccionado).map(lote => (
-                          <MenuItem key={lote.detalle_id} value={lote.detalle_id}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                              <Typography variant="body2">
-                                {lote.lote}
-                              </Typography>
-                              <Chip
-                                label={`Saldo: ${lote.saldo}`}
-                                size="small"
-                                color={lote.saldo < 10 ? 'warning' : 'success'}
-                              />
-                            </Box>
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  )}
+                  ) : ''}
 
                   <Button
                     variant="contained"

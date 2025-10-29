@@ -13,6 +13,7 @@ const dbConfig = {
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  timezone: 'America/Lima',
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   acquireTimeout: 60000,
   timeout: 60000

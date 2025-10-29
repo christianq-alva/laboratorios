@@ -52,6 +52,7 @@ import type {
 } from '../../services/horarioService'
 import type { Laboratorio } from '../../services/laboratorioService'
 import { TIME_BLOCKS, getBlockLabel, combineDateWithTime } from '../../utils/timeBlocks'
+import { insumoService, type InsumoSaldo } from '../../services/insumoService'
 
 interface HorarioFormProps {
   open: boolean
@@ -113,7 +114,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
   const [escuelas, setEscuelas] = useState<Escuela[]>([])
   const [ciclos, setCiclos] = useState<Ciclo[]>([])
   const [grupos, setGrupos] = useState<Grupo[]>([])
-  const [insumosDisponibles, setInsumosDisponibles] = useState<Insumo[]>([])
+  const [insumosDisponibles, setInsumosDisponibles] = useState<InsumoSaldo[]>([])
   const [insumosSeleccionados, setInsumosSeleccionados] = useState<InsumoSeleccionado[]>([])
   const [equiposDisponibles, setEquiposDisponibles] = useState<Equipo[]>([])
   const [equiposSeleccionados, setEquiposSeleccionados] = useState<EquipoSeleccionado[]>([])
@@ -307,10 +308,10 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       // Mostrar loading en la sección de insumos
       setInsumosDisponibles([])
       
-      const result = await horarioService.getInsumosByLaboratorio(laboratorio_id)
+      const result = await insumoService.getWithStock(laboratorio_id)
       console.log('📦 Resultado de insumos:', result)
       
-      if (result.success) {
+      if (result.data) {
         const insumos = result.data || []
         console.log('✅ Insumos cargados:', insumos.length)
         setInsumosDisponibles(insumos)
@@ -320,7 +321,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
           console.log('ℹ️ No hay insumos disponibles para este laboratorio')
         }
       } else {
-        console.error('❌ Error al cargar insumos:', result.message)
+        console.error('❌ Error al cargar insumos:', error)
         setInsumosDisponibles([])
         // No mostrar error, solo log - los insumos son opcionales
       }
