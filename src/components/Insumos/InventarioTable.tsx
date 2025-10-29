@@ -352,7 +352,7 @@ export const InventarioTable: React.FC<InventarioTableProps> = ({
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={`${insumo.total_lotes || 0} registro${(insumo.total_lotes || 0) !== 1 ? 's' : ''}`}
+                      label={`${insumo.total_lotes || 0} lote${(insumo.total_lotes || 0) !== 1 ? 's' : ''}`}
                       size="small"
                       color="info"
                       variant="outlined"
@@ -362,7 +362,7 @@ export const InventarioTable: React.FC<InventarioTableProps> = ({
                     <Chip
                       label={`${insumo.stock_disponible || 0} ${insumo.unidad_medida}`}
                       size="small"
-                      color="success"
+                      color={insumo.stock_disponible > 0 ? "success" : 'default'}
                       variant="filled"
                       sx={{ fontWeight: 600 }}
                     />

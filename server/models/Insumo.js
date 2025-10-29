@@ -2,8 +2,12 @@ import { pool } from '../config/database.js'
 
 export const Insumo = {
   // Obtener insumos disponibles por laboratorio
-  createInsumo: async (nombre, descripcion, unidad_medida, categoria, presentacion) => {
-    const [insumoResult] = await pool.execute(`
+  createInsumo: async (nombre, descripcion, unidad_medida, categoria, presentacion, connection) => {
+    
+    //Obtener conexión o usar pool
+    const conn = connection || pool
+    
+    const [insumoResult] = await conn.execute(`
       INSERT INTO insumos (codigo, nombre, descripcion, unidad_medida, categoria, presentacion) 
       VALUES ('PENDIENTE', ?, ?, ?, ?, ?)
     `, [nombre, descripcion || '', unidad_medida, categoria, presentacion || ''])
@@ -12,7 +16,7 @@ export const Insumo = {
     
     const codigo = `INS-${insumo_id.toString().padStart(4, '0')}`
 
-    await pool.execute('UPDATE insumos SET codigo = ? WHERE id = ?', [codigo, insumo_id])
+    await conn.execute('UPDATE insumos SET codigo = ? WHERE id = ?', [codigo, insumo_id])
 
     return {insumo_id, codigo};
   },

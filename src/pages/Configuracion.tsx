@@ -30,12 +30,11 @@ import { TiposEquipoTable } from '../components/Configuracion/TiposEquipoTable'
 import { TipoEquipoForm } from '../components/Configuracion/TipoEquipoForm'
 import { EscuelasTable } from '../components/Configuracion/EscuelasTable'
 import { EscuelaForm } from '../components/Configuracion/EscuelaForm'
-import { ConfigStockTable } from '../components/Configuracion/ConfigStockTable'
 import { DocentesTable } from '../components/Docentes/DocentesTable'
 import { DocenteForm } from '../components/Docentes/DocenteForm'
 import { InsumoForm } from '../components/Insumos/InsumoForm'
-import { LaboratoriosTable } from '../components/Laboratorios/LaboratoriosTable'
-import { LaboratorioForm } from '../components/Laboratorios/LaboratorioForm'
+import { LaboratoriosTable } from '../components/Configuracion/Laboratorios/LaboratoriosTable'
+import { LaboratorioForm } from '../components/Configuracion/Laboratorios/LaboratorioForm'
 import { tipoEquipoService, type TipoEquipo } from '../services/tipoEquipoService'
 import { escuelaService, type Escuela } from '../services/escuelaService'
 import { docenteService, type Docente } from '../services/docenteService'
@@ -628,13 +627,6 @@ export const Configuracion: React.FC = () => {
               id="config-tab-4"
               aria-controls="config-tabpanel-4"
             />
-            <Tab
-              icon={<Inventory />}
-              iconPosition="start"
-              label="Stock Mínimo"
-              id="config-tab-5"
-              aria-controls="config-tabpanel-5"
-            />
           </Tabs>
         </Box>
 
@@ -924,13 +916,6 @@ export const Configuracion: React.FC = () => {
                 onDelete={handleDeleteEscuelaClick}
               />
             )}
-          </Box>
-        </TabPanel>
-
-        {/* Tab Panel: Stock Mínimo */}
-        <TabPanel value={tabValue} index={5}>
-          <Box sx={{ px: 3 }}>
-            <ConfigStockTable />
           </Box>
         </TabPanel>
       </Paper>

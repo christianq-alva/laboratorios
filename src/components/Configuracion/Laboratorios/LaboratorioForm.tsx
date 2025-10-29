@@ -17,8 +17,8 @@ import {
   Typography,
 } from '@mui/material'
 import { Close } from '@mui/icons-material'
-import { laboratorioService } from '../../services/laboratorioService'
-import type { Laboratorio, CreateLaboratorioData, Escuela } from '../../services/laboratorioService'
+import { laboratorioService } from '../../../services/laboratorioService'
+import type { Laboratorio, CreateLaboratorioData, Escuela } from '../../../services/laboratorioService'
 
 interface LaboratorioFormProps {
   open: boolean

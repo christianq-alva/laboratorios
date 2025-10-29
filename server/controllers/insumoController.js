@@ -378,7 +378,7 @@ export const previsualizarImportacionMasiva = async (req, res) => {
       const nombre = row.NOMBRE ? row.NOMBRE.toString().trim() : ''
       const descripcion = row.DESCRIPCION ? row.DESCRIPCION.toString().trim() : ''
       const unidad_medida = row.UNIDAD_MEDIDA ? row.UNIDAD_MEDIDA.toString().trim() : ''
-      const categoria = row.CATEGORIA ? row.CATEGORIA.toString().trim() : 'Materiales'
+      const categoria = row.CATEGORIA ? row.CATEGORIA.toString().trim() : ''
       const presentacion = row.PRESENTACION ? row.PRESENTACION.toString().trim() : ''
 
       // Validar campos obligatorios
@@ -477,7 +477,7 @@ export const importacionMasiva = async (req, res) => {
         const nombre = row.NOMBRE.toString().trim()
         const descripcion = row.DESCRIPCION ? row.DESCRIPCION.toString().trim() : ''
         const unidad_medida = row.UNIDAD_MEDIDA.toString().trim()
-        const categoria = row.CATEGORIA ? row.CATEGORIA.toString().trim() : 'Materiales'
+        const categoria = row.CATEGORIA ? row.CATEGORIA.toString().trim() : ''
         const presentacion = row.PRESENTACION ? row.PRESENTACION.toString().trim() : ''
 
         // Validar categoría
@@ -487,38 +487,7 @@ export const importacionMasiva = async (req, res) => {
           continue
         }
 
-        // Generar código único
-        let codigo
-        let intentos = 0
-        const maxIntentos = 10
-
-        do {
-          const [maxId] = await connection.execute('SELECT MAX(id) as max_id FROM insumos')
-          const nextId = (maxId[0].max_id || 0) + procesados + 1 + intentos
-          codigo = `INS-${nextId.toString().padStart(4, '0')}`
-
-          // Verificar si el código ya existe
-          const [existing] = await connection.execute('SELECT id FROM insumos WHERE codigo = ?', [codigo])
-
-          if (existing.length === 0) {
-            break // Código único encontrado
-          }
-
-          intentos++
-        } while (intentos < maxIntentos)
-
-        if (intentos >= maxIntentos) {
-          errores.push(`Fila ${rowNum}: No se pudo generar un código único para el insumo`)
-          continue
-        }
-
-        // Crear el insumo (fecha_vencimiento ahora se maneja en movimiento_insumo_detalle)
-        const [insumoResult] = await connection.execute(`
-          INSERT INTO insumos (codigo, nombre, descripcion, unidad_medida, categoria, presentacion) 
-          VALUES (?, ?, ?, ?, ?, ?)
-        `, [codigo, nombre, descripcion, unidad_medida, categoria, presentacion])
-
-        const insumo_id = insumoResult.insertId
+        const { insumo_id, codigo } = await Insumo.createInsumo(nombre, descripcion || '', unidad_medida, categoria, presentacion || '', connection)
 
 
         resultados.push({

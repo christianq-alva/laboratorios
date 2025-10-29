@@ -35,8 +35,8 @@ import {
   Block,
   RemoveCircle,
 } from '@mui/icons-material'
-import { laboratorioService } from '../../services/laboratorioService'
-import type { Laboratorio } from '../../services/laboratorioService'
+import { laboratorioService } from '../../../services/laboratorioService'
+import type { Laboratorio } from '../../../services/laboratorioService'
 
 interface LaboratoriosTableProps {
   onEdit: (laboratorio: Laboratorio) => void
