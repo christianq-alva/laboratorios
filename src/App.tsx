@@ -1,80 +1,201 @@
-import React from 'react'
+import React, { Suspense, lazy } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { ThemeProvider, CssBaseline } from '@mui/material'
+import { ThemeProvider, CssBaseline, Box, CircularProgress } from '@mui/material'
 import { theme } from './theme'
 import { useAuth } from './context/authContext'
 import { Login } from './components/Login/Login'
 import { MainLayout } from './components/Layout/MainLayout'
-import {
-  Dashboard,
-  Horarios,
-  Insumos,
-  Equipos,
-  Incidencias,
-  ReportesSimple,
-  Configuracion,
-} from './pages'
 import { HorarioPublico } from './components/Public/HorarioPublico'
 
-// Protected Route Component
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth()
-  return user ? <>{children}</> : <Navigate to="/login" replace />
+// ============================================
+// LAZY LOADING - Carga componentes bajo demanda
+// ============================================
+// Cada página se carga solo cuando el usuario navega a ella
+// Esto reduce el bundle inicial significativamente
+const Dashboard = lazy(() => 
+  import('./pages/Dashboard').then(module => ({ default: module.Dashboard }))
+)
+const Horarios = lazy(() => 
+  import('./pages/Horarios').then(module => ({ default: module.Horarios }))
+)
+const Insumos = lazy(() => 
+  import('./pages/Insumos').then(module => ({ default: module.Insumos }))
+)
+const Equipos = lazy(() => 
+  import('./pages/Equipos').then(module => ({ default: module.Equipos }))
+)
+const Incidencias = lazy(() => 
+  import('./pages/Incidencias').then(module => ({ default: module.Incidencias }))
+)
+const ReportesSimple = lazy(() => 
+  import('./pages/ReportesSimple')
+)
+const Configuracion = lazy(() => 
+  import('./pages/Configuracion').then(module => ({ default: module.Configuracion }))
+)
+
+// ============================================
+// LOADING FALLBACK
+// ============================================
+// Componente que se muestra mientras se carga una página
+const PageLoader: React.FC = () => (
+  <Box 
+    display="flex" 
+    justifyContent="center" 
+    alignItems="center" 
+    minHeight="60vh"
+    role="status"
+    aria-label="Cargando página"
+  >
+    <CircularProgress />
+  </Box>
+)
+
+// ============================================
+// PROTECTED PAGE WRAPPER
+// ============================================
+// Envuelve cada página protegida con:
+// 1. Verificación de autenticación
+// 2. MainLayout (sidebar + estructura)
+// 3. Suspense para lazy loading
+interface ProtectedPageProps {
+  children: React.ReactNode
 }
 
-// Public Route Component (redirect if already logged in)
-const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const ProtectedPage: React.FC<ProtectedPageProps> = ({ children }) => {
   const { user } = useAuth()
-  return !user ? <>{children}</> : <Navigate to="/dashboard" replace />
+  
+  // Si no hay usuario, redirige al login
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
+  
+  // Si hay usuario, renderiza con layout y suspense
+  return (
+    <MainLayout>
+      <Suspense fallback={<PageLoader />}>
+        {children}
+      </Suspense>
+    </MainLayout>
+  )
 }
 
+// ============================================
+// PUBLIC PAGE WRAPPER
+// ============================================
+// Envuelve páginas públicas (como login)
+// Si el usuario ya está autenticado, redirige al dashboard
+const PublicPage: React.FC<ProtectedPageProps> = ({ children }) => {
+  const { user } = useAuth()
+  
+  // Si ya hay usuario autenticado, redirige al dashboard
+  if (user) {
+    return <Navigate to="/dashboard" replace />
+  }
+  
+  // Si no hay usuario, muestra la página pública
+  return <>{children}</>
+}
+
+// ============================================
+// APP COMPONENT
+// ============================================
 function App() {
-  const { user: _user } = useAuth()
-
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
         <Routes>
-          {/* Public Routes */}
+          {/* ============================================ */}
+          {/* RUTAS PÚBLICAS */}
+          {/* ============================================ */}
+          
+          {/* Login - Solo accesible si NO estás autenticado */}
           <Route 
             path="/login" 
             element={
-              <PublicRoute>
+              <PublicPage>
                 <Login />
-              </PublicRoute>
+              </PublicPage>
             } 
           />
           
-          {/* Public Horario Route (sin autenticación) */}
+          {/* Horario Público - Accesible sin autenticación */}
           <Route 
             path="/horarios/publico/:laboratorio_id" 
             element={<HorarioPublico />} 
           />
           
-          {/* Protected Routes */}
+          {/* ============================================ */}
+          {/* RUTAS PROTEGIDAS - Cada una independiente */}
+          {/* ============================================ */}
+          {/* Cada ruta es completamente independiente y autocontenida */}
+          {/* Se cargan bajo demanda (lazy loading) */}
+          {/* Todas comparten: autenticación + layout + suspense */}
+          
           <Route 
-            path="/*" 
+            path="/dashboard" 
             element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <Routes>
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/horarios" element={<Horarios />} />
-                    <Route path="/insumos" element={<Insumos />} />
-                    <Route path="/equipos" element={<Equipos />} />
-                    <Route path="/incidencias" element={<Incidencias />} />
-                    <Route path="/reportes" element={<ReportesSimple />} />
-                    <Route path="/configuracion" element={<Configuracion />} />
-                    
-                    {/* Default redirect */}
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                    <Route path="*" element={<Navigate to="/dashboard" replace />} />
-                  </Routes>
-                </MainLayout>
-              </ProtectedRoute>
+              <ProtectedPage>
+                <Dashboard />
+              </ProtectedPage>
             } 
           />
+          
+          <Route 
+            path="/horarios" 
+            element={
+              <ProtectedPage>
+                <Horarios />
+              </ProtectedPage>
+            } 
+          />
+          
+          <Route 
+            path="/insumos" 
+            element={
+              <ProtectedPage>
+                <Insumos />
+              </ProtectedPage>
+            } 
+          />
+          
+          <Route 
+            path="/equipos" 
+            element={
+              <ProtectedPage>
+                <Equipos />
+              </ProtectedPage>
+            } 
+          />
+          
+          <Route 
+            path="/incidencias" 
+            element={
+              <ProtectedPage>
+                <Incidencias />
+              </ProtectedPage>
+            } 
+          />
+          
+          <Route 
+            path="/reportes" 
+            element={
+              <ProtectedPage>
+                <ReportesSimple />
+              </ProtectedPage>
+            } 
+          />
+          
+          <Route 
+            path="/configuracion" 
+            element={
+              <ProtectedPage>
+                <Configuracion />
+              </ProtectedPage>
+            } 
+          />
+          
         </Routes>
       </Router>
     </ThemeProvider>

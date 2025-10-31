@@ -35,7 +35,7 @@ import {
   Delete,
   Refresh
 } from '@mui/icons-material'
-import { insumoService } from '../../services/insumoService'
+import { insumoService, type DatoValidado } from '../../services/insumoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
 import dayjs from 'dayjs'
 
@@ -43,20 +43,6 @@ interface CargaMasivaModalProps {
   open: boolean
   onClose: () => void
   onSuccess?: () => void
-}
-
-export interface DatoValidado {
-  fila: number
-  insumo_id: number
-  insumo_codigo: string
-  insumo_nombre: string
-  insumo_unidad: string
-  cantidad: number
-  //laboratorio_id: number
-  //laboratorio_codigo: string
-  //laboratorio_nombre: string
-  insumo_lote: string
-  insumo_fecha_venc: string
 }
 
 interface ResultadoProcesamiento {

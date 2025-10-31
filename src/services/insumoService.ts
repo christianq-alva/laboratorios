@@ -1,5 +1,20 @@
-import type { DatoValidado } from '../components/Insumos/CargaMasivaModal'
 import { api } from './api'
+
+// ============================================
+// TIPOS PARA CARGA MASIVA
+// ============================================
+// Tipo movido desde CargaMasivaModal para evitar dependencias circulares
+// Services NO deben importar desde Components
+export interface DatoValidado {
+  fila: number
+  insumo_id: number
+  insumo_codigo: string
+  insumo_nombre: string
+  insumo_unidad: string
+  cantidad: number
+  insumo_lote: string
+  insumo_fecha_venc: string
+}
 
 export interface LoteInsumo {
   detalle_id: number

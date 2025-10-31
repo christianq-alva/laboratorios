@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -32,8 +32,18 @@ import {
 import { useAuth } from '../context/authContext'
 import { dashboardService } from '../services/dashboardService'
 import { CalendarView } from '../components/Dashboard/CalendarView'
-import { HorarioFormSimple } from '../components/Horarios/HorarioFormSimple'
 import type { DashboardStats } from '../services/dashboardService'
+
+// ============================================
+// LAZY LOADING - Modal de Horario
+// ============================================
+// Se carga solo cuando el usuario hace clic en "Nuevo Horario"
+// Esto evita cargar insumoService y laboratorioService al entrar al dashboard
+const HorarioFormSimple = lazy(() => 
+  import('../components/Horarios/HorarioFormSimple').then(m => ({ 
+    default: m.HorarioFormSimple 
+  }))
+)
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth()
@@ -300,12 +310,20 @@ export const Dashboard: React.FC = () => {
         </Card>
       </Box>
 
-      {/* Formulario de nuevo horario */}
-      <HorarioFormSimple
-        open={horarioFormOpen}
-        onClose={handleHorarioFormClose}
-        onSuccess={handleHorarioFormSuccess}
-      />
+      {/* Formulario de nuevo horario - Lazy Loading */}
+      {horarioFormOpen && (
+        <Suspense fallback={
+          <Box display="flex" justifyContent="center" alignItems="center" p={3}>
+            <CircularProgress />
+          </Box>
+        }>
+          <HorarioFormSimple
+            open={horarioFormOpen}
+            onClose={handleHorarioFormClose}
+            onSuccess={handleHorarioFormSuccess}
+          />
+        </Suspense>
+      )}
 
       {/* Snackbar de navegación */}
       <Snackbar
