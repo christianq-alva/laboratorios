@@ -1,7 +1,7 @@
 // Generar plantilla Excel para carga masiva
 import { pool } from '../config/database.js'
 import XLSX from 'xlsx'
-import { Inventario } from '../models/inventario.js'
+import { Inventario } from '../models/Inventario.js'
 
 //Obtener los insumos y su stock de todos los laboratorios
 export const getAllInsumosWithStock = async (req, res) => {
