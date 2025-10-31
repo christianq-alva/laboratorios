@@ -9,7 +9,6 @@ import {
   deleteHorario,
   verificarDisponibilidad,
   getActividadHorarios, // ← NUEVO
-  getEscuelas,      // ← NUEVO
   getCiclos,        // ← NUEVO
   getGrupos,        // ← NUEVO
   debugHorarios,    // ← DEBUG
@@ -69,13 +68,6 @@ router.post('/verificar-disponibilidad',
 )
 
 // ==================== RUTAS UTILITARIAS ==================== 
-
-// 🏫 OBTENER ESCUELAS
-router.get('/utils/escuelas', 
-  authenticateToken,
-  authorize('read', 'Horario'),
-  getEscuelas
-)
 
 // 📅 OBTENER CICLOS  
 router.get('/utils/ciclos', 

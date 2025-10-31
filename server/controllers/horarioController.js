@@ -1452,25 +1452,6 @@ export const getHorarios = async (req, res) => {
 
 // ==================== FUNCIONES UTILITARIAS ==================== 
 
-// 🏫 OBTENER ESCUELAS DISPONIBLES
-export const getEscuelas = async (req, res) => {
-  try {
-    const [escuelas] = await pool.execute(`
-      SELECT id, nombre 
-      FROM escuelas 
-      ORDER BY nombre
-    `)
-    
-    res.json({ 
-      success: true, 
-      data: escuelas 
-    })
-  } catch (error) {
-    console.error('Error en getEscuelas:', error)
-    res.status(500).json({ success: false, message: error.message })
-  }
-}
-
 // 📅 OBTENER CICLOS DISPONIBLES  
 export const getCiclos = async (req, res) => {
   try {

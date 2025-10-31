@@ -10,7 +10,6 @@ import {
   Paper,
   IconButton,
   Typography,
-  Chip,
   Menu,
   MenuItem,
   ListItemIcon,
@@ -28,7 +27,6 @@ import {
   Person,
   Email,
   School,
-  Schedule,
   Visibility,
 } from '@mui/icons-material'
 import { docenteService } from '../../services/docenteService'
@@ -172,7 +170,6 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
             <TableCell sx={{ fontWeight: 600 }}>Docente</TableCell>
             <TableCell sx={{ fontWeight: 600 }}>Contacto</TableCell>
             <TableCell sx={{ fontWeight: 600 }}>Escuela</TableCell>
-            <TableCell sx={{ fontWeight: 600 }}>Horarios</TableCell>
             <TableCell align="center" sx={{ fontWeight: 600 }}>Acciones</TableCell>
           </TableRow>
         </TableHead>
@@ -213,19 +210,6 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
                   <Typography variant="body2">
                     {docente.escuela || 'Sin asignar'}
                   </Typography>
-                </Box>
-              </TableCell>
-
-              {/* Horarios */}
-              <TableCell>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Schedule fontSize="small" color="action" />
-                  <Chip
-                    label={`${docente.total_horarios || 0} horarios`}
-                    size="small"
-                    color={docente.total_horarios && docente.total_horarios > 0 ? 'primary' : 'default'}
-                    variant="outlined"
-                  />
                 </Box>
               </TableCell>
 

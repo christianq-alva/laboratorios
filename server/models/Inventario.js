@@ -195,4 +195,80 @@ export const Inventario = {
 
 
     },
+
+    getActividadInsumos: async (user_rol, user_laboratorio_ids, laboratorio_id, fecha_inicio, fecha_fin, tipo_movimiento) => {
+
+        let query = `
+        SELECT 
+          m.id,
+          m.fecha_movimiento,
+          m.tipo_movimiento,
+          m.fecha_ingreso,
+          m.observaciones,
+          l.nombre as laboratorio_nombre,
+          u.nombre_completo as usuario_nombre,
+          rol.nombre as usuario_rol,
+          r.descripcion as reserva_descripcion,
+          r.fecha_inicio as reserva_fecha_inicio,
+          r.fecha_fin as reserva_fecha_fin
+        FROM movimientos_insumos m
+        INNER JOIN laboratorios l ON m.laboratorio_id = l.id
+        INNER JOIN usuarios u ON m.usuario_id = u.id
+        INNER JOIN roles rol ON u.rol_id = rol.id
+        LEFT JOIN reservas r ON m.reserva_id = r.id
+        WHERE 1=1
+      `
+
+        const params = []
+
+        // Filtros según permisos del usuario
+        if (user_rol === 'Jefe de Laboratorio' && Array.isArray(user_laboratorio_ids) && user_laboratorio_ids.length) {
+            query += ` AND m.laboratorio_id IN (${user_laboratorio_ids.join(',')})`
+        }
+
+        // Filtros opcionales
+        if (laboratorio_id) {
+            query += ` AND m.laboratorio_id = ?`
+            params.push(laboratorio_id)
+        }
+
+        if (fecha_inicio) {
+            query += ` AND DATE(m.fecha_movimiento) >= ?`
+            params.push(fecha_inicio)
+        }
+
+        if (fecha_fin) {
+            query += ` AND DATE(m.fecha_movimiento) <= ?`
+            params.push(fecha_fin)
+        }
+
+        if (tipo_movimiento) {
+            query += ` AND m.tipo_movimiento = ?`
+            params.push(tipo_movimiento)
+        }
+
+        query += ` ORDER BY m.fecha_movimiento DESC LIMIT 100`
+
+        const [rows] = await pool.execute(query, params)
+
+        return rows;
+    },
+
+    getInsumosConfiguradosByLaboratorio: async (laboratorio_id) => {
+        const [insumos] = await pool.execute(`
+        SELECT 
+          l.codigo AS lab_codigo,
+          l.id AS lab_id,
+          l.nombre AS lab_nombre,
+          i.codigo AS ins_codigo,
+          i.id AS ins_id,
+          i.nombre AS ins_nombre,
+          i.unidad_medida AS ins_unidad_medida
+        FROM inventario_insumos ii
+        INNER JOIN laboratorios l ON l.id = ii.laboratorio_id 
+        INNER JOIN insumos i ON i.id = ii.insumo_id
+        WHERE ii.laboratorio_id = ?
+        `, [laboratorio_id])
+        return insumos;
+    }
 }

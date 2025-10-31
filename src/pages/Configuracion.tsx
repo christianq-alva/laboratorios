@@ -25,7 +25,7 @@ import {
   Tooltip,
   TablePagination
 } from '@mui/material'
-import { Add, Category, Person, LibraryBooks, Edit, School, Delete, AccountBalance, Inventory, FileUpload } from '@mui/icons-material'
+import { Add, Category, Person, LibraryBooks, Edit, School, Delete, AccountBalance,  FileUpload } from '@mui/icons-material'
 import { TiposEquipoTable } from '../components/Configuracion/TiposEquipoTable'
 import { TipoEquipoForm } from '../components/Configuracion/TipoEquipoForm'
 import { EscuelasTable } from '../components/Configuracion/EscuelasTable'
@@ -38,7 +38,7 @@ import { LaboratorioForm } from '../components/Configuracion/Laboratorios/Labora
 import { tipoEquipoService, type TipoEquipo } from '../services/tipoEquipoService'
 import { escuelaService, type Escuela } from '../services/escuelaService'
 import { docenteService, type Docente } from '../services/docenteService'
-import { insumoService, type Insumo, type Insumo2 } from '../services/insumoService'
+import { insumoService, type Insumo2 } from '../services/insumoService'
 import { laboratorioService, type Laboratorio } from '../services/laboratorioService'
 import { ImportacionMasiva } from '../components/Insumos/ImportacionMasiva'
 
@@ -120,9 +120,10 @@ export const Configuracion: React.FC = () => {
   const loadTiposEquipo = async () => {
     setLoadingTipos(true)
     try {
+      if (!setLoadingTipos) console.log("refresh", refresh) //Observación: Hay que borrarlo      
       console.log('🔄 Cargando tipos de equipo...')
-      const response = await tipoEquipoService.getAll()
-      console.log('📦 Response:', response)
+      const response = await tipoEquipoService.getAllWithCountEquipos()
+      console.log('📦 Response:', response.data)
 
       if (!response || !response.data) {
         console.error('❌ Response inválida:', response)
@@ -130,22 +131,7 @@ export const Configuracion: React.FC = () => {
       }
 
       console.log('📊 Tipos recibidos:', response.data.length)
-
-      // Obtener el conteo de equipos para cada tipo
-      const tiposConConteo = await Promise.all(
-        response.data.map(async (tipo) => {
-          try {
-            const countResponse = await tipoEquipoService.countEquipos(tipo.id)
-            return { ...tipo, count_equipos: countResponse.data.count }
-          } catch (err) {
-            console.warn('⚠️ Error al contar equipos para tipo', tipo.id, err)
-            return { ...tipo, count_equipos: 0 }
-          }
-        })
-      )
-
-      console.log('✅ Tipos con conteo:', tiposConConteo)
-      setTiposEquipo(tiposConConteo)
+      setTiposEquipo(response.data)
     } catch (error: any) {
       console.error('❌ Error al cargar tipos de equipo:', error)
       console.error('❌ Error details:', error.response?.data)

@@ -19,6 +19,7 @@ import {
 import { Close } from '@mui/icons-material'
 import { laboratorioService } from '../../../services/laboratorioService'
 import type { Laboratorio, CreateLaboratorioData, Escuela } from '../../../services/laboratorioService'
+import { escuelaService } from '../../../services/escuelaService'
 
 interface LaboratorioFormProps {
   open: boolean
@@ -49,16 +50,10 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
   const fetchEscuelas = async () => {
     try {
       setLoadingEscuelas(true)
-      const result = await laboratorioService.getEscuelas()
-      if (result.success) {
-        setEscuelas(result.data || [])
-      } else {
-        console.error('Error al cargar escuelas:', result.message)
-        setEscuelas([])
-      }
+      const result = await escuelaService.getAll()
+      setEscuelas(result.data || [])
     } catch (err) {
       console.error('Error al cargar escuelas:', err)
-      setEscuelas([])
     } finally {
       setLoadingEscuelas(false)
     }

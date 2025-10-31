@@ -34,7 +34,6 @@ import {
   FileDownload,
   CalendarMonth
 } from '@mui/icons-material'
-import { insumoService } from '../../services/insumoService'
 import { laboratorioService } from '../../services/laboratorioService'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -110,13 +109,13 @@ export const ReporteProximosVencer: React.FC = () => {
     setLoading(true)
     setError(null)
     try {
-      const labId = laboratorioSeleccionado === '' ? undefined : laboratorioSeleccionado
-      const response = await insumoService.getInsumosProximosVencer(labId, diasFiltro)
+      //const labId = laboratorioSeleccionado === '' ? undefined : laboratorioSeleccionado
+      //const response = await insumoService.getInsumosProximosVencer(labId, diasFiltro)
       
-      if (response.success) {
-        setInsumos(response.data)
-        setEstadisticas(response.estadisticas)
-      }
+      //if (response.success) {
+        setInsumos([]) //response.data
+        setEstadisticas(null) //response.estadisticas
+      //}
     } catch (error: any) {
       setError(error.message || 'Error al cargar el reporte')
       console.error('Error al cargar reporte:', error)

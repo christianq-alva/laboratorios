@@ -51,7 +51,9 @@ interface ImportacionMasivaEquiposProps {
 
 interface PreviewDataEquipo {
   fila: number
+  codigo: string
   nombre: string
+  tipo_equipo_id: number
   descripcion: string
   marca: string
   modelo: string
@@ -62,7 +64,7 @@ interface PreviewDataEquipo {
   comentarios: string
   condicion: string
   fecha_adquisicion: string
-  inventario_labs: { [key: string]: number }
+  laboratorio_id: number
   errores: string[]
 }
 
@@ -86,7 +88,7 @@ interface ResultadoImportacion {
     marca: string
     modelo: string
     estado: string
-    inventario: string
+    laboratorio_id: number
   }>
 }
 
@@ -434,13 +436,15 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
                   <TableHead>
                     <TableRow>
                       <TableCell>Fila</TableCell>
+                      <TableCell>Código</TableCell>
                       <TableCell>Nombre</TableCell>
+                      <TableCell>Tipo de Equipo</TableCell>
                       <TableCell>Marca/Modelo</TableCell>
                       <TableCell>Serie</TableCell>
                       <TableCell>Estado</TableCell>
                       <TableCell>Condición</TableCell>
                       <TableCell>Fecha Adq.</TableCell>
-                      <TableCell>Inventario</TableCell>
+                      <TableCell>Laboratorio</TableCell>
                       <TableCell>Estado</TableCell>
                     </TableRow>
                   </TableHead>
@@ -450,6 +454,7 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
                         bgcolor: item.errores.length > 0 ? 'error.50' : 'inherit'
                       }}>
                         <TableCell>{item.fila}</TableCell>
+                        <TableCell>{item.codigo || 'Sin código'}</TableCell>
                         <TableCell>
                           <Box>
                             <Typography variant="body2" sx={{ fontWeight: 500 }}>
@@ -461,6 +466,11 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
                               </Typography>
                             )}
                           </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {item.tipo_equipo_id || 'N/A'}
+                          </Typography>
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2">
@@ -500,18 +510,18 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
                         </TableCell>
                         <TableCell>
                           <Box>
-                            {Object.entries(item.inventario_labs).map(([lab, cantidad]) => (
+                            {item.laboratorio_id && (
                               <Chip 
-                                key={lab}
-                                label={`${lab}: ${cantidad}`}
+                                key={item.laboratorio_id}
+                                label={`${item.laboratorio_id}`}
                                 size="small"
                                 variant="outlined"
                                 sx={{ mr: 0.5, mb: 0.5 }}
                               />
-                            ))}
-                            {Object.keys(item.inventario_labs).length === 0 && (
+                            )}
+                            {!item.laboratorio_id && (
                               <Typography variant="caption" color="text.secondary">
-                                Sin inventario inicial
+                                N/A
                               </Typography>
                             )}
                           </Box>
@@ -670,7 +680,7 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
                             </TableCell>
                             <TableCell>
                               <Typography variant="body2">
-                                {item.inventario}
+                                {item.laboratorio_id}
                               </Typography>
                             </TableCell>
                           </TableRow>

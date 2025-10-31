@@ -1,57 +1,51 @@
 import express from 'express'
 import { authenticateToken } from '../middleware/auth.js'
 import { authorize, authorizeResource } from '../middleware/authorize.js'
-import { 
-  getLaboratorios, 
-  createLaboratorio, 
+import {
+  getLaboratorios,
+  createLaboratorio,
   updateLaboratorio,
   deleteLaboratorio,
-  getEscuelas,
   changeEstadoLaboratorio
 } from '../controllers/laboratorioController.js'
 
 const router = express.Router()
 
-// 🔍 LISTAR LABORATORIOS
-router.get('/', 
-  authenticateToken,                    // 1️⃣ Verificar JWT
-  authorize('read', 'Laboratorio'),     // 2️⃣ Verificar permiso general
+// Obtener todos los laboratorios
+router.get('/',
+  authenticateToken,
+  authorize('read', 'Laboratorio'),
   getLaboratorios
 )
 
-// 🏫 OBTENER ESCUELAS (debe ir antes de /:id)
-router.get('/escuelas', 
-  authenticateToken,                    // 1️⃣ JWT
-  authorize('read', 'Laboratorio'),     // 2️⃣ Permiso de lectura
-  getEscuelas
-)
-
-// ➕ CREAR LABORATORIO
-router.post('/', 
-  authenticateToken,                    // 1️⃣ JWT
-  authorize('create', 'Laboratorio'),   // 2️⃣ Solo Admin puede crear labs
+// Crear nuevo laboratorio
+router.post('/',
+  authenticateToken,
+  authorize('create', 'Laboratorio'),
   createLaboratorio
 )
 
-// ✏️ EDITAR LABORATORIO
-router.put('/:id', 
-  authenticateToken,                         // 1️⃣ JWT
-  authorizeResource('update', 'Laboratorio'), // 2️⃣ Admin o Jefe de su lab
+// Actualizar laboratorio
+router.put('/:id',
+  authenticateToken,
+  authorizeResource('update', 'Laboratorio'),
   updateLaboratorio
 )
 
-// 🔄 CAMBIAR ESTADO DE LABORATORIO
-router.patch('/:id/estado', 
-  authenticateToken,                         // 1️⃣ JWT
-  authorizeResource('update', 'Laboratorio'), // 2️⃣ Admin o Jefe de su lab
+// Eliminar laboratorio
+router.delete('/:id',
+  authenticateToken,
+  authorize('delete', 'Laboratorio'),
+  deleteLaboratorio
+)
+
+// Cambiar estado de un laboratorio
+router.patch('/:id/estado',
+  authenticateToken,
+  authorizeResource('update', 'Laboratorio'),
   changeEstadoLaboratorio
 )
 
-// 🗑️ ELIMINAR LABORATORIO
-router.delete('/:id', 
-  authenticateToken,                         // 1️⃣ JWT
-  authorize('delete', 'Laboratorio'),        // 2️⃣ Solo Admin
-  deleteLaboratorio
-)
+
 
 export default router

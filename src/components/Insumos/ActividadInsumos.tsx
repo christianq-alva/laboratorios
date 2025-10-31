@@ -35,11 +35,9 @@ import {
   Schedule,
   Person,
   LocationOn,
-  Inventory
 } from '@mui/icons-material'
 import { insumoService, type ActividadInsumo } from '../../services/insumoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
-import dayjs from 'dayjs'
 
 interface ActividadInsumosProps {
   open: boolean

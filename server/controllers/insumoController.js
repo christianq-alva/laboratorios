@@ -3,56 +3,75 @@ import { Insumo } from '../models/Insumo.js'
 import multer from 'multer'
 import XLSX from 'xlsx'
 
-//Crear insumo
+const categoriasValidas = ['Reactivos', 'Materiales', 'Material_Biologico'];
+
+// Crear insumo
 export const createInsumo = async (req, res) => {
   try {
-    const {
-      nombre, descripcion, unidad_medida, categoria, presentacion } = req.body
+    const { nombre, descripcion, unidad_medida, categoria, presentacion } = req.body
 
     console.log('🔍 Creando insumo maestro:', req.body)
 
     // Validar campos requeridos
-    if (!nombre || !unidad_medida) {
+    if (!nombre?.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'Nombre y unidad de medida son requeridos'
+        message: 'El nombre es requerido'
       })
     }
 
-    const { insumo_id, codigo } = await Insumo.createInsumo(nombre, descripcion || '', unidad_medida, categoria, presentacion || '')
+    if (!unidad_medida?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'La unidad de medida es requerida'
+      })
+    }
 
-    res.json({
+    if (!categoriasValidas.includes(categoria)) {
+      return res.status(400).json({
+        success: false,
+        message: 'La categoría es inválida'
+      })
+    }
+
+    const { insumo_id, codigo } = await Insumo.create(
+      nombre.trim(),
+      descripcion?.trim() || '',
+      unidad_medida.trim(),
+      categoria,
+      presentacion?.trim() || ''
+    )
+
+    // Respuesta exitosa
+    res.status(201).json({
       success: true,
       message: 'Insumo creado exitosamente',
       data: {
         id: insumo_id,
         codigo: codigo,
-        nombre: nombre,
-        unidad_medida: unidad_medida,
+        nombre: nombre.trim(),
+        unidad_medida: unidad_medida.trim(),
         categoria: categoria
       }
     })
 
   } catch (error) {
     console.error('Error en createInsumo:', error)
-    res.status(500).json({ success: false, message: error.message })
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    })
   }
 }
 
-//Editar insumo
+// Actualizar insumo
 export const updateInsumo = async (req, res) => {
   try {
     const { id } = req.params
-    const insumoId = parseInt(id, 10) // Convertir a número entero
+    const insumoId = parseInt(id, 10)
     const { nombre, descripcion, unidad_medida, categoria, presentacion } = req.body
 
-    // Limpiar espacios en blanco
-    const nombreLimpio = nombre?.trim()
-    const descripcionLimpia = descripcion?.trim()
-    const unidadLimpia = unidad_medida?.trim()
-    const presentacionLimpia = presentacion?.trim()
-
-    console.log('🔄 Actualizando insumo:', { id, insumoId, nombre: nombreLimpio, descripcion: descripcionLimpia, unidad_medida: unidadLimpia })
+    console.log('🔄 Actualizando insumo:', { id, insumoId, nombre, descripcion, unidad_medida })
 
     // Validar ID
     if (isNaN(insumoId) || insumoId <= 0) {
@@ -62,36 +81,63 @@ export const updateInsumo = async (req, res) => {
       })
     }
 
-    // Validar datos
-    if (!nombreLimpio || !unidadLimpia) {
+    // Validar datos requeridos
+    if (!nombre?.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'Nombre y unidad de medida son requeridos'
+        message: 'El nombre es requerido'
+      })
+    }
+
+    if (!unidad_medida?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'La unidad de medida es requerida'
+      })
+    }
+
+    if (!categoriasValidas.includes(categoria)) {
+      return res.status(400).json({
+        success: false,
+        message: 'La categoría es inválida'
       })
     }
 
     // Verificar que el insumo existe
-    const [existingInsumo] = await pool.execute(
-      'SELECT id FROM insumos WHERE id = ?',
-      [insumoId]
-    )
+    const exists = await Insumo.existsById(insumoId)
+    if (!exists) {
+      return res.status(404).json({
+        success: false,
+        message: 'Insumo no encontrado'
+      })
+    }
+    
+    // Actualizar insumo
+    const { affectedRows } = await Insumo.updateById(insumoId, {
+      nombre: nombre.trim(),
+      descripcion: descripcion?.trim() || '',
+      unidad_medida: unidad_medida.trim(),
+      categoria: categoria,
+      presentacion: presentacion?.trim() || ''
+    })
 
-    if (existingInsumo.length === 0) {
+    if (affectedRows === 0) {
       return res.status(404).json({
         success: false,
         message: 'Insumo no encontrado'
       })
     }
 
-    // Validación de duplicados deshabilitada para permitir edición libre
-    console.log('ℹ️ Validación de duplicados omitida - permitiendo edición libre')
-
-    await Insumo.updateInsumo(nombreLimpio, descripcionLimpia || '', unidadLimpia, categoria || 'Materiales', presentacionLimpia || '', insumoId)
-
-    res.json({
+    // Respuesta exitosa
+    res.status(200).json({
       success: true,
       message: 'Insumo actualizado exitosamente',
-      data: { id: insumoId, nombre: nombreLimpio, descripcion: descripcionLimpia, unidad_medida: unidadLimpia }
+      data: {
+        id: insumoId,
+        nombre: nombre.trim(),
+        descripcion: descripcion?.trim() || '',
+        unidad_medida: unidad_medida.trim()
+      }
     })
 
   } catch (error) {
@@ -103,7 +149,7 @@ export const updateInsumo = async (req, res) => {
   }
 }
 
-//Eliminar insumo
+// Eliminar insumo
 export const deleteInsumo = async (req, res) => {
   const connection = await pool.getConnection()
 
@@ -124,58 +170,49 @@ export const deleteInsumo = async (req, res) => {
     }
 
     // Verificar que el insumo existe
-    const [existingInsumo] = await connection.execute(
-      'SELECT id, nombre FROM insumos WHERE id = ?',
-      [insumoId]
-    )
-
-    if (existingInsumo.length === 0) {
+    const insumo = await Insumo.getById(insumoId, connection)
+    if (!insumo) {
       return res.status(404).json({
         success: false,
         message: 'Insumo no encontrado'
       })
     }
 
-    // Verificar si hay relaciones antes de eliminar
+    // Verificar relaciones antes de eliminar
+    const relations = await Insumo.checkRelations(insumoId, connection)
 
-    const [detalleMovimientos] = await connection.execute(
-      'SELECT COUNT(*) as total FROM movimiento_insumo_detalle WHERE insumo_id = ?',
-      [insumoId]
-    )
-
-    const [inventario] = await connection.execute(
-      'SELECT COUNT(*) as total FROM inventario_insumos WHERE insumo_id = ?',
-      [insumoId]
-    )
-
-    // Si tiene relaciones, informar al usuario
-    const totalRelaciones = detalleMovimientos[0].total + inventario[0].total
-
-    if (totalRelaciones > 0) {
+    if (relations.total > 0) {
       const relaciones = []
-
-      if (detalleMovimientos[0].total > 0) {
-        relaciones.push(`${detalleMovimientos[0].total} registro(s) de lotes`)
+      if (relations.detalleMovimientos > 0) {
+        relaciones.push(`Tiene ${relations.detalleMovimientos} registro(s) de lotes`)
       }
-      if (inventario[0].total > 0) {
-        relaciones.push(`${inventario[0].total} registro(s) de inventario`)
+      if (relations.inventario > 0) {
+        relaciones.push(`Configurado en ${relations.inventario} laboratorio(s)`)
       }
 
       await connection.rollback()
-      return res.status(400).json({
+      return res.status(409).json({
         success: false,
-        message: `No se puede eliminar el insumo "${existingInsumo[0].nombre}" porque está siendo usado en el sistema y tiene datos asociados: ${relaciones.join(', ')}. Primero debes eliminar estos registros relacionados para poder eliminar el insumo.`
+        message: `No se puede eliminar. El insumo "${insumo.nombre}" está siendo usado en el sistema: ${relaciones.join(', ')}.`
       })
     }
 
-    // Si no tiene relaciones, proceder con la eliminación
-    await connection.execute('DELETE FROM insumos WHERE id = ?', [insumoId])
+    // Eliminar insumo
+    const { affectedRows } = await Insumo.deleteById(insumoId, connection)
+
+    if (affectedRows === 0) {
+      await connection.rollback()
+      return res.status(404).json({
+        success: false,
+        message: 'Insumo no encontrado'
+      })
+    }
 
     await connection.commit()
 
     console.log('✅ Insumo eliminado exitosamente:', insumoId)
 
-    res.json({
+    res.status(200).json({
       success: true,
       message: 'Insumo eliminado exitosamente'
     })
@@ -186,33 +223,37 @@ export const deleteInsumo = async (req, res) => {
 
     // Manejar errores de restricción de clave foránea
     if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.code === 'ER_ROW_IS_REFERENCED') {
-      return res.status(400).json({
+      return res.status(409).json({
         success: false,
         message: 'No se puede eliminar el insumo porque está siendo usado en el sistema y tiene información relacionada (movimientos, lotes, inventario u otros registros). Primero debes eliminar o modificar estos registros para poder eliminar el insumo.'
       })
     }
 
-    // Error genérico pero más descriptivo
     res.status(500).json({
       success: false,
-      message: 'Error al eliminar el insumo. Es posible que esté siendo usado en el sistema. Verifica que no tenga movimientos, lotes o registros de inventario asociados antes de eliminarlo.'
+      message: 'Error interno del servidor'
     })
   } finally {
     connection.release()
   }
 }
 
+// Obtener todos los insumos
 export const getAllInsumos = async (req, res) => {
   try {
-    console.log('Se está pidiendo todos los insumos')
-    const [insumos] = await Insumo.getAllInsumos()
-    res.json({
+    const insumos = await Insumo.getAll()
+
+    res.status(200).json({
+      success: true,
       data: insumos
     })
 
   } catch (error) {
     console.error('Error en getAllInsumos:', error)
-    res.status(500).json({ success: false, message: error.message })
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    })
   }
 }
 
@@ -296,7 +337,7 @@ export const generarPlantillaImportacion = async (req, res) => {
       [''],
       ['COLUMNAS OPCIONALES:'],
       ['• DESCRIPCION: Descripción detallada del insumo'],
-      ['• CATEGORIA: Reactivos | Materiales | Material_Biologico (por defecto: Materiales)'],
+      ['• CATEGORIA: Reactivos | Materiales | Material_Biologico'],
       ['• PRESENTACION: Formato de presentación (ej: Frasco 500ml, Caja x 100)'],
       [''],
       [''],
@@ -390,7 +431,6 @@ export const previsualizarImportacionMasiva = async (req, res) => {
       }
 
       // Validar categoría
-      const categoriasValidas = ['Reactivos', 'Materiales', 'Material_Biologico']
       if (!categoriasValidas.includes(categoria)) {
         erroresFila.push(`Categoría inválida. Debe ser: ${categoriasValidas.join(', ')}`)
       }
@@ -409,7 +449,7 @@ export const previsualizarImportacionMasiva = async (req, res) => {
 
     console.log(`📊 Previsualización completada: ${previewData.length} filas procesadas`)
 
-    res.json({
+    res.status(200).json({
       success: true,
       data: previewData,
       total_filas: previewData.length,
@@ -481,13 +521,12 @@ export const importacionMasiva = async (req, res) => {
         const presentacion = row.PRESENTACION ? row.PRESENTACION.toString().trim() : ''
 
         // Validar categoría
-        const categoriasValidas = ['Reactivos', 'Materiales', 'Material_Biologico']
         if (!categoriasValidas.includes(categoria)) {
           errores.push(`Fila ${rowNum}: Categoría inválida. Debe ser: ${categoriasValidas.join(', ')}`)
           continue
         }
 
-        const { insumo_id, codigo } = await Insumo.createInsumo(nombre, descripcion || '', unidad_medida, categoria, presentacion || '', connection)
+        const { insumo_id, codigo } = await Insumo.create(nombre, descripcion || '', unidad_medida, categoria, presentacion || '', connection)
 
 
         resultados.push({
@@ -518,7 +557,7 @@ export const importacionMasiva = async (req, res) => {
 
     console.log(`✅ Importación completada: ${procesados} insumos creados, ${errores.length} errores`)
 
-    res.json({
+    res.status(200).json({
       success: true,
       message: `Importación completada: ${procesados} insumos creados`,
       procesados: procesados,
@@ -539,178 +578,3 @@ export const importacionMasiva = async (req, res) => {
     connection.release()
   }
 }
-
-/*  try {
-    const { laboratorio_id, tipo_movimiento, observaciones, reserva_id, detalles } = req.body
-
-    // 🐛 DEBUG: Ver qué está llegando desde el frontend
-    console.log('📦 Datos recibidos en registrarMovimientoManual:')
-    console.log('  - laboratorio_id:', laboratorio_id, typeof laboratorio_id)
-    console.log('  - tipo_movimiento:', tipo_movimiento, typeof tipo_movimiento)
-    console.log('  - observaciones:', observaciones, typeof observaciones)
-    console.log('  - reserva_id:', reserva_id, typeof reserva_id)
-    console.log('  - detalles:', JSON.stringify(detalles, null, 2))
-
-    // Validaciones
-    if (!laboratorio_id || !tipo_movimiento || !detalles || detalles.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Datos incompletos: laboratorio_id, tipo_movimiento y detalles son requeridos'
-      })
-    }
-
-    // Verificar permisos
-    if (req.user.rol !== 'Administrador' && !req.user.laboratorio_ids.includes(laboratorio_id)) {
-      return res.status(403).json({
-        success: false,
-        message: 'No tienes permisos para registrar movimientos en este laboratorio'
-      })
-    }
-
-    await connection.beginTransaction()
-
-    // 1. Crear el movimiento principal
-    // Normalizar valores undefined/null/vacío
-    const observacionesNormalizadas = (observaciones !== undefined && observaciones !== null && observaciones.trim() !== '') 
-      ? observaciones.trim() 
-      : null
-    const reservaIdNormalizado = (reserva_id !== undefined && reserva_id !== null && reserva_id > 0) 
-      ? reserva_id 
-      : null
-
-    console.log('🔧 Valores normalizados para INSERT:')
-    console.log('  - observaciones:', observacionesNormalizadas, typeof observacionesNormalizadas)
-    console.log('  - reserva_id:', reservaIdNormalizado, typeof reservaIdNormalizado)
-
-    const [movimientoResult] = await connection.execute(
-      `INSERT INTO movimientos_insumos 
-       (laboratorio_id, usuario_id, tipo_movimiento, fecha_movimiento, fecha_ingreso, observaciones, reserva_id)
-       VALUES (?, ?, ?, NOW(), NOW(), 'PRUEBA', 'Movimiento manual')`,
-      [
-        laboratorio_id, 
-        req.user.id, 
-        tipo_movimiento, 
-        observacionesNormalizadas, 
-        reservaIdNormalizado
-      ]
-    )
-
-    console.log('✅ Movimiento manual:', movimientoResult.insertId)
-    const movimientoId = movimientoResult.insertId
-
-    // 2. Procesar cada detalle
-    for (const detalle of detalles) {
-      const { insumo_id, cantidad, lote, fecha_vencimiento, entrada_detalle_id } = detalle
-
-      if (tipo_movimiento === 'entrada') {
-        // ENTRADA: Crear nuevo lote con saldo = cantidad
-        // Normalizar valores: cadena vacía '', undefined o null -> valor por defecto
-        const loteNormalizado = (lote !== undefined && lote !== null && lote.trim() !== '') 
-          ? lote.trim() 
-          : `LOTE-${Date.now()}-${insumo_id}`
-        
-        const fechaVencimientoNormalizada = (fecha_vencimiento !== undefined && fecha_vencimiento !== null && fecha_vencimiento.trim() !== '') 
-          ? fecha_vencimiento.trim() 
-          : null
-        
-
-        await connection.execute(
-          `INSERT INTO movimiento_insumo_detalle 
-           (movimiento_id, insumo_id, cantidad, saldo, lote, fecha_vencimiento)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [
-            movimientoId,
-            insumo_id,
-            cantidad,
-            cantidad, // saldo inicial = cantidad
-            loteNormalizado,
-            fechaVencimientoNormalizada
-          ]
-        )
-
-        // Actualizar inventario_insumos (aumentar)
-        await connection.execute(
-          `INSERT INTO inventario_insumos (laboratorio_id, insumo_id, stock_disponible)
-           VALUES (?, ?, ?)
-           ON DUPLICATE KEY UPDATE stock_disponible = stock_disponible + ?`,
-          [laboratorio_id, insumo_id, cantidad, cantidad]
-        )
-
-      } else if (tipo_movimiento === 'salida') {
-        // SALIDA: Reducir saldo del lote de entrada seleccionado
-        if (!entrada_detalle_id) {
-          throw new Error(`El insumo ${insumo_id} requiere entrada_detalle_id para salidas`)
-        }
-
-        // Verificar que el lote tiene saldo suficiente
-        const [loteCheck] = await connection.execute(
-          `SELECT mid.saldo, mi.laboratorio_id
-           FROM movimiento_insumo_detalle mid
-           INNER JOIN movimientos_insumos mi ON mid.movimiento_id = mi.id
-           WHERE mid.id = ? AND mid.insumo_id = ?`,
-          [entrada_detalle_id, insumo_id]
-        )
-
-        if (loteCheck.length === 0) {
-          throw new Error(`Lote de entrada ${entrada_detalle_id} no encontrado`)
-        }
-
-        if (loteCheck[0].laboratorio_id !== laboratorio_id) {
-          throw new Error(`El lote pertenece a otro laboratorio`)
-        }
-
-        const saldoActual = loteCheck[0].saldo || 0
-        if (saldoActual < cantidad) {
-          throw new Error(`Saldo insuficiente en el lote ${entrada_detalle_id}. Disponible: ${saldoActual}, Solicitado: ${cantidad}`)
-        }
-
-        // Reducir saldo del lote de entrada
-        await connection.execute(
-          `UPDATE movimiento_insumo_detalle 
-           SET saldo = saldo - ?
-           WHERE id = ?`,
-          [cantidad, entrada_detalle_id]
-        )
-
-        // Registrar el detalle de salida (sin saldo, ya que es salida)
-        await connection.execute(
-          `INSERT INTO movimiento_insumo_detalle 
-           (movimiento_id, insumo_id, cantidad, saldo, lote)
-           VALUES (?, ?, ?, NULL, 
-             (SELECT lote FROM movimiento_insumo_detalle WHERE id = ?))`,
-          [movimientoId, insumo_id, cantidad, entrada_detalle_id]
-        )
-
-        // Actualizar inventario_insumos (reducir)
-        await connection.execute(
-          `UPDATE inventario_insumos 
-           SET stock_disponible = stock_disponible - ?
-           WHERE laboratorio_id = ? AND insumo_id = ?`,
-          [cantidad, laboratorio_id, insumo_id]
-        )
-      }
-    }
-
-    await connection.commit()
-
-    console.log(`✅ Movimiento ${tipo_movimiento} registrado exitosamente: ID ${movimientoId}`)
-
-    res.json({
-      success: true,
-      message: `Movimiento de ${tipo_movimiento} registrado correctamente`,
-      movimiento_id: movimientoId
-    })
-
-  } catch (error) {
-    await connection.rollback()
-    console.error('❌ Error al registrar movimiento manual:', error)
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error al registrar el movimiento',
-      error: error.message
-    })
-  } finally {
-    connection.release()
-  }
-}
-*/

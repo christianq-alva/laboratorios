@@ -88,19 +88,6 @@ export interface CreateHorarioData {
 export interface UpdateHorarioData extends CreateHorarioData {}
 
 // Interfaces para formularios
-export interface Docente {
-  id: number
-  nombre: string
-  correo: string
-  escuela_id: number
-  escuela?: string
-}
-
-export interface Escuela {
-  id: number
-  nombre: string
-}
-
 export interface Ciclo {
   id: number
   nombre: string
@@ -223,13 +210,7 @@ export const horarioService = {
     return response.data
   },
 
-  // Utilidades para formularios
-  getEscuelas: async () => {
-    const response = await api.get('/horarios/utils/escuelas')
-    return response.data
-  },
-
-  getCiclos: async () => {
+   getCiclos: async () => {
     const response = await api.get('/horarios/utils/ciclos')
     return response.data
   },
@@ -247,25 +228,6 @@ export const horarioService = {
     
     const response = await api.get(url)
     return response.data
-  },
-
-  // Obtener docentes
-  getDocentes: async () => {
-    const response = await api.get('/docentes')
-    return response.data
-  },
-
-  // Obtener insumos por laboratorio
-  getInsumosByLaboratorio: async (laboratorio_id: number) => {
-    try {
-      console.log('🔍 Cargando insumos para laboratorio:', laboratorio_id)
-      const response = await api.get(`/insumos?laboratorio_id=${laboratorio_id}`)
-      console.log('📦 Insumos recibidos:', response.data)
-      return response.data
-    } catch (error) {
-      console.error('❌ Error al cargar insumos:', error)
-      return { success: false, data: [], message: 'Error al cargar insumos' }
-    }
   },
 
   // Obtener equipos por laboratorio

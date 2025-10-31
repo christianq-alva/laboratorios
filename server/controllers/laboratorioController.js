@@ -1,34 +1,16 @@
-import { pool } from '../config/database.js'
-import { defineAbilitiesFor } from '../abilities/defineAbilities.js'
+import { Laboratorio } from '../models/Laboratorio.js'
+import { Escuela } from '../models/Escuela.js'
 
+const estadosValidos = ['Activo', 'En Mantenimiento', 'Inhabilitado', 'Baja']
+
+
+// Obtener todos los laboratorios
 export const getLaboratorios = async (req, res) => {
   try {
-    let query, params = []
 
-    if (req.user.rol === 'Administrador') {
-      query = `
-        SELECT l.*, e.nombre as escuela 
-        FROM laboratorios l
-        LEFT JOIN escuelas e ON l.escuela_id = e.id
-        ORDER BY l.codigo, l.nombre
-      `
-    } else if (req.user.rol === 'Jefe de Laboratorio') {
-      query = `
-        SELECT l.*, e.nombre as escuela  
-        FROM laboratorios l
-        LEFT JOIN escuelas e ON l.escuela_id = e.id
-        JOIN jefe_laboratorio jl ON l.id = jl.laboratorio_id
-        WHERE jl.usuario_id = ?
-        ORDER BY l.codigo, l.nombre
-      `
-      params = [req.user.userId]
-    } else {
-      query = 'SELECT * FROM laboratorios WHERE 1=0'
-    }
-
-    const [laboratorios] = await pool.execute(query, params)
-
-    res.json({
+    const laboratorios = await Laboratorio.getAllByUser(req.user.id, req.user.rol)
+    
+    res.status(200).json({  
       success: true,
       data: laboratorios,
       user_role: req.user.rol,
@@ -44,6 +26,7 @@ export const getLaboratorios = async (req, res) => {
   }
 }
 
+// Crear nuevo laboratorio
 export const createLaboratorio = async (req, res) => {
   try {
     const { codigo, nombre, ubicacion, escuela_id, piso, estado = 'Activo' } = req.body
@@ -80,62 +63,47 @@ export const createLaboratorio = async (req, res) => {
     }
 
     // Validar que la escuela existe
-    const [escuelaCheck] = await pool.execute(
-      'SELECT id, nombre FROM escuelas WHERE id = ?', 
-      [escuela_id]
-    )
+    const escuelaCheck = await Escuela.exists(escuela_id)
     
-    if (escuelaCheck.length === 0) {
+    if (!escuelaCheck) {
       return res.status(400).json({
         success: false,
         message: 'La escuela seleccionada no existe'
       })
     }
 
-    // Usar el código proporcionado por el usuario (sin validar unicidad)
-    const codigoFinal = codigo.trim()
-
     // Insertar laboratorio
-    const [result] = await pool.execute(`
-      INSERT INTO laboratorios (codigo, nombre, ubicacion, escuela_id, piso, estado) 
-      VALUES (?, ?, ?, ?, ?, ?)
-    `, [codigoFinal, nombre.trim(), ubicacion.trim(), escuela_id, piso.toString().trim(), estado])
+    const insertId = await Laboratorio.create(codigo.trim(), nombre.trim(), ubicacion.trim(), escuela_id, piso.toString().trim(), estado)
 
-    console.log('✅ Laboratorio creado con ID:', result.insertId)
+    console.log('✅ Laboratorio creado con ID:', insertId)
 
-    res.json({
+    // Respuesta exitosa
+    res.status(201).json({
       success: true,
       data: {
-        id: result.insertId,
-        codigo: codigoFinal,
+        id: insertId,
+        codigo: codigo.trim(),
         nombre: nombre.trim(),
         ubicacion: ubicacion.trim(),
         escuela_id,
         piso: piso.toString().trim(),
         estado,
-        escuela: escuelaCheck[0].nombre
+        escuela: ''
       },
       message: 'Laboratorio creado correctamente'
     })
 
   } catch (error) {
+         
     console.error('Error en createLaboratorio:', error)
-    
-    // Manejar error de duplicado (si aún existe la restricción)
-    if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(400).json({
-        success: false,
-        message: 'Ya existe un laboratorio con ese código. Puedes usar el mismo código si es necesario.'
-      })
-    }
-    
     res.status(500).json({
       success: false,
-      message: error.message
+      message: 'Error interno del servidor'
     })
   }
 }
 
+// Actualizar laboratorio
 export const updateLaboratorio = async (req, res) => {
   try {
     const { id } = req.params
@@ -144,12 +112,9 @@ export const updateLaboratorio = async (req, res) => {
     console.log('🔄 Actualizando laboratorio:', { id, codigo, nombre, ubicacion, escuela_id, piso, estado })
 
     // Verificar que el laboratorio existe
-    const [labCheck] = await pool.execute(
-      'SELECT * FROM laboratorios WHERE id = ?', 
-      [id]
-    )
+    const labCheck = await Laboratorio.exists(id)
     
-    if (labCheck.length === 0) {
+    if (!labCheck) {
       return res.status(404).json({
         success: false,
         message: 'Laboratorio no encontrado'
@@ -157,12 +122,9 @@ export const updateLaboratorio = async (req, res) => {
     }
 
     // Validar que la escuela existe
-    const [escuelaCheck] = await pool.execute(
-      'SELECT id, nombre FROM escuelas WHERE id = ?', 
-      [escuela_id]
-    )
+    const escuelaCheck = await Escuela.exists(escuela_id)
     
-    if (escuelaCheck.length === 0) {
+    if (!escuelaCheck) {
       return res.status(400).json({
         success: false,
         message: 'La escuela seleccionada no existe'
@@ -188,15 +150,18 @@ export const updateLaboratorio = async (req, res) => {
     }
 
     // Actualizar laboratorio incluyendo el código y estado
-    const [result] = await pool.execute(`
-      UPDATE laboratorios 
-      SET codigo = ?, nombre = ?, ubicacion = ?, escuela_id = ?, piso = ?, estado = ?
-      WHERE id = ?
-    `, [codigo.trim(), nombre, ubicacion, escuela_id, piso, estado || 'Activo', id])
+    const affectedRows = await Laboratorio.update(id, codigo.trim(), nombre, ubicacion, escuela_id, piso, estado || 'Activo')
+
+    if (affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Laboratorio no encontrado'
+      })
+    }
 
     console.log('✅ Laboratorio actualizado:', id)
 
-    res.json({
+    res.status(200).json({
       success: true,
       data: {
         id: parseInt(id),
@@ -206,31 +171,28 @@ export const updateLaboratorio = async (req, res) => {
         escuela_id,
         piso,
         estado: estado || 'Activo',
-        escuela: escuelaCheck[0].nombre
+        escuela: ''
       },
       message: 'Laboratorio actualizado correctamente'
     })
 
   } catch (error) {
-    console.error('Error en updateLaboratorio:', error)
     res.status(500).json({
       success: false,
-      message: error.message
+      message: 'Error interno del servidor'
     })
   }
 }
 
+// Eliminar laboratorio
 export const deleteLaboratorio = async (req, res) => {
   try {
     const { id } = req.params
 
     // Verificar que el laboratorio existe
-    const [labCheck] = await pool.execute(
-      'SELECT * FROM laboratorios WHERE id = ?', 
-      [id]
-    )
+    const labCheck = await Laboratorio.exists(id)
     
-    if (labCheck.length === 0) {
+    if (!labCheck) {
       return res.status(404).json({
         success: false,
         message: 'Laboratorio no encontrado'
@@ -247,67 +209,19 @@ export const deleteLaboratorio = async (req, res) => {
       }
     }
 
-    // Verificar si tiene relaciones antes de eliminar
-    const [equiposCount] = await pool.execute(
-      'SELECT COUNT(*) as total FROM equipos WHERE laboratorio_id = ?',
-      [id]
-    )
-    
-    const [horariosCount] = await pool.execute(
-      'SELECT COUNT(*) as total FROM horarios WHERE laboratorio_id = ?',
-      [id]
-    )
+    // Eliminar laboratorio
+    const affectedRows = await Laboratorio.delete(id)
 
-    const [insumosCount] = await pool.execute(
-      'SELECT COUNT(*) as total FROM insumos WHERE laboratorio_id = ?',
-      [id]
-    )
-
-    const [incidenciasCount] = await pool.execute(
-      'SELECT COUNT(*) as total FROM incidencias WHERE laboratorio_id = ?',
-      [id]
-    )
-
-    const [jefesCount] = await pool.execute(
-      'SELECT COUNT(*) as total FROM jefe_laboratorio WHERE laboratorio_id = ?',
-      [id]
-    )
-
-    // Si tiene relaciones, informar al usuario
-    const totalRelaciones = equiposCount[0].total + horariosCount[0].total + 
-                           insumosCount[0].total + incidenciasCount[0].total + 
-                           jefesCount[0].total
-
-    if (totalRelaciones > 0) {
-      const relaciones = []
-      if (equiposCount[0].total > 0) {
-        relaciones.push(`${equiposCount[0].total} equipo(s)`)
-      }
-      if (insumosCount[0].total > 0) {
-        relaciones.push(`${insumosCount[0].total} insumo(s)`)
-      }
-      if (horariosCount[0].total > 0) {
-        relaciones.push(`${horariosCount[0].total} horario(s)`)
-      }
-      if (incidenciasCount[0].total > 0) {
-        relaciones.push(`${incidenciasCount[0].total} incidencia(s)`)
-      }
-      if (jefesCount[0].total > 0) {
-        relaciones.push(`${jefesCount[0].total} jefe(s) asignado(s)`)
-      }
-
-      return res.status(400).json({
+    if (affectedRows === 0) {
+      return res.status(404).json({
         success: false,
-        message: `No se puede eliminar el laboratorio "${labCheck[0].nombre}" porque está relacionado con otras tablas del sistema y tiene datos asociados: ${relaciones.join(', ')}. Primero debes eliminar o reasignar estos registros para poder eliminar el laboratorio.`
+        message: 'Laboratorio no encontrado'
       })
     }
 
-    // Si no tiene relaciones, proceder con la eliminación
-    const [result] = await pool.execute('DELETE FROM laboratorios WHERE id = ?', [id])
-
     console.log('✅ Laboratorio eliminado:', id)
 
-    res.json({
+    res.status(200).json({
       success: true,
       message: 'Laboratorio eliminado correctamente'
     })
@@ -323,28 +237,13 @@ export const deleteLaboratorio = async (req, res) => {
       })
     }
     
-    // Error genérico pero con contexto de posibles relaciones
     res.status(500).json({
       success: false,
-      message: 'No se puede eliminar el laboratorio porque está relacionado con otras tablas del sistema y tiene datos asociados. Primero debes eliminar o reasignar los registros relacionados (equipos, insumos, horarios, etc.) antes de poder eliminar el laboratorio.'
+      message: 'Error interno del servidor'
     })
   }
 }
 
-// Obtener escuelas disponibles para el selector
-export const getEscuelas = async (req, res) => {
-  try {
-    const [escuelas] = await pool.execute('SELECT id, nombre FROM escuelas ORDER BY nombre')
-    
-    res.json({ 
-      success: true, 
-      data: escuelas
-    })
-  } catch (error) {
-    console.error('Error en getEscuelas:', error)
-    res.status(500).json({ success: false, message: error.message })
-  }
-}
 
 // Cambiar estado de un laboratorio
 export const changeEstadoLaboratorio = async (req, res) => {
@@ -355,12 +254,9 @@ export const changeEstadoLaboratorio = async (req, res) => {
     console.log('🔄 Cambiando estado del laboratorio:', { id, estado })
 
     // Validar que el laboratorio existe
-    const [labCheck] = await pool.execute(
-      'SELECT * FROM laboratorios WHERE id = ?', 
-      [id]
-    )
+    const labCheck = await Laboratorio.exists(id)
     
-    if (labCheck.length === 0) {
+    if (!labCheck) {
       return res.status(404).json({
         success: false,
         message: 'Laboratorio no encontrado'
@@ -368,7 +264,6 @@ export const changeEstadoLaboratorio = async (req, res) => {
     }
 
     // Validar estado
-    const estadosValidos = ['Activo', 'En Mantenimiento', 'Inhabilitado', 'Baja']
     if (!estadosValidos.includes(estado)) {
       return res.status(400).json({
         success: false,
@@ -387,19 +282,22 @@ export const changeEstadoLaboratorio = async (req, res) => {
     }
 
     // Actualizar solo el estado
-    const [result] = await pool.execute(`
-      UPDATE laboratorios 
-      SET estado = ?
-      WHERE id = ?
-    `, [estado, id])
+    const affectedRows = await Laboratorio.updateEstado(id, estado)
+
+    if (affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Laboratorio no encontrado'
+      })
+    }
 
     console.log('✅ Estado del laboratorio actualizado:', id)
 
-    res.json({
+    res.status(200).json({
       success: true,
       data: {
         id: parseInt(id),
-        estado_anterior: labCheck[0].estado,
+        estado_anterior: '',
         estado_nuevo: estado
       },
       message: `Estado cambiado a "${estado}" correctamente`

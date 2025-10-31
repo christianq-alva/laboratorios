@@ -3,7 +3,7 @@ import { authenticateToken } from '../middleware/auth.js'
 import { authorize } from '../middleware/authorize.js'
 import { 
   getEquipos,
-  getEquiposSimple,
+  getEquipoByLaboratorio,
   createEquipo,
   updateEquipo,
   deleteEquipo,
@@ -24,16 +24,29 @@ const upload = multer({
 
 const router = express.Router()
 
+// Rutas para importación masiva de equipos
+router.get('/plantilla-importacion', 
+  authenticateToken,
+  authorize('create', 'Equipo'),
+  generarPlantillaImportacionEquipos
+)
+
+router.get('/actividad', 
+  authenticateToken,
+  authorize('read', 'Equipo'),
+  getActividadEquipos
+)
+
+router.get('/:laboratorio_id', 
+  authenticateToken, 
+  authorize('read', 'Equipo'), 
+  getEquipoByLaboratorio
+)
+
 router.get('/', 
   authenticateToken, 
   authorize('read', 'Equipo'), 
   getEquipos
-)
-
-router.get('/simple', 
-  authenticateToken, 
-  authorize('read', 'Equipo'), 
-  getEquiposSimple
 )
 
 router.post('/', 
@@ -52,19 +65,6 @@ router.delete('/:id',
   authenticateToken,
   authorize('delete', 'Equipo'),
   deleteEquipo
-)
-
-router.get('/actividad', 
-  authenticateToken,
-  authorize('read', 'Equipo'),
-  getActividadEquipos
-)
-
-// Rutas para importación masiva de equipos
-router.get('/plantilla-importacion', 
-  authenticateToken,
-  authorize('create', 'Equipo'),
-  generarPlantillaImportacionEquipos
 )
 
 router.post('/previsualizar-importacion', 

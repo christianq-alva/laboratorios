@@ -31,10 +31,9 @@ import {
   SwapHoriz,
   TrendingUp,
   TrendingDown,
-  Search
 } from '@mui/icons-material'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
-import { insumoService, type Insumo, type InsumoSaldo } from '../../services/insumoService'
+import { insumoService, type InsumoSaldo } from '../../services/insumoService'
 
 interface NuevoMovimientoModalProps {
   open: boolean

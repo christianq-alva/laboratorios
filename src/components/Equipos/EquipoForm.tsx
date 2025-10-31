@@ -31,6 +31,7 @@ interface EquipoFormProps {
 
 export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess, equipo }) => {
   const [formData, setFormData] = useState({
+    codigo: '',
     nombre: '',
     descripcion: '',
     marca: '',
@@ -104,6 +105,7 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
     }
 
     setFormData({
+      codigo: equipoData.codigo,
       nombre: equipoData.nombre,
       descripcion: equipoData.descripcion || '',
       marca: equipoData.marca || '',
@@ -122,6 +124,7 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
 
   const resetForm = () => {
     setFormData({
+      codigo: '',
       nombre: '',
       descripcion: '',
       marca: '',
@@ -165,6 +168,7 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
       // Preparar datos
       const equipoData = {
         ...formData,
+        codigo: formData.codigo.trim(),
         nombre: formData.nombre.trim(),
         descripcion: formData.descripcion.trim(),
         marca: formData.marca.trim(),
@@ -248,28 +252,15 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
               </Typography>
               
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {isEditing && equipo?.codigo && (
-                  <TextField
-                    fullWidth
-                    label="Código de Activo"
-                    value={equipo.codigo}
-                    disabled
-                    InputProps={{
-                      startAdornment: (
-                        <Box sx={{ mr: 1, color: 'primary.main', fontWeight: 600 }}>
-                          EQP-
-                        </Box>
-                      )
-                    }}
-                    sx={{
-                      '& .MuiInputBase-input': {
-                        fontFamily: 'monospace',
-                        fontWeight: 600,
-                        color: 'primary.main'
-                      }
-                    }}
-                  />
-                )}
+                <TextField
+                  fullWidth
+                  label="Código de Activo"
+                  value={formData.codigo}
+                  onChange={(e) => setFormData(prev => ({ ...prev, codigo: e.target.value }))}
+                  placeholder="Ej: EQP-0001"
+                  disabled={loading}
+                  required
+                />
                 
                 <TextField
                   fullWidth
@@ -460,7 +451,7 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
         
         <Button
           onClick={handleSubmit}
-          disabled={loading || !formData.nombre.trim()}
+          disabled={loading || !formData.nombre.trim() || !formData.codigo.trim()}
           variant="contained"
           sx={{ borderRadius: 2, px: 3 }}
         >

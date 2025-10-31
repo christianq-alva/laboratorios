@@ -31,7 +31,6 @@ import {
   FileDownload,
   Inventory
 } from '@mui/icons-material'
-import { insumoService } from '../../services/insumoService'
 import { laboratorioService } from '../../services/laboratorioService'
 
 interface Laboratorio {
@@ -100,13 +99,13 @@ export const ReporteStockBajo: React.FC = () => {
     setLoading(true)
     setError(null)
     try {
-      const labId = laboratorioSeleccionado === '' ? undefined : laboratorioSeleccionado
-      const response = await insumoService.getInsumosStockBajo(labId)
+      //const labId = laboratorioSeleccionado === '' ? undefined : laboratorioSeleccionado
+      //const response = await insumoService.getInsumosStockBajo(labId)
       
-      if (response.success) {
-        setInsumos(response.data)
-        setEstadisticas(response.estadisticas)
-      }
+      //if (response.success) {
+        setInsumos([]) //response.data
+        setEstadisticas(null) //response.estadisticas
+      //}
     } catch (error: any) {
       setError(error.message || 'Error al cargar el reporte')
       console.error('Error al cargar reporte:', error)

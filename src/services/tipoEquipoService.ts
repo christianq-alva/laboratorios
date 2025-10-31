@@ -56,8 +56,10 @@ export const tipoEquipoService = {
   },
 
   // Contar equipos por tipo
-  async countEquipos(id: number): Promise<{ success: boolean; data: { count: number } }> {
-    const response = await api.get(`/tipos-equipo/${id}/count-equipos`)
+  async getAllWithCountEquipos(): Promise<{ success: boolean; data: TipoEquipo[] }> {
+    console.log('Estamos avanzando...')
+    const response = await api.get('/tipos-equipo/with-count-equipos')
+    console.log('Respuesta del servidor:', response.data)
     return response.data
   }
 }

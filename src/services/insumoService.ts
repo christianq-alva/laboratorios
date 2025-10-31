@@ -412,7 +412,7 @@ class InsumoService {
     }
   }
 
-  // Obtener lotes con saldo disponible por laboratorio e insumo
+  //Obtener lotes con saldo disponible por laboratorio e insumo
   async getLotesConSaldo(laboratorioId: number, insumoId?: number): Promise<{
     success: boolean
     data: Array<{

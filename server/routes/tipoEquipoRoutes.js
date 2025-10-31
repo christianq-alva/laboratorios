@@ -1,5 +1,13 @@
 import express from 'express'
-import { tipoEquipoController } from '../controllers/tipoEquipoController.js'
+import {
+  getAll,
+  getActivos,
+  getById,
+  createTipoEquipo,
+  updateTipoEquipo,
+  deleteTipoEquipo,
+  getAllWithCountEquipos
+} from '../controllers/tipoEquipoController.js'
 import { authenticateToken } from '../middleware/auth.js'
 import { authorize } from '../middleware/authorize.js'
 
@@ -12,44 +20,45 @@ router.use(authenticateToken)
 router.get(
   '/',
   authorize('read', 'TipoEquipo'),
-  tipoEquipoController.getAll
+  getAll
 )
 
 router.get(
   '/activos',
   authorize('read', 'TipoEquipo'),
-  tipoEquipoController.getActivos
+  getActivos
+)
+
+router.get(
+  '/with-count-equipos',
+  authorize('read', 'TipoEquipo'),
+  getAllWithCountEquipos
 )
 
 router.get(
   '/:id',
   authorize('read', 'TipoEquipo'),
-  tipoEquipoController.getById
-)
-
-router.get(
-  '/:id/count-equipos',
-  authorize('read', 'TipoEquipo'),
-  tipoEquipoController.countEquipos
+  getById
 )
 
 router.post(
   '/',
   authorize('create', 'TipoEquipo'),
-  tipoEquipoController.create
+  createTipoEquipo
 )
 
 router.put(
   '/:id',
   authorize('update', 'TipoEquipo'),
-  tipoEquipoController.update
+  updateTipoEquipo
 )
 
 router.delete(
   '/:id',
   authorize('delete', 'TipoEquipo'),
-  tipoEquipoController.delete
+  deleteTipoEquipo
 )
+
 
 export default router
 

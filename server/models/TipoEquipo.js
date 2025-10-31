@@ -1,8 +1,8 @@
 import { pool } from '../config/database.js'
 
-export class TipoEquipo {
+export const TipoEquipo = {
   // Obtener todos los tipos de equipo
-  static async getAll() {
+  getAll: async () => {
     try {
       const [rows] = await pool.execute(`
         SELECT 
@@ -15,16 +15,16 @@ export class TipoEquipo {
           CASE WHEN nombre = 'Otro' THEN 1 ELSE 0 END,
           nombre ASC
       `)
-      
+
       return rows
     } catch (error) {
       console.error('❌ Error al obtener tipos de equipo:', error)
       throw error
     }
-  }
+  },
 
   // Obtener solo tipos activos (sin filtro de estado)
-  static async getActivos() {
+  getActivos: async () => {
     try {
       const [rows] = await pool.execute(`
         SELECT 
@@ -37,16 +37,16 @@ export class TipoEquipo {
           CASE WHEN nombre = 'Otro' THEN 1 ELSE 0 END,
           nombre ASC
       `)
-      
+
       return rows
     } catch (error) {
       console.error('❌ Error al obtener tipos activos:', error)
       throw error
     }
-  }
+  },
 
   // Obtener un tipo por ID
-  static async getById(id) {
+  getById: async (id) => {
     try {
       const [rows] = await pool.execute(`
         SELECT 
@@ -57,16 +57,16 @@ export class TipoEquipo {
         FROM tipos_equipo
         WHERE id = ?
       `, [id])
-      
+
       return rows[0]
     } catch (error) {
       console.error('❌ Error al obtener tipo por ID:', error)
       throw error
     }
-  }
+  },
 
   // Crear un nuevo tipo de equipo
-  static async create(data) {
+  create: async (data) => {
     const connection = await pool.getConnection()
     try {
       await connection.beginTransaction()
@@ -96,10 +96,10 @@ export class TipoEquipo {
     } finally {
       connection.release()
     }
-  }
+  },
 
   // Actualizar un tipo de equipo
-  static async update(id, data) {
+  update: async (id, data) => {
     const connection = await pool.getConnection()
     try {
       await connection.beginTransaction()
@@ -130,10 +130,10 @@ export class TipoEquipo {
     } finally {
       connection.release()
     }
-  }
+  },
 
   // Eliminar un tipo de equipo (solo si no tiene equipos asociados)
-  static async delete(id) {
+  delete: async (id) => {
     const connection = await pool.getConnection()
     try {
       await connection.beginTransaction()
@@ -162,19 +162,22 @@ export class TipoEquipo {
     } finally {
       connection.release()
     }
-  }
+  },
 
-  // Contar equipos por tipo
-  static async countEquiposByTipo(id) {
+  // Listar tipos de equipo con conteo de equipos
+  getAllWithCountEquipos: async () => {
     try {
-      const [rows] = await pool.execute(
-        'SELECT COUNT(*) as count FROM equipos WHERE tipo_equipo_id = ?',
-        [id]
-      )
-      
-      return rows[0].count
+      const [rows] = await pool.execute(`	
+        SELECT te.id, te.nombre, te.descripcion, te.created_at, COUNT(e.id) as count_equipos 
+        FROM tipos_equipo te
+        LEFT JOIN equipos e ON te.id = e.tipo_equipo_id
+        GROUP BY te.id
+        ORDER BY te.nombre ASC
+      `)
+
+      return rows
     } catch (error) {
-      console.error('❌ Error al contar equipos por tipo:', error)
+      console.error('❌ Error al listar tipos de equipo con conteo de equipos:', error)
       throw error
     }
   }

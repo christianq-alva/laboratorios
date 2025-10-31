@@ -95,6 +95,7 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
 
   useEffect(() => {
     if (open) {
+      if (!open) console.log("loadingData", loadingData) //Observación: Hay que borrarlo      
       loadInitialData()
     } else {
       handleClose
@@ -387,7 +388,7 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
                               <TableCell>
                                 <Chip label={dato.insumo_codigo} size="small" color="primary" variant="outlined" />
                               </TableCell>
-                              
+
                               <TableCell>{dato.insumo_nombre}</TableCell>
                               <TableCell>{dato.insumo_unidad}</TableCell>
                               <TableCell>{dato.insumo_lote}</TableCell>

@@ -17,7 +17,8 @@ import {
 } from '@mui/material'
 import { Close } from '@mui/icons-material'
 import { docenteService } from '../../services/docenteService'
-import type { Docente, CreateDocenteData, Escuela } from '../../services/docenteService'
+import type { Docente, DocenteData} from '../../services/docenteService'
+import { escuelaService, type Escuela } from '../../services/escuelaService'
 
 interface DocenteFormProps {
   open: boolean
@@ -32,7 +33,7 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
   onSuccess,
   docente,
 }) => {
-  const [formData, setFormData] = useState<CreateDocenteData>({
+  const [formData, setFormData] = useState<DocenteData>({
     nombre: '',
     correo: '',
     escuela_id: 0,
@@ -48,10 +49,8 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
   const fetchEscuelas = async () => {
     try {
       setLoadingEscuelas(true)
-      const result = await docenteService.getEscuelas()
-      if (result.success) {
-        setEscuelas(result.data || [])
-      }
+      const result = await escuelaService.getAll()
+      setEscuelas(result.data || [])
     } catch (err) {
       console.error('Error loading escuelas:', err)
     } finally {
@@ -100,7 +99,7 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
     }
   }, [docente, open, escuelas])
 
-  const handleChange = (field: keyof CreateDocenteData) => (
+  const handleChange = (field: keyof DocenteData) => (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const value = field === 'escuela_id' ? parseInt(event.target.value) || 0 : event.target.value

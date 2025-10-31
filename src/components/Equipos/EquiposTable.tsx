@@ -29,7 +29,6 @@ interface EquiposTableProps {
   onDelete?: (equipo: Equipo) => void
   refresh?: boolean
   onRefreshComplete?: () => void
-  vistaSimple?: boolean
 }
 
 export const EquiposTable: React.FC<EquiposTableProps> = ({
@@ -37,7 +36,6 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
   onDelete,
   refresh,
   onRefreshComplete,
-  vistaSimple = false
 }) => {
   const [equipos, setEquipos] = useState<Equipo[]>([])
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
@@ -50,7 +48,7 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
   const loadData = async () => {
     setLoading(true)
     setError(null)
-    
+
     try {
       // Cargar laboratorios para el filtro
       const laboratoriosResponse = await laboratorioService.getAll()
@@ -58,18 +56,13 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
 
       // Cargar equipos
       let equiposResponse
-      if (vistaSimple) {
-        // Usar vista simple (sin agrupar)
-        equiposResponse = await equipoService.getAllSimple()
+      // Usar vista normal (agrupada)
+      if (selectedLaboratorio === 'all') {
+        equiposResponse = await equipoService.getAll()
       } else {
-        // Usar vista normal (agrupada)
-        if (selectedLaboratorio === 'all') {
-          equiposResponse = await equipoService.getAll()
-        } else {
-          equiposResponse = await equipoService.getByLaboratorio(selectedLaboratorio)
-        }
+        equiposResponse = await equipoService.getByLaboratorio(selectedLaboratorio)
       }
-      
+
       setEquipos(equiposResponse.data)
     } catch (err: any) {
       setError(err.message)
@@ -92,11 +85,6 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
     }
   }, [refresh])
 
-  // Efecto para recargar cuando cambia la vista
-  useEffect(() => {
-    loadData()
-  }, [vistaSimple])
-
   // Efecto para recargar cuando cambia el laboratorio seleccionado
   useEffect(() => {
     if (laboratorios.length > 0) {
@@ -117,7 +105,7 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
   // Función para filtrar equipos por término de búsqueda
   const filteredEquipos = equipos.filter(equipo => {
     if (!searchTerm) return true
-    
+
     const searchLower = searchTerm.toLowerCase()
     return (
       (equipo.codigo && equipo.codigo.toLowerCase().includes(searchLower)) ||
@@ -172,23 +160,23 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
               </Select>
             </FormControl>
           </Box>
-          
+
           {/* Resumen de equipos */}
           {equipos.length > 0 && (
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <Chip 
+              <Chip
                 label={`${filteredEquipos.length} de ${equipos.length} equipo${equipos.length !== 1 ? 's' : ''}`}
                 color="primary"
                 variant="outlined"
                 size="small"
               />
-              <Chip 
+              <Chip
                 label={`${equipos.filter(e => e.estado === 'Operativo').length} operativo${equipos.filter(e => e.estado === 'Operativo').length !== 1 ? 's' : ''}`}
                 color="success"
                 variant="outlined"
                 size="small"
               />
-              <Chip 
+              <Chip
                 label={`${equipos.filter(e => e.estado === 'En Mantenimiento').length} en mantenimiento`}
                 color="warning"
                 variant="outlined"
@@ -249,29 +237,22 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
               <TableCell sx={{ fontWeight: 600, width: '10%' }}>Fecha Adq.</TableCell>
               <TableCell sx={{ fontWeight: 600, width: '8%' }}>Último Mant.</TableCell>
               <TableCell sx={{ fontWeight: 600, width: '8%' }}>Próximo Mant.</TableCell>
-              {vistaSimple && (
-                <>
-                  <TableCell sx={{ fontWeight: 600, width: '8%' }}>Movimientos</TableCell>
-                  <TableCell sx={{ fontWeight: 600, width: '10%' }}>Laboratorios</TableCell>
-                  <TableCell sx={{ fontWeight: 600, width: '12%' }}>Comentarios</TableCell>
-                </>
-              )}
               <TableCell sx={{ fontWeight: 600, width: '3%' }} align="center">Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredEquipos.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={vistaSimple ? 14 : 11} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={11} align="center" sx={{ py: 4 }}>
                   <Box sx={{ textAlign: 'center' }}>
                     <Build sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
                     <Typography variant="h6" color="text.secondary" gutterBottom>
                       No hay equipos registrados
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {searchTerm 
+                      {searchTerm
                         ? `No se encontraron equipos que coincidan con "${searchTerm}"`
-                        : selectedLaboratorio === 'all' 
+                        : selectedLaboratorio === 'all'
                           ? 'No se han registrado equipos en el sistema'
                           : 'No hay equipos registrados en este laboratorio'
                       }
@@ -283,9 +264,9 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
               filteredEquipos.map((equipo) => (
                 <TableRow key={equipo.id} hover>
                   <TableCell>
-                    <Chip 
-                      label={equipo.codigo || 'N/A'} 
-                      size="small" 
+                    <Chip
+                      label={equipo.codigo || 'N/A'}
+                      size="small"
                       color="primary"
                       variant="outlined"
                       sx={{ fontFamily: 'monospace', fontWeight: 600 }}
@@ -307,7 +288,7 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
                     </Box>
                   </TableCell>
                   <TableCell>
-                    <Chip 
+                    <Chip
                       label={equipo.tipo_equipo_nombre || 'Sin tipo'}
                       size="small"
                       color={equipo.tipo_equipo_nombre ? 'default' : 'warning'}
@@ -316,7 +297,7 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
                     />
                   </TableCell>
                   <TableCell>
-                    <Chip 
+                    <Chip
                       label={equipo.laboratorio_nombre || 'Sin asignar'}
                       size="small"
                       color={equipo.laboratorio_nombre ? 'primary' : 'default'}
@@ -340,7 +321,7 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Chip 
+                    <Chip
                       label={equipo.estado}
                       color={getEstadoColor(equipo.estado)}
                       variant="filled"
@@ -380,58 +361,12 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
                       </Typography>
                     )}
                   </TableCell>
-                  {vistaSimple && (
-                    <>
-                      <TableCell>
-                        <Chip 
-                          label={equipo.total_movimientos || 0}
-                          color={equipo.total_movimientos && equipo.total_movimientos > 0 ? "primary" : "default"}
-                          variant="outlined"
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                            {equipo.laboratorios_asignados || 0} laboratorio(s)
-                          </Typography>
-                          {equipo.laboratorios_nombres && (
-                            <Typography variant="caption" color="text.secondary">
-                              {equipo.laboratorios_nombres}
-                            </Typography>
-                          )}
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        {equipo.comentarios ? (
-                          <Tooltip title={equipo.comentarios}>
-                            <Typography 
-                              variant="body2" 
-                              sx={{ 
-                                maxWidth: 150,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                                cursor: 'help'
-                              }}
-                            >
-                              {equipo.comentarios}
-                            </Typography>
-                          </Tooltip>
-                        ) : (
-                          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                            Sin comentarios
-                          </Typography>
-                        )}
-                      </TableCell>
-                    </>
-                  )}
                   <TableCell align="center">
                     <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
                       {onEdit && (
                         <Tooltip title="Editar equipo">
-                          <IconButton 
-                            size="small" 
+                          <IconButton
+                            size="small"
                             onClick={() => onEdit(equipo)}
                             color="primary"
                           >
@@ -441,8 +376,8 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
                       )}
                       {onDelete && (
                         <Tooltip title="Eliminar equipo">
-                          <IconButton 
-                            size="small" 
+                          <IconButton
+                            size="small"
                             onClick={() => onDelete(equipo)}
                             color="error"
                           >

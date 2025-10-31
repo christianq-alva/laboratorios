@@ -22,10 +22,9 @@ import {
   Button,
   TablePagination
 } from '@mui/material'
-import { Edit, Delete, Inventory, Science, Search, Clear, CloudUpload, Settings } from '@mui/icons-material'
+import { Edit, Delete, Inventory, Science, Search, Clear, CloudUpload } from '@mui/icons-material'
 import { insumoService, type Insumo, type InsumoSaldo} from '../../services/insumoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
-// import { ConfigStockMinimoDialog } from './ConfigStockMinimoDialog'
 
 interface InsumosTableProps {
   onEdit?: (insumo: Insumo) => void
@@ -53,9 +52,6 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   
-  // Estados para configuración de stock mínimo
-  const [configStockDialogOpen, setConfigStockDialogOpen] = useState(false)
-  const [insumoParaConfigurar, setInsumoParaConfigurar] = useState<InsumoSaldo | null>(null)
 
   // Cargar datos
   const loadData = async () => {
@@ -169,22 +165,6 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
   const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10))
     setPage(0)
-  }
-
-  // Handler para abrir el diálogo de configuración de stock mínimo
-  const handleOpenConfigStock = (insumo: InsumoSaldo) => {
-    setInsumoParaConfigurar(insumo)
-    setConfigStockDialogOpen(true)
-  }
-
-  const handleCloseConfigStock = () => {
-    setConfigStockDialogOpen(false)
-    setInsumoParaConfigurar(null)
-  }
-
-  const handleConfigStockSuccess = () => {
-    // Opcional: Recargar datos si es necesario
-    loadData()
   }
 
   // Calcular los insumos a mostrar según la página actual
@@ -438,15 +418,6 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
                           </IconButton>
                         </Tooltip>
                       )}
-                      <Tooltip title="Configurar stock mínimo">
-                        <IconButton 
-                          size="small" 
-                          onClick={() => handleOpenConfigStock(insumo)}
-                          color="secondary"
-                        >
-                          <Settings />
-                        </IconButton>
-                      </Tooltip>
                     </Box>
                   </TableCell>
                 </TableRow>
@@ -488,17 +459,6 @@ export const InsumosTable: React.FC<InsumosTableProps> = ({
             </Typography>
           </Box>
         </Paper>
-      )}
-
-      {/* Diálogo de Configuración de Stock Mínimo */}
-      {insumoParaConfigurar && (
-        <ConfigStockMinimoDialog
-          open={configStockDialogOpen}
-          onClose={handleCloseConfigStock}
-          insumoId={insumoParaConfigurar.id}
-          insumoNombre={insumoParaConfigurar.nombre}
-          onSuccess={handleConfigStockSuccess}
-        />
       )}
     </Box>
   )

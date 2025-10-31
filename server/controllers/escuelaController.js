@@ -1,50 +1,19 @@
-import { pool } from '../config/database.js'
+import { Escuela } from '../models/Escuela.js'
 
 // Obtener todas las escuelas
 export const getEscuelas = async (req, res) => {
   try {
-    // Primero verificar qué columnas existen en la tabla escuelas
-    const [columns] = await pool.execute(`
-      SELECT COLUMN_NAME 
-      FROM INFORMATION_SCHEMA.COLUMNS 
-      WHERE TABLE_NAME = 'escuelas' AND TABLE_SCHEMA = DATABASE()
-    `)
-    
-    console.log('📋 Columnas disponibles en tabla escuelas:', columns.map(c => c.COLUMN_NAME))
-    
-    const hasDescripcion = columns.some(c => c.COLUMN_NAME === 'descripcion')
-    const hasCodigo = columns.some(c => c.COLUMN_NAME === 'codigo')
-    const hasCreatedAt = columns.some(c => c.COLUMN_NAME === 'created_at')
-    
-    // Construir consulta basada en columnas disponibles
-    let selectFields = 'e.id, e.nombre'
-    if (hasCodigo) selectFields += ', e.codigo'
-    if (hasDescripcion) selectFields += ', e.descripcion'
-    if (hasCreatedAt) selectFields += ', e.created_at'
-    
-    const [escuelas] = await pool.execute(`
-      SELECT ${selectFields}, 
-        COUNT(DISTINCT l.id) as total_laboratorios,
-        COUNT(DISTINCT d.id) as total_docentes
-      FROM escuelas e
-      LEFT JOIN laboratorios l ON e.id = l.escuela_id
-      LEFT JOIN docentes d ON e.id = d.escuela_id
-      GROUP BY e.id
-      ORDER BY e.nombre ASC
-    `)
-    
-    console.log('✅ Escuelas encontradas:', escuelas.length)
-    
-    res.json({ 
-      success: true, 
+    const escuelas = await Escuela.getAll()
+
+    res.status(200).json({
+      success: true,
       data: escuelas
     })
   } catch (error) {
-    console.error('❌ Error en getEscuelas:', error)
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Error al obtener escuelas',
-      error: error.message 
+      error: error.message
     })
   }
 }
@@ -53,25 +22,29 @@ export const getEscuelas = async (req, res) => {
 export const getEscuelaById = async (req, res) => {
   try {
     const { id } = req.params
-    
-    const [escuelas] = await pool.execute(
-      'SELECT * FROM escuelas WHERE id = ?',
-      [id]
-    )
-    
-    if (escuelas.length === 0) {
+    const idNum = parseInt(id, 10)
+
+    if (isNaN(idNum) || idNum <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID inválido'
+      })
+    }
+
+    const escuela = await Escuela.getById(idNum)
+
+    if (!escuela) {
       return res.status(404).json({
         success: false,
         message: 'Escuela no encontrada'
       })
     }
-    
-    res.json({
+
+    res.status(200).json({
       success: true,
-      data: escuelas[0]
+      data: escuela
     })
   } catch (error) {
-    console.error('Error en getEscuelaById:', error)
     res.status(500).json({
       success: false,
       message: 'Error al obtener la escuela',
@@ -83,8 +56,8 @@ export const getEscuelaById = async (req, res) => {
 // Crear nueva escuela
 export const createEscuela = async (req, res) => {
   try {
-    const { nombre, descripcion, codigo } = req.body
-    
+    const { nombre } = req.body
+
     // Validaciones
     if (!nombre || !nombre.trim()) {
       return res.status(400).json({
@@ -92,67 +65,31 @@ export const createEscuela = async (req, res) => {
         message: 'El nombre de la escuela es requerido'
       })
     }
-    
+
     // Verificar si ya existe una escuela con ese nombre
-    const [existingEscuela] = await pool.execute(
-      'SELECT id FROM escuelas WHERE nombre = ?',
-      [nombre.trim()]
-    )
-    
-    if (existingEscuela.length > 0) {
-      return res.status(400).json({
+    const existingEscuela = await Escuela.existsByName(nombre.trim())
+
+    if (existingEscuela) {
+      return res.status(409).json({
         success: false,
         message: 'Ya existe una escuela con ese nombre'
       })
     }
-    
-    // Verificar qué columnas existen
-    const [columns] = await pool.execute(`
-      SELECT COLUMN_NAME 
-      FROM INFORMATION_SCHEMA.COLUMNS 
-      WHERE TABLE_NAME = 'escuelas' AND TABLE_SCHEMA = DATABASE()
-    `)
-    
-    const hasDescripcion = columns.some(c => c.COLUMN_NAME === 'descripcion')
-    const hasCodigo = columns.some(c => c.COLUMN_NAME === 'codigo')
-    
-    // Construir consulta dinámica
-    let fields = 'nombre'
-    let placeholders = '?'
-    let values = [nombre.trim()]
-    
-    if (hasCodigo && codigo) {
-      fields += ', codigo'
-      placeholders += ', ?'
-      values.push(codigo.trim())
-    }
-    
-    if (hasDescripcion && descripcion) {
-      fields += ', descripcion'
-      placeholders += ', ?'
-      values.push(descripcion.trim())
-    }
-    
+
     // Insertar escuela
-    const [result] = await pool.execute(
-      `INSERT INTO escuelas (${fields}) VALUES (${placeholders})`,
-      values
-    )
-    
-    console.log('✅ Escuela creada con ID:', result.insertId)
-    
+    const insertId = await Escuela.create(nombre.trim())
+
+
     res.status(201).json({
       success: true,
       data: {
-        id: result.insertId,
-        nombre: nombre.trim(),
-        ...(hasCodigo && codigo ? { codigo: codigo.trim() } : {}),
-        ...(hasDescripcion && descripcion ? { descripcion: descripcion.trim() } : {})
+        id: insertId,
+        nombre: nombre.trim()
       },
       message: 'Escuela creada exitosamente'
     })
   } catch (error) {
-    console.error('❌ Error en createEscuela:', error)
+    console.error('❌ Error al crear la escuela:', error)
     res.status(500).json({
       success: false,
       message: 'Error al crear la escuela',
@@ -165,21 +102,26 @@ export const createEscuela = async (req, res) => {
 export const updateEscuela = async (req, res) => {
   try {
     const { id } = req.params
-    const { nombre, descripcion, codigo } = req.body
-    
+    const idNum = parseInt(id, 10)
+    const { nombre } = req.body
+
+    if (isNaN(idNum) || idNum <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID inválido'
+      })
+    }
+
     // Verificar que la escuela existe
-    const [escuelaCheck] = await pool.execute(
-      'SELECT * FROM escuelas WHERE id = ?',
-      [id]
-    )
-    
-    if (escuelaCheck.length === 0) {
+    const escuelaCheck = await Escuela.exists(idNum)
+
+    if (!escuelaCheck) {
       return res.status(404).json({
         success: false,
         message: 'Escuela no encontrada'
       })
     }
-    
+
     // Validaciones
     if (!nombre || !nombre.trim()) {
       return res.status(400).json({
@@ -187,66 +129,36 @@ export const updateEscuela = async (req, res) => {
         message: 'El nombre de la escuela es requerido'
       })
     }
-    
+
     // Verificar si ya existe otra escuela con ese nombre
-    const [existingEscuela] = await pool.execute(
-      'SELECT id FROM escuelas WHERE nombre = ? AND id != ?',
-      [nombre.trim(), id]
-    )
-    
-    if (existingEscuela.length > 0) {
-      return res.status(400).json({
+    const existingEscuela = await Escuela.existsByNameExcludingId(nombre.trim(), idNum)
+
+    if (existingEscuela) {
+      return res.status(409).json({
         success: false,
         message: 'Ya existe otra escuela con ese nombre'
       })
     }
-    
-    // Verificar qué columnas existen
-    const [columns] = await pool.execute(`
-      SELECT COLUMN_NAME 
-      FROM INFORMATION_SCHEMA.COLUMNS 
-      WHERE TABLE_NAME = 'escuelas' AND TABLE_SCHEMA = DATABASE()
-    `)
-    
-    const hasDescripcion = columns.some(c => c.COLUMN_NAME === 'descripcion')
-    const hasCodigo = columns.some(c => c.COLUMN_NAME === 'codigo')
-    
-    // Construir consulta dinámica
-    let setClause = 'nombre = ?'
-    let values = [nombre.trim()]
-    
-    if (hasCodigo) {
-      setClause += ', codigo = ?'
-      values.push(codigo?.trim() || null)
-    }
-    
-    if (hasDescripcion) {
-      setClause += ', descripcion = ?'
-      values.push(descripcion?.trim() || null)
-    }
-    
-    values.push(id)
-    
+
     // Actualizar escuela
-    await pool.execute(
-      `UPDATE escuelas SET ${setClause} WHERE id = ?`,
-      values
-    )
-    
-    console.log('✅ Escuela actualizada:', id)
-    
-    res.json({
+    const affectedRows = await Escuela.update(idNum, { nombre: nombre.trim(), descripcion: null, codigo: null })
+
+    if (affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Escuela no encontrada'
+      })
+    }
+
+    res.status(200).json({
       success: true,
       data: {
-        id: parseInt(id),
-        nombre: nombre.trim(),
-        ...(hasCodigo ? { codigo: codigo?.trim() || null } : {}),
-        ...(hasDescripcion ? { descripcion: descripcion?.trim() || null } : {})
+        id: idNum,
+        nombre: nombre.trim()
       },
       message: 'Escuela actualizada exitosamente'
     })
   } catch (error) {
-    console.error('❌ Error en updateEscuela:', error)
     res.status(500).json({
       success: false,
       message: 'Error al actualizar la escuela',
@@ -259,69 +171,67 @@ export const updateEscuela = async (req, res) => {
 export const deleteEscuela = async (req, res) => {
   try {
     const { id } = req.params
-    
+    const idNum = parseInt(id, 10)
+
+    if (isNaN(idNum) || idNum <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID inválido'
+      })
+    }
+
     // Verificar que la escuela existe
-    const [escuelaCheck] = await pool.execute(
-      'SELECT * FROM escuelas WHERE id = ?',
-      [id]
-    )
-    
-    if (escuelaCheck.length === 0) {
+    const escuelaCheck = await Escuela.exists(idNum)
+
+    if (!escuelaCheck) {
       return res.status(404).json({
         success: false,
         message: 'Escuela no encontrada'
       })
     }
-    
+
     // Verificar si tiene relaciones antes de eliminar
-    const [laboratoriosCount] = await pool.execute(
-      'SELECT COUNT(*) as total FROM laboratorios WHERE escuela_id = ?',
-      [id]
-    )
-    
-    const [docentesCount] = await pool.execute(
-      'SELECT COUNT(*) as total FROM docentes WHERE escuela_id = ?',
-      [id]
-    )
-    
-    // Si tiene relaciones, informar al usuario
-    const totalRelaciones = laboratoriosCount[0].total + docentesCount[0].total
-    
-    if (totalRelaciones > 0) {
+    const relations = await Escuela.checkRelations(idNum)
+
+    if (relations.total > 0) {
       const relaciones = []
-      if (laboratoriosCount[0].total > 0) {
-        relaciones.push(`${laboratoriosCount[0].total} laboratorio(s)`)
+      if (relations.docentes > 0) {
+        relaciones.push(`${relations.docentes} docente(s)`)
       }
-      if (docentesCount[0].total > 0) {
-        relaciones.push(`${docentesCount[0].total} docente(s)`)
-      }
-      
-      return res.status(400).json({
+
+      // Obtener nombre para el mensaje
+      const escuela = await Escuela.getById(idNum)
+      return res.status(409).json({
         success: false,
-        message: `No se puede eliminar la escuela "${escuelaCheck[0].nombre}" porque está relacionada con otras tablas del sistema y tiene datos asociados: ${relaciones.join(', ')}. Primero debes eliminar o reasignar estos registros para poder eliminar la escuela.`
+        message: `No se puede eliminar. La escuela "${escuela.nombre}" está siendo usada en el sistema: ${relaciones.join(', ')}.`
       })
     }
-    
+
     // Si no tiene relaciones, proceder con la eliminación
-    await pool.execute('DELETE FROM escuelas WHERE id = ?', [id])
-    
-    console.log('✅ Escuela eliminada:', id)
-    
-    res.json({
+    const affectedRows = await Escuela.delete(idNum)
+
+    if (affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Escuela no encontrada'
+      })
+    }
+
+    res.status(200).json({
       success: true,
       message: 'Escuela eliminada exitosamente'
     })
+
   } catch (error) {
-    console.error('Error en deleteEscuela:', error)
-    
+
     // Manejar errores de restricción de clave foránea
     if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.code === 'ER_ROW_IS_REFERENCED') {
-      return res.status(400).json({
+      return res.status(409).json({
         success: false,
         message: 'No se puede eliminar la escuela porque está relacionada con otras tablas del sistema y tiene datos asociados (laboratorios, docentes u otros registros). Primero debes eliminar o reasignar estos registros para poder eliminar la escuela.'
       })
     }
-    
+
     res.status(500).json({
       success: false,
       message: 'Error al eliminar la escuela',

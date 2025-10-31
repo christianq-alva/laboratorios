@@ -35,6 +35,7 @@ import { horarioService, type CreateHorarioData } from '../../services/horarioSe
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
 import { docenteService, type Docente } from '../../services/docenteService'
 import { TIME_BLOCKS } from '../../utils/timeBlocks'
+import { escuelaService } from '../../services/escuelaService'
 
 interface HorarioRecurrenteProps {
   open: boolean
@@ -139,7 +140,7 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
       const [labsRes, docentesRes, escuelasRes, ciclosRes] = await Promise.all([
         laboratorioService.getAll(),
         docenteService.getAll(),
-        horarioService.getEscuelas(),
+        escuelaService.getAll(),
         horarioService.getCiclos()
       ])
 

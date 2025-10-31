@@ -1,11 +1,12 @@
 import express from 'express'
 import { authenticateToken } from '../middleware/auth.js'
-import { 
-  getEscuelas, 
+import { authorize } from '../middleware/authorize.js'
+import {
+  getEscuelas,
   getEscuelaById,
-  createEscuela, 
-  updateEscuela, 
-  deleteEscuela 
+  createEscuela,
+  updateEscuela,
+  deleteEscuela
 } from '../controllers/escuelaController.js'
 
 const router = express.Router()
@@ -13,20 +14,40 @@ const router = express.Router()
 // Todas las rutas requieren autenticación
 router.use(authenticateToken)
 
-// GET /api/escuelas - Obtener todas las escuelas
-router.get('/', getEscuelas)
+// Obtener todas las escuelas
+router.get(
+  '/',
+  authorize('read', 'Escuela'),
+  getEscuelas
+)
 
-// GET /api/escuelas/:id - Obtener una escuela por ID
-router.get('/:id', getEscuelaById)
+// Obtener una escuela por ID
+router.get(
+  '/:id', 
+  authorize('read', 'Escuela'), 
+  getEscuelaById
+)
 
-// POST /api/escuelas - Crear nueva escuela
-router.post('/', createEscuela)
+// Crear nueva escuela
+router.post(
+  '/', 
+  authorize('create', 'Escuela'), 
+  createEscuela
+)
 
-// PUT /api/escuelas/:id - Actualizar escuela
-router.put('/:id', updateEscuela)
+// Actualizar escuela
+router.put(
+  '/:id', 
+  authorize('update', 'Escuela'), 
+  updateEscuela
+)
 
-// DELETE /api/escuelas/:id - Eliminar escuela
-router.delete('/:id', deleteEscuela)
+// Eliminar escuela
+router.delete(
+  '/:id', 
+  authorize('delete', 'Escuela'), 
+  deleteEscuela
+)
 
 export default router
 

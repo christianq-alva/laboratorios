@@ -6,60 +6,44 @@ import {
   getDocente,
   createDocente,
   updateDocente,
-  deleteDocente,
-  getDocenteHorarios,
-  getEscuelas
+  deleteDocente
 } from '../controllers/docenteController.js'
 
 const router = express.Router()
 
-// 🏫 OBTENER ESCUELAS (para el selector) - ANTES de las rutas dinámicas
-router.get('/utils/escuelas', 
-  authenticateToken,
-  authorize('read', 'Docente'),
-  getEscuelas
-)
-
-// 📋 LISTAR DOCENTES
+// Obtener todos los docentes
 router.get('/', 
   authenticateToken,
   authorize('read', 'Docente'),
   getDocentes
 )
 
-// 🔍 VER DOCENTE ESPECÍFICO
+// Obtener docente por ID
 router.get('/:id', 
   authenticateToken,
   authorize('read', 'Docente'),
   getDocente
 )
 
-// ➕ CREAR DOCENTE
+// Crear nuevo docente
 router.post('/', 
   authenticateToken,
   authorize('create', 'Docente'),
   createDocente
 )
 
-// ✏️ ACTUALIZAR DOCENTE
+// Actualizar docente
 router.put('/:id', 
   authenticateToken,
   authorize('update', 'Docente'),
   updateDocente
 )
 
-// 🗑️ ELIMINAR DOCENTE
+// Eliminar docente
 router.delete('/:id', 
   authenticateToken,
   authorize('delete', 'Docente'),
   deleteDocente
-)
-
-// 📅 VER HORARIOS DE UN DOCENTE
-router.get('/:id/horarios', 
-  authenticateToken,
-  authorize('read', 'Docente'),
-  getDocenteHorarios
 )
 
 export default router 

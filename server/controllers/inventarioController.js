@@ -9,7 +9,8 @@ export const getAllInsumosWithStock = async (req, res) => {
   
       const [insumos] = await Inventario.getAllInsumosConSaldo(req.user.rol, req.user.laboratorio_ids)
   
-      res.json({
+      res.status(200).json({
+        success: true,
         data: insumos
       })
   
@@ -26,7 +27,8 @@ export const getAllInsumosWithStock = async (req, res) => {
     try {
       console.log('Correcto!!!!')
       const [insumos] = await Inventario.getInsumosConSaldo(laboratorio_id)
-      res.json({
+      res.status(200).json({
+        success: true,
         data: insumos
       })
   
@@ -44,7 +46,8 @@ export const getAllInsumosWithStock = async (req, res) => {
   
       const [insumos] = await Inventario.getInsumosConSaldoPositivo(laboratorio_id)
   
-      res.json({
+      res.status(200).json({
+        success: true,
         data: insumos
       })
   
@@ -69,58 +72,7 @@ export const getActividadInsumos = async (req, res) => {
             user_laboratorio_ids: req.user.laboratorio_ids
         })
 
-        let query = `
-        SELECT 
-          m.id,
-          m.fecha_movimiento,
-          m.tipo_movimiento,
-          m.fecha_ingreso,
-          m.observaciones,
-          l.nombre as laboratorio_nombre,
-          u.nombre_completo as usuario_nombre,
-          rol.nombre as usuario_rol,
-          r.descripcion as reserva_descripcion,
-          r.fecha_inicio as reserva_fecha_inicio,
-          r.fecha_fin as reserva_fecha_fin
-        FROM movimientos_insumos m
-        INNER JOIN laboratorios l ON m.laboratorio_id = l.id
-        INNER JOIN usuarios u ON m.usuario_id = u.id
-        INNER JOIN roles rol ON u.rol_id = rol.id
-        LEFT JOIN reservas r ON m.reserva_id = r.id
-        WHERE 1=1
-      `
-
-        const params = []
-
-        // Filtros según permisos del usuario
-        if (req.user.rol === 'Jefe de Laboratorio') {
-            query += ` AND m.laboratorio_id IN (${req.user.laboratorio_ids.join(',')})`
-        }
-
-        // Filtros opcionales
-        if (laboratorio_id) {
-            query += ` AND m.laboratorio_id = ?`
-            params.push(laboratorio_id)
-        }
-
-        if (fecha_inicio) {
-            query += ` AND DATE(m.fecha_movimiento) >= ?`
-            params.push(fecha_inicio)
-        }
-
-        if (fecha_fin) {
-            query += ` AND DATE(m.fecha_movimiento) <= ?`
-            params.push(fecha_fin)
-        }
-
-        if (tipo_movimiento) {
-            query += ` AND m.tipo_movimiento = ?`
-            params.push(tipo_movimiento)
-        }
-
-        query += ` ORDER BY m.fecha_movimiento DESC LIMIT 100`
-
-        const [rows] = await pool.execute(query, params)
+        const rows = await Inventario.getActividadInsumos(req.user.rol, req.user.laboratorio_ids, laboratorio_id, fecha_inicio, fecha_fin, tipo_movimiento)
 
         // Convertir fechas al formato ISO para el frontend
         const actividadConFechasISO = rows.map(row => ({
@@ -133,7 +85,7 @@ export const getActividadInsumos = async (req, res) => {
 
         console.log('📊 Actividad encontrada:', rows.length)
 
-        res.json({
+        res.status(200).json({
             success: true,
             data: actividadConFechasISO,
             total_movimientos: rows.length,
@@ -336,20 +288,7 @@ export const procesarArchivoExcel = async (req, res) => {
         }
 
         // Obtener todos los pares válidos de laboratorio-insumo
-        const [inventario] = await pool.execute(`
-        SELECT 
-          l.codigo AS lab_codigo,
-          l.id AS lab_id,
-          l.nombre AS lab_nombre,
-          i.codigo AS ins_codigo,
-          i.id AS ins_id,
-          i.nombre AS ins_nombre,
-          i.unidad_medida AS ins_unidad_medida
-        FROM inventario_insumos ii
-        INNER JOIN laboratorios l ON l.id = ii.laboratorio_id 
-        INNER JOIN insumos i ON i.id = ii.insumo_id
-        WHERE ii.laboratorio_id = ?
-      `, [laboratorio_id]);
+        const inventario = await Inventario.getInsumosConfiguradosByLaboratorio(laboratorio_id);
 
         // Crear mapa rápido de validación: "LABCODE|INSCODE" → datos combinados
         const mapaInventario = new Map(
@@ -486,7 +425,7 @@ export const getLotesConSaldo = async (req, res) => {
       }
       const lotes = await Inventario.getLotesConSaldo(laboratorio_id, insumo_id);
   
-      res.json({
+      res.status(200).json({
         success: true,
         data: lotes
       })
@@ -508,11 +447,33 @@ export const getLotesConSaldo = async (req, res) => {
   
     try {
       const { laboratorio_id, tipo_movimiento, fecha_movimiento, observaciones, reserva_id, detalles } = req.body
+
+      // Validaciones básicas
+      if (!laboratorio_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'El laboratorio_id es requerido'
+        })
+      }
+
+      if (!tipo_movimiento || !['entrada', 'salida'].includes(tipo_movimiento)) {
+        return res.status(400).json({
+          success: false,
+          message: 'El tipo_movimiento debe ser "entrada" o "salida"'
+        })
+      }
+
+      if (!detalles || !Array.isArray(detalles) || detalles.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Los detalles del movimiento son requeridos'
+        })
+      }
   
       const movimientoId = await Inventario.registrarMovimientoManual(connection, req.user.userId, fecha_movimiento, laboratorio_id, tipo_movimiento, observaciones, reserva_id, detalles)
   
       //Respuesta
-      res.json({
+      res.status(200).json({
         success: true,
         message: `Movimiento de ${tipo_movimiento} registrado correctamente`,
         movimiento_id: movimientoId
@@ -520,123 +481,13 @@ export const getLotesConSaldo = async (req, res) => {
   
     } catch (error) {
       console.error('❌ Error al registrar movimiento manual:', error)
-      throw new Error(error.message || 'Error al registrar el movimiento')
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Error al registrar el movimiento'
+      })
     }
     finally {
       connection.release()
     }
   
   }
-
-/*
-try {
-    await connection.beginTransaction()
-
-    const { datos_reabastecimiento, fecha_movimiento, motivo_general } = req.body
-    const userId = req.user.userId
-
-
-    if (!datos_reabastecimiento || !Array.isArray(datos_reabastecimiento) || datos_reabastecimiento.length === 0) {
-        return res.status(400).json({
-            success: false,
-            message: 'No se proporcionaron datos válidos para el reabastecimiento'
-        })
-    }
-
-    let registrosProcesados = 0
-    const resultados = []
-
-    for (const dato of datos_reabastecimiento) {
-        const { insumo_id, cantidad, laboratorio_id, insumo_nombre, laboratorio_nombre } = dato
-
-        try {
-            // Verificar si ya existe stock para este insumo en este laboratorio
-            const [stockExistente] = await connection.execute(
-                'SELECT cantidad FROM inventario_insumos WHERE insumo_id = ? AND laboratorio_id = ?',
-                [insumo_id, laboratorio_id]
-            )
-
-            if (stockExistente.length > 0) {
-                // Actualizar stock existente
-                await connection.execute(`
-          UPDATE inventario_insumos 
-          SET cantidad = cantidad + ?
-          WHERE insumo_id = ? AND laboratorio_id = ?
-        `, [cantidad, insumo_id, laboratorio_id])
-            } else {
-                // Crear nuevo registro de stock
-                await connection.execute(`
-          INSERT INTO inventario_insumos (insumo_id, laboratorio_id, cantidad)
-          VALUES (?, ?, ?)
-        `, [insumo_id, laboratorio_id, cantidad])
-            }
-
-            // Crear fecha en zona horaria de Perú
-            const fechaPeru = new Date().toLocaleString('en-CA', {
-                timeZone: 'America/Lima',
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: false
-            }).replace(', ', ' ')
-
-            // Registrar movimiento
-            await connection.execute(`
-        INSERT INTO movimientos_insumos 
-        (insumo_id, laboratorio_id, tipo_movimiento, cantidad, observaciones, usuario_id, fecha_movimiento)
-        VALUES (?, ?, 'entrada', ?, ?, ?, ?)
-      `, [insumo_id, laboratorio_id, cantidad, motivo_general, userId, fechaPeru])
-
-            registrosProcesados++
-            resultados.push({
-                insumo: insumo_nombre,
-                laboratorio: laboratorio_nombre,
-                cantidad: cantidad,
-                estado: 'exitoso'
-            })
-
-            console.log(`✅ Procesado: ${insumo_nombre} +${cantidad} en ${laboratorio_nombre}`)
-
-        } catch (error) {
-            console.error(`❌ Error procesando ${insumo_nombre}:`, error.message)
-            resultados.push({
-                insumo: insumo_nombre,
-                laboratorio: laboratorio_nombre,
-                cantidad: cantidad,
-                estado: 'error',
-                error: error.message
-            })
-        }
-    }
-
-    await connection.commit()
-
-    console.log(`🎉 Reabastecimiento masivo completado: ${registrosProcesados}/${datos_reabastecimiento.length} registros`)
-
-    res.json({
-        success: true,
-        message: `Reabastecimiento masivo completado exitosamente`,
-        data: {
-            total_registros: datos_reabastecimiento.length,
-            registros_procesados: registrosProcesados,
-            registros_fallidos: datos_reabastecimiento.length - registrosProcesados,
-            motivo: motivo_general,
-            resultados: resultados
-        }
-    })
-
-} catch (error) {
-    await connection.rollback()
-    console.error('❌ Error en reabastecimiento masivo:', error)
-    res.status(500).json({
-        success: false,
-        message: 'Error interno al ejecutar el reabastecimiento masivo',
-        error: error.message
-    })
-} finally {
-    connection.release()
-}
-*/

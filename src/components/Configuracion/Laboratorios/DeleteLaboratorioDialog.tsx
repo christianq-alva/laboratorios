@@ -11,8 +11,8 @@ import {
   Alert,
 } from '@mui/material'
 import { Warning } from '@mui/icons-material'
-import { laboratorioService } from '../../services/laboratorioService'
-import type { Laboratorio } from '../../services/laboratorioService'
+import { laboratorioService } from '../../../services/laboratorioService'
+import type { Laboratorio } from '../../../services/laboratorioService.ts'
 
 interface DeleteLaboratorioDialogProps {
   open: boolean

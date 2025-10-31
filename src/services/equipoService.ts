@@ -11,10 +11,6 @@ export interface Equipo {
   estado: 'Operativo' | 'En Mantenimiento' | 'Fuera de Servicio'
   fecha_ultimo_mantenimiento?: string
   fecha_proximo_mantenimiento?: string
-  cantidad_disponible?: number
-  cantidad_total?: number
-  cantidad_en_uso?: number
-  inventario_por_laboratorio?: string
   comentarios?: string
   condicion?: 'Excelente' | 'Bueno' | 'Regular' | 'Malo'
   fecha_adquisicion?: string
@@ -22,10 +18,6 @@ export interface Equipo {
   tipo_equipo_nombre?: string
   laboratorio_id?: number
   laboratorio_nombre?: string
-  // Campos adicionales para vista simple
-  total_movimientos?: number
-  laboratorios_asignados?: number
-  laboratorios_nombres?: string
 }
 
 export interface ActividadEquipo {
@@ -90,7 +82,7 @@ class EquipoService {
   // Obtener equipos de un laboratorio específico
   async getByLaboratorio(laboratorioId: number): Promise<EquipoResponse> {
     try {
-      const response = await api.get(`/equipos?laboratorio_id=${laboratorioId}`)
+      const response = await api.get(`/equipos/${laboratorioId}`)
       return response.data
     } catch (error: any) {
       console.error('Error al obtener equipos del laboratorio:', error)
@@ -98,19 +90,9 @@ class EquipoService {
     }
   }
 
-  // Obtener equipos en vista simple (sin agrupar)
-  async getAllSimple(): Promise<EquipoResponse> {
-    try {
-      const response = await api.get('/equipos/simple')
-      return response.data
-    } catch (error: any) {
-      console.error('Error al obtener equipos simples:', error)
-      throw new Error(error.response?.data?.message || 'Error al obtener equipos simples')
-    }
-  }
-
   // Crear nuevo equipo
   async create(equipoData: {
+    codigo: string
     nombre: string
     descripcion: string
     marca: string
@@ -122,18 +104,15 @@ class EquipoService {
     comentarios?: string
     condicion?: string
     fecha_adquisicion?: string | null
-    inventario_inicial?: Array<{
-      laboratorio_id: number
-      cantidad_total: number
-      observaciones?: string
-    }>
+    tipo_equipo_id?: number
+    laboratorio_id?: number
   }): Promise<{ success: boolean; message: string; equipo_id: number }> {
     try {
       const response = await api.post('/equipos', equipoData)
       return response.data
     } catch (error: any) {
       console.error('Error al crear equipo:', error)
-      
+
       // Manejar errores específicos
       if (error.response?.data?.message) {
         if (error.response.data.message.includes('Duplicate entry')) {
@@ -141,13 +120,14 @@ class EquipoService {
         }
         throw new Error(error.response.data.message)
       }
-      
+
       throw new Error('Error al crear equipo')
     }
   }
 
   // Actualizar equipo
   async update(id: number, equipoData: {
+    codigo: string | null
     nombre: string
     descripcion: string
     marca: string
@@ -159,6 +139,8 @@ class EquipoService {
     comentarios?: string
     condicion?: string
     fecha_adquisicion?: string | null
+    tipo_equipo_id?: number
+    laboratorio_id?: number
   }): Promise<{ success: boolean; message: string; data: any }> {
     try {
       const response = await api.put(`/equipos/${id}`, equipoData)
@@ -200,7 +182,7 @@ class EquipoService {
       if (filters?.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio)
       if (filters?.fecha_fin) params.append('fecha_fin', filters.fecha_fin)
       if (filters?.tipo_movimiento) params.append('tipo_movimiento', filters.tipo_movimiento)
-      
+
       const response = await api.get(`/equipos/actividad?${params.toString()}`)
       return response.data
     } catch (error: any) {
@@ -215,16 +197,16 @@ class EquipoService {
       const response = await api.get('/equipos/plantilla-importacion', {
         responseType: 'blob'
       })
-      
+
       // Crear enlace de descarga
       const blob = new Blob([response.data], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       })
-      
+
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      
+
       // Obtener nombre del archivo desde header o usar uno por defecto
       const contentDisposition = response.headers['content-disposition']
       let filename = 'plantilla_equipos.xlsx'
@@ -234,13 +216,13 @@ class EquipoService {
           filename = filenameMatch[1]
         }
       }
-      
+
       link.download = filename
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
-      
+
     } catch (error: any) {
       console.error('Error al descargar plantilla de equipos:', error)
       throw new Error(error.response?.data?.message || 'Error al descargar la plantilla de equipos')
@@ -252,7 +234,9 @@ class EquipoService {
     success: boolean
     data: Array<{
       fila: number
+      codigo: string
       nombre: string
+      tipo_equipo_id: number
       descripcion: string
       marca: string
       modelo: string
@@ -263,7 +247,7 @@ class EquipoService {
       comentarios: string
       condicion: string
       fecha_adquisicion: string
-      inventario_labs: { [key: string]: number }
+      laboratorio_id: number
       errores: string[]
     }>
     total_filas: number
@@ -272,13 +256,13 @@ class EquipoService {
     try {
       const formData = new FormData()
       formData.append('archivo_excel', archivo)
-      
+
       const response = await api.post('/equipos/previsualizar-importacion', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       })
-      
+
       return response.data
     } catch (error: any) {
       console.error('Error en previsualización de equipos:', error)
@@ -300,19 +284,19 @@ class EquipoService {
       marca: string
       modelo: string
       estado: string
-      inventario: string
+      laboratorio_id: number
     }>
   }> {
     try {
       const formData = new FormData()
       formData.append('archivo_excel', archivo)
-      
+
       const response = await api.post('/equipos/importacion-masiva', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       })
-      
+
       return response.data
     } catch (error: any) {
       console.error('Error en importación masiva de equipos:', error)

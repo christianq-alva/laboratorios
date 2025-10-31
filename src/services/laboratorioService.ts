@@ -58,12 +58,6 @@ export const laboratorioService = {
     return response.data
   },
 
-  // Obtener escuelas disponibles para el selector
-  getEscuelas: async () => {
-    const response = await api.get('/docentes/utils/escuelas')
-    return response.data
-  },
-
   // Cambiar estado de un laboratorio
   changeStatus: async (id: number, estado: 'Activo' | 'En Mantenimiento' | 'Inhabilitado' | 'Baja') => {
     const response = await api.patch(`/laboratorios/${id}/estado`, { estado })

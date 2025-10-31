@@ -95,6 +95,7 @@ export const CerrarHorarioModal: React.FC<CerrarHorarioModalProps> = ({
 
   useEffect(() => {
     if (open && horarioId) {
+      if (!open) console.log("equiposRequeridos", equiposRequeridos) //Observación: Hay que borrarlo      
       loadHorarioData()
     } else {
       resetForm()
@@ -118,7 +119,7 @@ export const CerrarHorarioModal: React.FC<CerrarHorarioModalProps> = ({
       setLaboratorioId(horario.laboratorio_id)
 
       // Cargar insumos requeridos
-      const insumos = horario.insumos?.map(i => ({
+      const insumos = horario.insumos?.map((i: any) => ({
         id: i.id,
         nombre: i.nombre,
         cantidad_requerida: i.cantidad_usada || 0,
@@ -127,7 +128,7 @@ export const CerrarHorarioModal: React.FC<CerrarHorarioModalProps> = ({
       setInsumosRequeridos(insumos)
 
       // Cargar equipos requeridos
-      const equipos = horario.equipos?.map(e => ({
+      const equipos = horario.equipos?.map((e: any) => ({
         id: e.id,
         nombre: e.nombre,
         cantidad_requerida: e.cantidad_usada || 1

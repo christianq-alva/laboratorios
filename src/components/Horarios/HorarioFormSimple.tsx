@@ -43,8 +43,6 @@ import type { Equipo } from '../../services/equipoService'
 import type { 
   Horario, 
   CreateHorarioData, 
-  Docente, 
-  Escuela, 
   Ciclo, 
   Grupo, 
   Insumo,
@@ -53,6 +51,8 @@ import type {
 import type { Laboratorio } from '../../services/laboratorioService'
 import { TIME_BLOCKS, getBlockLabel, combineDateWithTime } from '../../utils/timeBlocks'
 import { insumoService, type InsumoSaldo } from '../../services/insumoService'
+import { escuelaService, type Escuela } from '../../services/escuelaService'
+import { docenteService, type Docente } from '../../services/docenteService'
 
 interface HorarioFormProps {
   open: boolean
@@ -151,8 +151,8 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       
       const [labsResult, docentesResult, escuelasResult, ciclosResult, gruposResult] = await Promise.all([
         laboratorioService.getAll(),
-        horarioService.getDocentes(),
-        horarioService.getEscuelas(),
+        docenteService.getAll(),
+        escuelaService.getAll(),
         horarioService.getCiclos(),
         horarioService.getGrupos()
       ])

@@ -6,29 +6,12 @@ export interface Docente {
   correo?: string | null
   escuela_id: number
   escuela?: string
-  total_horarios?: number
 }
 
-export interface CreateDocenteData {
+export interface DocenteData {
   nombre: string
   correo?: string
   escuela_id: number
-}
-
-export interface UpdateDocenteData extends CreateDocenteData {}
-
-export interface Escuela {
-  id: number
-  nombre: string
-}
-
-export interface DocenteHorario {
-  id: number
-  fecha_inicio: string
-  fecha_fin: string
-  cantidad_alumnos: number
-  laboratorio: string
-  laboratorio_id: number
 }
 
 export const docenteService = {
@@ -45,13 +28,13 @@ export const docenteService = {
   },
 
   // Crear nuevo docente
-  create: async (data: CreateDocenteData) => {
+  create: async (data: DocenteData) => {
     const response = await api.post('/docentes', data)
     return response.data
   },
 
   // Actualizar docente
-  update: async (id: number, data: UpdateDocenteData) => {
+  update: async (id: number, data: DocenteData) => {
     const response = await api.put(`/docentes/${id}`, data)
     return response.data
   },
@@ -62,15 +45,4 @@ export const docenteService = {
     return response.data
   },
 
-  // Obtener horarios de un docente
-  getHorarios: async (id: number) => {
-    const response = await api.get(`/docentes/${id}/horarios`)
-    return response.data
-  },
-
-  // Obtener escuelas disponibles
-  getEscuelas: async () => {
-    const response = await api.get('/docentes/utils/escuelas')
-    return response.data
-  }
 } 

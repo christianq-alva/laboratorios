@@ -1,11 +1,10 @@
-import { pool } from '../config/database.js'
 import { Docente } from '../models/Docente.js'
 
 export const getDocentes = async (req, res) => {
   try {
     console.log('🔍 Usuario solicitando docentes:', req.user.usuario, req.user.rol)
     
-    const docentes = await Docente.getByUser(req.user)
+    const docentes = await Docente.getAll()
     
     res.json({ 
       success: true, 
@@ -60,8 +59,8 @@ export const createDocente = async (req, res) => {
     
     // Verificar si el correo ya existe (solo si se proporciona)
     if (correo && correo.trim()) {
-      const [existing] = await pool.execute('SELECT id FROM docentes WHERE correo = ?', [correo])
-      if (existing.length > 0) {
+      const existByEmail = await Docente.existsByEmail(correo)
+      if (existByEmail) {
         return res.status(400).json({
           success: false,
           message: 'Ya existe un docente con ese correo'
@@ -70,15 +69,11 @@ export const createDocente = async (req, res) => {
     }
     
     // Crear el docente
-    const docente_id = await Docente.create({
-      nombre, 
-      correo, 
-      escuela_id
-    })
+    const docente_id = await Docente.create({nombre,correo,escuela_id})
     
     console.log('✅ Docente creado con ID:', docente_id)
     
-    res.json({ 
+    res.status(201).json({ 
       success: true, 
       message: 'Docente creado correctamente',
       docente_id: docente_id
@@ -97,8 +92,8 @@ export const updateDocente = async (req, res) => {
     console.log('🔍 Actualizando docente ID:', id)
     
     // Verificar que el docente existe
-    const docente = await Docente.getById(id)
-    if (!docente) {
+    const existById = await Docente.existsById(id)
+    if (!existById) {
       return res.status(404).json({
         success: false,
         message: 'Docente no encontrado'
@@ -107,8 +102,8 @@ export const updateDocente = async (req, res) => {
     
     // Verificar si el correo ya existe (solo si se proporciona y excluyendo el propio docente)
     if (correo && correo.trim()) {
-      const [existing] = await pool.execute('SELECT id FROM docentes WHERE correo = ? AND id != ?', [correo, id])
-      if (existing.length > 0) {
+      const existByEmail = await Docente.existsByEmail(correo, parseInt(id))
+      if (existByEmail) {
         return res.status(400).json({
           success: false,
           message: 'Ya existe otro docente con ese correo'
@@ -117,21 +112,19 @@ export const updateDocente = async (req, res) => {
     }
     
     // Actualizar el docente
-    await Docente.update(id, {
-      nombre, 
-      correo, 
-      escuela_id
-    })
+    await Docente.update(id, {nombre,correo,escuela_id})
     
     console.log('✅ Docente actualizado ID:', id)
     
-    res.json({ 
+    res.status(200).json({ 
       success: true, 
       message: 'Docente actualizado correctamente'
     })
   } catch (error) {
     console.error('Error en updateDocente:', error)
-    res.status(500).json({ success: false, message: error.message })
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error interno del servidor' })
   }
 }
 
@@ -142,8 +135,8 @@ export const deleteDocente = async (req, res) => {
     console.log('🔍 Eliminando docente ID:', id)
     
     // Verificar que el docente existe
-    const docente = await Docente.getById(id)
-    if (!docente) {
+    const existById = await Docente.existsById(id)  
+    if (!existById) {
       return res.status(404).json({
         success: false,
         message: 'Docente no encontrado'
@@ -164,63 +157,14 @@ export const deleteDocente = async (req, res) => {
     
     console.log('✅ Docente eliminado ID:', id)
     
-    res.json({ 
+    res.status(200).json({ 
       success: true, 
       message: 'Docente eliminado correctamente'
     })
   } catch (error) {
     console.error('Error en deleteDocente:', error)
-    res.status(500).json({ success: false, message: error.message })
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error interno del servidor' })
   }
 }
-
-export const getDocenteHorarios = async (req, res) => {
-  try {
-    const { id } = req.params
-    
-    console.log('🔍 Obteniendo horarios del docente ID:', id)
-    
-    // Verificar que el docente existe
-    const docente = await Docente.getById(id)
-    if (!docente) {
-      return res.status(404).json({
-        success: false,
-        message: 'Docente no encontrado'
-      })
-    }
-    
-    // Obtener horarios según permisos del usuario
-    const horarios = await Docente.getHorarios(id, req.user)
-    
-    res.json({ 
-      success: true, 
-      data: {
-        docente: {
-          id: docente.id,
-          nombre: docente.nombre,
-          correo: docente.correo
-        },
-        horarios: horarios,
-        total_horarios: horarios.length
-      }
-    })
-  } catch (error) {
-    console.error('Error en getDocenteHorarios:', error)
-    res.status(500).json({ success: false, message: error.message })
-  }
-}
-
-// Obtener escuelas disponibles para el selector
-export const getEscuelas = async (req, res) => {
-  try {
-    const [escuelas] = await pool.execute('SELECT id, nombre FROM escuelas ORDER BY nombre')
-    
-    res.json({ 
-      success: true, 
-      data: escuelas
-    })
-  } catch (error) {
-    console.error('Error en getEscuelas:', error)
-    res.status(500).json({ success: false, message: error.message })
-  }
-} 
