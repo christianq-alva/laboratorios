@@ -63,7 +63,12 @@ interface ProtectedPageProps {
 }
 
 const ProtectedPage: React.FC<ProtectedPageProps> = ({ children }) => {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
+  
+  // Mostrar loader mientras se verifica autenticación desde localStorage
+  if (loading) {
+    return <PageLoader />
+  }
   
   // Si no hay usuario, redirige al login
   if (!user) {
@@ -86,7 +91,12 @@ const ProtectedPage: React.FC<ProtectedPageProps> = ({ children }) => {
 // Envuelve páginas públicas (como login)
 // Si el usuario ya está autenticado, redirige al dashboard
 const PublicPage: React.FC<ProtectedPageProps> = ({ children }) => {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
+  
+  // Mostrar loader mientras se verifica autenticación
+  if (loading) {
+    return <PageLoader />
+  }
   
   // Si ya hay usuario autenticado, redirige al dashboard
   if (user) {
@@ -193,9 +203,19 @@ function App() {
               <ProtectedPage>
                 <Configuracion />
               </ProtectedPage>
-            } 
+            }
+             
+          />
+          <Route 
+            path="/" 
+            element={<Navigate to="/dashboard" replace />} 
           />
           
+          {/* Cualquier otra ruta no definida - redirige al dashboard */}
+          <Route 
+            path="*" 
+            element={<Navigate to="/dashboard" replace />} 
+          />
         </Routes>
       </Router>
     </ThemeProvider>

@@ -15,7 +15,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true) // ✅ Inicia en true para verificar localStorage primero
 
   // 🔄 RECUPERAR TOKEN AL CARGAR LA APP
   useEffect(() => {
@@ -26,6 +26,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setToken(savedToken)
       setUser(JSON.parse(savedUser))
     }
+    
+    // ✅ Marcar como no loading después de verificar localStorage
+    setLoading(false)
   }, [])
 
   const login = async (data: LoginRequest) => {
