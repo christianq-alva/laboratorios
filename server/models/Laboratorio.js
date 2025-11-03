@@ -35,6 +35,10 @@ export const Laboratorio = {
             query = 'SELECT * FROM laboratorios WHERE 1=0'
         }
 
+        console.log(query)
+        console.log(params)
+
+
         const [laboratorios] = await pool.execute(query, params)
 
         return laboratorios;
@@ -45,7 +49,7 @@ export const Laboratorio = {
             INSERT INTO laboratorios (codigo, nombre, ubicacion, escuela_id, piso, estado) 
             VALUES (?, ?, ?, ?, ?, ?)
         `, [codigo, nombre, ubicacion, escuela_id, piso, estado])
-        
+
         return result.insertId;
     },
 

@@ -246,7 +246,7 @@ export const CerrarHorarioModal: React.FC<CerrarHorarioModalProps> = ({
     setError(null)
     
     try {
-      await insumoService.registrarMovimiento({
+      await horarioService.cerrarHorario({
         laboratorio_id: laboratorioId,
         tipo_movimiento: 'salida',
         observaciones: `Consumo de inventario en horarioId: ${horarioId!}`,

@@ -9,8 +9,11 @@ export const getLaboratorios = async (req, res) => {
   try {
 
     const laboratorios = await Laboratorio.getAllByUser(req.user.id, req.user.rol)
-    
-    res.status(200).json({  
+
+    console.log('------------------------')
+    console.log(laboratorios)
+
+    res.status(200).json({
       success: true,
       data: laboratorios,
       user_role: req.user.rol,
@@ -64,7 +67,7 @@ export const createLaboratorio = async (req, res) => {
 
     // Validar que la escuela existe
     const escuelaCheck = await Escuela.exists(escuela_id)
-    
+
     if (!escuelaCheck) {
       return res.status(400).json({
         success: false,
@@ -94,7 +97,7 @@ export const createLaboratorio = async (req, res) => {
     })
 
   } catch (error) {
-         
+
     console.error('Error en createLaboratorio:', error)
     res.status(500).json({
       success: false,
@@ -113,7 +116,7 @@ export const updateLaboratorio = async (req, res) => {
 
     // Verificar que el laboratorio existe
     const labCheck = await Laboratorio.exists(id)
-    
+
     if (!labCheck) {
       return res.status(404).json({
         success: false,
@@ -123,7 +126,7 @@ export const updateLaboratorio = async (req, res) => {
 
     // Validar que la escuela existe
     const escuelaCheck = await Escuela.exists(escuela_id)
-    
+
     if (!escuelaCheck) {
       return res.status(400).json({
         success: false,
@@ -191,7 +194,7 @@ export const deleteLaboratorio = async (req, res) => {
 
     // Verificar que el laboratorio existe
     const labCheck = await Laboratorio.exists(id)
-    
+
     if (!labCheck) {
       return res.status(404).json({
         success: false,
@@ -228,7 +231,7 @@ export const deleteLaboratorio = async (req, res) => {
 
   } catch (error) {
     console.error('Error en deleteLaboratorio:', error)
-    
+
     // Manejar errores de restricción de clave foránea
     if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.code === 'ER_ROW_IS_REFERENCED') {
       return res.status(400).json({
@@ -236,7 +239,7 @@ export const deleteLaboratorio = async (req, res) => {
         message: 'No se puede eliminar el laboratorio porque está relacionado con otras tablas del sistema y tiene datos asociados (equipos, insumos, horarios, incidencias u otros registros). Primero debes eliminar o reasignar estos registros para poder eliminar el laboratorio.'
       })
     }
-    
+
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor'
@@ -255,7 +258,7 @@ export const changeEstadoLaboratorio = async (req, res) => {
 
     // Validar que el laboratorio existe
     const labCheck = await Laboratorio.exists(id)
-    
+
     if (!labCheck) {
       return res.status(404).json({
         success: false,

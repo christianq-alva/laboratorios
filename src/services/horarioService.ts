@@ -85,7 +85,7 @@ export interface CreateHorarioData {
   }>
 }
 
-export interface UpdateHorarioData extends CreateHorarioData {}
+export interface UpdateHorarioData extends CreateHorarioData { }
 
 // Interfaces para formularios
 export interface Ciclo {
@@ -210,7 +210,7 @@ export const horarioService = {
     return response.data
   },
 
-   getCiclos: async () => {
+  getCiclos: async () => {
     const response = await api.get('/horarios/utils/ciclos')
     return response.data
   },
@@ -218,14 +218,14 @@ export const horarioService = {
   getGrupos: async (escuela_id?: number, ciclo_id?: number) => {
     let url = '/horarios/utils/grupos'
     const params = new URLSearchParams()
-    
+
     if (escuela_id) params.append('escuela_id', escuela_id.toString())
     if (ciclo_id) params.append('ciclo_id', ciclo_id.toString())
-    
+
     if (params.toString()) {
       url += '?' + params.toString()
     }
-    
+
     const response = await api.get(url)
     return response.data
   },
@@ -253,7 +253,7 @@ export const horarioService = {
   }) => {
     try {
       const params = new URLSearchParams()
-      
+
       if (filters?.laboratorio_id) params.append('laboratorio_id', filters.laboratorio_id.toString())
       if (filters?.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio)
       if (filters?.fecha_fin) params.append('fecha_fin', filters.fecha_fin)
@@ -280,15 +280,22 @@ export const horarioService = {
   },
 
   // Cerrar horario y registrar consumo de insumos
-  cerrarHorario: async (horarioId: number, data: {
-    consumos_insumos: Array<{
+  cerrarHorario: async (data: {
+    laboratorio_id: number
+    tipo_movimiento: 'entrada' | 'salida'
+    observaciones?: string | null
+    reserva_id?: number | null
+    fecha_movimiento?: string | null
+    detalles: Array<{
       insumo_id: number
-      entrada_detalle_id: number
       cantidad: number
+      lote?: string | null
+      fecha_vencimiento?: string | null
+      entrada_detalle_id?: number | null
     }>
   }) => {
     try {
-      const response = await api.post(`/horarios/${horarioId}/cerrar`, data)
+      const response = await api.post(`/horarios/cerrar`, data)
       return response.data
     } catch (error: any) {
       console.error('❌ Error al cerrar horario:', error)
