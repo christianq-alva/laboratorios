@@ -1,11 +1,118 @@
 import { pool } from '../config/database.js'
 
 export const Horario = {
-    getAllHorarios: async () => {
+    getAllHorarios: async (user_rol, user_laboratorio_ids) => {
 
+        let query = `
+        SELECT 
+          r.id,
+          r.laboratorio_id,
+          r.fecha_inicio,
+          r.fecha_fin,
+          r.cantidad_alumnos,
+          r.descripcion,
+          r.color,
+          l.nombre as laboratorio,
+          d.nombre as docente,
+          e.nombre as escuela,
+          c.nombre as ciclo,
+          g.nombre as grupo
+        FROM reservas r
+        LEFT JOIN laboratorios l ON r.laboratorio_id = l.id
+        LEFT JOIN docentes d ON r.docente_id = d.id
+        LEFT JOIN grupos g ON r.grupo_id = g.id
+        LEFT JOIN escuelas e ON g.escuela_id = e.id
+        LEFT JOIN ciclos c ON g.ciclo_id = c.id
+      `
+        let params = []
 
+        // 🟡 JEFE DE LAB: Solo horarios de SUS laboratorios
+        if (user_rol === 'Jefe de Laboratorio') {
+            const labIds = user_laboratorio_ids
+
+            if (labIds && labIds.length > 0) {
+                const placeholders = labIds.map(() => '?').join(',')
+                query += ` WHERE r.laboratorio_id IN (${placeholders})`
+                params = labIds
+            } else {
+                // No tiene laboratorios asignados
+                query += ' WHERE 1 = 0' // No mostrar nada
+            }
+        } else {
+        }   
+
+        query += ' ORDER BY r.fecha_inicio DESC'
+
+        const [horarios] = await pool.execute(query, params)
+
+        return horarios;
+    },
+    getHorarioById: async (reserva_id) => {
+        const [horario] = await pool.execute(`
+        SELECT 
+          r.id,
+          r.laboratorio_id,
+          r.docente_id,
+          r.grupo_id,
+          r.descripcion,
+          r.fecha_inicio,
+          r.fecha_fin,
+          r.cantidad_alumnos,
+          r.estado,
+          l.nombre as laboratorio,
+          d.nombre as docente,
+          g.nombre as grupo,
+          e.nombre as escuela,
+          c.nombre as ciclo
+        FROM reservas r
+        JOIN laboratorios l ON r.laboratorio_id = l.id
+        JOIN docentes d ON r.docente_id = d.id
+        JOIN grupos g ON r.grupo_id = g.id
+        JOIN escuelas e ON g.escuela_id = e.id
+        JOIN ciclos c ON g.ciclo_id = c.id
+        WHERE r.id = ?
+      `, [reserva_id])
+
+        return horario[0] || null;
     },
 
+    exitsById: async (reserva_id) => {
+        const [result] = await pool.execute(`
+            SELECT id FROM reservas WHERE id = ?
+        `, [reserva_id])
+        return result.length > 0;
+    },
+
+    getInsumosRequeridosByHorario: async (reserva_id) => {
+        const [insumos] = await pool.execute(`
+            SELECT 
+              dri.insumo_id as id,
+              i.nombre,
+              dri.cantidad_usada
+            FROM detalle_reserva_insumos dri
+            JOIN insumos i ON dri.insumo_id = i.id
+            WHERE dri.reserva_id = ?
+            ORDER BY i.nombre
+        `, [reserva_id])
+        return insumos;
+    },
+    getEquiposRequeridosByHorario: async (reserva_id) => {
+        const [equipos] = await pool.execute(`
+            SELECT 
+              dre.equipo_id as id,
+              e.nombre,
+              e.marca,
+              e.modelo,
+              e.codigo,
+              e.estado,
+              dre.cantidad as cantidad_usada
+            FROM detalle_reserva_equipos dre
+            JOIN equipos e ON dre.equipo_id = e.id
+            WHERE dre.reserva_id = ?
+            ORDER BY e.nombre
+        `, [reserva_id])
+        return equipos;
+    },
     getCruceLab: async (laboratorio_id, reserva_id,
         fechaInicio, fechaFin) => {
 
@@ -284,26 +391,6 @@ export const Horario = {
             WHERE reserva_id = ?`,
             [reserva_id])
     },
-    getGrupoValidacion: async (grupo_id) => {
-
-        const conn = pool
-
-        const [grupoValidacion] = await conn.execute(`
-        SELECT 
-          g.id,
-          g.nombre as grupo_nombre,
-          g.escuela_id,
-          g.ciclo_id,
-          e.nombre as escuela_nombre,
-          c.nombre as ciclo_nombre
-        FROM grupos g
-        JOIN escuelas e ON g.escuela_id = e.id
-        JOIN ciclos c ON g.ciclo_id = c.id
-        WHERE g.id = ?
-      `, [grupo_id])
-
-        return grupoValidacion;
-    },
 
     registrarActividadHorario: async ({ accion, reserva_id, descripcion, usuario_id, ip_address }) => {
         try {
@@ -347,5 +434,39 @@ export const Horario = {
             SET estado = 'C'
             WHERE id = ?`,
             [reserva_id])
+    },
+    getHorarioLastMonth: async (user_rol, user_laboratorio_ids) => {
+        let query = `
+      SELECT 
+        r.id,
+        DATE_FORMAT(r.fecha_inicio, '%d/%m/%Y %H:%i') as fecha_clase,
+        DATE_FORMAT(r.fecha_fin, '%H:%i') as hora_fin,
+        l.nombre as laboratorio,
+        d.nombre as docente,
+        r.cantidad_alumnos
+      FROM reservas r
+      JOIN laboratorios l ON r.laboratorio_id = l.id
+      JOIN docentes d ON r.docente_id = d.id
+      WHERE r.fecha_inicio >= DATE_SUB(NOW(), INTERVAL 30 DAY)  -- Últimos 30 días
+    `
+        let params = []
+
+        // 🟡 JEFE DE LAB: Solo horarios de SUS laboratorios
+        if (user_rol === 'Jefe de Laboratorio') {
+            const labIds = user_laboratorio_ids || []
+            if (labIds.length > 0) {
+                const placeholders = labIds.map(() => '?').join(',')
+                query += ` AND r.laboratorio_id IN (${placeholders})`
+                params = labIds
+            } else {
+                query += ' AND 1 = 0' // No mostrar nada
+            }
+        }
+
+        query += ' ORDER BY r.fecha_inicio DESC LIMIT 100' // Últimos 100 horarios
+
+        const [horarios] = await pool.execute(query, params)
+
+        return horarios;
     }
 }

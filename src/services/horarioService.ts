@@ -20,6 +20,21 @@ export interface Horario {
   equipos?: EquipoHorario[]
 }
 
+export interface HorarioSimple {
+  id: number
+  laboratorio_id: number
+  descripcion: string
+  fecha_inicio: string
+  fecha_fin: string
+  cantidad_alumnos?: number
+  color?: string
+  laboratorio?: string
+  docente?: string
+  escuela?: string
+  ciclo?: string
+  grupo?: string
+}
+
 export interface InsumoHorario {
   id: number
   nombre: string
@@ -143,37 +158,22 @@ export interface VerificarDisponibilidadData {
 }
 
 export const horarioService = {
-  // CRUD básico
+  // Obtener todos los horarios
   getAll: async () => {
     const response = await api.get('/horarios')
     return response.data
   },
 
   getById: async (id: number) => {
-    try {
-      const response = await api.get(`/horarios/${id}`)
-      return response.data
-    } catch (error: any) {
-      console.error('Error al obtener horario:', error)
-      throw new Error(error.response?.data?.message || 'Error al obtener horario')
-    }
+    const response = await api.get(`/horarios/${id}`)
+    return response.data
   },
 
   create: async (data: CreateHorarioData) => {
-    try {
-      console.log('📤 Enviando datos a /horarios:', data)
-      const response = await api.post('/horarios', data)
-      console.log('✅ Respuesta exitosa:', response.data)
-      return response.data
-    } catch (error: any) {
-      console.error('❌ Error en create horario:', {
-        status: error.response?.status,
-        message: error.response?.data?.message,
-        data: error.response?.data,
-        sentData: data
-      })
-      throw error
-    }
+    console.log('📤 Enviando datos a /horarios:', data)
+    const response = await api.post('/horarios', data)
+    console.log('✅ Respuesta exitosa:', response.data)
+    return response.data
   },
 
   update: async (id: number, data: UpdateHorarioData) => {
@@ -182,20 +182,10 @@ export const horarioService = {
   },
 
   delete: async (id: number) => {
-    try {
-      console.log('🗑️ Eliminando horario:', id)
-      const response = await api.delete(`/horarios/${id}`)
-      console.log('✅ Respuesta del servidor:', response.data)
-      return response.data
-    } catch (error: any) {
-      console.error('❌ Error al eliminar horario:', {
-        status: error.response?.status,
-        message: error.response?.data?.message,
-        data: error.response?.data,
-        error: error.message
-      })
-      throw error
-    }
+    console.log('🗑️ Eliminando horario:', id)
+    const response = await api.delete(`/horarios/${id}`)
+    console.log('✅ Respuesta del servidor:', response.data)
+    return response.data
   },
 
   // Verificación de disponibilidad
@@ -211,12 +201,12 @@ export const horarioService = {
   },
 
   getCiclos: async () => {
-    const response = await api.get('/horarios/utils/ciclos')
+    const response = await api.get('/ciclos')
     return response.data
   },
 
   getGrupos: async (escuela_id?: number, ciclo_id?: number) => {
-    let url = '/horarios/utils/grupos'
+    let url = '/grupos'
     const params = new URLSearchParams()
 
     if (escuela_id) params.append('escuela_id', escuela_id.toString())
@@ -265,17 +255,6 @@ export const horarioService = {
     } catch (error) {
       console.error('❌ Error al obtener actividad de horarios:', error)
       return { success: false, data: [], message: 'Error al obtener actividad' }
-    }
-  },
-
-  // 🔍 DEBUG: Verificar todos los registros
-  debug: async () => {
-    try {
-      const response = await api.get('/horarios/debug')
-      return response.data
-    } catch (error) {
-      console.error('❌ Error en debug:', error)
-      return { success: false, message: 'Error en debug' }
     }
   },
 

@@ -16,6 +16,8 @@ import shareRoutes from './routes/shareRoutes.js'
 import reporteRoutes from './routes/reporteRoutes.js'
 import tipoEquipoRoutes from './routes/tipoEquipoRoutes.js'
 import escuelaRoutes from './routes/escuelaRoutes.js'
+import cicloRoutes from './routes/cicloRoutes.js'
+import grupoRoutes from './routes/grupoRoutes.js'
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -54,6 +56,8 @@ app.use('/api/share', shareRoutes)
 app.use('/api/reportes', reporteRoutes)
 app.use('/api/tipos-equipo', tipoEquipoRoutes)
 app.use('/api/escuelas', escuelaRoutes)
+app.use('/api/ciclos', cicloRoutes)
+app.use('/api/grupos', grupoRoutes)
 
 // Servir frontend en producción
 if (process.env.NODE_ENV === 'production') {

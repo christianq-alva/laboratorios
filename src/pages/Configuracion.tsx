@@ -13,26 +13,16 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  DialogContentText,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
-  IconButton,
-  Tooltip,
-  TablePagination
+  DialogContentText
 } from '@mui/material'
-import { Add, Category, Person, LibraryBooks, Edit, School, Delete, AccountBalance,  FileUpload } from '@mui/icons-material'
-import { TiposEquipoTable } from '../components/Configuracion/TiposEquipoTable'
-import { TipoEquipoForm } from '../components/Configuracion/TipoEquipoForm'
-import { EscuelasTable } from '../components/Configuracion/EscuelasTable'
-import { EscuelaForm } from '../components/Configuracion/EscuelaForm'
-import { DocentesTable } from '../components/Docentes/DocentesTable'
-import { DocenteForm } from '../components/Docentes/DocenteForm'
-import { InsumoForm } from '../components/Insumos/InsumoForm'
+import { Add, Category, Person, LibraryBooks, School, AccountBalance, FileUpload } from '@mui/icons-material'
+import { TiposEquipoTable } from '../components/Configuracion/TipoEquipo/TiposEquipoTable'
+import { TipoEquipoForm } from '../components/Configuracion/TipoEquipo/TipoEquipoForm'
+import { EscuelasTable } from '../components/Configuracion/Escuela/EscuelasTable'
+import { EscuelaForm } from '../components/Configuracion/Escuela/EscuelaForm'
+import { DocentesTable } from '../components/Configuracion/Docentes/DocentesTable'
+import { DocenteForm } from '../components/Configuracion/Docentes/DocenteForm'
+import { InsumoForm } from '../components/Configuracion/Insumos/InsumoForm'
 import { LaboratoriosTable } from '../components/Configuracion/Laboratorios/LaboratoriosTable'
 import { LaboratorioForm } from '../components/Configuracion/Laboratorios/LaboratorioForm'
 import { tipoEquipoService, type TipoEquipo } from '../services/tipoEquipoService'
@@ -40,7 +30,8 @@ import { escuelaService, type Escuela } from '../services/escuelaService'
 import { docenteService, type Docente } from '../services/docenteService'
 import { insumoService, type Insumo2 } from '../services/insumoService'
 import { laboratorioService, type Laboratorio } from '../services/laboratorioService'
-import { ImportacionMasiva } from '../components/Insumos/ImportacionMasiva'
+import { ImportacionMasiva } from '../components/Configuracion/Insumos/ImportacionMasiva'
+import { CatalogoInsumosTable } from '../components/Configuracion/Insumos/CatalogoInsumosTable'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -86,11 +77,8 @@ export const Configuracion: React.FC = () => {
   const [editingInsumo, setEditingInsumo] = useState<Insumo2 | null>(null)
   const [insumoDeleteDialogOpen, setInsumoDeleteDialogOpen] = useState(false)
   const [insumoToDelete, setInsumoToDelete] = useState<Insumo2 | null>(null)
-  const [insumoPage, setInsumoPage] = useState(0)
-  const [insumoRowsPerPage, setInsumoRowsPerPage] = useState(10)
 
   //Importación masiva
-  const [refresh, setRefresh] = useState(false)
   const [importacionMasivaOpen, setImportacionMasivaOpen] = useState(false)
 
 
@@ -119,66 +107,55 @@ export const Configuracion: React.FC = () => {
   // Cargar tipos de equipo
   const loadTiposEquipo = async () => {
     setLoadingTipos(true)
-    try {
-      if (!setLoadingTipos) console.log("refresh", refresh) //Observación: Hay que borrarlo      
-      console.log('🔄 Cargando tipos de equipo...')
-      const response = await tipoEquipoService.getAllWithCountEquipos()
-      console.log('📦 Response:', response.data)
+    const response = await tipoEquipoService.getAllWithCountEquipos()
 
-      if (!response || !response.data) {
-        console.error('❌ Response inválida:', response)
-        throw new Error('Respuesta inválida del servidor')
-      }
-
-      console.log('📊 Tipos recibidos:', response.data.length)
+    if (response.success && response.data) {
       setTiposEquipo(response.data)
-    } catch (error: any) {
-      console.error('❌ Error al cargar tipos de equipo:', error)
-      console.error('❌ Error details:', error.response?.data)
+    } else {
       setSnackbar({
         open: true,
-        message: error.response?.data?.message || 'Error al cargar tipos de equipo',
+        message: response.message || 'Error al cargar tipos de equipo',
         severity: 'error'
       })
-    } finally {
-      setLoadingTipos(false)
     }
+    
+    setLoadingTipos(false)
   }
 
   // Cargar catálogo de insumos
   const loadCatalogoInsumos = async () => {
     setLoadingInsumos(true)
-    try {
-      const response = await insumoService.getAllInsumos()
+    const response = await insumoService.getAllInsumos()
+    
+    if (response.data) {
       setInsumos(response.data || [])
-    } catch (error) {
-      console.error('Error al cargar catálogo de insumos:', error)
+    } else {
       setSnackbar({
         open: true,
-        message: 'Error al cargar catálogo de insumos',
+        message: response.message || 'Error al cargar catálogo de insumos',
         severity: 'error'
       })
-    } finally {
-      setLoadingInsumos(false)
     }
+    
+    setLoadingInsumos(false)
   }
 
   // Cargar escuelas
   const loadEscuelas = async () => {
     setLoadingEscuelas(true)
-    try {
-      const response = await escuelaService.getAll()
-      setEscuelas(response.data || [])
-    } catch (error) {
-      console.error('Error al cargar escuelas:', error)
+    const response = await escuelaService.getAll()
+    
+    if (response.success && response.data) {
+      setEscuelas(response.data)
+    } else {
       setSnackbar({
         open: true,
-        message: 'Error al cargar escuelas',
+        message: response.message || 'Error al cargar escuelas',
         severity: 'error'
       })
-    } finally {
-      setLoadingEscuelas(false)
     }
+    
+    setLoadingEscuelas(false)
   }
 
   // Cargar datos al montar o cambiar de tab
@@ -208,11 +185,11 @@ export const Configuracion: React.FC = () => {
     setEditingTipo(null)
   }
 
-  const handleFormSuccess = () => {
+  const handleFormSuccess = (message?: string) => {
     loadTiposEquipo()
     setSnackbar({
       open: true,
-      message: editingTipo ? 'Tipo actualizado exitosamente' : 'Tipo creado exitosamente',
+      message: message || (editingTipo ? 'Tipo actualizado exitosamente' : 'Tipo creado exitosamente'),
       severity: 'success'
     })
   }
@@ -225,25 +202,25 @@ export const Configuracion: React.FC = () => {
   const handleDeleteConfirm = async () => {
     if (!tipoToDelete) return
 
-    try {
-      await tipoEquipoService.delete(tipoToDelete.id)
+    const result = await tipoEquipoService.delete(tipoToDelete.id)
+    
+    if (result.success) {
       setSnackbar({
         open: true,
-        message: 'Tipo eliminado exitosamente',
+        message: result.message || 'Tipo eliminado exitosamente',
         severity: 'success'
       })
       loadTiposEquipo()
-    } catch (error: any) {
-      console.error('Error al eliminar tipo:', error)
+    } else {
       setSnackbar({
         open: true,
-        message: error.response?.data?.message || 'Error al eliminar tipo de equipo',
+        message: result.message || 'Error al eliminar tipo de equipo',
         severity: 'error'
       })
-    } finally {
-      setDeleteDialogOpen(false)
-      setTipoToDelete(null)
     }
+    
+    setDeleteDialogOpen(false)
+    setTipoToDelete(null)
   }
 
   // Handlers para Docentes
@@ -262,11 +239,11 @@ export const Configuracion: React.FC = () => {
     setEditingDocente(null)
   }
 
-  const handleDocenteFormSuccess = () => {
+  const handleDocenteFormSuccess = (message?: string) => {
     setRefreshDocentes(true)
     setSnackbar({
       open: true,
-      message: editingDocente ? 'Docente actualizado exitosamente' : 'Docente creado exitosamente',
+      message: message || (editingDocente ? 'Docente actualizado exitosamente' : 'Docente creado exitosamente'),
       severity: 'success'
     })
   }
@@ -279,25 +256,25 @@ export const Configuracion: React.FC = () => {
   const handleDeleteDocenteConfirm = async () => {
     if (!docenteToDelete) return
 
-    try {
-      await docenteService.delete(docenteToDelete.id)
+    const result = await docenteService.delete(docenteToDelete.id)
+    
+    if (result.success) {
       setSnackbar({
         open: true,
-        message: 'Docente eliminado exitosamente',
+        message: result.message || 'Docente eliminado exitosamente',
         severity: 'success'
       })
       setRefreshDocentes(true)
-    } catch (error: any) {
-      console.error('Error al eliminar docente:', error)
+    } else {
       setSnackbar({
         open: true,
-        message: error.response?.data?.message || 'Error al eliminar docente',
+        message: result.message || 'Error al eliminar docente',
         severity: 'error'
       })
-    } finally {
-      setDocenteDeleteDialogOpen(false)
-      setDocenteToDelete(null)
     }
+    
+    setDocenteDeleteDialogOpen(false)
+    setDocenteToDelete(null)
   }
 
   // Handlers para Catálogo de Insumos
@@ -315,11 +292,11 @@ export const Configuracion: React.FC = () => {
     setEditingInsumo(null)
   }
 
-  const handleInsumoFormSuccess = () => {
+  const handleInsumoFormSuccess = (message?: string) => {
     loadCatalogoInsumos()
     setSnackbar({
       open: true,
-      message: editingInsumo ? 'Insumo actualizado exitosamente' : 'Insumo creado exitosamente',
+      message: message || (editingInsumo ? 'Insumo actualizado exitosamente' : 'Insumo creado exitosamente'),
       severity: 'success'
     })
   }
@@ -332,25 +309,25 @@ export const Configuracion: React.FC = () => {
   const handleDeleteInsumoConfirm = async () => {
     if (!insumoToDelete) return
 
-    try {
-      await insumoService.delete(insumoToDelete.id)
+    const result = await insumoService.delete(insumoToDelete.id)
+    
+    if (result.success) {
       setSnackbar({
         open: true,
-        message: 'Insumo eliminado exitosamente',
+        message: result.message || 'Insumo eliminado exitosamente',
         severity: 'success'
       })
       loadCatalogoInsumos()
-    } catch (error: any) {
-      console.error('Error al eliminar insumo:', error)
+    } else {
       setSnackbar({
         open: true,
-        message: error.response?.data?.message || 'Error al eliminar insumo',
+        message: result.message || 'Error al eliminar insumo',
         severity: 'error'
       })
-    } finally {
-      setInsumoDeleteDialogOpen(false)
-      setInsumoToDelete(null)
     }
+    
+    setInsumoDeleteDialogOpen(false)
+    setInsumoToDelete(null)
   }
 
   // Handlers para Laboratorios
@@ -369,11 +346,11 @@ export const Configuracion: React.FC = () => {
     setEditingLaboratorio(null)
   }
 
-  const handleLaboratorioFormSuccess = () => {
+  const handleLaboratorioFormSuccess = (message?: string) => {
     setRefreshLaboratorios(prev => prev + 1)
     setSnackbar({
       open: true,
-      message: editingLaboratorio ? 'Laboratorio actualizado exitosamente' : 'Laboratorio creado exitosamente',
+      message: message || (editingLaboratorio ? 'Laboratorio actualizado exitosamente' : 'Laboratorio creado exitosamente'),
       severity: 'success'
     })
   }
@@ -459,11 +436,11 @@ export const Configuracion: React.FC = () => {
     setEditingEscuela(null)
   }
 
-  const handleEscuelaFormSuccess = () => {
+  const handleEscuelaFormSuccess = (message?: string) => {
     loadEscuelas()
     setSnackbar({
       open: true,
-      message: editingEscuela ? 'Escuela actualizada exitosamente' : 'Escuela creada exitosamente',
+      message: message || (editingEscuela ? 'Escuela actualizada exitosamente' : 'Escuela creada exitosamente'),
       severity: 'success'
     })
   }
@@ -510,31 +487,6 @@ export const Configuracion: React.FC = () => {
     setSnackbar({ ...snackbar, open: false })
   }
 
-  const getCategoriaColor = (categoria?: string) => {
-    switch (categoria) {
-      case 'Reactivos': return '#ff9800'
-      case 'Materiales': return '#2196f3'
-      case 'Material_Biologico': return '#4caf50'
-      default: return '#9e9e9e'
-    }
-  }
-
-  // Funciones para manejar la paginación de insumos
-  const handleInsumoPageChange = (_event: unknown, newPage: number) => {
-    setInsumoPage(newPage)
-  }
-
-  const handleInsumoRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setInsumoRowsPerPage(parseInt(event.target.value, 10))
-    setInsumoPage(0)
-  }
-
-  // Calcular los insumos paginados
-  const paginatedInsumos = insumos.slice(
-    insumoPage * insumoRowsPerPage,
-    insumoPage * insumoRowsPerPage + insumoRowsPerPage
-  )
-
   // Función para abrir importación masiva
   const handleImportacionMasivaOpen = () => {
     setImportacionMasivaOpen(true)
@@ -546,11 +498,11 @@ export const Configuracion: React.FC = () => {
   }
 
   // Función para éxito de importación masiva
-  const handleImportacionMasivaSuccess = () => {
-    setRefresh(prev => !prev)
+  const handleImportacionMasivaSuccess = (message?: string) => {
+    loadCatalogoInsumos()
     setSnackbar({
       open: true,
-      message: 'Importación masiva completada correctamente',
+      message: message || 'Importación masiva completada correctamente',
       severity: 'success'
     })
   }
@@ -726,111 +678,12 @@ export const Configuracion: React.FC = () => {
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
                 <CircularProgress />
               </Box>
-            ) : insumos.length === 0 ? (
-              <Box sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                py: 8,
-                color: 'text.secondary'
-              }}>
-                <LibraryBooks sx={{ fontSize: 64, mb: 2, opacity: 0.3 }} />
-                <Typography variant="h6" gutterBottom>
-                  No hay insumos registrados
-                </Typography>
-                <Typography variant="body2">
-                  Crea el primer insumo para empezar
-                </Typography>
-              </Box>
             ) : (
-              <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 2 }}>
-                <Table>
-                  <TableHead>
-                    <TableRow sx={{ backgroundColor: 'primary.main' }}>
-                      <TableCell sx={{ color: 'white', fontWeight: 600 }}>Código</TableCell>
-                      <TableCell sx={{ color: 'white', fontWeight: 600 }}>Nombre</TableCell>
-                      <TableCell sx={{ color: 'white', fontWeight: 600 }}>Categoría</TableCell>
-                      <TableCell sx={{ color: 'white', fontWeight: 600 }}>Unidad</TableCell>
-                      <TableCell sx={{ color: 'white', fontWeight: 600 }}>Presentación</TableCell>
-                      <TableCell sx={{ color: 'white', fontWeight: 600 }} align="center">Acciones</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {paginatedInsumos.map((insumo) => (
-                      <TableRow key={insumo.id} hover>
-                        <TableCell>
-                          <Chip
-                            label={insumo.codigo || 'N/A'}
-                            size="small"
-                            color="primary"
-                            variant="outlined"
-                            sx={{ fontFamily: 'monospace', fontWeight: 600 }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight={500}>
-                            {insumo.nombre}
-                          </Typography>
-                          {insumo.descripcion && (
-                            <Typography variant="caption" color="text.secondary">
-                              {insumo.descripcion}
-                            </Typography>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={insumo.categoria?.replace('_', ' ')}
-                            size="small"
-                            sx={{
-                              backgroundColor: getCategoriaColor(insumo.categoria),
-                              color: 'white',
-                              fontWeight: 500
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell>{insumo.unidad_medida}</TableCell>
-                        <TableCell>{insumo.presentacion || '-'}</TableCell>
-                        <TableCell align="center">
-                          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                            <Tooltip title="Editar">
-                              <IconButton
-                                size="small"
-                                color="primary"
-                                onClick={() => handleEditInsumo(insumo)}
-                              >
-                                <Edit fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Eliminar">
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() => handleDeleteInsumoClick(insumo)}
-                              >
-                                <Delete fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                <TablePagination
-                  rowsPerPageOptions={[5, 10, 25, 50]}
-                  component="div"
-                  count={insumos.length}
-                  rowsPerPage={insumoRowsPerPage}
-                  page={insumoPage}
-                  onPageChange={handleInsumoPageChange}
-                  onRowsPerPageChange={handleInsumoRowsPerPageChange}
-                  labelRowsPerPage="Filas por página:"
-                  labelDisplayedRows={({ from, to, count }) =>
-                    `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
-                  }
-                />
-              </TableContainer>
+              <CatalogoInsumosTable
+                insumos={insumos}
+                onEdit={handleEditInsumo}
+                onDelete={handleDeleteInsumoClick}
+              />
             )}
           </Box>
         </TabPanel>

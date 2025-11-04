@@ -67,31 +67,21 @@ export interface EquipoResponse {
 }
 
 
-class EquipoService {
+export const equipoService = {
   // Obtener todos los equipos (según permisos del usuario)
-  async getAll(): Promise<EquipoResponse> {
-    try {
-      const response = await api.get('/equipos')
-      return response.data
-    } catch (error: any) {
-      console.error('Error al obtener equipos:', error)
-      throw new Error(error.response?.data?.message || 'Error al obtener equipos')
-    }
-  }
+  getAll: async (): Promise<EquipoResponse> => {
+    const response = await api.get('/equipos')
+    return response.data
+  },
 
   // Obtener equipos de un laboratorio específico
-  async getByLaboratorio(laboratorioId: number): Promise<EquipoResponse> {
-    try {
-      const response = await api.get(`/equipos/${laboratorioId}`)
-      return response.data
-    } catch (error: any) {
-      console.error('Error al obtener equipos del laboratorio:', error)
-      throw new Error(error.response?.data?.message || 'Error al obtener equipos del laboratorio')
-    }
-  }
+  getByLaboratorio: async (laboratorioId: number): Promise<EquipoResponse> => {
+    const response = await api.get(`/equipos/${laboratorioId}`)
+    return response.data
+  },
 
   // Crear nuevo equipo
-  async create(equipoData: {
+  create: async (equipoData: {
     codigo: string
     nombre: string
     descripcion: string
@@ -106,27 +96,14 @@ class EquipoService {
     fecha_adquisicion?: string | null
     tipo_equipo_id?: number
     laboratorio_id?: number
-  }): Promise<{ success: boolean; message: string; equipo_id: number }> {
-    try {
-      const response = await api.post('/equipos', equipoData)
-      return response.data
-    } catch (error: any) {
-      console.error('Error al crear equipo:', error)
-
-      // Manejar errores específicos
-      if (error.response?.data?.message) {
-        if (error.response.data.message.includes('Duplicate entry')) {
-          throw new Error('Error: Ya existe un equipo con ese código. El sistema generará automáticamente un código único.')
-        }
-        throw new Error(error.response.data.message)
-      }
-
-      throw new Error('Error al crear equipo')
-    }
-  }
+  }): Promise<{ success: boolean; message: string; equipo_id: number }> => {
+    const response = await api.post('/equipos', equipoData)
+    // El interceptor normaliza errores, si hay "Duplicate entry" vendrá en response.data.message
+    return response.data
+  },
 
   // Actualizar equipo
-  async update(id: number, equipoData: {
+  update: async (id: number, equipoData: {
     codigo: string | null
     nombre: string
     descripcion: string
@@ -141,7 +118,7 @@ class EquipoService {
     fecha_adquisicion?: string | null
     tipo_equipo_id?: number
     laboratorio_id?: number
-  }): Promise<{ success: boolean; message: string; data: any }> {
+  }): Promise<{ success: boolean; message: string; data: any }> => {
     try {
       const response = await api.put(`/equipos/${id}`, equipoData)
       return response.data
@@ -149,50 +126,35 @@ class EquipoService {
       console.error('Error al actualizar equipo:', error)
       throw new Error(error.response?.data?.message || 'Error al actualizar equipo')
     }
-  }
+  },
 
   // Eliminar equipo
-  async delete(id: number): Promise<{ success: boolean; message: string }> {
-    try {
-      console.log('🗑️ Eliminando equipo:', id)
-      const response = await api.delete(`/equipos/${id}`)
-      console.log('✅ Respuesta del servidor:', response.data)
-      return response.data
-    } catch (error: any) {
-      console.error('❌ Error al eliminar equipo:', {
-        status: error.response?.status,
-        message: error.response?.data?.message,
-        data: error.response?.data,
-        error: error.message
-      })
-      throw error
-    }
-  }
+  delete: async (id: number): Promise<{ success: boolean; message: string }> => {
+    console.log('🗑️ Eliminando equipo:', id)
+    const response = await api.delete(`/equipos/${id}`)
+    console.log('✅ Respuesta del servidor:', response.data)
+    return response.data
+  },
 
   // Obtener actividad de equipos
-  async getActividad(filters?: {
+  getActividad: async (filters?: {
     laboratorio_id?: number
     fecha_inicio?: string
     fecha_fin?: string
     tipo_movimiento?: string
-  }): Promise<ActividadEquipoResponse> {
-    try {
-      const params = new URLSearchParams()
-      if (filters?.laboratorio_id) params.append('laboratorio_id', filters.laboratorio_id.toString())
-      if (filters?.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio)
-      if (filters?.fecha_fin) params.append('fecha_fin', filters.fecha_fin)
-      if (filters?.tipo_movimiento) params.append('tipo_movimiento', filters.tipo_movimiento)
+  }): Promise<ActividadEquipoResponse> => {
+    const params = new URLSearchParams()
+    if (filters?.laboratorio_id) params.append('laboratorio_id', filters.laboratorio_id.toString())
+    if (filters?.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio)
+    if (filters?.fecha_fin) params.append('fecha_fin', filters.fecha_fin)
+    if (filters?.tipo_movimiento) params.append('tipo_movimiento', filters.tipo_movimiento)
 
-      const response = await api.get(`/equipos/actividad?${params.toString()}`)
-      return response.data
-    } catch (error: any) {
-      console.error('Error al obtener actividad de equipos:', error)
-      throw new Error(error.response?.data?.message || 'Error al obtener actividad de equipos')
-    }
-  }
+    const response = await api.get(`/equipos/actividad?${params.toString()}`)
+    return response.data
+  },
 
   // Descargar plantilla Excel para importación masiva de equipos
-  async descargarPlantillaImportacion(): Promise<void> {
+  descargarPlantillaImportacion: async (): Promise<void> => {
     try {
       const response = await api.get('/equipos/plantilla-importacion', {
         responseType: 'blob'
@@ -227,10 +189,10 @@ class EquipoService {
       console.error('Error al descargar plantilla de equipos:', error)
       throw new Error(error.response?.data?.message || 'Error al descargar la plantilla de equipos')
     }
-  }
+  },
 
   // Previsualizar datos del Excel antes de importar equipos
-  async previsualizarImportacion(archivo: File): Promise<{
+  previsualizarImportacion: async (archivo: File): Promise<{
     success: boolean
     data: Array<{
       fila: number
@@ -252,7 +214,7 @@ class EquipoService {
     }>
     total_filas: number
     errores_generales: string[]
-  }> {
+  }> => {
     try {
       const formData = new FormData()
       formData.append('archivo_excel', archivo)
@@ -268,10 +230,10 @@ class EquipoService {
       console.error('Error en previsualización de equipos:', error)
       throw new Error(error.response?.data?.message || 'Error al previsualizar el archivo de equipos')
     }
-  }
+  },
 
   // Importación masiva de equipos desde Excel
-  async importacionMasiva(archivo: File): Promise<{
+  importacionMasiva: async (archivo: File): Promise<{
     success: boolean
     message: string
     procesados: number
@@ -286,7 +248,7 @@ class EquipoService {
       estado: string
       laboratorio_id: number
     }>
-  }> {
+  }> => {
     try {
       const formData = new FormData()
       formData.append('archivo_excel', archivo)
@@ -304,5 +266,3 @@ class EquipoService {
     }
   }
 }
-
-export const equipoService = new EquipoService()

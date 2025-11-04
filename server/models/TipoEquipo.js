@@ -18,7 +18,6 @@ export const TipoEquipo = {
 
       return rows
     } catch (error) {
-      console.error('❌ Error al obtener tipos de equipo:', error)
       throw error
     }
   },
@@ -40,7 +39,6 @@ export const TipoEquipo = {
 
       return rows
     } catch (error) {
-      console.error('❌ Error al obtener tipos activos:', error)
       throw error
     }
   },
@@ -60,7 +58,6 @@ export const TipoEquipo = {
 
       return rows[0]
     } catch (error) {
-      console.error('❌ Error al obtener tipo por ID:', error)
       throw error
     }
   },
@@ -91,7 +88,6 @@ export const TipoEquipo = {
       return result.insertId
     } catch (error) {
       await connection.rollback()
-      console.error('❌ Error al crear tipo de equipo:', error)
       throw error
     } finally {
       connection.release()
@@ -125,7 +121,6 @@ export const TipoEquipo = {
       return result.affectedRows > 0
     } catch (error) {
       await connection.rollback()
-      console.error('❌ Error al actualizar tipo de equipo:', error)
       throw error
     } finally {
       connection.release()
@@ -157,7 +152,6 @@ export const TipoEquipo = {
       return result.affectedRows > 0
     } catch (error) {
       await connection.rollback()
-      console.error('❌ Error al eliminar tipo de equipo:', error)
       throw error
     } finally {
       connection.release()
@@ -177,7 +171,6 @@ export const TipoEquipo = {
 
       return rows
     } catch (error) {
-      console.error('❌ Error al listar tipos de equipo con conteo de equipos:', error)
       throw error
     }
   }

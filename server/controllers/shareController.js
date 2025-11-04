@@ -121,8 +121,9 @@ export const createShareLink = async (req, res) => {
       PORT: process.env.PORT
     })
     
-    res.json({
+    res.status(201).json({
       success: true,
+      message: 'Enlace compartible creado exitosamente',
       data: {
         id: shareId,
         laboratorio_id: parseInt(laboratorio_id),
@@ -132,8 +133,7 @@ export const createShareLink = async (req, res) => {
         url: publicUrl,
         fecha_expiracion: fechaExpiracion,
         activo: true
-      },
-      message: 'Enlace compartible creado exitosamente'
+      }
     })
     
   } catch (error) {

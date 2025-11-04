@@ -10,11 +10,6 @@ const condicionesValidas = ['Excelente', 'Bueno', 'Regular', 'Malo']
 export const getEquipos = async (req, res) => {
   try {
 
-    console.log('🔍 getEquipos - Parámetros:', {
-      user_role: req.user.rol,
-      user_laboratorio_ids: req.user.laboratorio_ids
-    })
-
     let equipos = await Equipo.getAll(req.user.rol, req.user.laboratorio_ids)
 
     res.status(200).json({
@@ -23,10 +18,9 @@ export const getEquipos = async (req, res) => {
       total_equipos: equipos.length
     })
   } catch (error) {
-    console.error('Error en getEquipos:', error)
-    res.status(500).json({ 
-      success: false, 
-      message: error.message 
+    res.status(500).json({
+      success: false,
+      message: error.message
     })
   }
 }
@@ -34,21 +28,15 @@ export const getEquipos = async (req, res) => {
 export const getEquipoByLaboratorio = async (req, res) => {
   try {
     const { laboratorio_id } = req.params
-    console.log('🔍 getEquipoByLaboratorio - Parámetros:', {
-      laboratorio_id,
-      user_role: req.user.rol,
-      user_laboratorio_ids: req.user.laboratorio_ids
-    })
     const equipos = await Equipo.getByLaboratorio(laboratorio_id)
     res.status(200).json({
       success: true,
       data: equipos
     })
   } catch (error) {
-    console.error('Error en getEquipoByLaboratorio:', error)
-    res.status(500).json({ 
-      success: false, 
-      message: error.message 
+    res.status(500).json({
+      success: false,
+      message: error.message
     })
   }
 }
@@ -73,8 +61,6 @@ export const createEquipo = async (req, res) => {
       laboratorio_id,
       inventario_inicial = []
     } = req.body
-
-    console.log('🔍 Creando equipo:', req.body)
 
     // Validar fechas de mantenimiento
     if (fecha_ultimo_mantenimiento && fecha_proximo_mantenimiento) {
@@ -108,8 +94,6 @@ export const createEquipo = async (req, res) => {
       laboratorio_id
     })
 
-    console.log('✅ Equipo creado con ID:', equipo_id)
-
     // Registrar actividad de creación
     await Equipo.registrarActividadEquipo({
       accion: 'crear',
@@ -122,8 +106,10 @@ export const createEquipo = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Equipo creado exitosamente',
-      equipo_id: equipo_id,
-      codigo: codigo
+      data: {
+        id: equipo_id,
+        codigo: codigo
+      }
     })
 
   } catch (error) {
@@ -140,8 +126,6 @@ export const updateEquipo = async (req, res) => {
     const equipoId = parseInt(id, 10)
     const { codigo, nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios, condicion, fecha_adquisicion, tipo_equipo_id, laboratorio_id } = req.body
 
-    console.log('🔄 Actualizando equipo:', { id, equipoId, codigo, nombre, marca, modelo })
-    console.log('body: ', req.body)
     // Validar ID
     if (isNaN(equipoId) || equipoId <= 0) {
       return res.status(400).json({
@@ -195,6 +179,16 @@ export const updateEquipo = async (req, res) => {
         message: 'Ya existe otro equipo con ese código'
       })
     }
+
+    const equipoInfo = await Equipo.getById(equipoId)
+    const reservasActivasByLaboratorioId = await Equipo.reservasActivasByLaboratorioId(equipoInfo.id, equipoInfo.laboratorio_id)
+    if (reservasActivasByLaboratorioId && laboratorio_id !== equipoInfo.laboratorio_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'No se puede actualizar. El equipo tiene reservas programadas en el laboratorio actual.'
+      })
+    }
+
     const affectedRows = await Equipo.update(equipoId, {
       codigo: codigo.trim(),
       nombre: nombre.trim(),
@@ -235,10 +229,9 @@ export const updateEquipo = async (req, res) => {
     })
 
   } catch (error) {
-    console.error('❌ Error al actualizar equipo:', error)
     res.status(500).json({
       success: false,
-      message: 'Error interno del servidor'
+      message: error.message || 'Error interno del servidor'
     })
   }
 }
@@ -251,8 +244,6 @@ export const deleteEquipo = async (req, res) => {
 
     const { id } = req.params
     const equipoId = parseInt(id, 10)
-
-    console.log('🗑️ Eliminando equipo:', equipoId)
 
     // Validar ID
     if (isNaN(equipoId) || equipoId <= 0) {
@@ -283,7 +274,7 @@ export const deleteEquipo = async (req, res) => {
     }
 
     const equipoInfo = await Equipo.getById(equipoId)
-    
+
     // Eliminar equipo
     await Equipo.delete(equipoId)
 
@@ -296,15 +287,12 @@ export const deleteEquipo = async (req, res) => {
       ip_address: req.ip || req.connection.remoteAddress
     })
 
-    console.log('✅ Equipo eliminado exitosamente:', equipoId)
-
     res.status(200).json({
       success: true,
       message: 'Equipo eliminado exitosamente'
     })
 
   } catch (error) {
-    console.error('❌ Error al eliminar equipo:', error)
     res.status(500).json({
       success: false,
       message: 'Error interno al eliminar el equipo'
@@ -316,15 +304,6 @@ export const deleteEquipo = async (req, res) => {
 export const getActividadEquipos = async (req, res) => {
   try {
     const { laboratorio_id, fecha_inicio, fecha_fin, tipo_actividad } = req.query
-
-    console.log('🔍 getActividadEquipos - Parámetros:', {
-      laboratorio_id,
-      fecha_inicio,
-      fecha_fin,
-      tipo_actividad,
-      user_role: req.user.rol,
-      user_laboratorio_ids: req.user.laboratorio_ids
-    })
 
     // Consulta para actividad de CRUD (crear, actualizar, eliminar)
     let queryCRUD = `
@@ -556,7 +535,7 @@ export const generarPlantillaImportacionEquipos = async (req, res) => {
       ['• TIPO_EQUIPO_ID: ID del tipo de equipo'],
       ['• FECHA_ADQUISICION: Fecha de compra (formato YYYY-MM-DD)'],
       ['• LABORATORIO_CODIGO: Código del laboratorio'],
-      
+
       [''],
       ['COLUMNAS OPCIONALES:'],
       ['• DESCRIPCION: Descripción detallada del equipo'],
@@ -568,7 +547,7 @@ export const generarPlantillaImportacionEquipos = async (req, res) => {
       ['• FECHA_PROXIMO_MANTENIMIENTO: Formato YYYY-MM-DD'],
       ['• COMENTARIOS: Observaciones adicionales'],
       ['• CONDICION: Excelente | Bueno | Regular | Malo (por defecto: Bueno)'],
-    
+
       [''],
       ['LABORATORIOS DISPONIBLES:'],
       ['CODIGO', 'NOMBRE'],
@@ -598,7 +577,7 @@ export const generarPlantillaImportacionEquipos = async (req, res) => {
     }
 
     XLSX.utils.book_append_sheet(wb, wsInstrucciones, 'INSTRUCCIONES')
-    
+
     // Configurar respuesta para descarga
     const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' })
     const timestamp = new Date().toISOString().slice(0, 10)
@@ -736,7 +715,7 @@ export const previsualizarImportacionMasivaEquipos = async (req, res) => {
         erroresFila.push('LABORATORIO_CODIGO es obligatorio')
       } else if (!laboratorios.some(lab => lab.codigo === laboratorio_codigo)) {
         erroresFila.push(`Laboratorio inválido: ${laboratorio_codigo}`)
-      }    
+      }
 
       if (!tipo_equipo_id) {
         erroresFila.push('TIPO_EQUIPO_ID es obligatorio')
@@ -797,16 +776,11 @@ export const importacionMasivaEquipos = async (req, res) => {
       })
     }
 
-    console.log('📊 Procesando importación masiva de equipos...')
-    console.log('📁 Archivo recibido:', req.file.originalname, 'Tamaño:', req.file.size)
-
     // Leer archivo Excel
     const workbook = XLSX.read(req.file.buffer, { type: 'buffer' })
     const sheetName = workbook.SheetNames[0]
     const worksheet = workbook.Sheets[sheetName]
     const data = XLSX.utils.sheet_to_json(worksheet)
-
-    console.log('📋 Registros encontrados en Excel:', data.length)
 
     if (data.length === 0) {
       return res.status(400).json({
@@ -913,7 +887,7 @@ export const importacionMasivaEquipos = async (req, res) => {
         }
 
         const laboratorio_id = laboratorios.find(lab => lab.codigo === laboratorio_codigo)?.id
-        
+
         if (!tipo_equipo_id) {
           errores.push(`Fila ${rowNum}: TIPO_EQUIPO_ID es obligatorio`)
           continue
@@ -976,7 +950,6 @@ export const importacionMasivaEquipos = async (req, res) => {
         procesados++
 
       } catch (error) {
-        console.error(`❌ Error procesando fila ${rowNum}:`, error)
         errores.push(`Fila ${rowNum}: ${error.message}`)
       }
     }
@@ -992,8 +965,6 @@ export const importacionMasivaEquipos = async (req, res) => {
 
     await connection.commit()
 
-    console.log(`✅ Importación de equipos completada: ${procesados} equipos creados, ${errores.length} errores`)
-
     res.json({
       success: true,
       message: `Importación completada: ${procesados} equipos creados`,
@@ -1005,7 +976,6 @@ export const importacionMasivaEquipos = async (req, res) => {
 
   } catch (error) {
     await connection.rollback()
-    console.error('❌ Error en importación masiva de equipos:', error)
     res.status(500).json({
       success: false,
       message: 'Error interno en la importación masiva de equipos',

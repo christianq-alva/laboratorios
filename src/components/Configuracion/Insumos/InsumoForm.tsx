@@ -16,7 +16,7 @@ import {
   Alert
 } from '@mui/material'
 import { Close, Inventory, Info } from '@mui/icons-material'
-import { insumoService, type Insumo } from '../../services/insumoService'
+import { insumoService, type Insumo } from '../../../services/insumoService'
 
 
 interface InsumoFormProps {

@@ -9,10 +9,6 @@ import {
   deleteHorario,
   verificarDisponibilidad,
   getActividadHorarios, // ← NUEVO
-  getCiclos,        // ← NUEVO
-  getGrupos,        // ← NUEVO
-  debugHorarios,    // ← DEBUG
-  diagnosticarZonaHoraria,  // ← DIAGNÓSTICO ZONA HORARIA
   cerrarHorario     // ← CERRAR HORARIO
 } from '../controllers/horarioController.js'
 
@@ -73,35 +69,5 @@ router.post('/verificar-disponibilidad',
   authorize('read', 'Horario'),
   verificarDisponibilidad
 )
-
-// ==================== RUTAS UTILITARIAS ==================== 
-
-// 📅 OBTENER CICLOS  
-router.get('/utils/ciclos',
-  authenticateToken,
-  authorize('read', 'Horario'),
-  getCiclos
-)
-
-// 👥 OBTENER GRUPOS (con filtros opcionales)
-router.get('/utils/grupos',
-  authenticateToken,
-  authorize('read', 'Horario'),
-  getGrupos
-)
-
-// 🔍 DEBUG: VERIFICAR TODOS LOS REGISTROS
-router.get('/debug',
-  authenticateToken,
-  debugHorarios
-)
-
-// 🕐 DIAGNÓSTICO: ZONA HORARIA DEL SERVIDOR
-router.get('/diagnostico/timezone',
-  authenticateToken,
-  diagnosticarZonaHoraria
-)
-
-
 
 export default router

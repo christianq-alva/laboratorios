@@ -10,8 +10,6 @@ export const createInsumo = async (req, res) => {
   try {
     const { nombre, descripcion, unidad_medida, categoria, presentacion } = req.body
 
-    console.log('🔍 Creando insumo maestro:', req.body)
-
     // Validar campos requeridos
     if (!nombre?.trim()) {
       return res.status(400).json({
@@ -56,7 +54,6 @@ export const createInsumo = async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error en createInsumo:', error)
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor'
@@ -111,7 +108,7 @@ export const updateInsumo = async (req, res) => {
         message: 'Insumo no encontrado'
       })
     }
-    
+
     // Actualizar insumo
     const { affectedRows } = await Insumo.updateById(insumoId, {
       nombre: nombre.trim(),
@@ -141,7 +138,6 @@ export const updateInsumo = async (req, res) => {
     })
 
   } catch (error) {
-    console.error('❌ Error al actualizar insumo:', error)
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor'
@@ -158,8 +154,6 @@ export const deleteInsumo = async (req, res) => {
 
     const { id } = req.params
     const insumoId = parseInt(id, 10)
-
-    console.log('🗑️ Eliminando insumo:', insumoId)
 
     // Validar ID
     if (isNaN(insumoId) || insumoId <= 0) {
@@ -210,8 +204,6 @@ export const deleteInsumo = async (req, res) => {
 
     await connection.commit()
 
-    console.log('✅ Insumo eliminado exitosamente:', insumoId)
-
     res.status(200).json({
       success: true,
       message: 'Insumo eliminado exitosamente'
@@ -219,7 +211,6 @@ export const deleteInsumo = async (req, res) => {
 
   } catch (error) {
     await connection.rollback()
-    console.error('❌ Error al eliminar insumo:', error)
 
     // Manejar errores de restricción de clave foránea
     if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.code === 'ER_ROW_IS_REFERENCED') {
@@ -249,7 +240,6 @@ export const getAllInsumos = async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error en getAllInsumos:', error)
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor'
@@ -277,8 +267,6 @@ export const upload = multer({
 //Generar plantilla Excel para importación masiva de insumos
 export const generarPlantillaImportacion = async (req, res) => {
   try {
-    console.log('📊 Generando plantilla Excel para importación masiva de insumos...')
-
     // Crear workbook
     const wb = XLSX.utils.book_new()
 
@@ -368,10 +356,7 @@ export const generarPlantillaImportacion = async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename=plantilla_insumos_${timestamp}.xlsx`)
     res.send(buffer)
 
-    console.log('✅ Plantilla Excel generada y enviada')
-
   } catch (error) {
-    console.error('❌ Error al generar plantilla Excel:', error)
     res.status(500).json({
       success: false,
       message: 'Error al generar la plantilla Excel'
@@ -389,16 +374,11 @@ export const previsualizarImportacionMasiva = async (req, res) => {
       })
     }
 
-    console.log('📊 Previsualizando importación masiva de insumos...')
-    console.log('📁 Archivo recibido:', req.file.originalname, 'Tamaño:', req.file.size)
-
     // Leer archivo Excel
     const workbook = XLSX.read(req.file.buffer, { type: 'buffer' })
     const sheetName = workbook.SheetNames[0]
     const worksheet = workbook.Sheets[sheetName]
     const data = XLSX.utils.sheet_to_json(worksheet)
-
-    console.log('📋 Registros encontrados en Excel:', data.length)
 
     if (data.length === 0) {
       return res.status(400).json({
@@ -447,8 +427,6 @@ export const previsualizarImportacionMasiva = async (req, res) => {
       })
     }
 
-    console.log(`📊 Previsualización completada: ${previewData.length} filas procesadas`)
-
     res.status(200).json({
       success: true,
       data: previewData,
@@ -457,7 +435,6 @@ export const previsualizarImportacionMasiva = async (req, res) => {
     })
 
   } catch (error) {
-    console.error('❌ Error en previsualización de insumos:', error)
     res.status(500).json({
       success: false,
       message: 'Error interno en la previsualización',
@@ -480,16 +457,11 @@ export const importacionMasiva = async (req, res) => {
       })
     }
 
-    console.log('📊 Procesando importación masiva de insumos...')
-    console.log('📁 Archivo recibido:', req.file.originalname, 'Tamaño:', req.file.size)
-
     // Leer archivo Excel
     const workbook = XLSX.read(req.file.buffer, { type: 'buffer' })
     const sheetName = workbook.SheetNames[0]
     const worksheet = workbook.Sheets[sheetName]
     const data = XLSX.utils.sheet_to_json(worksheet)
-
-    console.log('📋 Registros encontrados en Excel:', data.length)
 
     if (data.length === 0) {
       return res.status(400).json({
@@ -539,7 +511,6 @@ export const importacionMasiva = async (req, res) => {
         procesados++
 
       } catch (error) {
-        console.error(`❌ Error procesando fila ${rowNum}:`, error)
         errores.push(`Fila ${rowNum}: ${error.message}`)
       }
     }
@@ -555,8 +526,6 @@ export const importacionMasiva = async (req, res) => {
 
     await connection.commit()
 
-    console.log(`✅ Importación completada: ${procesados} insumos creados, ${errores.length} errores`)
-
     res.status(200).json({
       success: true,
       message: `Importación completada: ${procesados} insumos creados`,
@@ -568,7 +537,6 @@ export const importacionMasiva = async (req, res) => {
 
   } catch (error) {
     await connection.rollback()
-    console.error('❌ Error en importación masiva:', error)
     res.status(500).json({
       success: false,
       message: 'Error interno en la importación masiva',

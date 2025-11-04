@@ -13,7 +13,7 @@ import {
   Typography,
 } from '@mui/material'
 import { Close } from '@mui/icons-material'
-import { escuelaService, type Escuela, type CreateEscuelaData } from '../../services/escuelaService'
+import { escuelaService, type Escuela, type CreateEscuelaData } from '../../../services/escuelaService'
 
 interface EscuelaFormProps {
   open: boolean

@@ -10,36 +10,24 @@ export const Laboratorio = {
         return laboratorios;
     },
 
-    getAllByUser: async (user_id, user_rol) => {
+    getAllByUser: async (user_rol, user_laboratorio_ids) => {
 
-        let query, params = []
+        let query = []
 
-        if (user_rol === 'Administrador') {
-            query = `
-        SELECT l.*, e.nombre as escuela 
+        query = `
+        SELECT l.id, l.codigo, l.nombre, l.ubicacion, l.escuela_id, l.piso, l.estado, e.nombre as escuela 
         FROM laboratorios l
         LEFT JOIN escuelas e ON l.escuela_id = e.id
-        ORDER BY l.codigo, l.nombre
+        WHERE 1=1
+        
       `
-        } else if (user_rol === 'Jefe de Laboratorio') {
-            query = `
-        SELECT l.*, e.nombre as escuela  
-        FROM laboratorios l
-        LEFT JOIN escuelas e ON l.escuela_id = e.id
-        JOIN jefe_laboratorio jl ON l.id = jl.laboratorio_id
-        WHERE jl.usuario_id = ?
-        ORDER BY l.codigo, l.nombre
-      `
-            params = [user_id]
-        } else {
-            query = 'SELECT * FROM laboratorios WHERE 1=0'
+        if (user_rol === 'Jefe de Laboratorio') {
+            query += ` AND l.id IN (${user_laboratorio_ids.join(',')})`
         }
 
-        console.log(query)
-        console.log(params)
+        query += ' ORDER BY l.codigo, l.nombre';
 
-
-        const [laboratorios] = await pool.execute(query, params)
+        const [laboratorios] = await pool.execute(query)
 
         return laboratorios;
     },
@@ -77,5 +65,15 @@ export const Laboratorio = {
     getLaboratorioById: async (id) => {
         const [rows] = await pool.execute('SELECT * FROM laboratorios WHERE id = ?', [id])
         return rows[0];
+    },
+    getLaboratorioInsumos: async () => {
+        const [laboratorioInsumos] = await pool.execute(`
+        SELECT l.codigo lab_codigo, l.nombre lab_nombre, i.codigo ins_codigo, i.nombre ins_nombre, i.unidad_medida ins_unidad_medida
+        FROM inventario_insumos ii
+        INNER JOIN laboratorios l on l.id = ii.laboratorio_id 
+        INNER JOIN insumos i on i.id = ii.insumo_id 
+        ORDER BY l.nombre, i.nombre;
+        `)
+        return laboratorioInsumos;
     },
 }

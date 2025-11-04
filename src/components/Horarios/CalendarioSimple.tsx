@@ -129,11 +129,11 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
     try {
       const result = await laboratorioService.getAll()
       if (result.success) {
-        setLaboratorios(result.data || [])
-        setUserRole(result.user_role || '')
+        setLaboratorios(result.data)
+        //setUserRole(result.data.user_role || '')
         
-        // Si es jefe de laboratorio y solo tiene un lab, seleccionarlo automáticamente
-        if (result.user_role === 'Jefe de Laboratorio' && result.data?.length === 1) {
+        // Si solo tiene un lab, seleccionarlo automáticamente
+        if (result.data.length === 1) {
           setSelectedLaboratorio(result.data[0].id)
         }
       }
@@ -362,9 +362,8 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
               )}
             </Box>
             
-            {/* Selector de laboratorio para administradores y jefes con múltiples labs */}
-            {((userRole === 'Jefe de Laboratorio' && laboratorios.length > 1) || 
-              (userRole === 'Administrador' && laboratorios.length > 0)) && (
+            {/* Selector de laboratorio para múltiples labs */}
+            {laboratorios.length > 1 && (
               <FormControl size="small" sx={{ minWidth: 200, mt: 1 }}>
                 <InputLabel>Ver laboratorio</InputLabel>
                 <Select

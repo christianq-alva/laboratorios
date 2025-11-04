@@ -11,12 +11,12 @@ import {
   Alert
 } from '@mui/material'
 import { Close, Category } from '@mui/icons-material'
-import { tipoEquipoService, type TipoEquipo } from '../../services/tipoEquipoService'
+import { tipoEquipoService, type TipoEquipo } from '../../../services/tipoEquipoService'
 
 interface TipoEquipoFormProps {
   open: boolean
   onClose: () => void
-  onSuccess: () => void
+  onSuccess: (message?: string) => void
   tipoEquipo?: TipoEquipo | null
 }
 
@@ -83,28 +83,28 @@ export const TipoEquipoForm: React.FC<TipoEquipoFormProps> = ({
     setLoading(true)
     setError(null)
 
-    try {
-      const data = {
-        nombre: formData.nombre.trim(),
-        descripcion: formData.descripcion.trim() || undefined
-      }
-
-      if (tipoEquipo) {
-        // Editar
-        await tipoEquipoService.update(tipoEquipo.id, data)
-      } else {
-        // Crear
-        await tipoEquipoService.create(data)
-      }
-
-      onSuccess()
-      onClose()
-    } catch (err: any) {
-      console.error('Error al guardar tipo de equipo:', err)
-      setError(err.response?.data?.message || 'Error al guardar tipo de equipo')
-    } finally {
-      setLoading(false)
+    const data = {
+      nombre: formData.nombre.trim(),
+      descripcion: formData.descripcion.trim() || undefined
     }
+
+    let result
+    if (tipoEquipo) {
+      // Editar
+      result = await tipoEquipoService.update(tipoEquipo.id, data)
+    } else {
+      // Crear
+      result = await tipoEquipoService.create(data)
+    }
+
+    if (result.success) {
+      onSuccess(result.message)
+      onClose()
+    } else {
+      setError(result.message || 'Error al guardar tipo de equipo')
+    }
+    
+    setLoading(false)
   }
 
   return (

@@ -7,24 +7,16 @@ export const getAll = async (req, res) => {
   // Obtener todos los tipos de equipo
 
   try {
-    console.log('📥 GET /api/tipos-equipo - Obteniendo todos los tipos')
-    console.log('👤 Usuario:', req.user)
-
     const tipos = await TipoEquipo.getAll()
-
-    console.log('✅ Tipos encontrados:', tipos.length)
-    console.log('📦 Datos:', tipos)
 
     res.status(200).json({
       success: true,
       data: tipos
     })
   } catch (error) {
-    console.error('❌ Error al obtener tipos de equipo:', error)
     res.status(500).json({
       success: false,
-      message: 'Error al obtener tipos de equipo',
-      error: error.message
+      message: 'Error al obtener tipos de equipo'
     })
   }
 }
@@ -39,11 +31,9 @@ export const getActivos = async (req, res) => {
       data: tipos
     })
   } catch (error) {
-    console.error('❌ Error al obtener tipos activos:', error)
     res.status(500).json({
       success: false,
-      message: 'Error al obtener tipos activos',
-      error: error.message
+      message: 'Error al obtener tipos activos'
     })
   }
 }
@@ -76,11 +66,9 @@ export const getById = async (req, res) => {
       data: tipo
     })
   } catch (error) {
-    console.error('❌ Error al obtener tipo por ID:', error)
     res.status(500).json({
       success: false,
-      message: 'Error al obtener tipo de equipo',
-      error: error.message
+      message: 'Error al obtener tipo de equipo'
     })
   }
 }
@@ -125,8 +113,6 @@ export const createTipoEquipo = async (req, res) => {
       data: nuevoTipo
     })
   } catch (error) {
-    console.error('❌ Error al crear tipo de equipo:', error)
-
     if (error.message.includes('Ya existe')) {
       return res.status(409).json({
         success: false,
@@ -136,8 +122,7 @@ export const createTipoEquipo = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: 'Error al crear tipo de equipo',
-      error: error.message
+      message: 'Error al crear tipo de equipo'
     })
   }
 }
@@ -208,8 +193,6 @@ export const updateTipoEquipo = async (req, res) => {
       data: tipoActualizado
     })
   } catch (error) {
-    console.error('❌ Error al actualizar tipo de equipo:', error)
-
     if (error.message.includes('Ya existe')) {
       return res.status(409).json({
         success: false,
@@ -219,8 +202,7 @@ export const updateTipoEquipo = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: 'Error al actualizar tipo de equipo',
-      error: error.message
+      message: 'Error al actualizar tipo de equipo'
     })
   }
 }
@@ -262,8 +244,6 @@ export const deleteTipoEquipo = async (req, res) => {
       message: 'Tipo de equipo eliminado exitosamente'
     })
   } catch (error) {
-    console.error('❌ Error al eliminar tipo de equipo:', error)
-
     if (error.message.includes('tiene') && error.message.includes('asociado')) {
       return res.status(409).json({
         success: false,
@@ -281,8 +261,7 @@ export const deleteTipoEquipo = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: 'Error al eliminar tipo de equipo',
-      error: error.message
+      message: 'Error al eliminar tipo de equipo'
     })
   }
 }
@@ -297,11 +276,9 @@ export const getAllWithCountEquipos = async (req, res) => {
       data: tiposWithCount
     })
   } catch (error) {
-    console.error('❌ Error al contar equipos:', error)
     res.status(500).json({
       success: false,
-      message: 'Error al contar equipos',
-      error: error.message
+      message: 'Error al contar equipos'
     })
   }
 }

@@ -1,10 +1,6 @@
 import { api } from './api'
+import type { ApiMessageResponse, ApiCreateUpdateResponse } from './types'
 
-// ============================================
-// TIPOS PARA CARGA MASIVA
-// ============================================
-// Tipo movido desde CargaMasivaModal para evitar dependencias circulares
-// Services NO deben importar desde Components
 export interface DatoValidado {
   fila: number
   insumo_id: number
@@ -41,7 +37,9 @@ export interface InsumoSaldo {
 }
 
 export interface AllInsumoResponse {
+  success?: boolean
   data: Insumo2[]
+  message?: string
 }
 
 export interface Insumo2 {
@@ -112,20 +110,15 @@ export interface ActividadResponse {
   message?: string
 }
 
-class InsumoService {
-
+export const insumoService = {
   //Crear nuevo insumo
-  async create(insumoData: {
+  create: async (insumoData: {
     nombre: string
     descripcion: string
     unidad_medida: string
     categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico'
     presentacion?: string
-  }): Promise<{
-    success: boolean;
-    message: string;
-    insumo_id: number;
-  }> {
+  }): Promise<ApiCreateUpdateResponse<{ id: number; insumo_id: number }>> => {
     try {
       const response = await api.post('/insumos', insumoData)
       console.log(response)
@@ -134,10 +127,10 @@ class InsumoService {
       console.error('Error al crear insumo:', error)
       throw new Error('Error al crear insumo')
     }
-  }
+  },
 
   //Actualizar insumo
-  async update(id: number, insumoData: {
+  update: async (id: number, insumoData: {
     nombre: string
     descripcion: string
     unidad_medida: string
@@ -146,7 +139,7 @@ class InsumoService {
     condicion?: string
     fecha_vencimiento?: string
     observacion?: string
-  }): Promise<{ success: boolean; message: string; data: any }> {
+  }): Promise<ApiCreateUpdateResponse<Insumo>> => {
     try {
       const response = await api.put(`/insumos/${id}`, insumoData)
       return response.data
@@ -154,38 +147,24 @@ class InsumoService {
       console.error('Error al actualizar insumo:', error)
       throw new Error(error.response?.data?.message || 'Error al actualizar insumo')
     }
-  }
+  },
 
   //Eliminar insumo
-  async delete(id: number): Promise<{ success: boolean; message: string }> {
-    try {
-      console.log('🗑️ Eliminando insumo:', id)
-      const response = await api.delete(`/insumos/${id}`)
-      console.log('✅ Respuesta del servidor:', response.data)
-      return response.data
-    } catch (error: any) {
-      console.error('❌ Error al eliminar insumo:', {
-        status: error.response?.status,
-        message: error.response?.data?.message,
-        data: error.response?.data,
-        error: error.message
-      })
-      throw error
-    }
-  }
+  delete: async (id: number): Promise<ApiMessageResponse> => {
+    console.log('🗑️ Eliminando insumo:', id)
+    const response = await api.delete(`/insumos/${id}`)
+    console.log('✅ Respuesta del servidor:', response.data)
+    return response.data
+  },
+
   //Obtener listado de insumos 
-  async getAllInsumos(): Promise<AllInsumoResponse> {
-    try {
-      const response = await api.get('/insumos/list')
-      return response.data
-    } catch (error: any) {
-      console.error('Error al obtener listado de insumos:', error)
-      throw new Error(error.response?.data?.message || 'Error al obtener listado de insumos')
-    }
-  }
+  getAllInsumos: async (): Promise<AllInsumoResponse> => {
+    const response = await api.get('/insumos/list')
+    return response.data
+  },
 
   //Generar plantilla Excel para importación masiva de insumos
-  async descargarPlantillaImportacion(): Promise<void> {
+  descargarPlantillaImportacion: async (): Promise<void> => {
     try {
       const response = await api.get('/insumos/plantilla-importacion', {
         responseType: 'blob'
@@ -220,10 +199,10 @@ class InsumoService {
       console.error('Error al descargar plantilla:', error)
       throw new Error(error.response?.data?.message || 'Error al descargar la plantilla')
     }
-  }
+  },
 
   //Procesar archivo Excel para importación masiva de insumos
-  async previsualizarImportacion(archivo: File): Promise<{
+  previsualizarImportacion: async (archivo: File): Promise<{
     success: boolean
     data: Array<{
       fila: number
@@ -236,7 +215,7 @@ class InsumoService {
     }>
     total_filas: number
     errores_generales: string[]
-  }> {
+  }> => {
     try {
       const formData = new FormData()
       formData.append('archivo_excel', archivo)
@@ -252,10 +231,10 @@ class InsumoService {
       console.error('Error en previsualización:', error)
       throw new Error(error.response?.data?.message || 'Error al previsualizar el archivo')
     }
-  }
+  },
 
   //Ejecutar importación masiva de insumos
-  async importacionMasiva(archivo: File): Promise<{
+  importacionMasiva: async (archivo: File): Promise<{
     success: boolean
     message: string
     procesados: number
@@ -268,7 +247,7 @@ class InsumoService {
       categoria: string
       stock: string
     }>
-  }> {
+  }> => {
     try {
       const formData = new FormData()
       formData.append('archivo_excel', archivo)
@@ -284,10 +263,10 @@ class InsumoService {
       console.error('Error en importación masiva:', error)
       throw new Error(error.response?.data?.message || 'Error en la importación masiva')
     }
-  }
+  },
 
   //Obtener los insumos y su stock de todos los laboratorios
-  async getAllWithStock(): Promise<InsumoSaldoResponse> {
+  getAllWithStock: async (): Promise<InsumoSaldoResponse> => {
     try {
       const response = await api.get('/inventario/all-con-saldo')
       return response.data
@@ -295,10 +274,10 @@ class InsumoService {
       console.error('Error al obtener insumos con saldo:', error)
       throw new Error(error.response?.data?.message || 'Error al obtener insumos con saldo')
     }
-  }
+  },
 
   //Obtener los insumos y su stock de un laboratorio
-  async getWithStock(laboratorio_id: number): Promise<InsumoSaldoResponse> {
+  getWithStock: async (laboratorio_id: number): Promise<InsumoSaldoResponse> => {
     try {
       const params = new URLSearchParams()
       params.append('laboratorio_id', laboratorio_id.toString());
@@ -308,10 +287,10 @@ class InsumoService {
       console.error('Error al obtener insumos con saldo por laboratorio:', error)
       throw new Error(error.response?.data?.message || 'Error al obtener insumos con saldo por laboratorio')
     }
-  }
+  },
 
   //Obtener solo los insumos con stock de un laboratorio
-  async getWithPositiveStock(laboratorio_id: number): Promise<InsumoSaldoResponse> {
+  getWithPositiveStock: async (laboratorio_id: number): Promise<InsumoSaldoResponse> => {
     try {
       const params = new URLSearchParams()
       params.append('laboratorio_id', laboratorio_id.toString());
@@ -321,15 +300,15 @@ class InsumoService {
       console.error('Error al obtener insumos con saldo:', error)
       throw new Error(error.response?.data?.message || 'Error al obtener insumos con saldo')
     }
-  }
+  },
 
   //Obtener listado de movimiento con filtro de laboratorio, rango de fechas y tipo de movimiento
-  async getActividad(filters?: {
+  getActividad: async (filters?: {
     laboratorio_id?: number
     fecha_inicio?: string
     fecha_fin?: string
     tipo_movimiento?: string
-  }): Promise<ActividadResponse> {
+  }): Promise<ActividadResponse> => {
     try {
       const params = new URLSearchParams()
       if (filters?.laboratorio_id) params.append('laboratorio_id', filters.laboratorio_id.toString())
@@ -344,10 +323,10 @@ class InsumoService {
       console.error('Error al obtener actividad de insumos:', error)
       throw new Error(error.response?.data?.message || 'Error al obtener actividad de insumos')
     }
-  }
+  },
 
   //Generar plantilla excel para reabastecimiento masivo
-  async descargarPlantillaExcel(): Promise<{ data: Blob }> {
+  descargarPlantillaExcel: async (): Promise<{ data: Blob }> => {
     try {
       const response = await api.get('/inventario/plantilla-excel', {
         responseType: 'blob'
@@ -357,10 +336,10 @@ class InsumoService {
       console.error('Error al descargar plantilla Excel:', error)
       throw new Error(error.response?.data?.message || 'Error al descargar plantilla Excel')
     }
-  }
+  },
 
   //Procesar archivo excel para reabastecimiento masivo
-  async procesarArchivoExcel(formData: FormData, laboratorio_id: number
+  procesarArchivoExcel: async (formData: FormData, laboratorio_id: number
   ): Promise<{
     success: boolean
     message: string
@@ -372,7 +351,7 @@ class InsumoService {
       datos_validados: DatoValidado[]
       errores: string[]
     }
-  }> {
+  }> => {
     try {
       const response = await api.post('/inventario/procesar-excel', formData, {
         headers: {
@@ -387,10 +366,10 @@ class InsumoService {
       console.error('Error al procesar archivo Excel:', error)
       throw new Error(error.response?.data?.message || 'Error al procesar archivo Excel')
     }
-  }
+  },
 
   //Ejecutar reabastecimiento masivo 
-  async ejecutarReabastecimientoMasivo(data: {
+  ejecutarReabastecimientoMasivo: async (data: {
     datos_reabastecimiento: Array<{
       insumo_id: number
       cantidad: number
@@ -417,7 +396,7 @@ class InsumoService {
         error?: string
       }>
     }
-  }> {
+  }> => {
     try {
       const response = await api.post('/inventario/reabastecimiento-masivo', data)
       return response.data
@@ -425,10 +404,10 @@ class InsumoService {
       console.error('Error al ejecutar reabastecimiento masivo:', error)
       throw new Error(error.response?.data?.message || 'Error al ejecutar reabastecimiento masivo')
     }
-  }
+  },
 
   //Obtener lotes con saldo disponible por laboratorio e insumo
-  async getLotesConSaldo(laboratorioId: number, insumoId?: number): Promise<{
+  getLotesConSaldo: async (laboratorioId: number, insumoId?: number): Promise<{
     success: boolean
     data: Array<{
       detalle_id: number
@@ -443,7 +422,7 @@ class InsumoService {
       fecha_ingreso: string
       dias_para_vencer: number | null
     }>
-  }> {
+  }> => {
     try {
       const params = new URLSearchParams()
       params.append('laboratorio_id', laboratorioId.toString())
@@ -455,10 +434,10 @@ class InsumoService {
       console.error('Error al obtener lotes con saldo:', error)
       throw new Error(error.response?.data?.message || 'Error al obtener lotes con saldo')
     }
-  }
+  },
 
   // Registrar movimiento manual (entrada o salida)
-  async registrarMovimiento(data: {
+  registrarMovimiento: async (data: {
     laboratorio_id: number
     tipo_movimiento: 'entrada' | 'salida'
     observaciones?: string | null
@@ -471,7 +450,7 @@ class InsumoService {
       fecha_vencimiento?: string | null
       entrada_detalle_id?: number | null  // Para salidas: ID del lote de entrada a reducir
     }>
-  }): Promise<{ success: boolean; message: string; movimiento_id: number }> {
+  }): Promise<{ success: boolean; message: string; movimiento_id: number }> => {
     try {
       console.log('📝 Registrando movimiento manual:', data)
       const response = await api.post('/inventario/movimiento-manual', data)
@@ -481,6 +460,4 @@ class InsumoService {
       throw new Error(error.response?.data?.message || 'Error al registrar movimiento')
     }
   }
-}
-
-export const insumoService = new InsumoService() 
+} 

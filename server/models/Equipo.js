@@ -98,7 +98,15 @@ export const Equipo = {
     const [rows] = await pool.execute('SELECT COUNT(*) as total FROM detalle_reserva_equipos WHERE equipo_id = ?', [id])
     return rows[0].total > 0
   },
-
+  reservasActivasByLaboratorioId: async (equipo_id, laboratorio_id) => {
+    const [rows] = await pool.execute(`
+      SELECT COUNT(*) as total 
+      FROM detalle_reserva_equipos dre
+      INNER JOIN reservas r ON dre.reserva_id = r.id
+      WHERE dre.equipo_id = ? AND r.laboratorio_id = ? AND r.estado = 'P' AND r.fecha_inicio > NOW()`, 
+      [equipo_id, laboratorio_id])
+    return rows[0].total > 0
+  },
   registrarActividadEquipo: async ({ accion, equipo_id, descripcion, usuario_id, ip_address }) => {
     try {
       // Crear fecha en zona horaria de Perú
@@ -151,10 +159,11 @@ export const Equipo = {
       FROM equipos e
       LEFT JOIN tipos_equipo te ON e.tipo_equipo_id = te.id
       LEFT JOIN laboratorios lab ON e.laboratorio_id = lab.id
+      WHERE 1=1
         `
     // Filtros según permisos del usuario
     if (user_rol === 'Jefe de Laboratorio') {
-      query += ` AND ii.laboratorio_id IN (${user_laboratorio_ids.join(',')})`
+      query += ` AND e.laboratorio_id IN (${user_laboratorio_ids.join(',')})`
     }
 
     const [equipos] = await pool.execute(query)
@@ -193,83 +202,7 @@ export const Equipo = {
       return equipos;
 
     } catch (error) {
-      console.error('❌ Error al obtener equipos por laboratorio:', error)
       throw error
     }
   },
-
-  // Verificar disponibilidad de equipo
-  checkDisponibilidad: async (equipo_id, laboratorio_id, cantidad_requerida) => {
-    try {
-      const [rows] = await pool.execute(`
-        SELECT cantidad_disponible
-        FROM inventario_equipos 
-        WHERE equipo_id = ? AND laboratorio_id = ?
-      `, [equipo_id, laboratorio_id])
-
-      if (rows.length === 0) return false
-
-      const disponible = rows[0].cantidad_disponible || 0
-      return disponible >= cantidad_requerida
-    } catch (error) {
-      console.error('❌ Error verificando disponibilidad de equipo:', error)
-      return false
-    }
-  },
-
-  // Reservar equipo (marcar como en uso)
-  reservarEquipo: async (connection, equipo_id, laboratorio_id, cantidad, usuario_id, reserva_id) => {
-    try {
-      console.log('🔒 Reservando equipo:', { equipo_id, laboratorio_id, cantidad })
-
-      // Actualizar inventario
-      await connection.execute(`
-        UPDATE inventario_equipos 
-        SET cantidad_disponible = cantidad_disponible - ?,
-            cantidad_en_uso = cantidad_en_uso + ?
-        WHERE equipo_id = ? AND laboratorio_id = ?
-      `, [cantidad, cantidad, equipo_id, laboratorio_id])
-
-      // Registrar movimiento
-      await connection.execute(`
-        INSERT INTO movimientos_equipos 
-        (equipo_id, laboratorio_id, usuario_id, tipo_movimiento, cantidad, reserva_id, observaciones)
-        VALUES (?, ?, ?, 'reserva', ?, ?, 'Equipo reservado para clase')
-      `, [equipo_id, laboratorio_id, usuario_id, cantidad, reserva_id])
-
-      console.log('✅ Equipo reservado exitosamente')
-    } catch (error) {
-      console.error('❌ Error reservando equipo:', error)
-      throw error
-    }
-  },
-
-
-
-  // Devolver equipo (marcar como disponible)
-  devolverEquipo: async (connection, equipo_id, laboratorio_id, cantidad, usuario_id, reserva_id) => {
-    try {
-      console.log('🔓 Devolviendo equipo:', { equipo_id, laboratorio_id, cantidad })
-
-      // Actualizar inventario
-      await connection.execute(`
-        UPDATE inventario_equipos 
-        SET cantidad_disponible = cantidad_disponible + ?,
-            cantidad_en_uso = cantidad_en_uso - ?
-        WHERE equipo_id = ? AND laboratorio_id = ?
-      `, [cantidad, cantidad, equipo_id, laboratorio_id])
-
-      // Registrar movimiento
-      await connection.execute(`
-        INSERT INTO movimientos_equipos 
-        (equipo_id, laboratorio_id, usuario_id, tipo_movimiento, cantidad, reserva_id, observaciones)
-        VALUES (?, ?, ?, 'devolucion', ?, ?, 'Equipo devuelto después de clase')
-      `, [equipo_id, laboratorio_id, usuario_id, cantidad, reserva_id])
-
-      console.log('✅ Equipo devuelto exitosamente')
-    } catch (error) {
-      console.error('❌ Error devolviendo equipo:', error)
-      throw error
-    }
-  }
 }

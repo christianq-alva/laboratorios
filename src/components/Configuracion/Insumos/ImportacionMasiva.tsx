@@ -41,7 +41,7 @@ import {
   Visibility,
   ArrowBack
 } from '@mui/icons-material'
-import { insumoService } from '../../services/insumoService'
+import { insumoService } from '../../../services/insumoService'
 
 interface ImportacionMasivaProps {
   open: boolean

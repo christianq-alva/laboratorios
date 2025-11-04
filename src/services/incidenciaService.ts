@@ -60,50 +60,28 @@ export interface CreateIncidenciaResponse {
   incidencia_id: number
 }
 
-class IncidenciaService {
+export const incidenciaService = {
   // Obtener todas las incidencias del usuario
-  async getAll(): Promise<IncidenciaResponse> {
-    try {
-      const response = await api.get('/incidencias')
-      return response.data
-    } catch (error: any) {
-      console.error('Error al obtener incidencias:', error)
-      throw new Error(error.response?.data?.message || 'Error al obtener incidencias')
-    }
-  }
+  getAll: async (): Promise<IncidenciaResponse> => {
+    const response = await api.get('/incidencias')
+    return response.data
+  },
 
   // Obtener una incidencia específica por ID
-  async getById(id: number): Promise<IncidenciaDetalleResponse> {
-    try {
-      const response = await api.get(`/incidencias/${id}`)
-      return response.data
-    } catch (error: any) {
-      console.error('Error al obtener incidencia:', error)
-      throw new Error(error.response?.data?.message || 'Error al obtener incidencia')
-    }
-  }
+  getById: async (id: number): Promise<IncidenciaDetalleResponse> => {
+    const response = await api.get(`/incidencias/${id}`)
+    return response.data
+  },
 
   // Crear una nueva incidencia
-  async create(incidenciaData: CreateIncidenciaData): Promise<CreateIncidenciaResponse> {
-    try {
-      const response = await api.post('/incidencias', incidenciaData)
-      return response.data
-    } catch (error: any) {
-      console.error('Error al crear incidencia:', error)
-      throw new Error(error.response?.data?.message || 'Error al crear incidencia')
-    }
-  }
+  create: async (incidenciaData: CreateIncidenciaData): Promise<CreateIncidenciaResponse> => {
+    const response = await api.post('/incidencias', incidenciaData)
+    return response.data
+  },
 
   // Obtener horarios disponibles para reportar incidencias
-  async getHorariosDisponibles(): Promise<HorariosParaIncidenciasResponse> {
-    try {
-      const response = await api.get('/incidencias/horarios/disponibles')
-      return response.data
-    } catch (error: any) {
-      console.error('Error al obtener horarios para incidencias:', error)
-      throw new Error(error.response?.data?.message || 'Error al obtener horarios disponibles')
-    }
+  getHorariosDisponibles: async (): Promise<HorariosParaIncidenciasResponse> => {
+    const response = await api.get('/incidencias/horarios/disponibles')
+    return response.data
   }
-}
-
-export const incidenciaService = new IncidenciaService() 
+} 

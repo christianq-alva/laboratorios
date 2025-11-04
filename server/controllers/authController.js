@@ -40,7 +40,10 @@ export const login = async (req, res) => {
             token
           })
       } else {
-        res.json({ success: false, message: 'Credenciales incorrectas' })
+        res.status(401).json({ 
+          success: false, 
+          message: 'Credenciales incorrectas' 
+        })
       }
     } catch (error) {
       console.error(error)
@@ -51,7 +54,7 @@ export const login = async (req, res) => {
 export const getProfile = async (req, res) => {
     try {
       // req.user viene del middleware authenticateToken
-      res.json({
+      res.status(200).json({
         success: true,
         message: `Hola ${req.user.usuario}! Estás autenticado`,
         user: req.user

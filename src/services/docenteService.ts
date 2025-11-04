@@ -1,4 +1,5 @@
 import { api } from './api'
+import type { ApiMessageResponse, ApiCreateUpdateResponse, ApiDataResponse } from './types'
 
 export interface Docente {
   id: number
@@ -16,33 +17,32 @@ export interface DocenteData {
 
 export const docenteService = {
   // Obtener todos los docentes
-  getAll: async () => {
+  getAll: async (): Promise<ApiDataResponse<Docente[]>> => {
     const response = await api.get('/docentes')
     return response.data
   },
 
   // Obtener docente por ID
-  getById: async (id: number) => {
+  getById: async (id: number): Promise<ApiDataResponse<Docente>> => {
     const response = await api.get(`/docentes/${id}`)
     return response.data
   },
 
   // Crear nuevo docente
-  create: async (data: DocenteData) => {
+  create: async (data: DocenteData): Promise<ApiCreateUpdateResponse<Docente>> => {
     const response = await api.post('/docentes', data)
     return response.data
   },
 
   // Actualizar docente
-  update: async (id: number, data: DocenteData) => {
+  update: async (id: number, data: DocenteData): Promise<ApiCreateUpdateResponse<Docente>> => {
     const response = await api.put(`/docentes/${id}`, data)
     return response.data
   },
 
   // Eliminar docente
-  delete: async (id: number) => {
+  delete: async (id: number): Promise<ApiMessageResponse> => {
     const response = await api.delete(`/docentes/${id}`)
     return response.data
-  },
-
+  }
 } 

@@ -1,4 +1,5 @@
 import { api } from './api'
+import type { ApiResponse, ApiMessageResponse, ApiCreateUpdateResponse } from './types'
 
 export interface TipoEquipo {
   id: number
@@ -8,58 +9,51 @@ export interface TipoEquipo {
   count_equipos?: number
 }
 
-export interface TipoEquipoCreate {
-  nombre: string
-  descripcion?: string
-}
-
-export interface TipoEquipoUpdate {
+export interface TipoEquipoInput {
   nombre: string
   descripcion?: string
 }
 
 export const tipoEquipoService = {
   // Obtener todos los tipos de equipo
-  async getAll(): Promise<{ success: boolean; data: TipoEquipo[] }> {
+  getAll: async (): Promise<ApiResponse<TipoEquipo[]>> => {
     const response = await api.get('/tipos-equipo')
     return response.data
   },
 
   // Obtener solo tipos activos
-  async getActivos(): Promise<{ success: boolean; data: TipoEquipo[] }> {
+  getActivos: async (): Promise<ApiResponse<TipoEquipo[]>> => {
     const response = await api.get('/tipos-equipo/activos')
     return response.data
   },
 
   // Obtener un tipo por ID
-  async getById(id: number): Promise<{ success: boolean; data: TipoEquipo }> {
+  getById: async (id: number): Promise<ApiResponse<TipoEquipo>> => {
     const response = await api.get(`/tipos-equipo/${id}`)
     return response.data
   },
 
   // Crear un nuevo tipo
-  async create(data: TipoEquipoCreate): Promise<{ success: boolean; data: TipoEquipo; message: string }> {
+  create: async (data: TipoEquipoInput): Promise<ApiCreateUpdateResponse<TipoEquipo>> => {
     const response = await api.post('/tipos-equipo', data)
     return response.data
   },
 
   // Actualizar un tipo
-  async update(id: number, data: TipoEquipoUpdate): Promise<{ success: boolean; data: TipoEquipo; message: string }> {
+  update: async (id: number, data: TipoEquipoInput): Promise<ApiCreateUpdateResponse<TipoEquipo>> => {
     const response = await api.put(`/tipos-equipo/${id}`, data)
     return response.data
   },
 
   // Eliminar un tipo
-  async delete(id: number): Promise<{ success: boolean; message: string }> {
+  delete: async (id: number): Promise<ApiMessageResponse> => {
     const response = await api.delete(`/tipos-equipo/${id}`)
     return response.data
   },
 
   // Contar equipos por tipo
-  async getAllWithCountEquipos(): Promise<{ success: boolean; data: TipoEquipo[] }> {
-    console.log('Estamos avanzando...')
+  getAllWithCountEquipos: async (): Promise<ApiResponse<TipoEquipo[]>> => {
     const response = await api.get('/tipos-equipo/with-count-equipos')
-    console.log('Respuesta del servidor:', response.data)
     return response.data
   }
 }

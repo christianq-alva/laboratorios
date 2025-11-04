@@ -12,8 +12,7 @@ export const getEscuelas = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Error al obtener escuelas',
-      error: error.message
+      message: 'Error al obtener escuelas'
     })
   }
 }
@@ -47,8 +46,7 @@ export const getEscuelaById = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Error al obtener la escuela',
-      error: error.message
+      message: 'Error al obtener la escuela'
     })
   }
 }
@@ -79,7 +77,6 @@ export const createEscuela = async (req, res) => {
     // Insertar escuela
     const insertId = await Escuela.create(nombre.trim())
 
-
     res.status(201).json({
       success: true,
       data: {
@@ -89,11 +86,9 @@ export const createEscuela = async (req, res) => {
       message: 'Escuela creada exitosamente'
     })
   } catch (error) {
-    console.error('❌ Error al crear la escuela:', error)
     res.status(500).json({
       success: false,
-      message: 'Error al crear la escuela',
-      error: error.message
+      message: 'Error al crear la escuela'
     })
   }
 }
@@ -141,7 +136,7 @@ export const updateEscuela = async (req, res) => {
     }
 
     // Actualizar escuela
-    const affectedRows = await Escuela.update(idNum, { nombre: nombre.trim(), descripcion: null, codigo: null })
+    const affectedRows = await Escuela.update(idNum, nombre.trim())
 
     if (affectedRows === 0) {
       return res.status(404).json({
@@ -161,8 +156,7 @@ export const updateEscuela = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Error al actualizar la escuela',
-      error: error.message
+      message: 'Error al actualizar la escuela'
     })
   }
 }
@@ -234,8 +228,7 @@ export const deleteEscuela = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: 'Error al eliminar la escuela',
-      error: error.message
+      message: 'Error al eliminar la escuela'
     })
   }
 }

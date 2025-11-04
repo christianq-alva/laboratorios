@@ -299,33 +299,6 @@ export const Horarios: React.FC = () => {
             >
               Actividad
             </Button>
-          
-          {process.env.NODE_ENV === 'development' && (
-            <Button
-              variant="outlined"
-              onClick={async () => {
-                try {
-                  const result = await horarioService.debug()
-                  console.log('🔍 DEBUG RESULT:', result)
-                  if (result.success) {
-                    const info = result.debug_info
-                    const mensaje = `
-DEBUG: ${info.total_reservas} reservas, ${info.reservas_con_joins} con datos, ${info.registros_huerfanos} huérfanos`
-                    alert(mensaje)
-                  } else {
-                    alert('Error en debug: ' + result.message)
-                  }
-                } catch (err) {
-                  console.error('Debug error:', err)
-                  alert('Error en debug')
-                }
-              }}
-              size="small"
-              sx={{ minWidth: 'auto', px: 1 }}
-            >
-              Debug
-            </Button>
-          )}
         </Box>
       </Box>
 

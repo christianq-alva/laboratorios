@@ -1,4 +1,5 @@
 import { api } from './api'
+import type {   ApiMessageResponse, ApiCreateUpdateResponse, ApiDataResponse } from './types'
 
 export interface Laboratorio {
   id: number
@@ -29,37 +30,31 @@ export interface Escuela {
 
 export const laboratorioService = {
   // Obtener todos los laboratorios
-  getAll: async () => {
+  getAll: async (): Promise<ApiDataResponse<Laboratorio[]>> => {
     const response = await api.get('/laboratorios')
     return response.data
   },
 
-  // Obtener laboratorio por ID
-  getById: async (id: number) => {
-    const response = await api.get(`/laboratorios/${id}`)
-    return response.data
-  },
-
   // Crear nuevo laboratorio
-  create: async (data: CreateLaboratorioData) => {
+  create: async (data: CreateLaboratorioData): Promise<ApiCreateUpdateResponse<Laboratorio>> => {
     const response = await api.post('/laboratorios', data)
     return response.data
   },
 
   // Actualizar laboratorio
-  update: async (id: number, data: UpdateLaboratorioData) => {
+  update: async (id: number, data: UpdateLaboratorioData): Promise<ApiCreateUpdateResponse<Laboratorio>> => {
     const response = await api.put(`/laboratorios/${id}`, data)
     return response.data
   },
 
   // Eliminar laboratorio
-  delete: async (id: number) => {
+  delete: async (id: number): Promise<ApiMessageResponse> => {
     const response = await api.delete(`/laboratorios/${id}`)
     return response.data
   },
 
   // Cambiar estado de un laboratorio
-  changeStatus: async (id: number, estado: 'Activo' | 'En Mantenimiento' | 'Inhabilitado' | 'Baja') => {
+  changeStatus: async (id: number, estado: 'Activo' | 'En Mantenimiento' | 'Inhabilitado' | 'Baja'): Promise<ApiMessageResponse> => {
     const response = await api.patch(`/laboratorios/${id}/estado`, { estado })
     return response.data
   }

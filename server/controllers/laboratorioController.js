@@ -8,20 +8,16 @@ const estadosValidos = ['Activo', 'En Mantenimiento', 'Inhabilitado', 'Baja']
 export const getLaboratorios = async (req, res) => {
   try {
 
-    const laboratorios = await Laboratorio.getAllByUser(req.user.id, req.user.rol)
-
-    console.log('------------------------')
-    console.log(laboratorios)
+    const laboratorios = await Laboratorio.getAllByUser(req.user.rol, req.user.laboratorio_ids)
 
     res.status(200).json({
       success: true,
       data: laboratorios,
-      user_role: req.user.rol,
-      cantidad_laboratorios: laboratorios.length
+      //user_role: req.user.rol,
+      //cantidad_laboratorios: laboratorios.length
     })
 
   } catch (error) {
-    console.error('Error en getLaboratorios:', error)
     res.status(500).json({
       success: false,
       message: error.message
@@ -78,8 +74,6 @@ export const createLaboratorio = async (req, res) => {
     // Insertar laboratorio
     const insertId = await Laboratorio.create(codigo.trim(), nombre.trim(), ubicacion.trim(), escuela_id, piso.toString().trim(), estado)
 
-    console.log('✅ Laboratorio creado con ID:', insertId)
-
     // Respuesta exitosa
     res.status(201).json({
       success: true,
@@ -98,7 +92,6 @@ export const createLaboratorio = async (req, res) => {
 
   } catch (error) {
 
-    console.error('Error en createLaboratorio:', error)
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor'
@@ -111,8 +104,6 @@ export const updateLaboratorio = async (req, res) => {
   try {
     const { id } = req.params
     const { codigo, nombre, ubicacion, escuela_id, piso, estado } = req.body
-
-    console.log('🔄 Actualizando laboratorio:', { id, codigo, nombre, ubicacion, escuela_id, piso, estado })
 
     // Verificar que el laboratorio existe
     const labCheck = await Laboratorio.exists(id)
@@ -161,8 +152,6 @@ export const updateLaboratorio = async (req, res) => {
         message: 'Laboratorio no encontrado'
       })
     }
-
-    console.log('✅ Laboratorio actualizado:', id)
 
     res.status(200).json({
       success: true,
@@ -222,15 +211,12 @@ export const deleteLaboratorio = async (req, res) => {
       })
     }
 
-    console.log('✅ Laboratorio eliminado:', id)
-
     res.status(200).json({
       success: true,
       message: 'Laboratorio eliminado correctamente'
     })
 
   } catch (error) {
-    console.error('Error en deleteLaboratorio:', error)
 
     // Manejar errores de restricción de clave foránea
     if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.code === 'ER_ROW_IS_REFERENCED') {
@@ -253,8 +239,6 @@ export const changeEstadoLaboratorio = async (req, res) => {
   try {
     const { id } = req.params
     const { estado } = req.body
-
-    console.log('🔄 Cambiando estado del laboratorio:', { id, estado })
 
     // Validar que el laboratorio existe
     const labCheck = await Laboratorio.exists(id)
@@ -294,8 +278,6 @@ export const changeEstadoLaboratorio = async (req, res) => {
       })
     }
 
-    console.log('✅ Estado del laboratorio actualizado:', id)
-
     res.status(200).json({
       success: true,
       data: {
@@ -307,7 +289,6 @@ export const changeEstadoLaboratorio = async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error en changeEstadoLaboratorio:', error)
     res.status(500).json({
       success: false,
       message: error.message

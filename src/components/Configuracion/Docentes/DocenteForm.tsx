@@ -16,14 +16,14 @@ import {
   Select,
 } from '@mui/material'
 import { Close } from '@mui/icons-material'
-import { docenteService } from '../../services/docenteService'
-import type { Docente, DocenteData} from '../../services/docenteService'
-import { escuelaService, type Escuela } from '../../services/escuelaService'
+import { docenteService } from '../../../services/docenteService'
+import type { Docente, DocenteData} from '../../../services/docenteService'  
+import { escuelaService, type Escuela } from '../../../services/escuelaService'
 
 interface DocenteFormProps {
   open: boolean
   onClose: () => void
-  onSuccess: () => void
+  onSuccess: (message?: string) => void
   docente?: Docente | null
 }
 
@@ -153,12 +153,13 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
       }
 
       if (result.success) {
-        onSuccess()
+        onSuccess(result.message)
         onClose()
       } else {
         setError(result.message || 'Error al guardar el docente')
       }
     } catch (err: any) {
+      // Error de validación local (throw new Error)
       setError(err.message || 'Error de conexión')
     } finally {
       setLoading(false)

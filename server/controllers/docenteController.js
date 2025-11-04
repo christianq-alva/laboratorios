@@ -1,16 +1,15 @@
 import { Docente } from '../models/Docente.js'
 
+// Obtener todos los docentes
 export const getDocentes = async (req, res) => {
   try {
     console.log('🔍 Usuario solicitando docentes:', req.user.usuario, req.user.rol)
     
     const docentes = await Docente.getAll()
     
-    res.json({ 
+    res.status(200).json({ 
       success: true, 
       data: docentes,
-      user_role: req.user.rol,
-      total: docentes.length
     })
   } catch (error) {
     console.error('Error en getDocentes:', error)
@@ -18,6 +17,7 @@ export const getDocentes = async (req, res) => {
   }
 }
 
+// Obtener docente por ID
 export const getDocente = async (req, res) => {
   try {
     const { id } = req.params
@@ -33,7 +33,7 @@ export const getDocente = async (req, res) => {
       })
     }
     
-    res.json({ 
+    res.status(200).json({ 
       success: true, 
       data: docente 
     })
@@ -43,6 +43,7 @@ export const getDocente = async (req, res) => {
   }
 }
 
+// Crear docente
 export const createDocente = async (req, res) => {
   try {
     const { nombre, correo, escuela_id } = req.body
@@ -84,6 +85,7 @@ export const createDocente = async (req, res) => {
   }
 }
 
+// Actualizar docente
 export const updateDocente = async (req, res) => {
   try {
     const { id } = req.params
@@ -128,6 +130,7 @@ export const updateDocente = async (req, res) => {
   }
 }
 
+// Eliminar docente
 export const deleteDocente = async (req, res) => {
   try {
     const { id } = req.params
@@ -148,7 +151,7 @@ export const deleteDocente = async (req, res) => {
     if (hasSchedules) {
       return res.status(400).json({
         success: false,
-        message: 'No se puede eliminar: el docente tiene horarios programados'
+        message: 'No se puede eliminar. El docente tiene horarios programados'
       })
     }
     

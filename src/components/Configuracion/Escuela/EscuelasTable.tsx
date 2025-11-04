@@ -14,31 +14,22 @@ import {
   Typography,
   TablePagination
 } from '@mui/material'
-import { Edit, Delete, Category } from '@mui/icons-material'
-import type { TipoEquipo } from '../../services/tipoEquipoService'
+import { Edit, Delete, School } from '@mui/icons-material'
+import type { Escuela } from '../../../services/escuelaService'
 
-interface TiposEquipoTableProps {
-  tipos: TipoEquipo[]
-  onEdit: (tipo: TipoEquipo) => void
-  onDelete: (tipo: TipoEquipo) => void
+interface EscuelasTableProps {
+  escuelas: Escuela[]
+  onEdit: (escuela: Escuela) => void
+  onDelete: (escuela: Escuela) => void
 }
 
-export const TiposEquipoTable: React.FC<TiposEquipoTableProps> = ({
-  tipos,
+export const EscuelasTable: React.FC<EscuelasTableProps> = ({
+  escuelas,
   onEdit,
   onDelete
 }) => {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return '-'
-    return new Date(dateString).toLocaleDateString('es-PE', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
 
   // Funciones para manejar la paginación
   const handleChangePage = (_event: unknown, newPage: number) => {
@@ -50,13 +41,13 @@ export const TiposEquipoTable: React.FC<TiposEquipoTableProps> = ({
     setPage(0)
   }
 
-  // Calcular los tipos a mostrar según la página actual
-  const paginatedTipos = tipos.slice(
+  // Calcular las escuelas a mostrar según la página actual
+  const paginatedEscuelas = escuelas.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   )
 
-  if (tipos.length === 0) {
+  if (escuelas.length === 0) {
     return (
       <Box sx={{ 
         display: 'flex', 
@@ -66,12 +57,12 @@ export const TiposEquipoTable: React.FC<TiposEquipoTableProps> = ({
         py: 8,
         color: 'text.secondary'
       }}>
-        <Category sx={{ fontSize: 64, mb: 2, opacity: 0.3 }} />
+        <School sx={{ fontSize: 64, mb: 2, opacity: 0.3 }} />
         <Typography variant="h6" gutterBottom>
-          No hay tipos de equipo registrados
+          No hay escuelas registradas
         </Typography>
         <Typography variant="body2">
-          Crea el primer tipo de equipo para empezar
+          Crea la primera escuela para empezar
         </Typography>
       </Box>
     )
@@ -84,60 +75,42 @@ export const TiposEquipoTable: React.FC<TiposEquipoTableProps> = ({
           <TableRow sx={{ backgroundColor: 'primary.main' }}>
             <TableCell sx={{ color: 'white', fontWeight: 600 }}>ID</TableCell>
             <TableCell sx={{ color: 'white', fontWeight: 600 }}>Nombre</TableCell>
-            <TableCell sx={{ color: 'white', fontWeight: 600 }}>Descripción</TableCell>
-            <TableCell sx={{ color: 'white', fontWeight: 600 }}>Equipos</TableCell>
-            <TableCell sx={{ color: 'white', fontWeight: 600 }}>Fecha Creación</TableCell>
             <TableCell sx={{ color: 'white', fontWeight: 600 }} align="center">
               Acciones
             </TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {paginatedTipos.map((tipo) => (
+          {paginatedEscuelas.map((escuela) => (
             <TableRow 
-              key={tipo.id}
+              key={escuela.id}
               sx={{ 
                 '&:hover': { backgroundColor: 'action.hover' },
                 '&:last-child td, &:last-child th': { border: 0 }
               }}
             >
-              <TableCell>{tipo.id}</TableCell>
-              <TableCell>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Category color="primary" fontSize="small" />
-                  <Typography variant="body2" fontWeight={500}>
-                    {tipo.nombre}
-                  </Typography>
-                </Box>
-              </TableCell>
-              <TableCell>
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    maxWidth: 300, 
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  {tipo.descripcion || '-'}
-                </Typography>
-              </TableCell>
               <TableCell>
                 <Chip 
-                  label={tipo.count_equipos || 0}
+                  label={escuela.id} 
+                  size="small" 
                   color="default"
-                  size="small"
                   variant="outlined"
                 />
               </TableCell>
-              <TableCell>{formatDate(tipo.created_at)}</TableCell>
+              <TableCell>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <School color="primary" fontSize="small" />
+                  <Typography variant="body2" fontWeight={500}>
+                    {escuela.nombre}
+                  </Typography>
+                </Box>
+              </TableCell>
               <TableCell align="center">
                 <Tooltip title="Editar">
                   <IconButton
                     size="small"
                     color="primary"
-                    onClick={() => onEdit(tipo)}
+                    onClick={() => onEdit(escuela)}
                   >
                     <Edit fontSize="small" />
                   </IconButton>
@@ -146,7 +119,7 @@ export const TiposEquipoTable: React.FC<TiposEquipoTableProps> = ({
                   <IconButton
                     size="small"
                     color="error"
-                    onClick={() => onDelete(tipo)}
+                    onClick={() => onDelete(escuela)}
                   >
                     <Delete fontSize="small" />
                   </IconButton>
@@ -159,7 +132,7 @@ export const TiposEquipoTable: React.FC<TiposEquipoTableProps> = ({
       <TablePagination
         rowsPerPageOptions={[5, 10, 25, 50]}
         component="div"
-        count={tipos.length}
+        count={escuelas.length}
         rowsPerPage={rowsPerPage}
         page={page}
         onPageChange={handleChangePage}

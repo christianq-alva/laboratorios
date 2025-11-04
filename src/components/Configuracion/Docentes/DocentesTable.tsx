@@ -29,8 +29,8 @@ import {
   School,
   Visibility,
 } from '@mui/icons-material'
-import { docenteService } from '../../services/docenteService'
-import type { Docente } from '../../services/docenteService'
+import { docenteService } from '../../../services/docenteService'  
+import type { Docente } from '../../../services/docenteService'
 
 interface DocentesTableProps {
   onEdit: (docente: Docente) => void

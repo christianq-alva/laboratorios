@@ -51,7 +51,7 @@ export const InventarioTable: React.FC<InventarioTableProps> = ({
     try {
       // Cargar laboratorios para el filtro
       const laboratoriosResponse = await laboratorioService.getAll()
-      setLaboratorios(laboratoriosResponse.data)
+      setLaboratorios(laboratoriosResponse.data || [])
 
       // Cargar insumos
       let insumosResponse
