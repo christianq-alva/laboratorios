@@ -95,7 +95,9 @@ export const HorariosTable: React.FC<HorariosTableProps> = ({
   }
 
   useEffect(() => {
-    fetchHorarios()
+    if (horarios.length === 0) {
+      fetchHorarios()
+    }
   }, [])
 
   useEffect(() => {
@@ -203,7 +205,6 @@ export const HorariosTable: React.FC<HorariosTableProps> = ({
             {horarios.map((horario) => {
               const fechaInicio = formatDateTime(horario.fecha_inicio)
               const fechaFin = formatDateTime(horario.fecha_fin)
-              const isActive = new Date(horario.fecha_fin) > new Date()
               
               return (
                 <TableRow key={horario.id} hover>
@@ -304,8 +305,8 @@ export const HorariosTable: React.FC<HorariosTableProps> = ({
                   {/* Estado */}
                   <TableCell>
                     <Chip 
-                      label={isActive ? "Activo" : "Finalizado"}
-                      color={isActive ? "success" : "default"}
+                      label={horario.estado == 'C' ? "Cerrado" : "Programado"}
+                      color={horario.estado == 'C' ? "default" : "success"}
                       size="small" 
                       variant="outlined" 
                     />

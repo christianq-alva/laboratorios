@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   Box,
   Table,
@@ -15,8 +15,6 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  CircularProgress,
-  Alert,
   Tooltip,
   TextField,
   TablePagination,
@@ -35,62 +33,26 @@ import {
   Block,
   RemoveCircle,
 } from '@mui/icons-material'
-import { laboratorioService } from '../../../services/laboratorioService'
 import type { Laboratorio } from '../../../services/laboratorioService'
 
 interface LaboratoriosTableProps {
+  laboratorios: Laboratorio[]
   onEdit: (laboratorio: Laboratorio) => void
   onDelete: (laboratorio: Laboratorio) => void
   onChangeStatus: (laboratorio: Laboratorio, estado: 'Activo' | 'En Mantenimiento' | 'Inhabilitado' | 'Baja') => void
-  refresh: number
-  onRefreshComplete: () => void
 }
 
 export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
+  laboratorios,
   onEdit,
   onDelete,
   onChangeStatus,
-  refresh,
-  onRefreshComplete,
 }) => {
-  const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [selectedLab, setSelectedLab] = useState<Laboratorio | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
-
-  const fetchLaboratorios = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const result = await laboratorioService.getAll()
-      
-      if (result.success) {
-        setLaboratorios(result.data || [])
-      } else {
-        setError(result.message || 'Error al cargar laboratorios')
-      }
-    } catch (err) {
-      setError('Error de conexión al servidor')
-      console.error('Error fetching laboratorios:', err)
-    } finally {
-      setLoading(false)
-      onRefreshComplete()
-    }
-  }
-
-  useEffect(() => {
-    fetchLaboratorios()
-  }, [])
-
-  useEffect(() => {
-    if (refresh > 0) {
-      fetchLaboratorios()
-    }
-  }, [refresh])
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, laboratorio: Laboratorio) => {
     setAnchorEl(event.currentTarget)
@@ -123,7 +85,6 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
     handleMenuClose()
   }
 
-  // Función para filtrar laboratorios por término de búsqueda
   // Función para obtener el color del estado
   const getEstadoColor = (estado: string) => {
     switch (estado) {
@@ -140,17 +101,18 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
     }
   }
 
-  const filteredLaboratorios = laboratorios.filter(lab => {
-    if (!searchTerm) return true
+  // Filtrar laboratorios por término de búsqueda
+  const filteredLaboratorios = useMemo(() => {
+    if (!searchTerm) return laboratorios
     
     const searchLower = searchTerm.toLowerCase()
-    return (
+    return laboratorios.filter(lab => (
       (lab.codigo && lab.codigo.toLowerCase().includes(searchLower)) ||
       lab.nombre.toLowerCase().includes(searchLower) ||
       lab.ubicacion.toLowerCase().includes(searchLower) ||
       (lab.escuela && lab.escuela.toLowerCase().includes(searchLower))
-    )
-  })
+    ))
+  }, [laboratorios, searchTerm])
 
   // Función para limpiar búsqueda
   const handleClearSearch = () => {
@@ -173,22 +135,6 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   )
-
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-        <CircularProgress />
-      </Box>
-    )
-  }
-
-  if (error) {
-    return (
-      <Alert severity="error" sx={{ mb: 2 }}>
-        {error}
-      </Alert>
-    )
-  }
 
   if (laboratorios.length === 0) {
     return (

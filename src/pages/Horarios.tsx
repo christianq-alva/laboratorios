@@ -170,13 +170,12 @@ export const Horarios: React.FC = () => {
       const result = await horarioService.delete(selectedHorario.id)
       
       if (result.success) {
-        console.log('✅ Horario eliminado correctamente')
         setDeleteOpen(false)
         setSelectedHorario(null)
         setRefresh(prev => !prev)
         setSnackbar({
           open: true,
-          message: 'Horario eliminado correctamente. Los insumos han sido devueltos al stock.',
+          message: result.message ,
           severity: 'success'
         })
       } else {

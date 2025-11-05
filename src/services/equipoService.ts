@@ -1,4 +1,5 @@
 import { api } from './api'
+import type { ApiDataResponse, ApiMessageResponse } from './types'
 
 export interface Equipo {
   id: number
@@ -58,24 +59,15 @@ export interface ActividadEquipoResponse {
   message?: string
 }
 
-export interface EquipoResponse {
-  success: boolean
-  data: Equipo[]
-  laboratorio_filtrado?: number | null
-  total_equipos: number
-  message?: string
-}
-
-
 export const equipoService = {
   // Obtener todos los equipos (según permisos del usuario)
-  getAll: async (): Promise<EquipoResponse> => {
+  getAll: async (): Promise<ApiDataResponse<Equipo[]>> => {
     const response = await api.get('/equipos')
     return response.data
   },
 
   // Obtener equipos de un laboratorio específico
-  getByLaboratorio: async (laboratorioId: number): Promise<EquipoResponse> => {
+  getByLaboratorio: async (laboratorioId: number): Promise<ApiDataResponse<Equipo[]>> => {
     const response = await api.get(`/equipos/${laboratorioId}`)
     return response.data
   },
@@ -129,10 +121,8 @@ export const equipoService = {
   },
 
   // Eliminar equipo
-  delete: async (id: number): Promise<{ success: boolean; message: string }> => {
-    console.log('🗑️ Eliminando equipo:', id)
+  delete: async (id: number): Promise<ApiMessageResponse> => {
     const response = await api.delete(`/equipos/${id}`)
-    console.log('✅ Respuesta del servidor:', response.data)
     return response.data
   },
 

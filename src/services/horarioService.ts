@@ -18,6 +18,7 @@ export interface Horario {
   grupo?: string
   insumos?: InsumoHorario[]
   equipos?: EquipoHorario[]
+  estado?: string
 }
 
 export interface HorarioSimple {
@@ -224,11 +225,9 @@ export const horarioService = {
   getEquiposByLaboratorio: async (laboratorio_id: number) => {
     try {
       console.log('🔍 Cargando equipos para laboratorio:', laboratorio_id)
-      const response = await api.get(`/equipos?laboratorio_id=${laboratorio_id}`)
-      console.log('🔧 Equipos recibidos:', response.data)
+      const response = await api.get(`/equipos/${laboratorio_id}`)
       return response.data
     } catch (error) {
-      console.error('❌ Error al cargar equipos:', error)
       return { success: false, data: [], message: 'Error al cargar equipos' }
     }
   },

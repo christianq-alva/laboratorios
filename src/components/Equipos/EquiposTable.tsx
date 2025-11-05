@@ -49,28 +49,29 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
     setLoading(true)
     setError(null)
 
-    try {
-      // Cargar laboratorios para el filtro
-      const laboratoriosResponse = await laboratorioService.getAll()
+    // Cargar laboratorios para el filtro
+    const laboratoriosResponse = await laboratorioService.getAll()
+    if (laboratoriosResponse.success) {
       setLaboratorios(laboratoriosResponse.data)
-
-      // Cargar equipos
-      let equiposResponse
-      // Usar vista normal (agrupada)
-      if (selectedLaboratorio === 'all') {
-        equiposResponse = await equipoService.getAll()
-      } else {
-        equiposResponse = await equipoService.getByLaboratorio(selectedLaboratorio)
-      }
-
-      setEquipos(equiposResponse.data)
-    } catch (err: any) {
-      setError(err.message)
-      console.error('Error al cargar datos:', err)
-    } finally {
-      setLoading(false)
-      onRefreshComplete?.()
+    } else {
+      setError(laboratoriosResponse.message || 'Error al cargar laboratorios')
     }
+
+    // Cargar equipos
+    let equiposResponse
+    if (selectedLaboratorio === 'all') {
+      equiposResponse = await equipoService.getAll()  
+    } else {
+      equiposResponse = await equipoService.getByLaboratorio(selectedLaboratorio as number)
+    }
+    if (equiposResponse.success) {
+      setEquipos(equiposResponse.data)
+    } else {
+      setError(equiposResponse.message || 'Error al cargar equipos')
+    }
+
+    onRefreshComplete?.()
+    setLoading(false)
   }
 
   // Efecto para cargar datos iniciales

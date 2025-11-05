@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   Table,
   TableBody,
@@ -12,9 +12,10 @@ import {
   Tooltip,
   Box,
   Typography,
-  TablePagination
+  TablePagination,
+  TextField
 } from '@mui/material'
-import { Edit, Delete, LibraryBooks } from '@mui/icons-material'
+import { Edit, Delete, LibraryBooks, Search, Clear } from '@mui/icons-material'
 import type { Insumo2 } from '../../../services/insumoService'
 
 interface CatalogoInsumosTableProps {
@@ -30,6 +31,7 @@ export const CatalogoInsumosTable: React.FC<CatalogoInsumosTableProps> = ({
 }) => {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [searchTerm, setSearchTerm] = useState('')
 
   const getCategoriaColor = (categoria?: string) => {
     switch (categoria) {
@@ -38,6 +40,27 @@ export const CatalogoInsumosTable: React.FC<CatalogoInsumosTableProps> = ({
       case 'Material_Biologico': return '#4caf50'
       default: return '#9e9e9e'
     }
+  }
+
+  // Filtrar insumos por término de búsqueda
+  const filteredInsumos = useMemo(() => {
+    if (!searchTerm) return insumos
+    
+    const searchLower = searchTerm.toLowerCase()
+    return insumos.filter(insumo => (
+      (insumo.codigo && insumo.codigo.toLowerCase().includes(searchLower)) ||
+      insumo.nombre.toLowerCase().includes(searchLower) ||
+      (insumo.descripcion && insumo.descripcion.toLowerCase().includes(searchLower)) ||
+      (insumo.categoria && insumo.categoria.toLowerCase().includes(searchLower)) ||
+      (insumo.unidad_medida && insumo.unidad_medida.toLowerCase().includes(searchLower)) ||
+      (insumo.presentacion && insumo.presentacion.toLowerCase().includes(searchLower))
+    ))
+  }, [insumos, searchTerm])
+
+  // Función para limpiar búsqueda
+  const handleClearSearch = () => {
+    setSearchTerm('')
+    setPage(0)
   }
 
   // Funciones para manejar la paginación
@@ -51,7 +74,7 @@ export const CatalogoInsumosTable: React.FC<CatalogoInsumosTableProps> = ({
   }
 
   // Calcular los insumos a mostrar según la página actual
-  const paginatedInsumos = insumos.slice(
+  const paginatedInsumos = filteredInsumos.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   )
@@ -78,8 +101,42 @@ export const CatalogoInsumosTable: React.FC<CatalogoInsumosTableProps> = ({
   }
 
   return (
-    <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 2 }}>
-      <Table>
+    <Box>
+      {/* Barra de búsqueda */}
+      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+        <TextField
+          placeholder="Buscar insumos por código, nombre, categoría, unidad o presentación..."
+          value={searchTerm}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+            setSearchTerm(e.target.value)
+            setPage(0) // Resetear a la primera página al buscar
+          }}
+          size="small"
+          sx={{ flexGrow: 1 }}
+          InputProps={{
+            startAdornment: (
+              <Search sx={{ color: 'text.secondary', mr: 1 }} />
+            ),
+            endAdornment: searchTerm && (
+              <IconButton
+                size="small"
+                onClick={handleClearSearch}
+                sx={{ color: 'text.secondary' }}
+              >
+                <Clear />
+              </IconButton>
+            )
+          }}
+        />
+        {searchTerm && (
+          <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+            {filteredInsumos.length} resultado{filteredInsumos.length !== 1 ? 's' : ''}
+          </Typography>
+        )}
+      </Box>
+
+      <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 2 }}>
+        <Table>
         <TableHead>
           <TableRow sx={{ backgroundColor: 'primary.main' }}>
             <TableCell sx={{ color: 'white', fontWeight: 600 }}>Código</TableCell>
@@ -93,7 +150,25 @@ export const CatalogoInsumosTable: React.FC<CatalogoInsumosTableProps> = ({
           </TableRow>
         </TableHead>
         <TableBody>
-          {paginatedInsumos.map((insumo) => (
+          {filteredInsumos.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <LibraryBooks sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
+                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                    No se encontraron insumos
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {searchTerm 
+                      ? `No hay insumos que coincidan con "${searchTerm}"`
+                      : 'No hay insumos registrados en el sistema'
+                    }
+                  </Typography>
+                </Box>
+              </TableCell>
+            </TableRow>
+          ) : (
+            paginatedInsumos.map((insumo) => (
             <TableRow 
               key={insumo.id}
               sx={{ 
@@ -156,13 +231,14 @@ export const CatalogoInsumosTable: React.FC<CatalogoInsumosTableProps> = ({
                 </Box>
               </TableCell>
             </TableRow>
-          ))}
+            ))
+          )}
         </TableBody>
       </Table>
       <TablePagination
         rowsPerPageOptions={[5, 10, 25, 50]}
         component="div"
-        count={insumos.length}
+        count={filteredInsumos.length}
         rowsPerPage={rowsPerPage}
         page={page}
         onPageChange={handleChangePage}
@@ -172,7 +248,8 @@ export const CatalogoInsumosTable: React.FC<CatalogoInsumosTableProps> = ({
           `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
         }
       />
-    </TableContainer>
+      </TableContainer>
+    </Box>
   )
 }
 

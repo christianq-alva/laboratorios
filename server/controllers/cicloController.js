@@ -10,6 +10,9 @@ export const getCiclos = async (req, res) => {
         })
     } catch (error) {
         console.error('Error en getCiclos:', error)
-        res.status(500).json({ success: false, message: error.message })
+        res.status(500).json({
+            success: false,
+            message: error.message
+        })
     }
 }

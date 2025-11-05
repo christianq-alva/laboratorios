@@ -14,8 +14,8 @@ export const defineAbilitiesFor = (user) => {
   // 🟡 JEFE DE LABORATORIO: Solo sus laboratorios
   if (user.rol === 'Jefe de Laboratorio') {
     const labIds = user.laboratorio_ids || [] // ← USAR ARRAY
-    
-    
+
+
     if (labIds.length > 0) {
       // Para cada laboratorio que maneja
       labIds.forEach(labId => {
@@ -27,12 +27,15 @@ export const defineAbilitiesFor = (user) => {
         can(['read', 'update'], 'Laboratorio', { id: labId })
       })
     }
-    
+
     // Permisos generales (sin condiciones de laboratorio)
-    can(['create', 'read', 'update', 'delete'], 'Docente')
-    can('read', 'Horario') // ← Permitir leer horarios en general
+    can('read', 'Horario') // ← Permitir leer horarios
     can('read', 'TipoEquipo') // ← Permitir leer tipos de equipo
-    
+    can('read', 'Docente') // ← Permitir leer docentes
+    can('read', 'Ciclo') // ← Permitir leer ciclos
+    can('read', 'Grupo') // ← Permitir leer grupos
+    can('read', 'Escuela') // ← Permitir leer escuelas
+
     return build()
   }
 

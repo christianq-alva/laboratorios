@@ -29,7 +29,7 @@ export const Equipos: React.FC = () => {
   const [selectedEquipo, setSelectedEquipo] = useState<Equipo | null>(null)
   const [refresh, setRefresh] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
-  
+
   // Estados para notificaciones
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -117,7 +117,7 @@ export const Equipos: React.FC = () => {
     try {
       console.log('🗑️ Intentando eliminar equipo:', selectedEquipo.id)
       const result = await equipoService.delete(selectedEquipo.id)
-      
+
       if (result.success) {
         console.log('✅ Equipo eliminado correctamente')
         setDeleteOpen(false)
@@ -142,15 +142,15 @@ export const Equipos: React.FC = () => {
         response: err.response?.data,
         status: err.response?.status
       })
-      
+
       let errorMessage = 'Error de conexión al eliminar el equipo'
-      
+
       if (err.response?.status === 403) {
         errorMessage = 'No tienes permisos para eliminar este equipo'
       } else if (err.response?.data?.message) {
         errorMessage = err.response.data.message
       }
-      
+
       setSnackbar({
         open: true,
         message: errorMessage,
@@ -184,6 +184,24 @@ export const Equipos: React.FC = () => {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={handleNewEquipo}
+            sx={{ borderRadius: 2, px: 3 }}
+          >
+            Nuevo Equipo
+          </Button>
+          
+          <Button
+            variant="outlined"
+            startIcon={<FileUpload />}
+            onClick={handleImportacionMasivaOpen}
+            sx={{ borderRadius: 2, px: 3 }}
+            color="secondary"
+          >
+            Importar Excel
+          </Button>
 
           <Button
             variant="outlined"
@@ -194,31 +212,15 @@ export const Equipos: React.FC = () => {
             Actividad
           </Button>
 
-          <Button
-            variant="outlined"
-            startIcon={<FileUpload />}
-            onClick={handleImportacionMasivaOpen}
-            sx={{ borderRadius: 2, px: 3 }}
-            color="secondary"
-          >
-            Importar Excel
-          </Button>
-          
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={handleNewEquipo}
-            sx={{ borderRadius: 2, px: 3 }}
-          >
-            Nuevo Equipo
-          </Button>
+
+
         </Box>
       </Box>
 
       {/* Tabla de equipos */}
       <Card>
         <CardContent sx={{ p: 0 }}>
-          <EquiposTable 
+          <EquiposTable
             onEdit={handleEditEquipo}
             onDelete={handleDeleteEquipo}
             refresh={refresh}
@@ -228,7 +230,7 @@ export const Equipos: React.FC = () => {
       </Card>
 
       {/* Formulario de equipo */}
-      <EquipoForm 
+      <EquipoForm
         open={formOpen}
         onClose={handleFormClose}
         onSuccess={handleFormSuccess}
@@ -265,7 +267,7 @@ export const Equipos: React.FC = () => {
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button 
+          <Button
             onClick={handleDeleteClose}
             disabled={deleteLoading}
             variant="outlined"
@@ -273,7 +275,7 @@ export const Equipos: React.FC = () => {
           >
             Cancelar
           </Button>
-          <Button 
+          <Button
             onClick={handleDeleteConfirm}
             disabled={deleteLoading}
             variant="contained"
@@ -303,14 +305,14 @@ export const Equipos: React.FC = () => {
       />
 
       {/* Snackbar para notificaciones */}
-      <Snackbar 
-        open={snackbar.open} 
-        autoHideDuration={6000} 
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
         onClose={handleSnackbarClose}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert 
-          onClose={handleSnackbarClose} 
+        <Alert
+          onClose={handleSnackbarClose}
           severity={snackbar.severity}
           sx={{ width: '100%', borderRadius: 2 }}
         >

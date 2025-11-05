@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import {
   Box,
   Table,
@@ -14,8 +14,6 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  CircularProgress,
-  Alert,
   Tooltip,
   Avatar,
   TablePagination,
@@ -29,61 +27,25 @@ import {
   School,
   Visibility,
 } from '@mui/icons-material'
-import { docenteService } from '../../../services/docenteService'  
 import type { Docente } from '../../../services/docenteService'
 
 interface DocentesTableProps {
+  docentes: Docente[]
   onEdit: (docente: Docente) => void
   onDelete: (docente: Docente) => void
   onViewHorarios?: (docente: Docente) => void
-  refresh: boolean
-  onRefreshComplete: () => void
 }
 
 export const DocentesTable: React.FC<DocentesTableProps> = ({
+  docentes,
   onEdit,
   onDelete,
   onViewHorarios,
-  refresh,
-  onRefreshComplete,
 }) => {
-  const [docentes, setDocentes] = useState<Docente[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [selectedDocente, setSelectedDocente] = useState<Docente | null>(null)
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
-
-  const fetchDocentes = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const result = await docenteService.getAll()
-      
-      if (result.success) {
-        setDocentes(result.data || [])
-      } else {
-        setError(result.message || 'Error al cargar docentes')
-      }
-    } catch (err) {
-      setError('Error de conexión al servidor')
-      console.error('Error fetching docentes:', err)
-    } finally {
-      setLoading(false)
-      onRefreshComplete()
-    }
-  }
-
-  useEffect(() => {
-    fetchDocentes()
-  }, [])
-
-  useEffect(() => {
-    if (refresh) {
-      fetchDocentes()
-    }
-  }, [refresh])
 
   // Funciones para manejar la paginación
   const handleChangePage = (_event: unknown, newPage: number) => {
@@ -130,22 +92,6 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
       onViewHorarios(selectedDocente)
     }
     handleMenuClose()
-  }
-
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-        <CircularProgress />
-      </Box>
-    )
-  }
-
-  if (error) {
-    return (
-      <Alert severity="error" sx={{ mb: 2 }}>
-        {error}
-      </Alert>
-    )
   }
 
   if (docentes.length === 0) {

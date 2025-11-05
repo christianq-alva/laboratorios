@@ -48,7 +48,7 @@ router.get('/actividad',
 //Generar plantilla excel para reabastecimiento masivo
 router.get('/plantilla-excel',
     authenticateToken,
-    authorize('create', 'Inventario'),
+    authorize('create', 'Insumo'),
     generarPlantillaReabastecimiento
 )
 

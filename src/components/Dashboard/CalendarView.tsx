@@ -131,10 +131,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onNewHorario, onNavi
 
   // Manejar clic en una fecha
   const handleDateClick = (date: Dayjs) => {
-    const horariosDelDia = horarios.filter(horario => 
+    const horariosDelDia = horarios.filter(horario =>
       horario.start.isSame(date, 'day')
     )
-    
+
     setSelectedDate(date)
     setSelectedHorarios(horariosDelDia)
     setDialogOpen(true)
@@ -146,15 +146,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onNewHorario, onNavi
     const endOfMonth = currentDate.endOf('month')
     const startOfWeek = startOfMonth.startOf('week')
     const endOfWeek = endOfMonth.endOf('week')
-    
+
     const days = []
     let currentDay = startOfWeek
-    
+
     while (currentDay.isBefore(endOfWeek) || currentDay.isSame(endOfWeek, 'day')) {
       days.push(currentDay)
       currentDay = currentDay.add(1, 'day')
     }
-    
+
     return days
   }
 
@@ -243,7 +243,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onNewHorario, onNavi
               </Box>
             </Tooltip>
           ))}
-          
+
           {horariosDelDia.length > 3 && (
             <Chip
               label={`+${horariosDelDia.length - 3} más`}
@@ -291,20 +291,20 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onNewHorario, onNavi
             <Schedule color="primary" />
             Calendario de Horarios
           </Typography>
-          
+
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <IconButton onClick={handlePrevMonth} size="small">
               <ChevronLeft />
             </IconButton>
-            
+
             <Typography variant="h6" sx={{ fontWeight: 600, minWidth: 150, textAlign: 'center' }}>
               {currentDate.format('MMMM YYYY')}
             </Typography>
-            
+
             <IconButton onClick={handleNextMonth} size="small">
               <ChevronRight />
             </IconButton>
-            
+
             <Button
               variant="outlined"
               size="small"
@@ -344,11 +344,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onNewHorario, onNavi
         {/* Calendario tipo agenda */}
         <Box sx={{ mb: 3 }}>
           {/* Encabezados de días de la semana */}
-          <Box sx={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(7, 1fr)', 
-            gap: 0.5, 
-            mb: 1 
+          <Box sx={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(7, 1fr)',
+            gap: 0.5,
+            mb: 1
           }}>
             {weekDays.map((day) => (
               <Box key={day} sx={{ textAlign: 'center' }}>
@@ -369,10 +369,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onNewHorario, onNavi
           </Box>
 
           {/* Días del calendario */}
-          <Box sx={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(7, 1fr)', 
-            gap: 0.5 
+          <Box sx={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(7, 1fr)',
+            gap: 0.5
           }}>
             {generateDaysOfMonth().map((date) => (
               <Box key={date.format('YYYY-MM-DD')}>
@@ -456,7 +456,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onNewHorario, onNavi
                             </Typography>
                             <Chip
                               label={horario.laboratorio}
-                              sx={{ 
+                              sx={{
                                 backgroundColor: horario.color || '#4ecdc4',
                                 color: 'white'
                               }}
@@ -495,13 +495,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onNewHorario, onNavi
                             <Typography variant="body2" color="text.secondary">
                               {horario.descripcion}
                             </Typography>
-                          )}
-                          {horario.insumos && horario.insumos.length > 0 && (
-                            <Box sx={{ mt: 1 }}>
-                              <Typography variant="caption" color="text.secondary">
-                                Insumos: {horario.insumos.map(i => `${i.nombre} (${i.cantidad})`).join(', ')}
-                              </Typography>
-                            </Box>
                           )}
                         </Box>
                       }

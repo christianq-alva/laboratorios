@@ -22,16 +22,20 @@ import { EscuelasTable } from '../components/Configuracion/Escuela/EscuelasTable
 import { EscuelaForm } from '../components/Configuracion/Escuela/EscuelaForm'
 import { DocentesTable } from '../components/Configuracion/Docentes/DocentesTable'
 import { DocenteForm } from '../components/Configuracion/Docentes/DocenteForm'
+import { CatalogoInsumosTable } from '../components/Configuracion/Insumos/CatalogoInsumosTable'
 import { InsumoForm } from '../components/Configuracion/Insumos/InsumoForm'
+import { ImportacionMasiva } from '../components/Configuracion/Insumos/ImportacionMasiva'
 import { LaboratoriosTable } from '../components/Configuracion/Laboratorios/LaboratoriosTable'
 import { LaboratorioForm } from '../components/Configuracion/Laboratorios/LaboratorioForm'
+
+
 import { tipoEquipoService, type TipoEquipo } from '../services/tipoEquipoService'
 import { escuelaService, type Escuela } from '../services/escuelaService'
 import { docenteService, type Docente } from '../services/docenteService'
 import { insumoService, type Insumo2 } from '../services/insumoService'
 import { laboratorioService, type Laboratorio } from '../services/laboratorioService'
-import { ImportacionMasiva } from '../components/Configuracion/Insumos/ImportacionMasiva'
-import { CatalogoInsumosTable } from '../components/Configuracion/Insumos/CatalogoInsumosTable'
+
+
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -64,11 +68,12 @@ export const Configuracion: React.FC = () => {
   const [tipoToDelete, setTipoToDelete] = useState<TipoEquipo | null>(null)
 
   // Estado para Docentes
+  const [docentes, setDocentes] = useState<Docente[]>([])
+  const [loadingDocentes, setLoadingDocentes] = useState(false)
   const [docenteFormOpen, setDocenteFormOpen] = useState(false)
   const [editingDocente, setEditingDocente] = useState<Docente | null>(null)
   const [docenteDeleteDialogOpen, setDocenteDeleteDialogOpen] = useState(false)
   const [docenteToDelete, setDocenteToDelete] = useState<Docente | null>(null)
-  const [refreshDocentes, setRefreshDocentes] = useState(false)
 
   // Estado para Catálogo de Insumos
   const [insumos, setInsumos] = useState<Insumo2[]>([])
@@ -83,11 +88,12 @@ export const Configuracion: React.FC = () => {
 
 
   // Estado para Laboratorios
+  const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
+  const [loadingLaboratorios, setLoadingLaboratorios] = useState(false)
   const [laboratorioFormOpen, setLaboratorioFormOpen] = useState(false)
   const [editingLaboratorio, setEditingLaboratorio] = useState<Laboratorio | null>(null)
   const [laboratorioDeleteDialogOpen, setLaboratorioDeleteDialogOpen] = useState(false)
   const [laboratorioToDelete, setLaboratorioToDelete] = useState<Laboratorio | null>(null)
-  const [refreshLaboratorios, setRefreshLaboratorios] = useState(0)
 
   // Estado para Escuelas
   const [escuelas, setEscuelas] = useState<Escuela[]>([])
@@ -127,8 +133,8 @@ export const Configuracion: React.FC = () => {
     setLoadingInsumos(true)
     const response = await insumoService.getAllInsumos()
     
-    if (response.data) {
-      setInsumos(response.data || [])
+    if (response.success && response.data) {
+      setInsumos(response.data)
     } else {
       setSnackbar({
         open: true,
@@ -138,6 +144,42 @@ export const Configuracion: React.FC = () => {
     }
     
     setLoadingInsumos(false)
+  }
+
+  // Cargar docentes
+  const loadDocentes = async () => {
+    setLoadingDocentes(true)
+    const response = await docenteService.getAll()
+    
+    if (response.success && response.data) {
+      setDocentes(response.data)
+    } else {
+      setSnackbar({
+        open: true,
+        message: response.message || 'Error al cargar docentes',
+        severity: 'error'
+      })
+    }
+    
+    setLoadingDocentes(false)
+  }
+
+  // Cargar laboratorios
+  const loadLaboratorios = async () => {
+    setLoadingLaboratorios(true)
+    const response = await laboratorioService.getAll()
+    
+    if (response.success && response.data) {
+      setLaboratorios(response.data)
+    } else {
+      setSnackbar({
+        open: true,
+        message: response.message || 'Error al cargar laboratorios',
+        severity: 'error'
+      })
+    }
+    
+    setLoadingLaboratorios(false)
   }
 
   // Cargar escuelas
@@ -162,8 +204,12 @@ export const Configuracion: React.FC = () => {
   useEffect(() => {
     if (tabValue === 0) {
       loadTiposEquipo()
+    } else if (tabValue === 1) {
+      loadDocentes()
     } else if (tabValue === 2) {
       loadCatalogoInsumos()
+    } else if (tabValue === 3) {
+      loadLaboratorios()
     } else if (tabValue === 4) {
       loadEscuelas()
     }
@@ -240,7 +286,7 @@ export const Configuracion: React.FC = () => {
   }
 
   const handleDocenteFormSuccess = (message?: string) => {
-    setRefreshDocentes(true)
+    loadDocentes()
     setSnackbar({
       open: true,
       message: message || (editingDocente ? 'Docente actualizado exitosamente' : 'Docente creado exitosamente'),
@@ -264,7 +310,7 @@ export const Configuracion: React.FC = () => {
         message: result.message || 'Docente eliminado exitosamente',
         severity: 'success'
       })
-      setRefreshDocentes(true)
+      loadDocentes()
     } else {
       setSnackbar({
         open: true,
@@ -347,7 +393,7 @@ export const Configuracion: React.FC = () => {
   }
 
   const handleLaboratorioFormSuccess = (message?: string) => {
-    setRefreshLaboratorios(prev => prev + 1)
+    loadLaboratorios()
     setSnackbar({
       open: true,
       message: message || (editingLaboratorio ? 'Laboratorio actualizado exitosamente' : 'Laboratorio creado exitosamente'),
@@ -365,7 +411,7 @@ export const Configuracion: React.FC = () => {
       const result = await laboratorioService.changeStatus(laboratorio.id, estado)
 
       if (result.success) {
-        setRefreshLaboratorios(prev => prev + 1)
+        loadLaboratorios()
         setSnackbar({
           open: true,
           message: `Estado cambiado a "${estado}" correctamente`,
@@ -399,7 +445,7 @@ export const Configuracion: React.FC = () => {
           message: 'Laboratorio eliminado exitosamente',
           severity: 'success'
         })
-        setRefreshLaboratorios(prev => prev + 1)
+        loadLaboratorios()
       } else {
         setSnackbar({
           open: true,
@@ -628,12 +674,17 @@ export const Configuracion: React.FC = () => {
             </Box>
 
             {/* Tabla */}
-            <DocentesTable
-              onEdit={handleEditDocente}
-              onDelete={handleDeleteDocenteClick}
-              refresh={refreshDocentes}
-              onRefreshComplete={() => setRefreshDocentes(false)}
-            />
+            {loadingDocentes ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <DocentesTable
+                docentes={docentes}
+                onEdit={handleEditDocente}
+                onDelete={handleDeleteDocenteClick}
+              />
+            )}
           </Box>
         </TabPanel>
 
@@ -645,7 +696,7 @@ export const Configuracion: React.FC = () => {
               display="flex"
               alignItems="center"
               justifyContent="space-between"
-              mb={2}
+              mb={3}
             >
               <Typography variant="h6" fontWeight={600}>
                 Catálogo de Insumos
@@ -711,13 +762,18 @@ export const Configuracion: React.FC = () => {
             </Box>
 
             {/* Tabla de laboratorios */}
-            <LaboratoriosTable
-              onEdit={handleEditLaboratorio}
-              onDelete={handleDeleteLaboratorioClick}
-              onChangeStatus={handleChangeLaboratorioStatus}
-              refresh={refreshLaboratorios}
-              onRefreshComplete={() => { }}
-            />
+            {loadingLaboratorios ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <LaboratoriosTable
+                laboratorios={laboratorios}
+                onEdit={handleEditLaboratorio}
+                onDelete={handleDeleteLaboratorioClick}
+                onChangeStatus={handleChangeLaboratorioStatus}
+              />
+            )}
           </Box>
         </TabPanel>
 

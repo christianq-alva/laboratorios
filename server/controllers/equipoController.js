@@ -9,7 +9,6 @@ const condicionesValidas = ['Excelente', 'Bueno', 'Regular', 'Malo']
 
 export const getEquipos = async (req, res) => {
   try {
-
     let equipos = await Equipo.getAll(req.user.rol, req.user.laboratorio_ids)
 
     res.status(200).json({

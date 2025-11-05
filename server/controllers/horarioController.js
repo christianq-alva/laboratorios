@@ -4,6 +4,7 @@ import { Horario } from '../models/Horario.js'
 import { Inventario } from '../models/Inventario.js'
 import { Laboratorio } from '../models/Laboratorio.js'
 import { Grupo } from '../models/Grupo.js'
+import { Docente } from '../models/Docente.js'
 
 
 

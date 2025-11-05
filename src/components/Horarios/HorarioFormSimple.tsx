@@ -39,7 +39,7 @@ import {
 } from '@mui/icons-material'
 import { horarioService } from '../../services/horarioService'
 import { laboratorioService } from '../../services/laboratorioService'
-import type { Equipo } from '../../services/equipoService'
+import { equipoService, type Equipo } from '../../services/equipoService'
 import type { 
   Horario, 
   CreateHorarioData, 
@@ -333,33 +333,13 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
 
   // Cargar equipos cuando se selecciona laboratorio
   const loadEquiposByLaboratorio = async (laboratorio_id: number) => {
-    try {
-      console.log('🔍 Cargando equipos para laboratorio:', laboratorio_id)
       
-      // Mostrar loading en la sección de equipos
-      setEquiposDisponibles([])
-      
-      const result = await horarioService.getEquiposByLaboratorio(laboratorio_id)
-      console.log('🔧 Resultado de equipos:', result)
-      
-      if (result.success) {
-        const equipos = result.data || []
-        console.log('✅ Equipos cargados:', equipos.length)
-        setEquiposDisponibles(equipos)
-        
-        // Si no hay equipos, mostrar mensaje informativo
-        if (equipos.length === 0) {
-          console.log('ℹ️ No hay equipos disponibles para este laboratorio')
-        }
+      const result = await equipoService.getByLaboratorio(laboratorio_id)
+      if (result.success && result.data) {
+        setEquiposDisponibles(result.data)
       } else {
-        console.error('❌ Error al cargar equipos:', result.message)
-        setEquiposDisponibles([])
-        // No mostrar error, solo log - los equipos son opcionales
+        setError(result.message || 'Error al cargar equipos')
       }
-    } catch (err) {
-      console.error('❌ Excepción al cargar equipos:', err)
-      setEquiposDisponibles([])
-    }
   }
 
   const handleLaboratorioChange = async (laboratorio_id: number) => {

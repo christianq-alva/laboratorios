@@ -12,6 +12,7 @@ export const Horario = {
           r.cantidad_alumnos,
           r.descripcion,
           r.color,
+          r.estado,
           l.nombre as laboratorio,
           d.nombre as docente,
           e.nombre as escuela,
@@ -389,6 +390,13 @@ export const Horario = {
             DELETE 
             FROM detalle_reserva_equipos
             WHERE reserva_id = ?`,
+            [reserva_id])
+    },
+    deleteHorario: async (reserva_id, connection) => {
+        await connection.execute(`
+            DELETE 
+            FROM reservas
+            WHERE id = ?`,
             [reserva_id])
     },
 
