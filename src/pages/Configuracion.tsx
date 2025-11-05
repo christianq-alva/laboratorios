@@ -15,7 +15,7 @@ import {
   DialogActions,
   DialogContentText
 } from '@mui/material'
-import { Add, Category, Person, LibraryBooks, School, AccountBalance, FileUpload } from '@mui/icons-material'
+import { Add, Category, Person, LibraryBooks, School, AccountBalance, FileUpload, Group } from '@mui/icons-material'
 import { TiposEquipoTable } from '../components/Configuracion/TipoEquipo/TiposEquipoTable'
 import { TipoEquipoForm } from '../components/Configuracion/TipoEquipo/TipoEquipoForm'
 import { EscuelasTable } from '../components/Configuracion/Escuela/EscuelasTable'
@@ -27,8 +27,8 @@ import { InsumoForm } from '../components/Configuracion/Insumos/InsumoForm'
 import { ImportacionMasiva } from '../components/Configuracion/Insumos/ImportacionMasiva'
 import { LaboratoriosTable } from '../components/Configuracion/Laboratorios/LaboratoriosTable'
 import { LaboratorioForm } from '../components/Configuracion/Laboratorios/LaboratorioForm'
-
-
+import { UsuariosTable } from '../components/Configuracion/Usuarios/UsuariosTable'
+import { UsuarioForm } from '../components/Configuracion/Usuarios/UsuarioForm'
 import { tipoEquipoService, type TipoEquipo } from '../services/tipoEquipoService'
 import { escuelaService, type Escuela } from '../services/escuelaService'
 import { docenteService, type Docente } from '../services/docenteService'
@@ -102,6 +102,12 @@ export const Configuracion: React.FC = () => {
   const [editingEscuela, setEditingEscuela] = useState<Escuela | null>(null)
   const [escuelaDeleteDialogOpen, setEscuelaDeleteDialogOpen] = useState(false)
   const [escuelaToDelete, setEscuelaToDelete] = useState<Escuela | null>(null)
+
+  // Estado para Usuarios
+  const [usuarioFormOpen, setUsuarioFormOpen] = useState(false)
+  const [editingUsuario, setEditingUsuario] = useState<any | null>(null)
+  const [usuarioDeleteDialogOpen, setUsuarioDeleteDialogOpen] = useState(false)
+  const [usuarioToDelete, setUsuarioToDelete] = useState<any | null>(null)
 
   // Snackbar
   const [snackbar, setSnackbar] = useState({
@@ -529,6 +535,61 @@ export const Configuracion: React.FC = () => {
     }
   }
 
+  // Handlers para Usuarios
+  const handleOpenUsuarioForm = () => {
+    setEditingUsuario(null)
+    setUsuarioFormOpen(true)
+  }
+
+  const handleEditUsuario = (usuario: any) => {
+    setEditingUsuario(usuario)
+    setUsuarioFormOpen(true)
+  }
+
+  const handleCloseUsuarioForm = () => {
+    setUsuarioFormOpen(false)
+    setEditingUsuario(null)
+  }
+
+  const handleUsuarioFormSuccess = () => {
+    setSnackbar({
+      open: true,
+      message: editingUsuario ? 'Usuario actualizado exitosamente' : 'Usuario creado exitosamente',
+      severity: 'success'
+    })
+  }
+
+  const handleDeleteUsuarioClick = (usuario: any) => {
+    setUsuarioToDelete(usuario)
+    setUsuarioDeleteDialogOpen(true)
+  }
+
+  const handleDeleteUsuarioConfirm = async () => {
+    if (!usuarioToDelete) return
+
+    try {
+      // TODO: Implementar llamada a API
+      // await usuarioService.delete(usuarioToDelete.id)
+      console.log('Eliminar usuario:', usuarioToDelete)
+      
+      setSnackbar({
+        open: true,
+        message: 'Usuario eliminado exitosamente',
+        severity: 'success'
+      })
+    } catch (error: any) {
+      console.error('Error al eliminar usuario:', error)
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || 'Error al eliminar usuario',
+        severity: 'error'
+      })
+    } finally {
+      setUsuarioDeleteDialogOpen(false)
+      setUsuarioToDelete(null)
+    }
+  }
+
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false })
   }
@@ -610,6 +671,13 @@ export const Configuracion: React.FC = () => {
               label="Escuelas"
               id="config-tab-4"
               aria-controls="config-tabpanel-4"
+            />
+            <Tab
+              icon={<Group />}
+              iconPosition="start"
+              label="Usuarios"
+              id="config-tab-5"
+              aria-controls="config-tabpanel-5"
             />
           </Tabs>
         </Box>
@@ -813,6 +881,41 @@ export const Configuracion: React.FC = () => {
             )}
           </Box>
         </TabPanel>
+
+        {/* Tab Panel: Usuarios */}
+        <TabPanel value={tabValue} index={5}>
+          <Box sx={{ px: 3 }}>
+            {/* Header con botón */}
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mb: 3
+            }}>
+              <Box>
+                <Typography variant="h6" fontWeight={600}>
+                  Gestión de Usuarios
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Administra los usuarios del sistema y sus permisos
+                </Typography>
+              </Box>
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={handleOpenUsuarioForm}
+              >
+                Nuevo Usuario
+              </Button>
+            </Box>
+
+            {/* Tabla */}
+            <UsuariosTable
+              onEdit={handleEditUsuario}
+              onDelete={handleDeleteUsuarioClick}
+            />
+          </Box>
+        </TabPanel>
       </Paper>
 
       {/* Formulario de Tipo de Equipo */}
@@ -996,6 +1099,42 @@ export const Configuracion: React.FC = () => {
           </Button>
           <Button
             onClick={handleDeleteEscuelaConfirm}
+            color="error"
+            variant="contained"
+          >
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Formulario de Usuario */}
+      <UsuarioForm
+        open={usuarioFormOpen}
+        onClose={handleCloseUsuarioForm}
+        onSuccess={handleUsuarioFormSuccess}
+        usuario={editingUsuario}
+      />
+
+      {/* Diálogo de confirmación de eliminación - Usuario */}
+      <Dialog
+        open={usuarioDeleteDialogOpen}
+        onClose={() => setUsuarioDeleteDialogOpen(false)}
+      >
+        <DialogTitle>Confirmar Eliminación</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            ¿Está seguro que desea eliminar al usuario "{usuarioToDelete?.nombre}"?
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              Esta acción no se puede deshacer. El usuario perderá acceso al sistema permanentemente.
+            </Alert>
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUsuarioDeleteDialogOpen(false)}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleDeleteUsuarioConfirm}
             color="error"
             variant="contained"
           >

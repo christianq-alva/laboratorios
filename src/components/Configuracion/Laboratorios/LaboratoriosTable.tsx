@@ -32,8 +32,10 @@ import {
   Build,
   Block,
   RemoveCircle,
+  Inventory,
 } from '@mui/icons-material'
 import type { Laboratorio } from '../../../services/laboratorioService'
+import { ConfigurarInsumosModal } from './ConfigurarInsumosModal'
 
 interface LaboratoriosTableProps {
   laboratorios: Laboratorio[]
@@ -53,6 +55,7 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
   const [searchTerm, setSearchTerm] = useState('')
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [configurarInsumosOpen, setConfigurarInsumosOpen] = useState(false)
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, laboratorio: Laboratorio) => {
     setAnchorEl(event.currentTarget)
@@ -68,6 +71,11 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
     if (selectedLab) {
       onEdit(selectedLab)
     }
+    handleMenuClose()
+  }
+
+  const handleConfigurarInsumos = () => {
+    setConfigurarInsumosOpen(true)
     handleMenuClose()
   }
 
@@ -327,6 +335,13 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
           </ListItemIcon>
           <ListItemText>Editar</ListItemText>
         </MenuItem>
+
+        <MenuItem onClick={handleConfigurarInsumos}>
+          <ListItemIcon>
+            <Inventory fontSize="small" color="primary" />
+          </ListItemIcon>
+          <ListItemText>Configurar Insumos</ListItemText>
+        </MenuItem>
         
         {/* Separador visual */}
         <MenuItem disabled sx={{ borderTop: 1, borderColor: 'divider', mt: 1, pt: 1 }}>
@@ -384,6 +399,18 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
           <ListItemText>Eliminar</ListItemText>
         </MenuItem>
       </Menu>
+
+      {/* Modal de configuración de insumos */}
+      <ConfigurarInsumosModal
+        open={configurarInsumosOpen}
+        onClose={() => setConfigurarInsumosOpen(false)}
+        laboratorio={selectedLab ? {
+          id: selectedLab.id,
+          nombre: selectedLab.nombre,
+          codigo: selectedLab.codigo,
+          ubicacion: selectedLab.ubicacion,
+        } : null}
+      />
     </Box>
   )
 } 
