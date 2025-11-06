@@ -36,8 +36,9 @@ import {
   Person,
   LocationOn,
 } from '@mui/icons-material'
-import { insumoService, type ActividadInsumo } from '../../services/insumoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
+import { inventarioService, type ActividadInsumo } from '../../services/inventarioService'
+import { useApi } from '../../hooks/useApi'
 
 interface ActividadInsumosProps {
   open: boolean
@@ -45,11 +46,12 @@ interface ActividadInsumosProps {
 }
 
 export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClose }) => {
+  const { execute } = useApi()
   const [actividad, setActividad] = useState<ActividadInsumo[]>([])
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Filtros
   const [filters, setFilters] = useState({
     laboratorio_id: '',
@@ -67,40 +69,32 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
   }, [open])
 
   const loadLaboratorios = async () => {
-    try {
-      const response = await laboratorioService.getAll()
-      if (response.success) {
-        setLaboratorios(response.data)
-      }
-    } catch (err) {
-      console.error('Error al cargar laboratorios:', err)
+    const response = await execute(() => laboratorioService.getAll())
+    if (response.error) {
+      setError(response.error)
+    } else if (response.data) {
+      setLaboratorios(response.data.data || [])
     }
   }
 
   const loadActividad = async () => {
-    try {
-      setLoading(true)
-      setError(null)
+    setLoading(true)
+    setError(null)
 
-      const filtersToSend: any = {}
-      if (filters.laboratorio_id) filtersToSend.laboratorio_id = parseInt(filters.laboratorio_id)
-      if (filters.fecha_inicio) filtersToSend.fecha_inicio = filters.fecha_inicio
-      if (filters.fecha_fin) filtersToSend.fecha_fin = filters.fecha_fin
-      if (filters.tipo_movimiento) filtersToSend.tipo_movimiento = filters.tipo_movimiento
+    const filtersToSend: any = {}
+    if (filters.laboratorio_id) filtersToSend.laboratorio_id = parseInt(filters.laboratorio_id)
+    if (filters.fecha_inicio) filtersToSend.fecha_inicio = filters.fecha_inicio
+    if (filters.fecha_fin) filtersToSend.fecha_fin = filters.fecha_fin
+    if (filters.tipo_movimiento) filtersToSend.tipo_movimiento = filters.tipo_movimiento
 
-      const result = await insumoService.getActividad(filtersToSend)
-      
-      if (result.success) {
-        setActividad(result.data)
-      } else {
-        setError(result.message || 'Error al cargar actividad')
-      }
-    } catch (err: any) {
-      console.error('Error al cargar actividad:', err)
-      setError(err.message || 'Error de conexión')
-    } finally {
-      setLoading(false)
+    const result = await execute(() => inventarioService.getActividad(filtersToSend))
+
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      setActividad(result.data.data)
     }
+    setLoading(false)
   }
 
   const handleFilterChange = (field: string, value: string) => {
@@ -134,7 +128,7 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
   const formatFecha = (fecha: string) => {
     if (!fecha) return 'N/A'
     try {
-      return new Date(fecha).toLocaleString('es-PE', { 
+      return new Date(fecha).toLocaleString('es-PE', {
         timeZone: 'America/Lima',
         year: 'numeric',
         month: '2-digit',
@@ -182,7 +176,7 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
             <FilterList />
             Filtros
           </Typography>
-          
+
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
             <FormControl size="small">
               <InputLabel>Laboratorio</InputLabel>
@@ -303,7 +297,7 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
                           </Typography>
                         </Box>
                       </TableCell>
-                      
+
                       <TableCell>
                         <Chip
                           icon={getTipoMovimientoIcon(movimiento.tipo_movimiento)}
@@ -313,7 +307,7 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
                           variant="filled"
                         />
                       </TableCell>
-                      
+
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <LocationOn fontSize="small" color="action" />

@@ -12,6 +12,7 @@ import {
 } from '@mui/material'
 import { Close, Category } from '@mui/icons-material'
 import { tipoEquipoService, type TipoEquipo } from '../../../services/tipoEquipoService'
+import { useApi } from '../../../hooks/useApi'
 
 interface TipoEquipoFormProps {
   open: boolean
@@ -26,6 +27,7 @@ export const TipoEquipoForm: React.FC<TipoEquipoFormProps> = ({
   onSuccess,
   tipoEquipo
 }) => {
+  const { execute } = useApi()
   const [formData, setFormData] = useState({
     nombre: '',
     descripcion: ''
@@ -91,25 +93,25 @@ export const TipoEquipoForm: React.FC<TipoEquipoFormProps> = ({
     let result
     if (tipoEquipo) {
       // Editar
-      result = await tipoEquipoService.update(tipoEquipo.id, data)
+      result = await execute(() => tipoEquipoService.update(tipoEquipo.id, data))
     } else {
       // Crear
-      result = await tipoEquipoService.create(data)
+      result = await execute(() => tipoEquipoService.create(data))
     }
 
-    if (result.success) {
-      onSuccess(result.message)
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      onSuccess(result.data.message)
       onClose()
-    } else {
-      setError(result.message || 'Error al guardar tipo de equipo')
     }
-    
+
     setLoading(false)
   }
 
   return (
-    <Dialog 
-      open={open} 
+    <Dialog
+      open={open}
       onClose={onClose}
       maxWidth="sm"
       fullWidth
@@ -117,10 +119,10 @@ export const TipoEquipoForm: React.FC<TipoEquipoFormProps> = ({
         sx: { borderRadius: 2 }
       }}
     >
-      <DialogTitle sx={{ 
-        pb: 1, 
-        display: 'flex', 
-        alignItems: 'center', 
+      <DialogTitle sx={{
+        pb: 1,
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'space-between',
         bgcolor: 'primary.main',
         color: 'white'
@@ -129,8 +131,8 @@ export const TipoEquipoForm: React.FC<TipoEquipoFormProps> = ({
           <Category />
           {tipoEquipo ? 'Editar Tipo de Equipo' : 'Nuevo Tipo de Equipo'}
         </Box>
-        <IconButton 
-          onClick={onClose} 
+        <IconButton
+          onClick={onClose}
           size="small"
           sx={{ color: 'white' }}
         >
@@ -172,13 +174,13 @@ export const TipoEquipoForm: React.FC<TipoEquipoFormProps> = ({
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button 
+        <Button
           onClick={onClose}
           disabled={loading}
         >
           Cancelar
         </Button>
-        <Button 
+        <Button
           onClick={handleSubmit}
           variant="contained"
           disabled={loading}

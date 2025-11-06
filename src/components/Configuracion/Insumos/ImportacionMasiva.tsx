@@ -81,6 +81,7 @@ interface ResultadoImportacion {
 }
 
 export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onClose, onSuccess }) => {
+
   const [loading, setLoading] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<PreviewResponse | null>(null)

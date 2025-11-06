@@ -13,11 +13,12 @@ import {
 import { Warning } from '@mui/icons-material'
 import { laboratorioService } from '../../../services/laboratorioService'
 import type { Laboratorio } from '../../../services/laboratorioService.ts'
+import { useApi } from '../../../hooks/useApi'
 
 interface DeleteLaboratorioDialogProps {
   open: boolean
   onClose: () => void
-  onSuccess: () => void
+  onSuccess: (message: string) => void
   laboratorio: Laboratorio | null
 }
 
@@ -27,6 +28,7 @@ export const DeleteLaboratorioDialog: React.FC<DeleteLaboratorioDialogProps> = (
   onSuccess,
   laboratorio,
 }) => {
+  const { execute } = useApi()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -36,20 +38,16 @@ export const DeleteLaboratorioDialog: React.FC<DeleteLaboratorioDialogProps> = (
     setLoading(true)
     setError(null)
 
-    try {
-      const result = await laboratorioService.delete(laboratorio.id)
 
-      if (result.success) {
-        onSuccess()
-        onClose()
-      } else {
-        setError(result.message || 'Error al eliminar el laboratorio')
-      }
-    } catch (err: any) {
-      setError('Error de conexión al servidor')
-    } finally {
-      setLoading(false)
+    const result = await execute(() => laboratorioService.delete(laboratorio.id))
+
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      onSuccess(result.data.message)
+      onClose()
     }
+    setLoading(false)
   }
 
   const handleClose = () => {
@@ -80,9 +78,9 @@ export const DeleteLaboratorioDialog: React.FC<DeleteLaboratorioDialogProps> = (
 
       <DialogContent>
         {error && (
-          <Alert 
-            severity="error" 
-            sx={{ 
+          <Alert
+            severity="error"
+            sx={{
               mb: 3,
               '& .MuiAlert-message': {
                 width: '100%'
@@ -99,10 +97,10 @@ export const DeleteLaboratorioDialog: React.FC<DeleteLaboratorioDialogProps> = (
           ¿Estás seguro de que deseas eliminar el siguiente laboratorio?
         </Typography>
 
-        <Box 
-          sx={{ 
-            p: 2, 
-            bgcolor: 'grey.50', 
+        <Box
+          sx={{
+            p: 2,
+            bgcolor: 'grey.50',
             borderRadius: 1,
             border: '1px solid',
             borderColor: 'grey.200'
@@ -125,14 +123,14 @@ export const DeleteLaboratorioDialog: React.FC<DeleteLaboratorioDialogProps> = (
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 3 }}>
-        <Button 
-          onClick={handleClose} 
+        <Button
+          onClick={handleClose}
           disabled={loading}
           color="inherit"
         >
           Cancelar
         </Button>
-        <Button 
+        <Button
           onClick={handleDelete}
           disabled={loading}
           variant="contained"

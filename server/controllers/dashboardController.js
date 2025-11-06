@@ -1,9 +1,7 @@
 import { pool } from '../config/database.js'
-
 export const getDashboardStats = async (req, res) => {
   try {
     console.log('📊 Obteniendo estadísticas del dashboard...')
-
     // 1️⃣ ESTADÍSTICAS DE LABORATORIOS
     console.log('🔍 Consultando laboratorios...')
     const [laboratoriosResult] = await pool.execute(`
@@ -11,12 +9,10 @@ export const getDashboardStats = async (req, res) => {
       FROM laboratorios
     `)
     console.log('✅ Laboratorios resultado:', laboratoriosResult[0])
-    
     const laboratoriosStats = {
       total: laboratoriosResult[0]?.total || 0,
       activos: laboratoriosResult[0]?.total || 0
     }
-
     // 2️⃣ ESTADÍSTICAS DE DOCENTES
     console.log('🔍 Consultando docentes...')
     const [docentesResult] = await pool.execute(`
@@ -24,7 +20,6 @@ export const getDashboardStats = async (req, res) => {
       FROM docentes
     `)
     console.log('✅ Docentes resultado:', docentesResult[0])
-    
     console.log('🔍 Consultando docentes por escuela...')
     const [docentesPorEscuelaResult] = await pool.execute(`
       SELECT e.nombre as escuela, COUNT(d.id) as cantidad
@@ -35,12 +30,10 @@ export const getDashboardStats = async (req, res) => {
       ORDER BY cantidad DESC
     `)
     console.log('✅ Docentes por escuela resultado:', docentesPorEscuelaResult)
-
     const docentesStats = {
       total: docentesResult[0]?.total || 0,
       porEscuela: docentesPorEscuelaResult || []
     }
-
     // 3️⃣ ESTADÍSTICAS DE HORARIOS
     console.log('🔍 Consultando horarios...')
     const [horariosResult] = await pool.execute(`
@@ -48,7 +41,6 @@ export const getDashboardStats = async (req, res) => {
       FROM reservas
     `)
     console.log('✅ Horarios resultado:', horariosResult[0])
-
     // Horarios de hoy
     console.log('🔍 Consultando horarios de hoy...')
     const [horariosHoyResult] = await pool.execute(`
@@ -57,7 +49,6 @@ export const getDashboardStats = async (req, res) => {
       WHERE DATE(fecha_inicio) = CURDATE()
     `)
     console.log('✅ Horarios hoy resultado:', horariosHoyResult[0])
-
     // Horarios de esta semana
     console.log('🔍 Consultando horarios de esta semana...')
     const [horariosSemanáResult] = await pool.execute(`
@@ -66,7 +57,6 @@ export const getDashboardStats = async (req, res) => {
       WHERE YEARWEEK(fecha_inicio, 1) = YEARWEEK(CURDATE(), 1)
     `)
     console.log('✅ Horarios semana resultado:', horariosSemanáResult[0])
-
     // Horarios por laboratorio
     console.log('🔍 Consultando horarios por laboratorio...')
     const [horariosPorLabResult] = await pool.execute(`
@@ -78,14 +68,12 @@ export const getDashboardStats = async (req, res) => {
       ORDER BY cantidad DESC
     `)
     console.log('✅ Horarios por laboratorio resultado:', horariosPorLabResult)
-
     const horariosStats = {
       total: horariosResult[0]?.total || 0,
       hoy: horariosHoyResult[0]?.total || 0,
       estaSemana: horariosSemanáResult[0]?.total || 0,
       porLaboratorio: horariosPorLabResult || []
     }
-
     // 4️⃣ ESTADÍSTICAS DE INSUMOS
     console.log('🔍 Consultando insumos...')
     const [insumosResult] = await pool.execute(`
@@ -93,7 +81,6 @@ export const getDashboardStats = async (req, res) => {
       FROM insumos
     `)
     console.log('✅ Insumos resultado:', insumosResult[0])
-
     // Para insumos, vamos a simplificar primero para debug
     const insumosStats = {
       total: insumosResult[0]?.total || 0,
@@ -101,7 +88,6 @@ export const getDashboardStats = async (req, res) => {
       sinStock: 0,
       porLaboratorio: []
     }
-
     // 📊 RESPUESTA FINAL
     const dashboardStats = {
       laboratorios: laboratoriosStats,
@@ -109,19 +95,14 @@ export const getDashboardStats = async (req, res) => {
       horarios: horariosStats,
       insumos: insumosStats
     }
-
     console.log('✅ Estadísticas calculadas correctamente:', dashboardStats)
-
     res.json({
-      success: true,
       data: dashboardStats
     })
-
   } catch (error) {
     console.error('❌ Error al obtener estadísticas del dashboard:', error)
     console.error('❌ Stack trace:', error.stack)
     res.status(500).json({
-      success: false,
       message: 'Error al cargar estadísticas del dashboard: ' + error.message
     })
   }

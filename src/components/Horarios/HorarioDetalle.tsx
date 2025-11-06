@@ -31,22 +31,23 @@ import {
   People,
   CheckCircle
 } from '@mui/icons-material'
-import { horarioService, type Horario } from '../../services/horarioService'
+import { horarioService, type HorarioFull } from '../../services/horarioService'
 import { CerrarHorarioModal } from './CerrarHorarioModal'
 import dayjs from 'dayjs'
-
+import { useApi } from '../../hooks/useApi'
 interface HorarioDetalleProps {
   open: boolean
   onClose: () => void
   horarioId: number | null
 }
 
-export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({ 
-  open, 
-  onClose, 
-  horarioId 
+export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
+  open,
+  onClose,
+  horarioId
 }) => {
-  const [horario, setHorario] = useState<Horario | null>(null)
+  const { execute } = useApi()
+  const [horario, setHorario] = useState<HorarioFull | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [cerrarHorarioOpen, setCerrarHorarioOpen] = useState(false)
@@ -55,22 +56,16 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
   const loadHorario = async () => {
     if (!horarioId) return
 
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const response = await horarioService.getById(horarioId)
-      if (response.success) {
-        setHorario(response.data)
-      } else {
-        setError(response.message || 'Error al cargar horario')
-      }
-    } catch (err: any) {
-      setError(err.message || 'Error de conexión')
-      console.error('Error al cargar horario:', err)
-    } finally {
-      setLoading(false)
+    setLoading(true)
+    setError(null)
+
+    const response = await execute(() => horarioService.getById(horarioId))
+    if (response.error) {
+      setError(response.error)
+    } else if (response.data) {
+      setHorario(response.data.data)
     }
+    setLoading(false)
   }
 
   // Efecto para cargar horario cuando se abre el diálogo
@@ -154,7 +149,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                   </Typography>
                 </Box>
               </Box>
-              
+
               <Typography variant="body1" sx={{ color: 'text.secondary', lineHeight: 1.6 }}>
                 {horario.descripcion}
               </Typography>
@@ -166,7 +161,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                 <School color="primary" />
                 Información de la Clase
               </Typography>
-              
+
               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <LocationOn color="action" />
@@ -179,7 +174,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                     </Typography>
                   </Box>
                 </Box>
-                
+
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Person color="action" />
                   <Box>
@@ -191,7 +186,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                     </Typography>
                   </Box>
                 </Box>
-                
+
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Group color="action" />
                   <Box>
@@ -203,7 +198,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                     </Typography>
                   </Box>
                 </Box>
-                
+
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <School color="action" />
                   <Box>
@@ -215,7 +210,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                     </Typography>
                   </Box>
                 </Box>
-                
+
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <CalendarToday color="action" />
                   <Box>
@@ -227,7 +222,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                     </Typography>
                   </Box>
                 </Box>
-                
+
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <People color="action" />
                   <Box>
@@ -248,15 +243,15 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                 <Inventory color="primary" />
                 Insumos Requeridos
                 {horario.insumos && horario.insumos.length > 0 && (
-                  <Chip 
-                    label={horario.insumos.length} 
-                    size="small" 
-                    color="primary" 
+                  <Chip
+                    label={horario.insumos.length}
+                    size="small"
+                    color="primary"
                     variant="outlined"
                   />
                 )}
               </Typography>
-              
+
               {!horario.insumos || horario.insumos.length === 0 ? (
                 <Alert severity="info">
                   <Typography variant="body2">
@@ -277,7 +272,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                               <Typography variant="body1" sx={{ fontWeight: 500 }}>
                                 {insumo.nombre}
                               </Typography>
-                              <Chip 
+                              <Chip
                                 label={`${insumo.cantidad_usada} ${insumo.unidad_medida || 'unidades'}`}
                                 size="small"
                                 color="primary"
@@ -307,15 +302,15 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                 <Build color="primary" />
                 Equipos Requeridos
                 {horario.equipos && horario.equipos.length > 0 && (
-                  <Chip 
-                    label={horario.equipos.length} 
-                    size="small" 
-                    color="primary" 
+                  <Chip
+                    label={horario.equipos.length}
+                    size="small"
+                    color="primary"
                     variant="outlined"
                   />
                 )}
               </Typography>
-              
+
               {!horario.equipos || horario.equipos.length === 0 ? (
                 <Alert severity="info">
                   <Typography variant="body2">
@@ -336,12 +331,6 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                               <Typography variant="body1" sx={{ fontWeight: 500 }}>
                                 {equipo.nombre}
                               </Typography>
-                              <Chip 
-                                label={`${equipo.cantidad_usada} unidad${equipo.cantidad_usada !== 1 ? 'es' : ''}`}
-                                size="small"
-                                color="secondary"
-                                variant="outlined"
-                              />
                             </Box>
                           }
                           secondary={
@@ -370,7 +359,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
             {/* Información adicional */}
             <Alert severity="info" sx={{ mt: 3 }}>
               <Typography variant="body2">
-                <strong>ID de Horario:</strong> #{horario.id} | 
+                <strong>ID de Horario:</strong> #{horario.id} |
                 <strong>Fecha de Creación:</strong> {formatFechaHora(horario.fecha_inicio)}
               </Typography>
             </Alert>
@@ -393,8 +382,8 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
           Cerrar
         </Button>
         {horario && horario.insumos && horario.insumos.length > 0 && (
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             color="success"
             startIcon={<CheckCircle />}
             onClick={handleOpenCerrarHorario}
@@ -410,7 +399,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
         onClose={() => setCerrarHorarioOpen(false)}
         onSuccess={handleCerrarHorarioSuccess}
         horarioId={horarioId}
-        fecha= {dayjs(horario?.fecha_inicio).format('YYYY-MM-DD')}
+        fecha={dayjs(horario?.fecha_inicio).format('YYYY-MM-DD')}
       />
     </Dialog>
   )

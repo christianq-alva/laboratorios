@@ -41,7 +41,7 @@ export interface ActividadEquipo {
 }
 
 export interface ActividadEquipoResponse {
-  success: boolean
+  error: string | null
   data: ActividadEquipo[]
   total_registros: number
   total_movimientos: number
@@ -88,9 +88,9 @@ export const equipoService = {
     fecha_adquisicion?: string | null
     tipo_equipo_id?: number
     laboratorio_id?: number
-  }): Promise<{ success: boolean; message: string; equipo_id: number }> => {
+  }): Promise<{ message: string; equipo_id: number }> => {
+    
     const response = await api.post('/equipos', equipoData)
-    // El interceptor normaliza errores, si hay "Duplicate entry" vendrá en response.data.message
     return response.data
   },
 
@@ -110,14 +110,9 @@ export const equipoService = {
     fecha_adquisicion?: string | null
     tipo_equipo_id?: number
     laboratorio_id?: number
-  }): Promise<{ success: boolean; message: string; data: any }> => {
-    try {
-      const response = await api.put(`/equipos/${id}`, equipoData)
-      return response.data
-    } catch (error: any) {
-      console.error('Error al actualizar equipo:', error)
-      throw new Error(error.response?.data?.message || 'Error al actualizar equipo')
-    }
+  }): Promise<{ message: string; data: any }> => {
+    const response = await api.put(`/equipos/${id}`, equipoData)
+    return response.data
   },
 
   // Eliminar equipo

@@ -34,6 +34,7 @@ import {
 } from '@mui/icons-material'
 import { incidenciaService, type Incidencia } from '../../services/incidenciaService'
 import dayjs from 'dayjs'
+import { useApi } from '../../hooks/useApi'
 
 interface IncidenciasTableProps {
   onView?: (incidencia: Incidencia) => void
@@ -46,12 +47,13 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
   refresh,
   onRefreshComplete
 }) => {
+  const { execute } = useApi()
   const [incidencias, setIncidencias] = useState<Incidencia[]>([])
   const [filteredIncidencias, setFilteredIncidencias] = useState<Incidencia[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Filtros avanzados
   const [filtroFecha, setFiltroFecha] = useState('')
   const [filtroFechaInicio, setFiltroFechaInicio] = useState('')
@@ -66,22 +68,15 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
   const loadData = async () => {
     setLoading(true)
     setError(null)
-    
-    try {
-      const response = await incidenciaService.getAll()
-      if (response.success) {
-        setIncidencias(response.data)
-        setFilteredIncidencias(response.data)
-      } else {
-        setError(response.message || 'Error al cargar incidencias')
-      }
-    } catch (err: any) {
-      setError(err.message)
-      console.error('Error al cargar datos:', err)
-    } finally {
-      setLoading(false)
-      onRefreshComplete?.()
+
+    const response = await execute(() => incidenciaService.getAll())
+    if (response.error) {
+      setError(response.error)
+    } else if (response.data) {
+      setIncidencias(response.data.data || [])
+      setFilteredIncidencias(response.data.data || [])
     }
+    setLoading(false)
   }
 
   // Efecto para cargar datos iniciales
@@ -103,7 +98,7 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
     // Filtro de búsqueda general
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase()
-      filtered = filtered.filter(incidencia => 
+      filtered = filtered.filter(incidencia =>
         incidencia.titulo.toLowerCase().includes(searchLower) ||
         incidencia.descripcion.toLowerCase().includes(searchLower) ||
         incidencia.laboratorio.toLowerCase().includes(searchLower) ||
@@ -114,19 +109,19 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
 
     // Filtros específicos
     if (filtroFecha) {
-      filtered = filtered.filter(incidencia => 
+      filtered = filtered.filter(incidencia =>
         incidencia.fecha_reporte.includes(filtroFecha) ||
         incidencia.fecha_clase.includes(filtroFecha)
       )
     }
-    
+
     // Filtro por rango de fechas
     if (filtroFechaInicio || filtroFechaFin) {
       filtered = filtered.filter(incidencia => {
         const fechaReporte = dayjs(incidencia.fecha_reporte)
         const fechaInicio = filtroFechaInicio ? dayjs(filtroFechaInicio) : null
         const fechaFin = filtroFechaFin ? dayjs(filtroFechaFin) : null
-        
+
         if (fechaInicio && fechaFin) {
           return fechaReporte.isAfter(fechaInicio.subtract(1, 'day')) && fechaReporte.isBefore(fechaFin.add(1, 'day'))
         } else if (fechaInicio) {
@@ -138,28 +133,28 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
       })
     }
     if (filtroLaboratorio) {
-      filtered = filtered.filter(incidencia => 
+      filtered = filtered.filter(incidencia =>
         incidencia.laboratorio.toLowerCase().includes(filtroLaboratorio.toLowerCase())
       )
     }
     if (filtroDocente) {
-      filtered = filtered.filter(incidencia => 
+      filtered = filtered.filter(incidencia =>
         incidencia.docente.toLowerCase().includes(filtroDocente.toLowerCase())
       )
     }
     if (filtroReportadoPor) {
-      filtered = filtered.filter(incidencia => 
+      filtered = filtered.filter(incidencia =>
         incidencia.reportado_por.toLowerCase().includes(filtroReportadoPor.toLowerCase())
       )
     }
-    
+
     // Filtro por tipo de incidencia (basado en fecha)
     if (filtroEstado) {
       const ahora = dayjs()
       filtered = filtered.filter(incidencia => {
         const fechaReporte = dayjs(incidencia.fecha_reporte)
         const diasDiferencia = ahora.diff(fechaReporte, 'day')
-        
+
         switch (filtroEstado) {
           case 'reciente':
             return diasDiferencia <= 1
@@ -206,7 +201,7 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
     const fechaIncidencia = dayjs(fecha)
     const ahora = dayjs()
     const diferencia = ahora.diff(fechaIncidencia, 'day')
-    
+
     if (diferencia <= 1) return 'error' // Últimas 24 horas
     if (diferencia <= 7) return 'warning' // Última semana
     return 'default' // Más antigua
@@ -237,7 +232,7 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
             <ReportProblem color="primary" />
             Incidencias Reportadas
           </Typography>
-          
+
         </Box>
 
         {/* Barra de búsqueda y filtros */}
@@ -263,7 +258,7 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
               )
             }}
           />
-          
+
           {incidencias.length > 5 && (
             <Button
               size="small"
@@ -275,16 +270,16 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
             >
               {mostrarFiltros ? 'Ocultar' : 'Filtrar'}
               {(filtroFecha || filtroFechaInicio || filtroFechaFin || filtroLaboratorio || filtroDocente || filtroReportadoPor || filtroEstado) && (
-                <Chip 
-                  label="!" 
-                  size="small" 
-                  color="warning" 
+                <Chip
+                  label="!"
+                  size="small"
+                  color="warning"
                   sx={{ ml: 1, minWidth: 20, height: 20, fontSize: '0.75rem' }}
                 />
               )}
             </Button>
           )}
-          
+
           {searchTerm && (
             <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
               {filteredIncidencias.length} resultado{filteredIncidencias.length !== 1 ? 's' : ''}
@@ -294,18 +289,18 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
 
         {/* Panel de filtros avanzados */}
         {mostrarFiltros && (
-          <Box sx={{ 
-            p: 2, 
-            mb: 2, 
-            border: '1px solid #e0e0e0', 
-            borderRadius: 1, 
-            backgroundColor: '#f5f5f5' 
+          <Box sx={{
+            p: 2,
+            mb: 2,
+            border: '1px solid #e0e0e0',
+            borderRadius: 1,
+            backgroundColor: '#f5f5f5'
           }}>
             <Typography variant="body2" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
               <FilterList fontSize="small" />
               Filtros Avanzados ({filteredIncidencias.length} de {incidencias.length} incidencias)
             </Typography>
-            
+
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
               <TextField
                 size="small"
@@ -315,7 +310,7 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
                 placeholder="Ej: 15/12/2024"
                 sx={{ minWidth: 180 }}
               />
-              
+
               <TextField
                 size="small"
                 type="date"
@@ -325,7 +320,7 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
                 InputLabelProps={{ shrink: true }}
                 sx={{ minWidth: 120 }}
               />
-              
+
               <TextField
                 size="small"
                 type="date"
@@ -335,7 +330,7 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
                 InputLabelProps={{ shrink: true }}
                 sx={{ minWidth: 120 }}
               />
-              
+
               <TextField
                 size="small"
                 label="Laboratorio"
@@ -344,7 +339,7 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
                 placeholder="Nombre del laboratorio"
                 sx={{ minWidth: 150 }}
               />
-              
+
               <TextField
                 size="small"
                 label="Docente"
@@ -353,7 +348,7 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
                 placeholder="Nombre del docente"
                 sx={{ minWidth: 150 }}
               />
-              
+
               <TextField
                 size="small"
                 label="Reportado por"
@@ -362,7 +357,7 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
                 placeholder="Usuario que reportó"
                 sx={{ minWidth: 150 }}
               />
-              
+
               <FormControl size="small" sx={{ minWidth: 150 }}>
                 <InputLabel>Tipo de incidencia</InputLabel>
                 <Select
@@ -377,7 +372,7 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
                   <MenuItem value="antigua">Antiguas (+30 días)</MenuItem>
                 </Select>
               </FormControl>
-              
+
               <Button
                 size="small"
                 startIcon={<Clear />}
@@ -422,9 +417,9 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
                       }
                     </Typography>
                     {(searchTerm || filtroFecha || filtroFechaInicio || filtroFechaFin || filtroLaboratorio || filtroDocente || filtroReportadoPor) && (
-                      <Button 
-                        size="small" 
-                        onClick={limpiarFiltros} 
+                      <Button
+                        size="small"
+                        onClick={limpiarFiltros}
                         sx={{ mt: 1 }}
                         variant="outlined"
                       >
@@ -444,10 +439,10 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
                         <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary' }}>
                           {incidencia.titulo}
                         </Typography>
-                        <Typography 
-                          variant="caption" 
+                        <Typography
+                          variant="caption"
                           color="text.secondary"
-                          sx={{ 
+                          sx={{
                             display: '-webkit-box',
                             WebkitLineClamp: 2,
                             WebkitBoxOrient: 'vertical',
@@ -460,7 +455,7 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
                       </Box>
                     </Box>
                   </TableCell>
-                  
+
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <LocationOn fontSize="small" color="action" />
@@ -469,7 +464,7 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
                       </Typography>
                     </Box>
                   </TableCell>
-                  
+
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Person fontSize="small" color="action" />
@@ -478,7 +473,7 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
                       </Typography>
                     </Box>
                   </TableCell>
-                  
+
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Schedule fontSize="small" color="action" />
@@ -487,9 +482,9 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
                       </Typography>
                     </Box>
                   </TableCell>
-                  
+
                   <TableCell>
-                    <Chip 
+                    <Chip
                       label={formatFecha(incidencia.fecha_reporte)}
                       color={getFechaColor(incidencia.fecha_reporte)}
                       size="small"
@@ -497,19 +492,19 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
                       icon={<CalendarToday fontSize="small" />}
                     />
                   </TableCell>
-                  
+
                   <TableCell>
                     <Typography variant="body2" color="text.secondary">
                       {incidencia.reportado_por}
                     </Typography>
                   </TableCell>
-                  
+
                   <TableCell align="center">
                     <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
                       {onView && (
                         <Tooltip title="Ver detalles">
-                          <IconButton 
-                            size="small" 
+                          <IconButton
+                            size="small"
                             onClick={() => onView(incidencia)}
                             color="primary"
                           >

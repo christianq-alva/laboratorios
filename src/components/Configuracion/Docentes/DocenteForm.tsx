@@ -17,8 +17,9 @@ import {
 } from '@mui/material'
 import { Close } from '@mui/icons-material'
 import { docenteService } from '../../../services/docenteService'
-import type { Docente, DocenteData} from '../../../services/docenteService'  
+import type { Docente, DocenteData } from '../../../services/docenteService'
 import { escuelaService, type Escuela } from '../../../services/escuelaService'
+import { useApi } from '../../../hooks/useApi'
 
 interface DocenteFormProps {
   open: boolean
@@ -33,6 +34,7 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
   onSuccess,
   docente,
 }) => {
+  const { execute } = useApi()
   const [formData, setFormData] = useState<DocenteData>({
     nombre: '',
     correo: '',
@@ -47,15 +49,14 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
 
   // Cargar escuelas
   const fetchEscuelas = async () => {
-    try {
-      setLoadingEscuelas(true)
-      const result = await escuelaService.getAll()
-      setEscuelas(result.data || [])
-    } catch (err) {
-      console.error('Error loading escuelas:', err)
-    } finally {
-      setLoadingEscuelas(false)
+    setLoadingEscuelas(true)
+    const result = await execute(() => escuelaService.getAll())
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      setEscuelas(result.data.data)
     }
+    setLoadingEscuelas(false)
   }
 
   // Cargar escuelas cuando se abre el modal
@@ -70,10 +71,10 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
     if (open && escuelas.length > 0) {
       if (docente) {
         // Asegurar que escuela_id sea un número
-        const escuelaIdNumber = typeof docente.escuela_id === 'string' 
-          ? parseInt(docente.escuela_id) 
+        const escuelaIdNumber = typeof docente.escuela_id === 'string'
+          ? parseInt(docente.escuela_id)
           : docente.escuela_id || 0
-        
+
         console.log('📝 Cargando datos del docente para edición:', {
           nombre: docente.nombre,
           escuela_id_original: docente.escuela_id,
@@ -82,7 +83,7 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
           escuela: docente.escuela,
           escuelas_disponibles: escuelas.length
         })
-        
+
         setFormData({
           nombre: docente.nombre,
           correo: docente.correo || '',
@@ -132,38 +133,32 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
     setLoading(true)
     setError(null)
 
-    try {
-      // Validaciones básicas
-      if (!formData.nombre.trim()) {
-        throw new Error('El nombre es requerido')
-      }
-      // Validar correo solo si se proporciona
-      if (formData.correo && formData.correo.trim() && !formData.correo.includes('@')) {
-        throw new Error('El correo debe tener un formato válido')
-      }
-      if (formData.escuela_id <= 0) {
-        throw new Error('Debe seleccionar una escuela')
-      }
-
-      let result
-      if (isEditing && docente) {
-        result = await docenteService.update(docente.id, formData)
-      } else {
-        result = await docenteService.create(formData)
-      }
-
-      if (result.success) {
-        onSuccess(result.message)
-        onClose()
-      } else {
-        setError(result.message || 'Error al guardar el docente')
-      }
-    } catch (err: any) {
-      // Error de validación local (throw new Error)
-      setError(err.message || 'Error de conexión')
-    } finally {
-      setLoading(false)
+    // Validaciones básicas
+    if (!formData.nombre.trim()) {
+      throw new Error('El nombre es requerido')
     }
+    // Validar correo solo si se proporciona
+    if (formData.correo && formData.correo.trim() && !formData.correo.includes('@')) {
+      throw new Error('El correo debe tener un formato válido')
+    }
+    if (formData.escuela_id <= 0) {
+      throw new Error('Debe seleccionar una escuela')
+    }
+
+    let result
+    if (isEditing && docente) {
+      result = await execute(() => docenteService.update(docente.id, formData))
+    } else {
+      result = await execute(() => docenteService.create(formData))
+    }
+
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      onSuccess(result.data.message)
+      onClose()
+    }
+    setLoading(false)
   }
 
   const handleClose = () => {
@@ -173,8 +168,8 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
   }
 
   return (
-    <Dialog 
-      open={open} 
+    <Dialog
+      open={open}
       onClose={handleClose}
       maxWidth="sm"
       fullWidth
@@ -249,15 +244,15 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
         </DialogContent>
 
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button 
-            onClick={handleClose} 
+          <Button
+            onClick={handleClose}
             disabled={loading}
             color="inherit"
           >
             Cancelar
           </Button>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             variant="contained"
             disabled={loading}
             sx={{ minWidth: 120 }}

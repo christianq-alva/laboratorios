@@ -1,56 +1,5 @@
 import { api } from './api'
-import type { ApiMessageResponse, ApiCreateUpdateResponse } from './types'
-
-export interface DatoValidado {
-  fila: number
-  insumo_id: number
-  insumo_codigo: string
-  insumo_nombre: string
-  insumo_unidad: string
-  cantidad: number
-  insumo_lote: string
-  insumo_fecha_venc: string
-}
-
-export interface LoteInsumo {
-  detalle_id: number
-  lote: string | null
-  cantidad: number
-  saldo?: number | null
-  fecha_vencimiento: string | null
-  fecha_ingreso: string | null
-  fecha_movimiento: string | null
-  laboratorio_nombre?: string
-  laboratorio_id?: number
-}
-
-export interface InsumoSaldo {
-  id: number
-  codigo: string
-  nombre: string
-  description: string
-  unidad_medida: string
-  categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico'
-  presentacion: string
-  total_lotes: number
-  stock_disponible: number
-}
-
-export interface AllInsumoResponse {
-  success?: boolean
-  data: Insumo2[]
-  message?: string
-}
-
-export interface Insumo2 {
-  id: number
-  codigo: string
-  nombre: string
-  descripcion: string
-  unidad_medida: string
-  categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico'
-  presentacion: string
-}
+import type { ApiMessageResponse, ApiCreateUpdateResponse, ApiDataResponse } from './types'
 
 export interface Insumo {
   id: number
@@ -59,55 +8,7 @@ export interface Insumo {
   descripcion: string
   unidad_medida: string
   categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico'
-  stock_disponible?: number
-  stock_por_laboratorio?: string
-  presentacion?: string
-  condicion?: 'Excelente' | 'Bueno' | 'Regular' | 'Malo'
-  fecha_vencimiento?: string
-  observacion?: string
-  lotes?: LoteInsumo[]
-  total_lotes?: number
-  stock_total_lotes?: number
-  lotes_proximos_vencer?: number
-}
-
-export interface InsumoResponse {
-  success: boolean
-  data: Insumo[]
-  laboratorio_filtrado?: number | null
-  total_insumos: number
-  message?: string
-}
-
-export interface InsumoSaldoResponse {
-  data: InsumoSaldo[]
-}
-
-export interface ActividadInsumo {
-  id: number
-  fecha_movimiento: string
-  fecha_ingreso: string
-  tipo_movimiento: 'entrada' | 'salida'
-  observaciones: string
-  laboratorio_nombre: string
-  usuario_nombre: string
-  usuario_rol: string
-  reserva_descripcion?: string
-  reserva_fecha_inicio?: string
-  reserva_fecha_fin?: string
-}
-
-export interface ActividadResponse {
-  success: boolean
-  data: ActividadInsumo[]
-  total_movimientos: number
-  filtros_aplicados: {
-    laboratorio_id: number | null
-    fecha_inicio: string | null
-    fecha_fin: string | null
-    tipo_movimiento: string | null
-  }
-  message?: string
+  presentacion: string
 }
 
 export const insumoService = {
@@ -118,15 +19,9 @@ export const insumoService = {
     unidad_medida: string
     categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico'
     presentacion?: string
-  }): Promise<ApiCreateUpdateResponse<{ id: number; insumo_id: number }>> => {
-    try {
-      const response = await api.post('/insumos', insumoData)
-      console.log(response)
-      return response.data
-    } catch (error: any) {
-      console.error('Error al crear insumo:', error)
-      throw new Error('Error al crear insumo')
-    }
+  }): Promise<ApiCreateUpdateResponse<{ id: number }>> => {
+    const response = await api.post('/insumos', insumoData)
+    return response.data
   },
 
   //Actualizar insumo
@@ -136,29 +31,19 @@ export const insumoService = {
     unidad_medida: string
     categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico'
     presentacion?: string
-    condicion?: string
-    fecha_vencimiento?: string
-    observacion?: string
   }): Promise<ApiCreateUpdateResponse<Insumo>> => {
-    try {
-      const response = await api.put(`/insumos/${id}`, insumoData)
-      return response.data
-    } catch (error: any) {
-      console.error('Error al actualizar insumo:', error)
-      throw new Error(error.response?.data?.message || 'Error al actualizar insumo')
-    }
+    const response = await api.put(`/insumos/${id}`, insumoData)
+    return response.data
   },
 
   //Eliminar insumo
   delete: async (id: number): Promise<ApiMessageResponse> => {
-    console.log('🗑️ Eliminando insumo:', id)
     const response = await api.delete(`/insumos/${id}`)
-    console.log('✅ Respuesta del servidor:', response.data)
     return response.data
   },
 
   //Obtener listado de insumos 
-  getAllInsumos: async (): Promise<AllInsumoResponse> => {
+  getAllInsumos: async (): Promise<ApiDataResponse<Insumo[]>> => {
     const response = await api.get('/insumos/list')
     return response.data
   },
@@ -264,200 +149,4 @@ export const insumoService = {
       throw new Error(error.response?.data?.message || 'Error en la importación masiva')
     }
   },
-
-  //Obtener los insumos y su stock de todos los laboratorios
-  getAllWithStock: async (): Promise<InsumoSaldoResponse> => {
-    try {
-      const response = await api.get('/inventario/all-con-saldo')
-      return response.data
-    } catch (error: any) {
-      console.error('Error al obtener insumos con saldo:', error)
-      throw new Error(error.response?.data?.message || 'Error al obtener insumos con saldo')
-    }
-  },
-
-  //Obtener los insumos y su stock de un laboratorio
-  getWithStock: async (laboratorio_id: number): Promise<InsumoSaldoResponse> => {
-    try {
-      const params = new URLSearchParams()
-      params.append('laboratorio_id', laboratorio_id.toString());
-      const response = await api.get(`/inventario/insumos-con-saldo?${params.toString()}`)
-      return response.data
-    } catch (error: any) {
-      console.error('Error al obtener insumos con saldo por laboratorio:', error)
-      throw new Error(error.response?.data?.message || 'Error al obtener insumos con saldo por laboratorio')
-    }
-  },
-
-  //Obtener solo los insumos con stock de un laboratorio
-  getWithPositiveStock: async (laboratorio_id: number): Promise<InsumoSaldoResponse> => {
-    try {
-      const params = new URLSearchParams()
-      params.append('laboratorio_id', laboratorio_id.toString());
-      const response = await api.get(`/inventario/insumos-con-saldo-positivo?${params.toString()}`)
-      return response.data
-    } catch (error: any) {
-      console.error('Error al obtener insumos con saldo:', error)
-      throw new Error(error.response?.data?.message || 'Error al obtener insumos con saldo')
-    }
-  },
-
-  //Obtener listado de movimiento con filtro de laboratorio, rango de fechas y tipo de movimiento
-  getActividad: async (filters?: {
-    laboratorio_id?: number
-    fecha_inicio?: string
-    fecha_fin?: string
-    tipo_movimiento?: string
-  }): Promise<ActividadResponse> => {
-    try {
-      const params = new URLSearchParams()
-      if (filters?.laboratorio_id) params.append('laboratorio_id', filters.laboratorio_id.toString())
-      if (filters?.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio)
-      if (filters?.fecha_fin) params.append('fecha_fin', filters.fecha_fin)
-      if (filters?.tipo_movimiento) params.append('tipo_movimiento', filters.tipo_movimiento)
-
-      const response = await api.get(`/inventario/actividad?${params.toString()}`)
-      console.log(response.data)
-      return response.data
-    } catch (error: any) {
-      console.error('Error al obtener actividad de insumos:', error)
-      throw new Error(error.response?.data?.message || 'Error al obtener actividad de insumos')
-    }
-  },
-
-  //Generar plantilla excel para reabastecimiento masivo
-  descargarPlantillaExcel: async (): Promise<{ data: Blob }> => {
-    try {
-      const response = await api.get('/inventario/plantilla-excel', {
-        responseType: 'blob'
-      })
-      return { data: response.data }
-    } catch (error: any) {
-      console.error('Error al descargar plantilla Excel:', error)
-      throw new Error(error.response?.data?.message || 'Error al descargar plantilla Excel')
-    }
-  },
-
-  //Procesar archivo excel para reabastecimiento masivo
-  procesarArchivoExcel: async (formData: FormData, laboratorio_id: number
-  ): Promise<{
-    success: boolean
-    message: string
-    data: {
-      archivo: string
-      total_filas: number
-      registros_validos: number
-      registros_con_errores: number
-      datos_validados: DatoValidado[]
-      errores: string[]
-    }
-  }> => {
-    try {
-      const response = await api.post('/inventario/procesar-excel', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        },
-        params: {
-          laboratorio_id
-        }
-      })
-      return response.data
-    } catch (error: any) {
-      console.error('Error al procesar archivo Excel:', error)
-      throw new Error(error.response?.data?.message || 'Error al procesar archivo Excel')
-    }
-  },
-
-  //Ejecutar reabastecimiento masivo 
-  ejecutarReabastecimientoMasivo: async (data: {
-    datos_reabastecimiento: Array<{
-      insumo_id: number
-      cantidad: number
-      lote: string | null
-      fecha_vencimiento?: string | null
-      entrada_detalle_id?: number | null
-    }>
-    fecha_movimiento: string | null
-    motivo_general: string
-    laboratorio_id: number
-  }): Promise<{
-    success: boolean
-    message: string
-    data: {
-      total_registros: number
-      registros_procesados: number
-      registros_fallidos: number
-      motivo: string
-      resultados: Array<{
-        insumo: string
-        laboratorio: string
-        cantidad: number
-        estado: 'exitoso' | 'error'
-        error?: string
-      }>
-    }
-  }> => {
-    try {
-      const response = await api.post('/inventario/reabastecimiento-masivo', data)
-      return response.data
-    } catch (error: any) {
-      console.error('Error al ejecutar reabastecimiento masivo:', error)
-      throw new Error(error.response?.data?.message || 'Error al ejecutar reabastecimiento masivo')
-    }
-  },
-
-  //Obtener lotes con saldo disponible por laboratorio e insumo
-  getLotesConSaldo: async (laboratorioId: number, insumoId?: number): Promise<{
-    success: boolean
-    data: Array<{
-      detalle_id: number
-      insumo_id: number
-      insumo_nombre: string
-      insumo_codigo: string
-      unidad_medida: string
-      lote: string
-      cantidad_original: number
-      saldo: number
-      fecha_vencimiento: string | null
-      fecha_ingreso: string
-      dias_para_vencer: number | null
-    }>
-  }> => {
-    try {
-      const params = new URLSearchParams()
-      params.append('laboratorio_id', laboratorioId.toString())
-      if (insumoId) params.append('insumo_id', insumoId.toString())
-
-      const response = await api.get(`/inventario/lotes-con-saldo?${params.toString()}`)
-      return response.data
-    } catch (error: any) {
-      console.error('Error al obtener lotes con saldo:', error)
-      throw new Error(error.response?.data?.message || 'Error al obtener lotes con saldo')
-    }
-  },
-
-  // Registrar movimiento manual (entrada o salida)
-  registrarMovimiento: async (data: {
-    laboratorio_id: number
-    tipo_movimiento: 'entrada' | 'salida'
-    observaciones?: string | null
-    reserva_id?: number | null
-    fecha_movimiento?: string | null
-    detalles: Array<{
-      insumo_id: number
-      cantidad: number
-      lote?: string | null
-      fecha_vencimiento?: string | null
-      entrada_detalle_id?: number | null  // Para salidas: ID del lote de entrada a reducir
-    }>
-  }): Promise<{ success: boolean; message: string; movimiento_id: number }> => {
-    try {
-      console.log('📝 Registrando movimiento manual:', data)
-      const response = await api.post('/inventario/movimiento-manual', data)
-      return response.data
-    } catch (error: any) {
-      console.error('Error al registrar movimiento:', error)
-      throw new Error(error.response?.data?.message || 'Error al registrar movimiento')
-    }
-  }
 } 

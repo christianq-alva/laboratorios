@@ -30,6 +30,7 @@ import {
   Search
 } from '@mui/icons-material'
 import { incidenciaService, type HorarioParaIncidencia } from '../../services/incidenciaService'
+import { useApi } from '../../hooks/useApi'
 
 interface IncidenciaFormProps {
   open: boolean
@@ -38,6 +39,7 @@ interface IncidenciaFormProps {
 }
 
 export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, onSuccess }) => {
+  const { execute } = useApi()
   const [horarios, setHorarios] = useState<HorarioParaIncidencia[]>([])
   const [filteredHorarios, setFilteredHorarios] = useState<HorarioParaIncidencia[]>([])
   const [selectedHorario, setSelectedHorario] = useState<number | ''>('')
@@ -46,7 +48,7 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Filtros
   const [filtroFecha, setFiltroFecha] = useState('')
   const [filtroLaboratorio, setFiltroLaboratorio] = useState('')
@@ -55,23 +57,17 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
 
   // Cargar horarios disponibles
   const loadHorarios = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const response = await incidenciaService.getHorariosDisponibles()
-      if (response.success) {
-        setHorarios(response.data)
-        setFilteredHorarios(response.data)
-      } else {
-        setError(response.message || 'Error al cargar horarios')
-      }
-    } catch (err: any) {
-      setError(err.message || 'Error de conexión')
-      console.error('Error al cargar horarios:', err)
-    } finally {
-      setLoading(false)
+    setLoading(true)
+    setError(null)
+
+    const response = await execute(() => incidenciaService.getHorariosDisponibles())
+    if (response.error) {
+      setError(response.error)
+    } else if (response.data) {
+      setHorarios(response.data.data)
+      setFilteredHorarios(response.data.data)
     }
+    setLoading(false)
   }
 
   // Efecto para cargar horarios cuando se abre el formulario
@@ -146,30 +142,24 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
   const handleSubmit = async () => {
     if (!validateForm()) return
 
-    try {
-      setSubmitting(true)
-      setError(null)
+    setSubmitting(true)
+    setError(null)
 
-      const incidenciaData = {
-        reserva_id: selectedHorario as number,
-        titulo: titulo.trim(),
-        descripcion: descripcion.trim()
-      }
-
-      const response = await incidenciaService.create(incidenciaData)
-      
-      if (response.success) {
-        onSuccess()
-        handleClose()
-      } else {
-        setError(response.message || 'Error al crear incidencia')
-      }
-    } catch (err: any) {
-      setError(err.message || 'Error de conexión')
-      console.error('Error al crear incidencia:', err)
-    } finally {
-      setSubmitting(false)
+    const incidenciaData = {
+      reserva_id: selectedHorario as number,
+      titulo: titulo.trim(),
+      descripcion: descripcion.trim()
     }
+
+    const response = await execute(() => incidenciaService.create(incidenciaData))
+
+    if (response.error) {
+      setError(response.error)
+    } else if (response.data) {
+      onSuccess()
+      handleClose()
+    }
+    setSubmitting(false)
   }
 
   // Obtener el horario seleccionado
@@ -222,18 +212,18 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
 
           {/* Filtros */}
           {mostrarFiltros && (
-            <Box sx={{ 
-              p: 2, 
-              mb: 2, 
-              border: '1px solid #e0e0e0', 
-              borderRadius: 1, 
-              backgroundColor: '#f5f5f5' 
+            <Box sx={{
+              p: 2,
+              mb: 2,
+              border: '1px solid #e0e0e0',
+              borderRadius: 1,
+              backgroundColor: '#f5f5f5'
             }}>
               <Typography variant="body2" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Search fontSize="small" />
                 Filtrar horarios ({filteredHorarios.length} de {horarios.length})
               </Typography>
-              
+
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
                 <TextField
                   size="small"
@@ -243,7 +233,7 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
                   placeholder="Ej: 15/12/2024"
                   sx={{ minWidth: 150 }}
                 />
-                
+
                 <TextField
                   size="small"
                   label="Laboratorio"
@@ -252,7 +242,7 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
                   placeholder="Nombre del laboratorio"
                   sx={{ minWidth: 150 }}
                 />
-                
+
                 <TextField
                   size="small"
                   label="Docente"
@@ -261,7 +251,7 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
                   placeholder="Nombre del docente"
                   sx={{ minWidth: 150 }}
                 />
-                
+
                 <Button
                   size="small"
                   startIcon={<Clear />}
@@ -274,19 +264,19 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
               </Box>
             </Box>
           )}
-          
+
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
               <CircularProgress />
             </Box>
           ) : horarios.length === 0 ? (
             <Alert severity="info">
-              No hay horarios disponibles para reportar incidencias. 
+              No hay horarios disponibles para reportar incidencias.
               Solo se pueden reportar incidencias para clases que ya han terminado.
             </Alert>
           ) : filteredHorarios.length === 0 ? (
             <Alert severity="warning">
-              No se encontraron horarios con los filtros aplicados. 
+              No se encontraron horarios con los filtros aplicados.
               <Button size="small" onClick={limpiarFiltros} sx={{ ml: 1 }}>
                 Limpiar filtros
               </Button>
@@ -375,7 +365,7 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
           <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
             Detalles de la Incidencia
           </Typography>
-          
+
           <TextField
             label="Título de la incidencia"
             value={titulo}
@@ -388,12 +378,12 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
               titulo.length === 0
                 ? "Describe brevemente el problema (mínimo 30 caracteres)"
                 : titulo.trim().length < 30
-                ? `Faltan ${30 - titulo.trim().length} caracteres para alcanzar el mínimo (${titulo.trim().length}/30)`
-                : `${titulo.trim().length} caracteres ✓`
+                  ? `Faltan ${30 - titulo.trim().length} caracteres para alcanzar el mínimo (${titulo.trim().length}/30)`
+                  : `${titulo.trim().length} caracteres ✓`
             }
             error={titulo.length > 0 && titulo.trim().length < 30}
           />
-          
+
           <TextField
             label="Descripción detallada"
             value={descripcion}
@@ -407,8 +397,8 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
               descripcion.length === 0
                 ? "Proporciona todos los detalles relevantes (mínimo 50 caracteres)"
                 : descripcion.trim().length < 50
-                ? `Faltan ${50 - descripcion.trim().length} caracteres para alcanzar el mínimo (${descripcion.trim().length}/50)`
-                : `${descripcion.trim().length} caracteres ✓`
+                  ? `Faltan ${50 - descripcion.trim().length} caracteres para alcanzar el mínimo (${descripcion.trim().length}/50)`
+                  : `${descripcion.trim().length} caracteres ✓`
             }
             error={descripcion.length > 0 && descripcion.trim().length < 50}
           />
@@ -417,7 +407,7 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
         {/* Información adicional */}
         <Alert severity="info" sx={{ mt: 2 }}>
           <Typography variant="body2">
-            <strong>Importante:</strong> Las incidencias se reportan para clases que ya han terminado. 
+            <strong>Importante:</strong> Las incidencias se reportan para clases que ya han terminado.
             Esta información ayudará a mejorar el mantenimiento y la gestión de los laboratorios.
           </Typography>
         </Alert>
@@ -427,9 +417,9 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
         <Button onClick={handleClose} variant="outlined">
           Cancelar
         </Button>
-        <Button 
-          onClick={handleSubmit} 
-          variant="contained" 
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
           color="error"
           disabled={submitting || !selectedHorario || !titulo.trim() || !descripcion.trim()}
           startIcon={submitting ? <CircularProgress size={16} /> : <ReportProblem />}

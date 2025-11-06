@@ -272,7 +272,7 @@ export const Inventario = {
     return insumos;
   },
   validarSaldoByInsumoId: async (laboratorio_id, insumo_id, cantidad) => {
-    const [stock_disponible] = await pool.execute(`
+    const [result] = await pool.execute(`
       SELECT 
       sum(mid.saldo) stock_disponible
       FROM movimientos_insumos mi
@@ -280,6 +280,6 @@ export const Inventario = {
       WHERE mi.laboratorio_id = ? and mid.insumo_id = ?
       `, [laboratorio_id, insumo_id])
 
-    return stock_disponible > cantidad;
+    return result[0].stock_disponible > cantidad;
   },
 }

@@ -42,6 +42,7 @@ import {
 } from '@mui/icons-material'
 import { equipoService, type ActividadEquipo } from '../../services/equipoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
+import { useApi } from '../../hooks/useApi'
 
 interface ActividadEquiposProps {
   open: boolean
@@ -49,11 +50,12 @@ interface ActividadEquiposProps {
 }
 
 export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClose }) => {
+  const { execute } = useApi()
   const [actividad, setActividad] = useState<ActividadEquipo[]>([])
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Filtros
   const [filters, setFilters] = useState({
     laboratorio_id: '',
@@ -71,40 +73,32 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
   }, [open])
 
   const loadLaboratorios = async () => {
-    try {
-      const response = await laboratorioService.getAll()
-      if (response.success) {
-        setLaboratorios(response.data)
-      }
-    } catch (err) {
-      console.error('Error al cargar laboratorios:', err)
+    const response = await execute(() => laboratorioService.getAll())
+    if (response.error) {
+      setError(response.error)
+    } else if (response.data) {
+      setLaboratorios(response.data.data || [])
     }
   }
 
   const loadActividad = async () => {
-    try {
-      setLoading(true)
-      setError(null)
+    setLoading(true)
+    setError(null)
 
-      const filtersToSend: any = {}
-      if (filters.laboratorio_id) filtersToSend.laboratorio_id = parseInt(filters.laboratorio_id)
-      if (filters.fecha_inicio) filtersToSend.fecha_inicio = filters.fecha_inicio
-      if (filters.fecha_fin) filtersToSend.fecha_fin = filters.fecha_fin
-      if (filters.tipo_movimiento) filtersToSend.tipo_movimiento = filters.tipo_movimiento
+    const filtersToSend: any = {}
+    if (filters.laboratorio_id) filtersToSend.laboratorio_id = parseInt(filters.laboratorio_id)
+    if (filters.fecha_inicio) filtersToSend.fecha_inicio = filters.fecha_inicio
+    if (filters.fecha_fin) filtersToSend.fecha_fin = filters.fecha_fin
+    if (filters.tipo_movimiento) filtersToSend.tipo_movimiento = filters.tipo_movimiento
 
-      const result = await equipoService.getActividad(filtersToSend)
-      
-      if (result.success) {
-        setActividad(result.data)
-      } else {
-        setError('Error al cargar actividad')
-      }
-    } catch (err: any) {
-      console.error('Error al cargar actividad:', err)
-      setError(err.message || 'Error de conexión')
-    } finally {
-      setLoading(false)
+    const result = await execute(() => equipoService.getActividad(filtersToSend))
+
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      setActividad(result.data.data)
     }
+    setLoading(false)
   }
 
   const handleFilterChange = (field: string, value: string) => {
@@ -166,7 +160,7 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
   const formatFecha = (fecha: string) => {
     if (!fecha) return 'N/A'
     try {
-      return new Date(fecha).toLocaleString('es-PE', { 
+      return new Date(fecha).toLocaleString('es-PE', {
         timeZone: 'America/Lima',
         year: 'numeric',
         month: '2-digit',
@@ -232,7 +226,7 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
             <FilterList />
             Filtros
           </Typography>
-          
+
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
             <FormControl size="small">
               <InputLabel>Laboratorio</InputLabel>
@@ -359,7 +353,7 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
                           </Typography>
                         </Box>
                       </TableCell>
-                      
+
                       <TableCell>
                         <Chip
                           icon={getTipoMovimientoIcon(registro.tipo_movimiento, registro.tipo_registro)}
@@ -369,7 +363,7 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
                           size="small"
                         />
                       </TableCell>
-                      
+
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Memory fontSize="small" color="action" />
@@ -383,19 +377,19 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
                           </Box>
                         </Box>
                       </TableCell>
-                      
+
                       <TableCell>
                         <Typography variant="body2">
-                          {registro.equipo_marca && registro.equipo_modelo 
+                          {registro.equipo_marca && registro.equipo_modelo
                             ? `${registro.equipo_marca} ${registro.equipo_modelo}`
                             : registro.equipo_marca || registro.equipo_modelo || 'N/A'
                           }
                         </Typography>
                       </TableCell>
-                      
+
                       <TableCell>
                         {registro.cantidad ? (
-                          <Chip 
+                          <Chip
                             label={registro.cantidad}
                             size="small"
                             variant="outlined"
@@ -406,7 +400,7 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
                           </Typography>
                         )}
                       </TableCell>
-                      
+
                       <TableCell>
                         {registro.laboratorio_nombre ? (
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -421,7 +415,7 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
                           </Typography>
                         )}
                       </TableCell>
-                      
+
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Person fontSize="small" color="action" />
@@ -435,7 +429,7 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
                           </Box>
                         </Box>
                       </TableCell>
-                      
+
                       <TableCell>
                         <Tooltip title={registro.observaciones} arrow>
                           <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>

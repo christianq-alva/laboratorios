@@ -25,6 +25,7 @@ import {
 } from '@mui/icons-material'
 import { incidenciaService, type IncidenciaDetalle } from '../../services/incidenciaService'
 import dayjs from 'dayjs'
+import { useApi } from '../../hooks/useApi'
 
 interface IncidenciaDetalleProps {
   open: boolean
@@ -32,11 +33,12 @@ interface IncidenciaDetalleProps {
   incidenciaId: number | null
 }
 
-export const IncidenciaDetalleDialog: React.FC<IncidenciaDetalleProps> = ({ 
-  open, 
-  onClose, 
-  incidenciaId 
+export const IncidenciaDetalleDialog: React.FC<IncidenciaDetalleProps> = ({
+  open,
+  onClose,
+  incidenciaId
 }) => {
+  const { execute } = useApi()
   const [incidencia, setIncidencia] = useState<IncidenciaDetalle | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -45,22 +47,16 @@ export const IncidenciaDetalleDialog: React.FC<IncidenciaDetalleProps> = ({
   const loadIncidencia = async () => {
     if (!incidenciaId) return
 
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const response = await incidenciaService.getById(incidenciaId)
-      if (response.success) {
-        setIncidencia(response.data)
-      } else {
-        setError(response.message || 'Error al cargar incidencia')
-      }
-    } catch (err: any) {
-      setError(err.message || 'Error de conexión')
-      console.error('Error al cargar incidencia:', err)
-    } finally {
-      setLoading(false)
+    setLoading(true)
+    setError(null)
+
+    const response = await execute(() => incidenciaService.getById(incidenciaId))
+    if (response.error) {
+      setError(response.error)
+    } else if (response.data) {
+      setIncidencia(response.data.data)
     }
+    setLoading(false)
   }
 
   // Efecto para cargar incidencia cuando se abre el diálogo
@@ -87,7 +83,7 @@ export const IncidenciaDetalleDialog: React.FC<IncidenciaDetalleProps> = ({
     const fechaIncidencia = dayjs(fecha)
     const ahora = dayjs()
     const diferencia = ahora.diff(fechaIncidencia, 'day')
-    
+
     if (diferencia <= 1) return 'error' // Últimas 24 horas
     if (diferencia <= 7) return 'warning' // Última semana
     return 'default' // Más antigua
@@ -134,7 +130,7 @@ export const IncidenciaDetalleDialog: React.FC<IncidenciaDetalleProps> = ({
                   <Typography variant="h5" sx={{ fontWeight: 600, color: 'error.main' }}>
                     {incidencia.titulo}
                   </Typography>
-                  <Chip 
+                  <Chip
                     label={formatFecha(incidencia.fecha_reporte)}
                     color={getFechaColor(incidencia.fecha_reporte)}
                     size="small"
@@ -144,7 +140,7 @@ export const IncidenciaDetalleDialog: React.FC<IncidenciaDetalleProps> = ({
                   />
                 </Box>
               </Box>
-              
+
               <Typography variant="body1" sx={{ color: 'text.secondary', lineHeight: 1.6 }}>
                 {incidencia.descripcion}
               </Typography>
@@ -156,7 +152,7 @@ export const IncidenciaDetalleDialog: React.FC<IncidenciaDetalleProps> = ({
                 <Schedule color="primary" />
                 Información de la Clase
               </Typography>
-              
+
               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <CalendarToday color="action" />
@@ -169,7 +165,7 @@ export const IncidenciaDetalleDialog: React.FC<IncidenciaDetalleProps> = ({
                     </Typography>
                   </Box>
                 </Box>
-                
+
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <LocationOn color="action" />
                   <Box>
@@ -181,7 +177,7 @@ export const IncidenciaDetalleDialog: React.FC<IncidenciaDetalleProps> = ({
                     </Typography>
                   </Box>
                 </Box>
-                
+
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Person color="action" />
                   <Box>
@@ -193,7 +189,7 @@ export const IncidenciaDetalleDialog: React.FC<IncidenciaDetalleProps> = ({
                     </Typography>
                   </Box>
                 </Box>
-                
+
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Group color="action" />
                   <Box>
@@ -214,7 +210,7 @@ export const IncidenciaDetalleDialog: React.FC<IncidenciaDetalleProps> = ({
                 <Description color="primary" />
                 Información del Reporte
               </Typography>
-              
+
               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Person color="action" />
@@ -227,7 +223,7 @@ export const IncidenciaDetalleDialog: React.FC<IncidenciaDetalleProps> = ({
                     </Typography>
                   </Box>
                 </Box>
-                
+
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <CalendarToday color="action" />
                   <Box>
@@ -245,7 +241,7 @@ export const IncidenciaDetalleDialog: React.FC<IncidenciaDetalleProps> = ({
             {/* Información adicional */}
             <Alert severity="info" sx={{ mt: 3 }}>
               <Typography variant="body2">
-                <strong>ID de Incidencia:</strong> #{incidencia.id} | 
+                <strong>ID de Incidencia:</strong> #{incidencia.id} |
                 <strong>ID de Reserva:</strong> #{incidencia.reserva_id}
               </Typography>
             </Alert>

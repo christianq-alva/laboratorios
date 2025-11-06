@@ -25,9 +25,11 @@ import { ActividadHorarios } from '../components/Horarios/ActividadHorarios'
 import { ShareModal } from '../components/Share/ShareModal'
 import { ExportModal } from '../components/Export/ExportModal'
 import { horarioService } from '../services/horarioService'
-import type { Horario } from '../services/horarioService'
+import type { HorarioSimple } from '../services/horarioService'
+import { useApi } from '../hooks/useApi'
 
 export const Horarios: React.FC = () => {
+  const { execute } = useApi()
   // Estados para formulario y eliminación
   const [formOpen, setFormOpen] = useState(false)
   const [recurrenteOpen, setRecurrenteOpen] = useState(false)
@@ -36,17 +38,17 @@ export const Horarios: React.FC = () => {
   const [actividadOpen, setActividadOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
-  const [selectedHorario, setSelectedHorario] = useState<Horario | null>(null)
+  const [selectedHorario, setSelectedHorario] = useState<HorarioSimple | null>(null)
   const [selectedHorarioId, setSelectedHorarioId] = useState<number | null>(null)
   const [selectedLaboratorioId, setSelectedLaboratorioId] = useState<number | undefined>()
   const [currentWeek] = useState<Date>(new Date())
   const [currentLaboratorioName] = useState<string>('')
   const [refresh, setRefresh] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
-  
+
   // Estado para alternar entre vista de tabla y calendario
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('calendar')
-  
+
   // Estados para notificaciones
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -81,7 +83,7 @@ export const Horarios: React.FC = () => {
   }
 
   // Función para editar horario
-  const handleEditHorario = (horario: Horario) => {
+  const handleEditHorario = (horario: HorarioSimple) => {
     setSelectedHorario(horario)
     setFormOpen(true)
   }
@@ -93,17 +95,17 @@ export const Horarios: React.FC = () => {
   }
 
   // Función cuando el formulario tiene éxito
-  const handleFormSuccess = () => {
+  const handleFormSuccess = ( message: string ) => {
     setRefresh(prev => !prev)
     setSnackbar({
       open: true,
-      message: selectedHorario ? 'Horario actualizado correctamente' : 'Horario creado correctamente',
+      message: message,
       severity: 'success'
     })
   }
 
   // Función para ver detalles del horario
-  const handleViewHorario = (horario: Horario) => {
+  const handleViewHorario = (horario: HorarioSimple) => {
     setSelectedHorarioId(horario.id)
     setDetalleOpen(true)
   }
@@ -147,7 +149,7 @@ export const Horarios: React.FC = () => {
   }
 
   // Función para confirmar eliminación
-  const handleDeleteHorario = (horario: Horario) => {
+  const handleDeleteHorario = (horario: HorarioSimple) => {
     setSelectedHorario(horario)
     setDeleteOpen(true)
   }
@@ -165,50 +167,29 @@ export const Horarios: React.FC = () => {
     if (!selectedHorario) return
 
     setDeleteLoading(true)
-    try {
-      console.log('🗑️ Intentando eliminar horario:', selectedHorario.id)
-      const result = await horarioService.delete(selectedHorario.id)
-      
-      if (result.success) {
-        setDeleteOpen(false)
-        setSelectedHorario(null)
-        setRefresh(prev => !prev)
-        setSnackbar({
-          open: true,
-          message: result.message ,
-          severity: 'success'
-        })
-      } else {
-        console.error('❌ Error al eliminar horario:', result)
-        setSnackbar({
-          open: true,
-          message: result.message || 'Error al eliminar el horario',
-          severity: 'error'
-        })
-      }
-    } catch (err: any) {
-      console.error('❌ Error de conexión:', {
-        error: err.message,
-        response: err.response?.data,
-        status: err.response?.status
-      })
-      
-      let errorMessage = 'Error de conexión al eliminar el horario'
-      
-      if (err.response?.status === 403) {
-        errorMessage = 'No tienes permisos para eliminar este horario'
-      } else if (err.response?.data?.message) {
-        errorMessage = err.response.data.message
-      }
-      
+    const result = await execute(() => horarioService.delete(selectedHorario.id))
+
+    if (result.error) {
+      setDeleteOpen(false)
+      setSelectedHorario(null)
+      setRefresh(prev => !prev)
       setSnackbar({
         open: true,
-        message: errorMessage,
+        message: result.error,
         severity: 'error'
       })
-    } finally {
-      setDeleteLoading(false)
+    } else if (result.data) {
+      setDeleteOpen(false)
+      setSelectedHorario(null)
+      setRefresh(prev => !prev)
+      setSnackbar({
+        open: true,
+        message: result.data.message,
+        severity: 'success'
+      })
     }
+    setDeleteLoading(false)
+
   }
 
   // Función para manejar el refresh completado
@@ -225,7 +206,7 @@ export const Horarios: React.FC = () => {
     const date = new Date(dateString)
     return date.toLocaleString('es-ES', {
       day: '2-digit',
-      month: '2-digit', 
+      month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -235,11 +216,11 @@ export const Horarios: React.FC = () => {
   return (
     <Box sx={{ width: '100%', maxWidth: '100%', padding: 0, margin: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
       {/* Encabezado compacto */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        px: 2, 
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        px: 2,
         py: 1.5,
         borderBottom: '1px solid #e0e0e0',
         backgroundColor: '#fafafa'
@@ -248,7 +229,7 @@ export const Horarios: React.FC = () => {
           <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
             Horarios
           </Typography>
-          
+
           {/* Selector de vista compacto */}
           <ToggleButtonGroup
             value={viewMode}
@@ -268,36 +249,36 @@ export const Horarios: React.FC = () => {
             </ToggleButton>
           </ToggleButtonGroup>
         </Box>
-        
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={handleNewHorario}
-              size="small"
-            >
-              Nuevo
-            </Button>
-            
-            <Button
-              variant="outlined"
-              startIcon={<Repeat />}
-              onClick={handleNewHorarioRecurrente}
-              size="small"
-              color="secondary"
-            >
-              Recurrente
-            </Button>
 
-            <Button
-              variant="outlined"
-              startIcon={<History />}
-              onClick={handleActividad}
-              size="small"
-              color="info"
-            >
-              Actividad
-            </Button>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={handleNewHorario}
+            size="small"
+          >
+            Nuevo
+          </Button>
+
+          <Button
+            variant="outlined"
+            startIcon={<Repeat />}
+            onClick={handleNewHorarioRecurrente}
+            size="small"
+            color="secondary"
+          >
+            Recurrente
+          </Button>
+
+          <Button
+            variant="outlined"
+            startIcon={<History />}
+            onClick={handleActividad}
+            size="small"
+            color="info"
+          >
+            Actividad
+          </Button>
         </Box>
       </Box>
 
@@ -316,7 +297,7 @@ export const Horarios: React.FC = () => {
       ) : (
         <Card>
           <CardContent sx={{ p: 0 }}>
-            <HorariosTable 
+            <HorariosTable
               onEdit={handleEditHorario}
               onDelete={handleDeleteHorario}
               onView={handleViewHorario}
@@ -328,7 +309,7 @@ export const Horarios: React.FC = () => {
       )}
 
       {/* Formulario de horario */}
-      <HorarioForm 
+      <HorarioForm
         open={formOpen}
         onClose={handleFormClose}
         onSuccess={handleFormSuccess}
@@ -383,7 +364,7 @@ export const Horarios: React.FC = () => {
           <Typography variant="body1" gutterBottom>
             ¿Estás seguro de que quieres eliminar este horario?
           </Typography>
-          
+
           {selectedHorario && (
             <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
               <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -402,14 +383,9 @@ export const Horarios: React.FC = () => {
               <Typography variant="body2" color="text.secondary">
                 <strong>Descripción:</strong> {selectedHorario.descripcion}
               </Typography>
-              {selectedHorario.insumos && selectedHorario.insumos.length > 0 && (
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  <strong>Insumos:</strong> {selectedHorario.insumos.length} elementos serán devueltos al stock
-                </Typography>
-              )}
             </Box>
           )}
-          
+
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
             <strong>Esta acción:</strong>
           </Typography>
@@ -420,9 +396,9 @@ export const Horarios: React.FC = () => {
             <li>No se puede deshacer</li>
           </Typography>
         </DialogContent>
-        
+
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button 
+          <Button
             onClick={handleDeleteClose}
             disabled={deleteLoading}
             variant="outlined"
@@ -430,7 +406,7 @@ export const Horarios: React.FC = () => {
           >
             Cancelar
           </Button>
-          <Button 
+          <Button
             onClick={handleDeleteConfirm}
             disabled={deleteLoading}
             variant="contained"
@@ -447,14 +423,14 @@ export const Horarios: React.FC = () => {
       </Dialog>
 
       {/* Snackbar para notificaciones */}
-      <Snackbar 
-        open={snackbar.open} 
-        autoHideDuration={6000} 
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
         onClose={handleSnackbarClose}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert 
-          onClose={handleSnackbarClose} 
+        <Alert
+          onClose={handleSnackbarClose}
           severity={snackbar.severity}
           sx={{ width: '100%', borderRadius: 2 }}
         >

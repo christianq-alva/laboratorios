@@ -1,5 +1,5 @@
 import { api } from './api'
-import type { ApiMessageResponse, ApiCreateUpdateResponse, ApiDataResponse } from './types'
+import type { ApiMessageResponse, ApiDataResponse } from './types'
 
 export interface Docente {
   id: number
@@ -29,13 +29,13 @@ export const docenteService = {
   },
 
   // Crear nuevo docente
-  create: async (data: DocenteData): Promise<ApiCreateUpdateResponse<Docente>> => {
+  create: async (data: DocenteData): Promise<ApiMessageResponse> => {
     const response = await api.post('/docentes', data)
     return response.data
   },
 
   // Actualizar docente
-  update: async (id: number, data: DocenteData): Promise<ApiCreateUpdateResponse<Docente>> => {
+  update: async (id: number, data: DocenteData): Promise<ApiMessageResponse> => {
     const response = await api.put(`/docentes/${id}`, data)
     return response.data
   },

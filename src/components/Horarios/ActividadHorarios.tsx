@@ -41,6 +41,7 @@ import {
 import { horarioService, type ActividadHorario } from '../../services/horarioService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
 import { docenteService, type Docente } from '../../services/docenteService'
+import { useApi } from '../../hooks/useApi'
 
 interface ActividadHorariosProps {
   open: boolean
@@ -48,12 +49,13 @@ interface ActividadHorariosProps {
 }
 
 export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onClose }) => {
+  const { execute } = useApi()
   const [actividad, setActividad] = useState<ActividadHorario[]>([])
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
   const [_docentes] = useState<Docente[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Filtros
   const [filters, setFilters] = useState({
     laboratorio_id: '',
@@ -73,53 +75,41 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
   }, [open])
 
   const loadLaboratorios = async () => {
-    try {
-      const response = await laboratorioService.getAll()
-      if (response.success) {
-        setLaboratorios(response.data)
-      }
-    } catch (err) {
-      console.error('Error al cargar laboratorios:', err)
+
+    const response = await execute(() => laboratorioService.getAll())
+    if (response.error) {
+      setError(response.error)
+    } else if (response.data) {
+      setLaboratorios(response.data.data)
     }
   }
 
   const loadDocentes = async () => {
-    try {
-      const response = await docenteService.getAll()
-      if (response.success) {
-        // Los docentes se cargan pero no se usan actualmente en los filtros
-        console.log('Docentes cargados:', response.data.length)
-      }
-    } catch (err) {
-      console.error('Error al cargar docentes:', err)
+    const response = await execute(() => docenteService.getAll())
+    if (response.error) {
+      setError(response.error)
     }
   }
 
   const loadActividad = async () => {
-    try {
-      setLoading(true)
-      setError(null)
+    setLoading(true)
+    setError(null)
 
-      const filtersToSend: any = {}
-      if (filters.laboratorio_id) filtersToSend.laboratorio_id = parseInt(filters.laboratorio_id)
-      if (filters.fecha_inicio) filtersToSend.fecha_inicio = filters.fecha_inicio
-      if (filters.fecha_fin) filtersToSend.fecha_fin = filters.fecha_fin
-      if (filters.accion) filtersToSend.accion = filters.accion
-      if (filters.usuario_id) filtersToSend.usuario_id = parseInt(filters.usuario_id)
+    const filtersToSend: any = {}
+    if (filters.laboratorio_id) filtersToSend.laboratorio_id = parseInt(filters.laboratorio_id)
+    if (filters.fecha_inicio) filtersToSend.fecha_inicio = filters.fecha_inicio
+    if (filters.fecha_fin) filtersToSend.fecha_fin = filters.fecha_fin
+    if (filters.accion) filtersToSend.accion = filters.accion
+    if (filters.usuario_id) filtersToSend.usuario_id = parseInt(filters.usuario_id)
 
-      const result = await horarioService.getActividad(filtersToSend)
-      
-      if (result.success) {
-        setActividad(result.data)
-      } else {
-        setError(result.message || 'Error al cargar actividad')
-      }
-    } catch (err: any) {
-      console.error('Error al cargar actividad:', err)
-      setError(err.message || 'Error de conexión')
-    } finally {
-      setLoading(false)
+    const result = await execute(() => horarioService.getActividad(filtersToSend))
+
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      setActividad(result.data.data)
     }
+    setLoading(false)
   }
 
   const handleFilterChange = (field: string, value: string) => {
@@ -310,7 +300,7 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
             <FilterList />
             Filtros
           </Typography>
-          
+
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
             <FormControl size="small">
               <InputLabel>Laboratorio</InputLabel>
@@ -450,7 +440,7 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
                           </Typography>
                         </Box>
                       </TableCell>
-                      
+
                       <TableCell>
                         <Chip
                           icon={getAccionIcon(registro.accion)}
@@ -460,7 +450,7 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
                           variant="filled"
                         />
                       </TableCell>
-                      
+
                       <TableCell>
                         <Tooltip title={registro.descripcion} arrow>
                           <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -468,7 +458,7 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
                           </Typography>
                         </Tooltip>
                       </TableCell>
-                      
+
                       <TableCell>
                         <Box>
                           {(() => {
@@ -505,7 +495,7 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
                           })()}
                         </Box>
                       </TableCell>
-                      
+
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <LocationOn fontSize="small" color="action" />
@@ -522,7 +512,7 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
                           </Box>
                         </Box>
                       </TableCell>
-                      
+
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Person fontSize="small" color="action" />
@@ -544,7 +534,7 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
                           </Box>
                         </Box>
                       </TableCell>
-                      
+
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Person fontSize="small" color="primary" />

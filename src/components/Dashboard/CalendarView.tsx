@@ -32,8 +32,8 @@ import {
 } from '@mui/icons-material'
 import dayjs, { Dayjs } from 'dayjs'
 import 'dayjs/locale/es'
-import { horarioService } from '../../services/horarioService'
-import type { Horario } from '../../services/horarioService'
+import { horarioService, type HorarioSimple } from '../../services/horarioService'
+import { useApi } from '../../hooks/useApi'
 
 // Configurar dayjs en español
 dayjs.locale('es')
@@ -63,6 +63,7 @@ interface HorarioEvent {
 }
 
 export const CalendarView: React.FC<CalendarViewProps> = ({ onNewHorario, onNavigateToLab }) => {
+  const { execute } = useApi()
   const [currentDate, setCurrentDate] = useState<Dayjs>(dayjs())
   const [horarios, setHorarios] = useState<HorarioEvent[]>([])
   const [loading, setLoading] = useState(false)
@@ -73,40 +74,30 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onNewHorario, onNavi
 
   // Cargar horarios del mes actual
   const loadHorarios = async (_date: Dayjs) => {
-    try {
-      setLoading(true)
-      setError(null)
+    setLoading(true)
+    setError(null)
 
-      const result = await horarioService.getAll()
+    const result = await execute(() => horarioService.getAll())
 
-      if (result.success) {
-        const horariosFormateados: HorarioEvent[] = result.data.map((horario: Horario) => ({
-          id: horario.id,
-          laboratorio_id: horario.laboratorio_id,
-          title: `${horario.laboratorio || 'Lab'} - ${horario.docente || 'Docente'}`,
-          start: dayjs(horario.fecha_inicio),
-          end: dayjs(horario.fecha_fin),
-          laboratorio: horario.laboratorio || 'Laboratorio',
-          docente: horario.docente || 'Docente',
-          grupo: horario.grupo || 'Grupo',
-          escuela: horario.escuela || 'Escuela',
-          descripcion: horario.descripcion,
-          color: horario.color,
-          insumos: horario.insumos?.map(i => ({
-            nombre: i.nombre,
-            cantidad: i.cantidad_usada
-          })) || []
-        }))
-        setHorarios(horariosFormateados)
-      } else {
-        setError(result.message || 'Error al cargar horarios')
-      }
-    } catch (err: any) {
-      console.error('Error loading horarios:', err)
-      setError('Error de conexión al cargar horarios')
-    } finally {
-      setLoading(false)
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      const horariosFormateados: HorarioEvent[] = result.data.data.map((horario: HorarioSimple) => ({
+        id: horario.id,
+        laboratorio_id: horario.laboratorio_id,
+        title: `${horario.laboratorio || 'Lab'} - ${horario.docente || 'Docente'}`,
+        start: dayjs(horario.fecha_inicio),
+        end: dayjs(horario.fecha_fin),
+        laboratorio: horario.laboratorio || 'Laboratorio',
+        docente: horario.docente || 'Docente',
+        grupo: horario.grupo || 'Grupo',
+        escuela: horario.escuela || 'Escuela',
+        descripcion: horario.descripcion,
+        color: horario.color,
+      }))
+      setHorarios(horariosFormateados)
     }
+    setLoading(false)
   }
 
   // Cargar horarios cuando cambia el mes

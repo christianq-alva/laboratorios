@@ -22,7 +22,7 @@ import {
   TablePagination
 } from '@mui/material'
 import { Inventory, Science, Search, Clear, Visibility } from '@mui/icons-material'
-import { insumoService, type InsumoSaldo } from '../../services/insumoService'
+import { inventarioService, type InsumoSaldo } from '../../services/inventarioService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
 
 interface InventarioTableProps {
@@ -56,9 +56,9 @@ export const InventarioTable: React.FC<InventarioTableProps> = ({
       // Cargar insumos
       let insumosResponse
       if (selectedLaboratorio === 'all') {
-        insumosResponse = await insumoService.getAllWithStock()
+        insumosResponse = await inventarioService.getAllWithStock()
       } else {
-        insumosResponse = await insumoService.getWithStock(selectedLaboratorio)
+        insumosResponse = await inventarioService.getWithStock(selectedLaboratorio)
       }
 
       setInsumos(insumosResponse.data)

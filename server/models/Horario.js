@@ -7,6 +7,10 @@ export const Horario = {
         SELECT 
           r.id,
           r.laboratorio_id,
+          r.docente_id,
+          r.grupo_id,
+          g.escuela_id,
+          g.ciclo_id,
           r.fecha_inicio,
           r.fecha_fin,
           r.cantidad_alumnos,
@@ -17,13 +21,15 @@ export const Horario = {
           d.nombre as docente,
           e.nombre as escuela,
           c.nombre as ciclo,
-          g.nombre as grupo
+          g.nombre as grupo,
+          COUNT(dri.id) as insumos_requeridos
         FROM reservas r
         LEFT JOIN laboratorios l ON r.laboratorio_id = l.id
         LEFT JOIN docentes d ON r.docente_id = d.id
         LEFT JOIN grupos g ON r.grupo_id = g.id
         LEFT JOIN escuelas e ON g.escuela_id = e.id
         LEFT JOIN ciclos c ON g.ciclo_id = c.id
+        LEFT JOIN detalle_reserva_insumos dri ON r.id = dri.reserva_id
       `
         let params = []
 
@@ -40,9 +46,9 @@ export const Horario = {
                 query += ' WHERE 1 = 0' // No mostrar nada
             }
         } else {
-        }   
+        }
 
-        query += ' ORDER BY r.fecha_inicio DESC'
+        query += ' GROUP BY r.id ORDER BY r.fecha_inicio DESC'
 
         const [horarios] = await pool.execute(query, params)
 
@@ -55,6 +61,8 @@ export const Horario = {
           r.laboratorio_id,
           r.docente_id,
           r.grupo_id,
+          g.escuela_id,
+          g.ciclo_id,
           r.descripcion,
           r.fecha_inicio,
           r.fecha_fin,
@@ -105,8 +113,7 @@ export const Horario = {
               e.marca,
               e.modelo,
               e.codigo,
-              e.estado,
-              dre.cantidad as cantidad_usada
+              e.estado
             FROM detalle_reserva_equipos dre
             JOIN equipos e ON dre.equipo_id = e.id
             WHERE dre.reserva_id = ?
@@ -292,6 +299,7 @@ export const Horario = {
             return reserva_id;
 
         } catch (error) {
+            console.log('error', error)
             await connection.rollback();
             throw error;
         }
@@ -324,7 +332,7 @@ export const Horario = {
             } = datosHorario;
 
             // 1. CREAR LA RESERVA
-            await Horario.updateHorario(laboratorio_id, docente_id, grupo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, connection)
+            await Horario.updateHorario(laboratorio_id, docente_id, grupo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, reserva_id, connection)
 
             // 2. PROCESAR INSUMOS
             if (insumos_requeridos.length > 0) {
@@ -372,9 +380,9 @@ export const Horario = {
 
             // Insertar en detalle_reserva_equipos
             await connection.execute(`
-            INSERT INTO detalle_reserva_equipos (reserva_id, equipo_id, cantidad)
-            VALUES (?, ?, ?)
-            `, [reserva_id, equipo.equipo_id, equipo.cantidad])
+            INSERT INTO detalle_reserva_equipos (reserva_id, equipo_id)
+            VALUES (?, ?)
+            `, [reserva_id, equipo.equipo_id])
         }
 
     },

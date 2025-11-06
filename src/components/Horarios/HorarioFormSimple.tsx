@@ -40,24 +40,26 @@ import {
 import { horarioService } from '../../services/horarioService'
 import { laboratorioService } from '../../services/laboratorioService'
 import { equipoService, type Equipo } from '../../services/equipoService'
-import type { 
-  Horario, 
-  CreateHorarioData, 
-  Ciclo, 
-  Grupo, 
+import type {
+  Horario,
+  CreateHorarioData,
+  Ciclo,
+  Grupo,
   Insumo,
-  ConflictoHorario
+  ConflictoHorario,
+  HorarioFull
 } from '../../services/horarioService'
 import type { Laboratorio } from '../../services/laboratorioService'
 import { TIME_BLOCKS, getBlockLabel, combineDateWithTime } from '../../utils/timeBlocks'
-import { insumoService, type InsumoSaldo } from '../../services/insumoService'
 import { escuelaService, type Escuela } from '../../services/escuelaService'
 import { docenteService, type Docente } from '../../services/docenteService'
+import { useApi } from '../../hooks/useApi'
+import { inventarioService, type InsumoSaldo } from '../../services/inventarioService'
 
 interface HorarioFormProps {
   open: boolean
   onClose: () => void
-  onSuccess: () => void
+  onSuccess: (message: string) => void
   horario?: Horario | null
 }
 
@@ -71,8 +73,6 @@ interface InsumoSeleccionado {
 interface EquipoSeleccionado {
   equipo_id: number
   nombre: string
-  cantidad: number
-  cantidad_disponible: number
 }
 
 // Paleta de colores disponibles
@@ -90,6 +90,7 @@ const COLOR_PALETTE = [
 ]
 
 export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, onSuccess, horario }) => {
+  const { execute } = useApi()
   // Estados del formulario
   const [formData, setFormData] = useState<CreateHorarioData>({
     laboratorio_id: 0,
@@ -102,7 +103,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     color: '#4ecdc4',
     insumos: []
   })
-  
+
   // Estados para los selectores de bloques de tiempo
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [startBlockId, setStartBlockId] = useState<string>('')
@@ -138,17 +139,18 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     if (open) {
       loadInitialData()
       if (horario) {
-        loadHorarioData(horario)
+        loadHorarioFull(horario)
       } else {
         resetForm()
       }
     }
   }, [horario, open])
 
+
   const loadInitialData = async () => {
     try {
       setLoadingData(true)
-      
+
       const [labsResult, docentesResult, escuelasResult, ciclosResult, gruposResult] = await Promise.all([
         laboratorioService.getAll(),
         docenteService.getAll(),
@@ -157,11 +159,11 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
         horarioService.getGrupos()
       ])
 
-      if (labsResult.success) setLaboratorios(labsResult.data || [])
-      if (docentesResult.success) setDocentes(docentesResult.data || [])
-      if (escuelasResult.success) setEscuelas(escuelasResult.data || [])
-      if (ciclosResult.success) setCiclos(ciclosResult.data || [])
-      if (gruposResult.success) setGrupos(gruposResult.data || [])
+      if (labsResult.data) setLaboratorios(labsResult.data || [])
+      if (docentesResult.data) setDocentes(docentesResult.data || [])
+      if (escuelasResult.data) setEscuelas(escuelasResult.data || [])
+      if (ciclosResult.data) setCiclos(ciclosResult.data || [])
+      if (gruposResult.data) setGrupos(gruposResult.data || [])
 
     } catch (err) {
       console.error('Error loading initial data:', err)
@@ -171,29 +173,38 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     }
   }
 
-  const loadHorarioData = async (horarioData: Horario) => {
+  const loadHorarioFull = async (horario: Horario) => {
+    const response = await execute(() => horarioService.getById(horario.id))
+    if (response.error) {
+      setError(response.error)
+    } else if (response.data) {
+      loadHorarioData(response.data.data)
+    }
+  }
+
+  const loadHorarioData = async (horarioData: HorarioFull) => {
     // Extraer fecha y hora de los datos del horario
     const fechaInicio = new Date(horarioData.fecha_inicio)
     const fechaFin = new Date(horarioData.fecha_fin)
-    
+
     // Obtener la fecha (YYYY-MM-DD)
     const year = fechaInicio.getFullYear()
     const month = String(fechaInicio.getMonth() + 1).padStart(2, '0')
     const day = String(fechaInicio.getDate()).padStart(2, '0')
     const fecha = `${year}-${month}-${day}`
-    
+
     // Obtener las horas
     const horaInicio = `${String(fechaInicio.getHours()).padStart(2, '0')}:${String(fechaInicio.getMinutes()).padStart(2, '0')}`
     const horaFin = `${String(fechaFin.getHours()).padStart(2, '0')}:${String(fechaFin.getMinutes()).padStart(2, '0')}`
-    
+
     // Encontrar los bloques correspondientes
     const startBlock = TIME_BLOCKS.find(b => b.start === horaInicio)
     const endBlock = TIME_BLOCKS.find(b => b.end === horaFin)
-    
+
     setSelectedDate(fecha)
     setStartBlockId(startBlock?.id || '')
     setEndBlockId(endBlock?.id || '')
-    
+
     // Mantener las fechas completas en formData para compatibilidad
     const formatDateTimeLocal = (isoString: string) => {
       const date = new Date(isoString)
@@ -214,10 +225,6 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       fecha_fin: formatDateTimeLocal(horarioData.fecha_fin),
       cantidad_alumnos: horarioData.cantidad_alumnos || 1,
       color: horarioData.color || '#4ecdc4',
-      insumos: horarioData.insumos?.map(i => ({
-        insumo_id: i.id,
-        cantidad: i.cantidad_usada
-      })) || []
     })
 
     // Si estamos editando, encontrar la escuela y ciclo del grupo seleccionado
@@ -229,16 +236,6 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       }
     }
 
-    // Cargar insumos seleccionados
-    if (horarioData.insumos) {
-      setInsumosSeleccionados(horarioData.insumos.map(i => ({
-        insumo_id: i.id,
-        nombre: i.nombre,
-        cantidad: i.cantidad_usada,
-        stock_disponible: i.stock_disponible || 0
-      })))
-    }
-
     // Cargar insumos y equipos del laboratorio si ya está seleccionado
     if (horarioData.laboratorio_id) {
       await Promise.all([
@@ -246,7 +243,42 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
         loadEquiposByLaboratorio(horarioData.laboratorio_id)
       ])
     }
+
+    // Cargar insumos seleccionados
+    console.log('horarioData.insumos', horarioData.insumos)
+    if (horarioData.insumos && horarioData.insumos.length > 0) {
+      const insumosConStock = horarioData.insumos.map(i => ({
+
+        insumo_id: i.id,
+        nombre: i.nombre,
+        cantidad: i.cantidad_usada,
+        stock_disponible: i.stock_disponible || 0
+      })
+      )
+      setInsumosSeleccionados(insumosConStock)
+    }
+
+    // Cargar equipos seleccionados
+    console.log('horarioData.equipos', horarioData.equipos)
+    if (horarioData.equipos && horarioData.equipos.length > 0) {
+      const equiposSeleccionadosData = horarioData.equipos.map(e => ({
+        equipo_id: e.id,
+        nombre: e.nombre
+      }))
+      setEquiposSeleccionados(equiposSeleccionadosData)
+    }
   }
+  useEffect(() => {
+    if (insumosSeleccionados.length > 0 && insumosDisponibles.length > 0) {
+      setInsumosSeleccionados(prev => prev.map(insumo => {
+        const insumoDisponible = insumosDisponibles.find(id => id.id === insumo.insumo_id)
+        return {
+          ...insumo,
+          stock_disponible: insumoDisponible?.stock_disponible || insumo.stock_disponible
+        }
+      }))
+    }
+  }, [insumosDisponibles])
 
   const resetForm = () => {
     setFormData({
@@ -302,65 +334,47 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
 
   // Cargar insumos cuando se selecciona laboratorio
   const loadInsumosByLaboratorio = async (laboratorio_id: number) => {
-    try {
-      console.log('🔍 Cargando insumos para laboratorio:', laboratorio_id)
-      
-      // Mostrar loading en la sección de insumos
-      setInsumosDisponibles([])
-      
-      const result = await insumoService.getWithStock(laboratorio_id)
-      console.log('📦 Resultado de insumos:', result)
-      
-      if (result.data) {
-        const insumos = result.data || []
-        console.log('✅ Insumos cargados:', insumos.length)
-        setInsumosDisponibles(insumos)
-        
-        // Si no hay insumos, mostrar mensaje informativo
-        if (insumos.length === 0) {
-          console.log('ℹ️ No hay insumos disponibles para este laboratorio')
-        }
-      } else {
-        console.error('❌ Error al cargar insumos:', error)
-        setInsumosDisponibles([])
-        // No mostrar error, solo log - los insumos son opcionales
-      }
-    } catch (err) {
-      console.error('❌ Excepción al cargar insumos:', err)
-      setInsumosDisponibles([])
+
+    setInsumosDisponibles([])
+    const result = await execute(() => inventarioService.getWithStock(laboratorio_id))
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      setInsumosDisponibles(result.data.data)
     }
   }
 
   // Cargar equipos cuando se selecciona laboratorio
   const loadEquiposByLaboratorio = async (laboratorio_id: number) => {
-      
-      const result = await equipoService.getByLaboratorio(laboratorio_id)
-      if (result.success && result.data) {
-        setEquiposDisponibles(result.data)
-      } else {
-        setError(result.message || 'Error al cargar equipos')
-      }
+
+    setEquiposDisponibles([])
+    const result = await execute(() => equipoService.getByLaboratorio(laboratorio_id))
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      setEquiposDisponibles(result.data.data)
+    }
   }
 
   const handleLaboratorioChange = async (laboratorio_id: number) => {
     const laboratorioAnterior = formData.laboratorio_id
-    
+
     setFormData(prev => ({ ...prev, laboratorio_id }))
-    
+
     // Limpiar insumos y equipos seleccionados cuando se cambia el laboratorio
     if (laboratorioAnterior > 0 && laboratorioAnterior !== laboratorio_id) {
       const insumosAnteriores = insumosSeleccionados.length
       const equiposAnteriores = equiposSeleccionados.length
       setInsumosSeleccionados([])
       setEquiposSeleccionados([])
-      
+
       // Mostrar mensaje temporal si había insumos o equipos seleccionados
       if (insumosAnteriores > 0 || equiposAnteriores > 0) {
         setLaboratorioChangeMessage(`Se han limpiado ${insumosAnteriores} insumo(s) y ${equiposAnteriores} equipo(s) seleccionado(s) del laboratorio anterior`)
         setTimeout(() => setLaboratorioChangeMessage(null), 3000)
       }
     }
-    
+
     if (laboratorio_id > 0) {
       await Promise.all([
         loadInsumosByLaboratorio(laboratorio_id),
@@ -375,36 +389,35 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
   // Verificar disponibilidad de horario
   const verificarDisponibilidad = async () => {
     if (formData.laboratorio_id && formData.docente_id && formData.fecha_inicio && formData.fecha_fin) {
-      try {
-        // Mantener las fechas en formato local sin conversión a UTC
-        const fechaInicio = formData.fecha_inicio + ':00'
-        const fechaFin = formData.fecha_fin + ':00'
+      // Mantener las fechas en formato local sin conversión a UTC
+      const fechaInicio = formData.fecha_inicio + ':00'
+      const fechaFin = formData.fecha_fin + ':00'
 
-        const result = await horarioService.verificarDisponibilidad({
-          laboratorio_id: formData.laboratorio_id,
-          docente_id: formData.docente_id,
-          fecha_inicio: fechaInicio,
-          fecha_fin: fechaFin,
-          horario_id: horario?.id
-        })
-        
-        if (result.disponible) {
+      const result = await execute(() => horarioService.verificarDisponibilidad({
+        laboratorio_id: formData.laboratorio_id,
+        docente_id: formData.docente_id,
+        fecha_inicio: fechaInicio,
+        fecha_fin: fechaFin,
+        horario_id: horario?.id
+      }))
+
+      if (result.error) {
+        setError(result.error)
+      } else if (result.data) {
+        if (result.data.disponible) {
           setConflictos([])
           setError(null)
         } else {
           // Convertir el resultado del backend al formato esperado por el frontend
           const conflicto: ConflictoHorario = {
-            tipo: result.tipo_conflicto || 'laboratorio',
-            mensaje: result.motivo || 'Conflicto de horario',
+            tipo: result.data.tipo_conflicto || 'laboratorio',
+            mensaje: result.data.mensaje || 'Conflicto de horario',
             detalles: (result as any).detalles,
-            horario_conflicto: result.conflicto_detalle
+            horario_conflicto: result.data.conflicto_detalle
           }
           setConflictos([conflicto])
-          setError(result.motivo || 'Conflicto de horario')
+          setError(result.data.mensaje || 'Conflicto de horario')
         }
-      } catch (err: any) {
-        console.error('Error verificando disponibilidad:', err)
-        setError(err.message || 'Error al verificar disponibilidad')
       }
     }
   }
@@ -446,7 +459,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     if (cantidad <= 0) {
       eliminarInsumo(insumo_id)
     } else if (cantidad <= insumo.stock_disponible) {
-      setInsumosSeleccionados(prev => 
+      setInsumosSeleccionados(prev =>
         prev.map(i => i.insumo_id === insumo_id ? { ...i, cantidad } : i)
       )
     }
@@ -460,8 +473,6 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       const nuevoEquipo: EquipoSeleccionado = {
         equipo_id: equipo.id,
         nombre: equipo.nombre,
-        cantidad: 1,
-        cantidad_disponible: 1 // Valor fijo ya que los equipos no manejan cantidad
       }
       setEquiposSeleccionados(prev => [...prev, nuevoEquipo])
     }
@@ -478,92 +489,50 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       return
     }
 
-    try {
-      setLoading(true)
-      setError(null)
+    setLoading(true)
+    setError(null)
 
-      // Mantener las fechas en formato local sin conversión a UTC
-      // Las fechas ya vienen con segundos desde combineDateWithTime
-      const fechaInicio = formData.fecha_inicio
-      const fechaFin = formData.fecha_fin
+    // Mantener las fechas en formato local sin conversión a UTC
+    // Las fechas ya vienen con segundos desde combineDateWithTime
+    const fechaInicio = formData.fecha_inicio
+    const fechaFin = formData.fecha_fin
 
-      // Preparar datos finales - SOLO los campos que necesita el backend
-      const finalData: CreateHorarioData = {
-        laboratorio_id: formData.laboratorio_id,
-        docente_id: formData.docente_id,
-        grupo_id: formData.grupo_id,
-        descripcion: formData.descripcion.trim(),
-        fecha_inicio: fechaInicio,
-        fecha_fin: fechaFin,
-        cantidad_alumnos: formData.cantidad_alumnos || 1, // Asegurar valor por defecto
-        color: formData.color || '#4ecdc4', // Incluir color seleccionado
-        insumos: insumosSeleccionados.map(i => ({
-          insumo_id: i.insumo_id,
-          cantidad: i.cantidad
-        })),
-        equipos: equiposSeleccionados.map(e => ({
-          equipo_id: e.equipo_id,
-          cantidad: e.cantidad
-        }))
-      }
-
-      console.log('📤 Enviando datos al backend:', finalData)
-      console.log('🎨 Color seleccionado en formulario:', formData.color)
-
-      let result
-      if (isEditing && horario) {
-        result = await horarioService.update(horario.id, finalData)
-      } else {
-        result = await horarioService.create(finalData)
-      }
-
-      if (result.success) {
-        onSuccess()
-        onClose()
-      } else {
-        setError(result.message || 'Error al guardar el horario')
-      }
-    } catch (err: any) {
-      console.error('❌ Error al enviar horario:', err)
-      
-      // Mostrar información detallada del error
-      let errorMessage = 'Error de conexión'
-      
-      if (err.response) {
-        // Error de respuesta del servidor
-        const status = err.response.status
-        const data = err.response.data
-        
-        console.log('🚨 Error detallado:', {
-          status,
-          data,
-          message: data?.message,
-          url: err.config?.url
-        })
-        
-        if (status === 400) {
-          errorMessage = data?.message || 'Datos inválidos. Verifica que todos los campos sean correctos.'
-        } else if (status === 401) {
-          errorMessage = 'Sesión expirada. Por favor, inicia sesión nuevamente.'
-        } else if (status === 403) {
-          errorMessage = 'No tienes permisos para realizar esta acción.'
-        } else if (status === 409) {
-          errorMessage = data?.message || 'Conflicto de horario.'
-        } else {
-          errorMessage = data?.message || `Error del servidor (${status})`
-        }
-      } else if (err.request) {
-        // Error de red
-        errorMessage = 'Error de conexión. Verifica tu conexión a internet.'
-      } else {
-        // Otro tipo de error
-        errorMessage = err.message || 'Error inesperado'
-      }
-      
-      setError(errorMessage)
-    } finally {
-      setLoading(false)
+    // Preparar datos finales - SOLO los campos que necesita el backend
+    const finalData: CreateHorarioData = {
+      laboratorio_id: formData.laboratorio_id,
+      docente_id: formData.docente_id,
+      grupo_id: formData.grupo_id,
+      descripcion: formData.descripcion.trim(),
+      fecha_inicio: fechaInicio,
+      fecha_fin: fechaFin,
+      cantidad_alumnos: formData.cantidad_alumnos || 1, // Asegurar valor por defecto
+      color: formData.color || '#4ecdc4', // Incluir color seleccionado
+      insumos: insumosSeleccionados.map(i => ({
+        insumo_id: i.insumo_id,
+        cantidad: i.cantidad
+      })),
+      equipos: equiposSeleccionados.map(e => ({
+        equipo_id: e.equipo_id,
+      }))
     }
+
+    console.log('📤 Enviando datos al backend:', finalData)
+    console.log('🎨 Color seleccionado en formulario:', formData.color)
+
+    let result
+    if (isEditing && horario) {
+      result = await execute(() => horarioService.update(horario.id, finalData))
+    } else {
+      result = await execute(() => horarioService.create(finalData))
+    }
+
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      onSuccess(result.data.message)
+      onClose()
+    }
+    setLoading(false)
   }
 
   const handleClose = () => {
@@ -587,7 +556,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       formData.color &&
       conflictos.length === 0
     )
-    
+
     console.log('🔍 Validación formulario:', {
       laboratorio_id: formData.laboratorio_id > 0,
       docente_id: formData.docente_id > 0,
@@ -603,25 +572,25 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       conflictos: conflictos.length === 0,
       canSubmit: isValid
     })
-    
+
     return isValid
   }
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={handleClose} 
+    <Dialog
+      open={open}
+      onClose={handleClose}
       maxWidth={false}
       fullWidth
-      PaperProps={{ 
-        sx: { 
+      PaperProps={{
+        sx: {
           borderRadius: { xs: 0, md: 1 },
           width: { xs: '100vw', md: '95vw' },
           maxWidth: '1600px',
           height: { xs: '100vh', md: '90vh' },
           maxHeight: { xs: '100vh', md: '90vh' },
           m: { xs: 0, md: 'auto' }
-        } 
+        }
       }}
     >
       <DialogTitle sx={{ pb: 2 }}>
@@ -644,18 +613,18 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
             </Typography>
           </Box>
         ) : (
-          <Box sx={{ 
-            display: 'flex', 
-            gap: 2, 
-            height: { xs: 'calc(100vh - 140px)', md: 'calc(90vh - 140px)' }, 
+          <Box sx={{
+            display: 'flex',
+            gap: 2,
+            height: { xs: 'calc(100vh - 140px)', md: 'calc(90vh - 140px)' },
             p: 2,
             flexDirection: { xs: 'column', lg: 'row' }
           }}>
             {/* Panel izquierdo - Formulario principal */}
-            <Box sx={{ 
-              flex: { xs: 1, lg: 2 }, 
-              display: 'flex', 
-              flexDirection: 'column', 
+            <Box sx={{
+              flex: { xs: 1, lg: 2 },
+              display: 'flex',
+              flexDirection: 'column',
               gap: 2,
               overflowY: 'auto',
               pr: { xs: 0, lg: 1 }
@@ -667,540 +636,540 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                 </Alert>
               )}
 
-            {/* Información básica */}
-            <Paper sx={{ 
-              p: 3, 
-              borderRadius: 1.5,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              border: '1px solid #e8e8e8'
-            }}>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
-                <Schedule />
-                Información Básica
-              </Typography>
-              
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {/* Laboratorio */}
-                <FormControl fullWidth>
-                  <InputLabel>Laboratorio</InputLabel>
-                  <Select
-                    value={formData.laboratorio_id}
-                    label="Laboratorio"
-                    onChange={(e) => handleLaboratorioChange(e.target.value as number)}
-                    disabled={loading}
-                  >
-                    <MenuItem value={0} disabled>Seleccionar laboratorio</MenuItem>
-                    {laboratorios.map((lab) => (
-                      <MenuItem key={lab.id} value={lab.id}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <LocationOn fontSize="small" />
-                          {lab.nombre} - {lab.ubicacion}
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+              {/* Información básica */}
+              <Paper sx={{
+                p: 3,
+                borderRadius: 1.5,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                border: '1px solid #e8e8e8'
+              }}>
+                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
+                  <Schedule />
+                  Información Básica
+                </Typography>
 
-                {/* Docente */}
-                <FormControl fullWidth>
-                  <InputLabel>Docente</InputLabel>
-                  <Select
-                    value={formData.docente_id}
-                    label="Docente"
-                    onChange={(e) => setFormData(prev => ({ ...prev, docente_id: e.target.value as number }))}
-                    disabled={loading}
-                  >
-                    <MenuItem value={0} disabled>Seleccionar docente</MenuItem>
-                    {docentes.map((docente) => (
-                      <MenuItem key={docente.id} value={docente.id}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Person fontSize="small" />
-                          {docente.nombre}
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                {/* Fila de Escuela, Ciclo, Grupo */}
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  <FormControl sx={{ flex: 1 }}>
-                    <InputLabel>Escuela</InputLabel>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {/* Laboratorio */}
+                  <FormControl fullWidth>
+                    <InputLabel>Laboratorio</InputLabel>
                     <Select
-                      value={selectedEscuela}
-                      label="Escuela"
-                      onChange={(e) => handleEscuelaChange(e.target.value as number)}
+                      value={formData.laboratorio_id}
+                      label="Laboratorio"
+                      onChange={(e) => handleLaboratorioChange(e.target.value as number)}
                       disabled={loading}
                     >
-                      <MenuItem value={0}>Todas las escuelas</MenuItem>
-                      {escuelas.map((escuela) => (
-                        <MenuItem key={escuela.id} value={escuela.id}>
+                      <MenuItem value={0} disabled>Seleccionar laboratorio</MenuItem>
+                      {laboratorios.map((lab) => (
+                        <MenuItem key={lab.id} value={lab.id}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <School fontSize="small" />
-                            {escuela.nombre}
+                            <LocationOn fontSize="small" />
+                            {lab.nombre} - {lab.ubicacion}
                           </Box>
                         </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
 
-                  <FormControl sx={{ flex: 1 }}>
-                    <InputLabel>Ciclo</InputLabel>
+                  {/* Docente */}
+                  <FormControl fullWidth>
+                    <InputLabel>Docente</InputLabel>
                     <Select
-                      value={selectedCiclo}
-                      label="Ciclo"
-                      onChange={(e) => handleCicloChange(e.target.value as number)}
+                      value={formData.docente_id}
+                      label="Docente"
+                      onChange={(e) => setFormData(prev => ({ ...prev, docente_id: e.target.value as number }))}
                       disabled={loading}
                     >
-                      <MenuItem value={0}>Todos los ciclos</MenuItem>
-                      {[...ciclos]
-                        .sort((a, b) => {
-                          const numA = parseInt(a.nombre.replace(/[^\d]/g, '')) || 0;
-                          const numB = parseInt(b.nombre.replace(/[^\d]/g, '')) || 0;
-                          return numA - numB;
-                        })
-                        .map((ciclo) => (
-                          <MenuItem key={ciclo.id} value={ciclo.id}>
-                            {ciclo.nombre}
+                      <MenuItem value={0} disabled>Seleccionar docente</MenuItem>
+                      {docentes.map((docente) => (
+                        <MenuItem key={docente.id} value={docente.id}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Person fontSize="small" />
+                            {docente.nombre}
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  {/* Fila de Escuela, Ciclo, Grupo */}
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <FormControl sx={{ flex: 1 }}>
+                      <InputLabel>Escuela</InputLabel>
+                      <Select
+                        value={selectedEscuela}
+                        label="Escuela"
+                        onChange={(e) => handleEscuelaChange(e.target.value as number)}
+                        disabled={loading}
+                      >
+                        <MenuItem value={0}>Todas las escuelas</MenuItem>
+                        {escuelas.map((escuela) => (
+                          <MenuItem key={escuela.id} value={escuela.id}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <School fontSize="small" />
+                              {escuela.nombre}
+                            </Box>
                           </MenuItem>
                         ))}
-                    </Select>
-                  </FormControl>
+                      </Select>
+                    </FormControl>
 
-                  <FormControl sx={{ flex: 1 }}>
-                    <InputLabel>Grupo</InputLabel>
-                    <Select
-                      value={formData.grupo_id}
-                      label="Grupo"
-                      onChange={(e) => setFormData(prev => ({ ...prev, grupo_id: e.target.value as number }))}
-                      disabled={loading}
-                    >
-                      <MenuItem value={0} disabled>Seleccionar grupo</MenuItem>
-                      {getGruposFiltrados().map((grupo) => (
-                        <MenuItem key={grupo.id} value={grupo.id}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Group fontSize="small" />
-                            {grupo.nombre}
-                          </Box>
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Box>
+                    <FormControl sx={{ flex: 1 }}>
+                      <InputLabel>Ciclo</InputLabel>
+                      <Select
+                        value={selectedCiclo}
+                        label="Ciclo"
+                        onChange={(e) => handleCicloChange(e.target.value as number)}
+                        disabled={loading}
+                      >
+                        <MenuItem value={0}>Todos los ciclos</MenuItem>
+                        {[...ciclos]
+                          .sort((a, b) => {
+                            const numA = parseInt(a.nombre.replace(/[^\d]/g, '')) || 0;
+                            const numB = parseInt(b.nombre.replace(/[^\d]/g, '')) || 0;
+                            return numA - numB;
+                          })
+                          .map((ciclo) => (
+                            <MenuItem key={ciclo.id} value={ciclo.id}>
+                              {ciclo.nombre}
+                            </MenuItem>
+                          ))}
+                      </Select>
+                    </FormControl>
 
-                {/* Descripción */}
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={3}
-                  label="Descripción de la actividad"
-                  value={formData.descripcion}
-                  onChange={(e) => setFormData(prev => ({ ...prev, descripcion: e.target.value }))}
-                  placeholder="Describe la actividad o clase que se realizará..."
-                  disabled={loading}
-                />
-
-                {/* Fila con cantidad de alumnos y color */}
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                <TextField
-                  type="number"
-                  label="Cantidad de alumnos"
-                  value={formData.cantidad_alumnos}
-                  onChange={(e) => setFormData(prev => ({ ...prev, cantidad_alumnos: parseInt(e.target.value) || 1 }))}
-                  disabled={loading}
-                  inputProps={{ min: 1, max: 100 }}
-                    helperText="Número estimado de estudiantes"
-                    sx={{ flex: 1 }}
-                  />
-                  
-                  {/* Selector de color */}
-                  <Box sx={{ flex: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                      <Typography variant="body2">
-                        Color del horario
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
-                        ({formData.color})
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
-                      {COLOR_PALETTE.map((colorOption) => (
-                        <Box
-                          key={colorOption.color}
-                          onClick={() => {
-                            console.log('🎨 Color seleccionado:', colorOption.color)
-                            console.log('🎨 FormData antes:', formData.color)
-                            setFormData(prev => {
-                              const newData = { ...prev, color: colorOption.color }
-                              console.log('🎨 FormData después:', newData.color)
-                              return newData
-                            })
-                          }}
-                          sx={{
-                            width: 36,
-                            height: 36,
-                            backgroundColor: colorOption.color,
-                            borderRadius: 1,
-                            cursor: 'pointer',
-                            border: formData.color === colorOption.color ? '3px solid #000' : '2px solid #ddd',
-                            transition: 'all 0.2s',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            '&:hover': {
-                              transform: 'scale(1.1)',
-                              boxShadow: 3
-                            }
-                          }}
-                          title={colorOption.name}
-                        >
-                          {formData.color === colorOption.color && (
-                            <Box
-                              sx={{
-                                width: 8,
-                                height: 8,
-                                backgroundColor: 'white',
-                                borderRadius: '50%',
-                                boxShadow: 1
-                              }}
-                            />
-                          )}
-                        </Box>
-                      ))}
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Color seleccionado:
-                      </Typography>
-                      <Box
-                        sx={{
-                          width: 20,
-                          height: 20,
-                          backgroundColor: formData.color,
-                          borderRadius: 1,
-                          border: '1px solid #ddd'
-                        }}
-                      />
-                      <Typography variant="caption" sx={{ fontWeight: 500 }}>
-                        {COLOR_PALETTE.find(c => c.color === formData.color)?.name || 'Personalizado'}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Box>
-              </Box>
-            </Paper>
-
-            {/* Fechas y horas */}
-            <Paper sx={{ 
-              p: 3, 
-              borderRadius: 1.5,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              border: '1px solid #e8e8e8'
-            }}>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
-                <Schedule />
-                Fecha y Horario Académico
-              </Typography>
-              
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {/* Selector de fecha */}
-                <TextField
-                  type="date"
-                  label="Fecha de la clase"
-                  value={selectedDate}
-                  onChange={(e) => {
-                    setSelectedDate(e.target.value)
-                    // Actualizar formData cuando cambian fecha y bloques
-                    if (e.target.value && startBlockId && endBlockId) {
-                      const startBlock = TIME_BLOCKS.find(b => b.id === startBlockId)
-                      const endBlock = TIME_BLOCKS.find(b => b.id === endBlockId)
-                      if (startBlock && endBlock) {
-                        setFormData(prev => ({
-                          ...prev,
-                          fecha_inicio: combineDateWithTime(e.target.value, startBlock.start),
-                          fecha_fin: combineDateWithTime(e.target.value, endBlock.end)
-                        }))
-                      }
-                    }
-                  }}
-                  fullWidth
-                  disabled={loading}
-                  InputLabelProps={{ shrink: true }}
-                  helperText="Selecciona el día en que se realizará la actividad"
-                />
-                
-                {/* Selectores de bloques de tiempo */}
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  <FormControl fullWidth>
-                    <InputLabel>Hora de inicio</InputLabel>
-                    <Select
-                      value={startBlockId}
-                      label="Hora de inicio"
-                      onChange={(e) => {
-                        const blockId = e.target.value as string
-                        setStartBlockId(blockId)
-                        
-                        // Si no hay bloque final seleccionado, poner el mismo
-                        if (!endBlockId) {
-                          setEndBlockId(blockId)
-                        }
-                        
-                        // Actualizar formData
-                        if (selectedDate && blockId) {
-                          const startBlock = TIME_BLOCKS.find(b => b.id === blockId)
-                          const endB = endBlockId ? TIME_BLOCKS.find(b => b.id === endBlockId) : startBlock
-                          if (startBlock && endB) {
-                            setFormData(prev => ({
-                              ...prev,
-                              fecha_inicio: combineDateWithTime(selectedDate, startBlock.start),
-                              fecha_fin: combineDateWithTime(selectedDate, endB.end)
-                            }))
-                          }
-                        }
-                      }}
-                      disabled={loading || !selectedDate}
-                    >
-                      {TIME_BLOCKS.map((block) => (
-                        <MenuItem key={block.id} value={block.id}>
-                          {getBlockLabel(block)}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  
-                  <FormControl fullWidth>
-                    <InputLabel>Hora de fin</InputLabel>
-                    <Select
-                      value={endBlockId}
-                      label="Hora de fin"
-                      onChange={(e) => {
-                        const blockId = e.target.value as string
-                        setEndBlockId(blockId)
-                        
-                        // Actualizar formData
-                        if (selectedDate && startBlockId && blockId) {
-                          const startBlock = TIME_BLOCKS.find(b => b.id === startBlockId)
-                          const endBlock = TIME_BLOCKS.find(b => b.id === blockId)
-                          if (startBlock && endBlock) {
-                            setFormData(prev => ({
-                              ...prev,
-                              fecha_inicio: combineDateWithTime(selectedDate, startBlock.start),
-                              fecha_fin: combineDateWithTime(selectedDate, endBlock.end)
-                            }))
-                          }
-                        }
-                      }}
-                      disabled={loading || !selectedDate || !startBlockId}
-                    >
-                      {TIME_BLOCKS.map((block, index) => {
-                        // Solo mostrar bloques desde el bloque de inicio en adelante
-                        const startIndex = TIME_BLOCKS.findIndex(b => b.id === startBlockId)
-                        const isDisabled = Boolean(startBlockId && index < startIndex)
-                        
-                        return (
-                          <MenuItem 
-                            key={block.id} 
-                            value={block.id}
-                            disabled={isDisabled}
-                          >
-                            {getBlockLabel(block)}
-                          </MenuItem>
-                        )
-                      })}
-                    </Select>
-                  </FormControl>
-                </Box>
-                
-                {/* Mostrar resumen del horario seleccionado */}
-                {selectedDate && startBlockId && endBlockId && (
-                  <Alert severity="info" icon={<Schedule />}>
-                    <Typography variant="body2">
-                      <strong>Horario seleccionado:</strong> {new Date(selectedDate).toLocaleDateString('es-ES', { 
-                        weekday: 'long', 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      })}
-                    </Typography>
-                    <Typography variant="body2">
-                      {(() => {
-                        const startBlock = TIME_BLOCKS.find(b => b.id === startBlockId)
-                        const endBlock = TIME_BLOCKS.find(b => b.id === endBlockId)
-                        const startIndex = TIME_BLOCKS.findIndex(b => b.id === startBlockId)
-                        const endIndex = TIME_BLOCKS.findIndex(b => b.id === endBlockId)
-                        const numBlocks = endIndex - startIndex + 1
-                        
-                        if (startBlock && endBlock) {
-                          return `De ${startBlock.start} a ${endBlock.end} (${numBlocks} ${numBlocks === 1 ? 'hora académica' : 'horas académicas'})`
-                        }
-                        return ''
-                      })()}
-                    </Typography>
-                  </Alert>
-                )}
-              </Box>
-
-              {/* Verificación de disponibilidad */}
-              {formData.fecha_inicio && formData.fecha_fin && formData.laboratorio_id && formData.docente_id && (
-                <Box sx={{ mt: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                      Verificación de Disponibilidad
-                    </Typography>
-                    <Button 
-                      size="small" 
-                      variant="outlined" 
-                      onClick={verificarDisponibilidad}
-                      disabled={!formData.laboratorio_id || !formData.docente_id || !formData.fecha_inicio || !formData.fecha_fin}
-                    >
-                      Verificar Ahora
-                    </Button>
-                  </Box>
-                  
-                  {conflictos.length === 0 ? (
-                    <Alert severity="success" icon={<CheckCircle />}>
-                      ✅ El laboratorio y docente están disponibles en el horario seleccionado
-                    </Alert>
-                  ) : (
-                    <Alert 
-                      severity="error" 
-                      icon={<Warning />}
-                      sx={{ 
-                        borderRadius: 1.5,
-                        border: '1px solid #f44336',
-                        backgroundColor: '#fef2f2'
-                      }}
-                    >
-                      <Typography variant="body2" gutterBottom sx={{ fontWeight: 600 }}>
-                        ⚠️ Conflicto de Horario Detectado
-                      </Typography>
-                      
-                      {conflictos.map((conflicto, index) => (
-                        <Box key={index} sx={{ mt: 2 }}>
-                          {/* Tipo de conflicto */}
-                          <Box sx={{ 
-                            p: 2, 
-                            backgroundColor: 'white', 
-                            borderRadius: 1,
-                            border: '1px solid #ffcdd2',
-                            mb: 2
-                          }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'error.main', mb: 1 }}>
-                              {conflicto.tipo === 'laboratorio' ? '🏢 Laboratorio Ocupado' : '👨‍🏫 Docente Ocupado'}
-                            </Typography>
-                            <Typography variant="body2" sx={{ color: 'text.primary' }}>
-                              {conflicto.mensaje}
-                            </Typography>
-                          </Box>
-
-                          {/* Detalles del conflicto */}
-                          {conflicto.detalles && (
-                            <Box sx={{ 
-                              p: 2, 
-                              backgroundColor: 'white', 
-                              borderRadius: 1,
-                              border: '1px solid #ffcdd2'
-                            }}>
-                              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5, color: 'error.main' }}>
-                                📋 Detalles del Horario en Conflicto:
-                              </Typography>
-                              
-                              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
-                                <Box>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Laboratorio:
-                                  </Typography>
-                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                    {conflicto.detalles.laboratorio}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    📍 {conflicto.detalles.ubicacion}
-                                  </Typography>
-                                </Box>
-                                
-                                <Box>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Docente:
-                                  </Typography>
-                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                    {conflicto.detalles.docente}
-                                  </Typography>
-                                </Box>
-                                
-                                <Box>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Grupo:
-                                  </Typography>
-                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                    {conflicto.detalles.grupo}
-                                  </Typography>
-                                  {conflicto.detalles.escuela && (
-                                    <Typography variant="caption" color="text.secondary">
-                                      {conflicto.detalles.escuela} • {conflicto.detalles.ciclo}
-                                    </Typography>
-                                  )}
-                                </Box>
-                                
-                                <Box>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Horario:
-                                  </Typography>
-                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                    {new Date(conflicto.detalles.fecha_inicio).toLocaleString('es-ES', {
-                                      day: '2-digit',
-                                      month: '2-digit',
-                                      year: 'numeric',
-                                      hour: '2-digit',
-                                      minute: '2-digit'
-                                    })}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    hasta {new Date(conflicto.detalles.fecha_fin).toLocaleString('es-ES', {
-                                      hour: '2-digit',
-                                      minute: '2-digit'
-                                    })}
-                                  </Typography>
-                                </Box>
-                              </Box>
-                              
-                              {conflicto.detalles.descripcion && (
-                                <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid #ffcdd2' }}>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Actividad:
-                                  </Typography>
-                                  <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
-                                    {conflicto.detalles.descripcion}
-                                  </Typography>
-                                </Box>
-                              )}
+                    <FormControl sx={{ flex: 1 }}>
+                      <InputLabel>Grupo</InputLabel>
+                      <Select
+                        value={formData.grupo_id}
+                        label="Grupo"
+                        onChange={(e) => setFormData(prev => ({ ...prev, grupo_id: e.target.value as number }))}
+                        disabled={loading}
+                      >
+                        <MenuItem value={0} disabled>Seleccionar grupo</MenuItem>
+                        {getGruposFiltrados().map((grupo) => (
+                          <MenuItem key={grupo.id} value={grupo.id}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Group fontSize="small" />
+                              {grupo.nombre}
                             </Box>
-                          )}
-                        </Box>
-                      ))}
-                      
-                      <Box sx={{ mt: 2, p: 1.5, backgroundColor: '#fff3e0', borderRadius: 1 }}>
-                        <Typography variant="caption" sx={{ fontWeight: 500, color: 'warning.dark' }}>
-                          💡 Sugerencia: Cambia la fecha/hora o selecciona otro laboratorio/docente
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Box>
+
+                  {/* Descripción */}
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={3}
+                    label="Descripción de la actividad"
+                    value={formData.descripcion}
+                    onChange={(e) => setFormData(prev => ({ ...prev, descripcion: e.target.value }))}
+                    placeholder="Describe la actividad o clase que se realizará..."
+                    disabled={loading}
+                  />
+
+                  {/* Fila con cantidad de alumnos y color */}
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <TextField
+                      type="number"
+                      label="Cantidad de alumnos"
+                      value={formData.cantidad_alumnos}
+                      onChange={(e) => setFormData(prev => ({ ...prev, cantidad_alumnos: parseInt(e.target.value) || 1 }))}
+                      disabled={loading}
+                      inputProps={{ min: 1, max: 100 }}
+                      helperText="Número estimado de estudiantes"
+                      sx={{ flex: 1 }}
+                    />
+
+                    {/* Selector de color */}
+                    <Box sx={{ flex: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                        <Typography variant="body2">
+                          Color del horario
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
+                          ({formData.color})
                         </Typography>
                       </Box>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
+                        {COLOR_PALETTE.map((colorOption) => (
+                          <Box
+                            key={colorOption.color}
+                            onClick={() => {
+                              console.log('🎨 Color seleccionado:', colorOption.color)
+                              console.log('🎨 FormData antes:', formData.color)
+                              setFormData(prev => {
+                                const newData = { ...prev, color: colorOption.color }
+                                console.log('🎨 FormData después:', newData.color)
+                                return newData
+                              })
+                            }}
+                            sx={{
+                              width: 36,
+                              height: 36,
+                              backgroundColor: colorOption.color,
+                              borderRadius: 1,
+                              cursor: 'pointer',
+                              border: formData.color === colorOption.color ? '3px solid #000' : '2px solid #ddd',
+                              transition: 'all 0.2s',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              '&:hover': {
+                                transform: 'scale(1.1)',
+                                boxShadow: 3
+                              }
+                            }}
+                            title={colorOption.name}
+                          >
+                            {formData.color === colorOption.color && (
+                              <Box
+                                sx={{
+                                  width: 8,
+                                  height: 8,
+                                  backgroundColor: 'white',
+                                  borderRadius: '50%',
+                                  boxShadow: 1
+                                }}
+                              />
+                            )}
+                          </Box>
+                        ))}
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          Color seleccionado:
+                        </Typography>
+                        <Box
+                          sx={{
+                            width: 20,
+                            height: 20,
+                            backgroundColor: formData.color,
+                            borderRadius: 1,
+                            border: '1px solid #ddd'
+                          }}
+                        />
+                        <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                          {COLOR_PALETTE.find(c => c.color === formData.color)?.name || 'Personalizado'}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                </Box>
+              </Paper>
+
+              {/* Fechas y horas */}
+              <Paper sx={{
+                p: 3,
+                borderRadius: 1.5,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                border: '1px solid #e8e8e8'
+              }}>
+                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
+                  <Schedule />
+                  Fecha y Horario Académico
+                </Typography>
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {/* Selector de fecha */}
+                  <TextField
+                    type="date"
+                    label="Fecha de la clase"
+                    value={selectedDate}
+                    onChange={(e) => {
+                      setSelectedDate(e.target.value)
+                      // Actualizar formData cuando cambian fecha y bloques
+                      if (e.target.value && startBlockId && endBlockId) {
+                        const startBlock = TIME_BLOCKS.find(b => b.id === startBlockId)
+                        const endBlock = TIME_BLOCKS.find(b => b.id === endBlockId)
+                        if (startBlock && endBlock) {
+                          setFormData(prev => ({
+                            ...prev,
+                            fecha_inicio: combineDateWithTime(e.target.value, startBlock.start),
+                            fecha_fin: combineDateWithTime(e.target.value, endBlock.end)
+                          }))
+                        }
+                      }
+                    }}
+                    fullWidth
+                    disabled={loading}
+                    InputLabelProps={{ shrink: true }}
+                    helperText="Selecciona el día en que se realizará la actividad"
+                  />
+
+                  {/* Selectores de bloques de tiempo */}
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <FormControl fullWidth>
+                      <InputLabel>Hora de inicio</InputLabel>
+                      <Select
+                        value={startBlockId}
+                        label="Hora de inicio"
+                        onChange={(e) => {
+                          const blockId = e.target.value as string
+                          setStartBlockId(blockId)
+
+                          // Si no hay bloque final seleccionado, poner el mismo
+                          if (!endBlockId) {
+                            setEndBlockId(blockId)
+                          }
+
+                          // Actualizar formData
+                          if (selectedDate && blockId) {
+                            const startBlock = TIME_BLOCKS.find(b => b.id === blockId)
+                            const endB = endBlockId ? TIME_BLOCKS.find(b => b.id === endBlockId) : startBlock
+                            if (startBlock && endB) {
+                              setFormData(prev => ({
+                                ...prev,
+                                fecha_inicio: combineDateWithTime(selectedDate, startBlock.start),
+                                fecha_fin: combineDateWithTime(selectedDate, endB.end)
+                              }))
+                            }
+                          }
+                        }}
+                        disabled={loading || !selectedDate}
+                      >
+                        {TIME_BLOCKS.map((block) => (
+                          <MenuItem key={block.id} value={block.id}>
+                            {getBlockLabel(block)}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+
+                    <FormControl fullWidth>
+                      <InputLabel>Hora de fin</InputLabel>
+                      <Select
+                        value={endBlockId}
+                        label="Hora de fin"
+                        onChange={(e) => {
+                          const blockId = e.target.value as string
+                          setEndBlockId(blockId)
+
+                          // Actualizar formData
+                          if (selectedDate && startBlockId && blockId) {
+                            const startBlock = TIME_BLOCKS.find(b => b.id === startBlockId)
+                            const endBlock = TIME_BLOCKS.find(b => b.id === blockId)
+                            if (startBlock && endBlock) {
+                              setFormData(prev => ({
+                                ...prev,
+                                fecha_inicio: combineDateWithTime(selectedDate, startBlock.start),
+                                fecha_fin: combineDateWithTime(selectedDate, endBlock.end)
+                              }))
+                            }
+                          }
+                        }}
+                        disabled={loading || !selectedDate || !startBlockId}
+                      >
+                        {TIME_BLOCKS.map((block, index) => {
+                          // Solo mostrar bloques desde el bloque de inicio en adelante
+                          const startIndex = TIME_BLOCKS.findIndex(b => b.id === startBlockId)
+                          const isDisabled = Boolean(startBlockId && index < startIndex)
+
+                          return (
+                            <MenuItem
+                              key={block.id}
+                              value={block.id}
+                              disabled={isDisabled}
+                            >
+                              {getBlockLabel(block)}
+                            </MenuItem>
+                          )
+                        })}
+                      </Select>
+                    </FormControl>
+                  </Box>
+
+                  {/* Mostrar resumen del horario seleccionado */}
+                  {selectedDate && startBlockId && endBlockId && (
+                    <Alert severity="info" icon={<Schedule />}>
+                      <Typography variant="body2">
+                        <strong>Horario seleccionado:</strong> {new Date(selectedDate).toLocaleDateString('es-ES', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </Typography>
+                      <Typography variant="body2">
+                        {(() => {
+                          const startBlock = TIME_BLOCKS.find(b => b.id === startBlockId)
+                          const endBlock = TIME_BLOCKS.find(b => b.id === endBlockId)
+                          const startIndex = TIME_BLOCKS.findIndex(b => b.id === startBlockId)
+                          const endIndex = TIME_BLOCKS.findIndex(b => b.id === endBlockId)
+                          const numBlocks = endIndex - startIndex + 1
+
+                          if (startBlock && endBlock) {
+                            return `De ${startBlock.start} a ${endBlock.end} (${numBlocks} ${numBlocks === 1 ? 'hora académica' : 'horas académicas'})`
+                          }
+                          return ''
+                        })()}
+                      </Typography>
                     </Alert>
                   )}
                 </Box>
-              )}
-            </Paper>
+
+                {/* Verificación de disponibilidad */}
+                {formData.fecha_inicio && formData.fecha_fin && formData.laboratorio_id && formData.docente_id && (
+                  <Box sx={{ mt: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                        Verificación de Disponibilidad
+                      </Typography>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={verificarDisponibilidad}
+                        disabled={!formData.laboratorio_id || !formData.docente_id || !formData.fecha_inicio || !formData.fecha_fin}
+                      >
+                        Verificar Ahora
+                      </Button>
+                    </Box>
+
+                    {conflictos.length === 0 ? (
+                      <Alert severity="success" icon={<CheckCircle />}>
+                        ✅ El laboratorio y docente están disponibles en el horario seleccionado
+                      </Alert>
+                    ) : (
+                      <Alert
+                        severity="error"
+                        icon={<Warning />}
+                        sx={{
+                          borderRadius: 1.5,
+                          border: '1px solid #f44336',
+                          backgroundColor: '#fef2f2'
+                        }}
+                      >
+                        <Typography variant="body2" gutterBottom sx={{ fontWeight: 600 }}>
+                          ⚠️ Conflicto de Horario Detectado
+                        </Typography>
+
+                        {conflictos.map((conflicto, index) => (
+                          <Box key={index} sx={{ mt: 2 }}>
+                            {/* Tipo de conflicto */}
+                            <Box sx={{
+                              p: 2,
+                              backgroundColor: 'white',
+                              borderRadius: 1,
+                              border: '1px solid #ffcdd2',
+                              mb: 2
+                            }}>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'error.main', mb: 1 }}>
+                                {conflicto.tipo === 'laboratorio' ? '🏢 Laboratorio Ocupado' : '👨‍🏫 Docente Ocupado'}
+                              </Typography>
+                              <Typography variant="body2" sx={{ color: 'text.primary' }}>
+                                {conflicto.mensaje}
+                              </Typography>
+                            </Box>
+
+                            {/* Detalles del conflicto */}
+                            {conflicto.detalles && (
+                              <Box sx={{
+                                p: 2,
+                                backgroundColor: 'white',
+                                borderRadius: 1,
+                                border: '1px solid #ffcdd2'
+                              }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5, color: 'error.main' }}>
+                                  📋 Detalles del Horario en Conflicto:
+                                </Typography>
+
+                                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
+                                  <Box>
+                                    <Typography variant="caption" color="text.secondary">
+                                      Laboratorio:
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                      {conflicto.detalles.laboratorio}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      📍 {conflicto.detalles.ubicacion}
+                                    </Typography>
+                                  </Box>
+
+                                  <Box>
+                                    <Typography variant="caption" color="text.secondary">
+                                      Docente:
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                      {conflicto.detalles.docente}
+                                    </Typography>
+                                  </Box>
+
+                                  <Box>
+                                    <Typography variant="caption" color="text.secondary">
+                                      Grupo:
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                      {conflicto.detalles.grupo}
+                                    </Typography>
+                                    {conflicto.detalles.escuela && (
+                                      <Typography variant="caption" color="text.secondary">
+                                        {conflicto.detalles.escuela} • {conflicto.detalles.ciclo}
+                                      </Typography>
+                                    )}
+                                  </Box>
+
+                                  <Box>
+                                    <Typography variant="caption" color="text.secondary">
+                                      Horario:
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                      {new Date(conflicto.detalles.fecha_inicio).toLocaleString('es-ES', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      hasta {new Date(conflicto.detalles.fecha_fin).toLocaleString('es-ES', {
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })}
+                                    </Typography>
+                                  </Box>
+                                </Box>
+
+                                {conflicto.detalles.descripcion && (
+                                  <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid #ffcdd2' }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                      Actividad:
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
+                                      {conflicto.detalles.descripcion}
+                                    </Typography>
+                                  </Box>
+                                )}
+                              </Box>
+                            )}
+                          </Box>
+                        ))}
+
+                        <Box sx={{ mt: 2, p: 1.5, backgroundColor: '#fff3e0', borderRadius: 1 }}>
+                          <Typography variant="caption" sx={{ fontWeight: 500, color: 'warning.dark' }}>
+                            💡 Sugerencia: Cambia la fecha/hora o selecciona otro laboratorio/docente
+                          </Typography>
+                        </Box>
+                      </Alert>
+                    )}
+                  </Box>
+                )}
+              </Paper>
             </Box>
 
             {/* Panel derecho - Gestión de Insumos */}
-            <Box sx={{ 
-              flex: { xs: 1, lg: 1 }, 
+            <Box sx={{
+              flex: { xs: 1, lg: 1 },
               display: 'flex',
               flexDirection: 'column',
               gap: 2,
               pl: { xs: 0, lg: 1 }
             }}>
               {/* Header del panel de insumos */}
-              <Paper sx={{ 
-                p: 2, 
+              <Paper sx={{
+                p: 2,
                 borderRadius: 1.5,
                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                 border: '1px solid #e8e8e8',
@@ -1225,7 +1194,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                   )}
 
                   {/* Insumos disponibles */}
-                  <Paper sx={{ 
+                  <Paper sx={{
                     flex: 1,
                     borderRadius: 1.5,
                     boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
@@ -1244,16 +1213,16 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                         <List dense>
                           {insumosDisponibles.map((insumo) => {
                             const yaSeleccionado = insumosSeleccionados.some(i => i.insumo_id === insumo.id)
-                            const stockColor = (insumo.stock_disponible || 0) === 0 ? 'error' : 
-                                             (insumo.stock_disponible || 0) < 10 ? 'warning' : 'success'
+                            const stockColor = (insumo.stock_disponible || 0) === 0 ? 'error' :
+                              (insumo.stock_disponible || 0) < 10 ? 'warning' : 'success'
                             return (
                               <Box
                                 key={insumo.id}
                                 onClick={() => !yaSeleccionado && agregarInsumo(insumo)}
-                                sx={{ 
+                                sx={{
                                   p: 1.5,
                                   cursor: yaSeleccionado ? 'not-allowed' : 'pointer',
-                                  '&:hover': { 
+                                  '&:hover': {
                                     bgcolor: yaSeleccionado ? 'none' : 'primary.light',
                                     transform: yaSeleccionado ? 'none' : 'translateY(-1px)',
                                     boxShadow: yaSeleccionado ? 'none' : '0 4px 12px rgba(0,0,0,0.15)'
@@ -1277,9 +1246,9 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                                     <Typography variant="caption" color="text.secondary">
                                       Stock:
                                     </Typography>
-                                    <Chip 
-                                      label={insumo.stock_disponible || 0} 
-                                      size="small" 
+                                    <Chip
+                                      label={insumo.stock_disponible || 0}
+                                      size="small"
                                       color={stockColor}
                                       variant="outlined"
                                     />
@@ -1315,7 +1284,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                   </Paper>
 
                   {/* Insumos seleccionados */}
-                  <Paper sx={{ 
+                  <Paper sx={{
                     flex: 1,
                     borderRadius: 1.5,
                     boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
@@ -1333,8 +1302,8 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                       <List dense>
                         {insumosSeleccionados.map((insumo) => {
                           const stockRestante = insumo.stock_disponible - insumo.cantidad
-                          const stockColor = stockRestante === 0 ? 'error' : 
-                                           stockRestante < 5 ? 'warning' : 'success'
+                          const stockColor = stockRestante === 0 ? 'error' :
+                            stockRestante < 5 ? 'warning' : 'success'
                           return (
                             <ListItem key={insumo.insumo_id}>
                               <ListItemText
@@ -1344,9 +1313,9 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                                     <Typography variant="caption" color="text.secondary">
                                       Restante:
                                     </Typography>
-                                    <Chip 
-                                      label={stockRestante} 
-                                      size="small" 
+                                    <Chip
+                                      label={stockRestante}
+                                      size="small"
                                       color={stockColor}
                                       variant="outlined"
                                     />
@@ -1389,7 +1358,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                         })}
                         {insumosSeleccionados.length === 0 && (
                           <ListItem>
-                            <ListItemText 
+                            <ListItemText
                               primary="Sin insumos seleccionados"
                               secondary="Haz clic arriba para agregar"
                             />
@@ -1401,8 +1370,8 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
 
                   {/* Resumen compacto */}
                   {insumosSeleccionados.length > 0 && (
-                    <Paper sx={{ 
-                      p: 2, 
+                    <Paper sx={{
+                      p: 2,
                       borderRadius: 1.5,
                       boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                       border: '1px solid #e8e8e8',
@@ -1429,16 +1398,16 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
             </Box>
 
             {/* Panel derecho - Gestión de Equipos */}
-            <Box sx={{ 
-              flex: { xs: 1, lg: 1 }, 
+            <Box sx={{
+              flex: { xs: 1, lg: 1 },
               display: 'flex',
               flexDirection: 'column',
               gap: 2,
               minHeight: 0,
             }}>
               {/* Título de la sección */}
-              <Paper sx={{ 
-                p: 2, 
+              <Paper sx={{
+                p: 2,
                 borderRadius: 1.5,
                 background: 'linear-gradient(135deg, #f5f5f5 0%, #eeeeee 100%)',
                 border: '1px solid #e0e0e0'
@@ -1450,47 +1419,120 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
               </Paper>
 
               {/* Contenido de equipos */}
-              {formData.laboratorio_id > 0 ? (
-                <>
-                  {/* Mensaje de cambio de laboratorio */}
-                  {laboratorioChangeMessage && (
-                    <Alert severity="warning" sx={{ borderRadius: 1.5 }}>
-                      {laboratorioChangeMessage}
-                    </Alert>
-                  )}
+              {!formData.laboratorio_id ?
+                (
+                  <Alert severity="info" sx={{ borderRadius: 2 }}>
+                    Selecciona un laboratorio para ver los insumos disponibles
+                  </Alert>
+                ) : (
+                  <>
+                    {/* Mensaje de cambio de laboratorio */}
+                    {laboratorioChangeMessage && (
+                      <Alert severity="warning" sx={{ borderRadius: 1.5 }}>
+                        {laboratorioChangeMessage}
+                      </Alert>
+                    )}
 
-                  {/* Equipos disponibles */}
-                  <Paper sx={{ 
-                    flex: 1,
-                    borderRadius: 1.5,
-                    border: '1px solid #e0e0e0',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    minHeight: 250,
-                    maxHeight: 300
-                  }}>
-                    <Box sx={{ p: 2, backgroundColor: '#f0f7ff', borderBottom: '1px solid #e0e0e0' }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                        Disponibles ({equiposDisponibles.length})
-                      </Typography>
-                    </Box>
-                    <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
-                      {equiposDisponibles.length > 0 ? (
+                    {/* Equipos disponibles */}
+                    <Paper sx={{
+                      flex: 1,
+                      borderRadius: 1.5,
+                      border: '1px solid #e0e0e0',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      minHeight: 250,
+                      maxHeight: 300
+                    }}>
+                      <Box sx={{ p: 2, backgroundColor: '#f0f7ff', borderBottom: '1px solid #e0e0e0' }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                          Disponibles ({equiposDisponibles.length})
+                        </Typography>
+                      </Box>
+                      <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
+                        {equiposDisponibles.length > 0 ? (
+                          <List dense>
+                            {equiposDisponibles.map((equipo) => {
+                              const yaSeleccionado = equiposSeleccionados.some(e => e.equipo_id === equipo.id)
+                              return (
+                                <ListItem
+                                  key={equipo.id}
+                                  sx={{
+                                    border: '1px solid #f0f0f0',
+                                    borderRadius: 1,
+                                    mb: 1,
+                                    backgroundColor: yaSeleccionado ? '#e8f5e8' : 'transparent',
+                                    '&:hover': {
+                                      backgroundColor: yaSeleccionado ? '#e8f5e8' : '#f5f5f5'
+                                    }
+                                  }}
+                                >
+                                  <ListItemText
+                                    primary={
+                                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                        {equipo.nombre}
+                                      </Typography>
+                                    }
+                                    secondary={
+                                      <Typography variant="caption" color="text.secondary">
+                                        {equipo.marca} {equipo.modelo} - {equipo.codigo}
+                                      </Typography>
+                                    }
+                                  />
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => agregarEquipo(equipo)}
+                                    disabled={yaSeleccionado}
+                                    color="primary"
+                                    sx={{ ml: 1 }}
+                                  >
+                                    <Add />
+                                  </IconButton>
+                                </ListItem>
+                              )
+                            })}
+                          </List>
+                        ) : (
+                          <Box sx={{ p: 3, textAlign: 'center' }}>
+                            <Build sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
+                            <Typography variant="body2" color="text.secondary">
+                              No hay equipos disponibles en este laboratorio
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Paper>
+
+                    {/* Equipos seleccionados */}
+                    <Paper sx={{
+                      flex: 1,
+                      borderRadius: 1.5,
+                      border: '1px solid #e0e0e0',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      minHeight: 200,
+                      maxHeight: 250
+                    }}>
+                      <Box sx={{ p: 2, backgroundColor: '#f0fff4', borderBottom: '1px solid #e0e0e0' }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'success.main' }}>
+                          Seleccionados ({equiposSeleccionados.length})
+                        </Typography>
+                      </Box>
+                      <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
                         <List dense>
-                          {equiposDisponibles.map((equipo) => {
-                            const yaSeleccionado = equiposSeleccionados.some(e => e.equipo_id === equipo.id)
+                          {equiposSeleccionados.map((equipo) => {
                             return (
                               <ListItem
-                                key={equipo.id}
+                                key={equipo.equipo_id}
                                 sx={{
-                                  border: '1px solid #f0f0f0',
+                                  border: '1px solid #e8f5e8',
                                   borderRadius: 1,
                                   mb: 1,
-                                  backgroundColor: yaSeleccionado ? '#e8f5e8' : 'transparent',
-                                  '&:hover': {
-                                    backgroundColor: yaSeleccionado ? '#e8f5e8' : '#f5f5f5'
-                                  }
+                                  backgroundColor: '#f9fff9',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center'
                                 }}
                               >
                                 <ListItemText
@@ -1501,140 +1543,62 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                                   }
                                   secondary={
                                     <Typography variant="caption" color="text.secondary">
-                                      {equipo.marca} {equipo.modelo} - {equipo.codigo}
+                                      Equipo reservado
                                     </Typography>
                                   }
                                 />
-                                <IconButton
-                                  size="small"
-                                  onClick={() => agregarEquipo(equipo)}
-                                  disabled={yaSeleccionado}
-                                  color="primary"
-                                  sx={{ ml: 1 }}
-                                >
-                                  <Add />
-                                </IconButton>
+                                <Tooltip title="Eliminar equipo">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => eliminarEquipo(equipo.equipo_id)}
+                                    color="error"
+                                    sx={{ ml: 1 }}
+                                  >
+                                    <Delete />
+                                  </IconButton>
+                                </Tooltip>
                               </ListItem>
                             )
                           })}
-                        </List>
-                      ) : (
-                        <Box sx={{ p: 3, textAlign: 'center' }}>
-                          <Build sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
-                          <Typography variant="body2" color="text.secondary">
-                            No hay equipos disponibles en este laboratorio
-                          </Typography>
-                        </Box>
-                      )}
-                    </Box>
-                  </Paper>
-
-                  {/* Equipos seleccionados */}
-                  <Paper sx={{ 
-                    flex: 1,
-                    borderRadius: 1.5,
-                    border: '1px solid #e0e0e0',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    minHeight: 200,
-                    maxHeight: 250
-                  }}>
-                    <Box sx={{ p: 2, backgroundColor: '#f0fff4', borderBottom: '1px solid #e0e0e0' }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'success.main' }}>
-                        Seleccionados ({equiposSeleccionados.length})
-                      </Typography>
-                    </Box>
-                    <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
-                      <List dense>
-                        {equiposSeleccionados.map((equipo) => {
-                          return (
-                            <ListItem
-                              key={equipo.equipo_id}
-                              sx={{
-                                border: '1px solid #e8f5e8',
-                                borderRadius: 1,
-                                mb: 1,
-                                backgroundColor: '#f9fff9',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center'
-                              }}
-                            >
+                          {equiposSeleccionados.length === 0 && (
+                            <ListItem>
                               <ListItemText
-                                primary={
-                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                    {equipo.nombre}
-                                  </Typography>
-                                }
-                                secondary={
-                                  <Typography variant="caption" color="text.secondary">
-                                    Equipo reservado
-                                  </Typography>
-                                }
+                                primary="Sin equipos seleccionados"
+                                secondary="Los equipos seleccionados aparecerán aquí"
+                                sx={{ textAlign: 'center', color: 'text.secondary' }}
                               />
-                              <Tooltip title="Eliminar equipo">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => eliminarEquipo(equipo.equipo_id)}
-                                  color="error"
-                                  sx={{ ml: 1 }}
-                                >
-                                  <Delete />
-                                </IconButton>
-                              </Tooltip>
                             </ListItem>
-                          )
-                        })}
-                        {equiposSeleccionados.length === 0 && (
-                          <ListItem>
-                            <ListItemText 
-                              primary="Sin equipos seleccionados"
-                              secondary="Los equipos seleccionados aparecerán aquí"
-                              sx={{ textAlign: 'center', color: 'text.secondary' }}
-                            />
-                          </ListItem>
-                        )}
-                      </List>
-                    </Box>
-                  </Paper>
-
-                  {/* Resumen compacto */}
-                  {equiposSeleccionados.length > 0 && (
-                    <Paper sx={{ 
-                      p: 2, 
-                      borderRadius: 1.5,
-                      border: '1px solid #e0e0e0',
-                      backgroundColor: '#fff8e1'
-                    }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'warning.main', mb: 1 }}>
-                        Resumen de Equipos
-                      </Typography>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                        {equiposSeleccionados.map((equipo) => (
-                          <Chip
-                            key={equipo.equipo_id}
-                            label={`${equipo.nombre} (${equipo.cantidad})`}
-                            variant="outlined"
-                            size="small"
-                            sx={{ borderRadius: 1 }}
-                          />
-                        ))}
+                          )}
+                        </List>
                       </Box>
                     </Paper>
-                  )}
-                </>
-              ) : (
-                <Paper sx={{ p: 3, textAlign: 'center', borderRadius: 1.5, border: '1px solid #e0e0e0' }}>
-                  <Build sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
-                  <Typography variant="body1" color="text.secondary" gutterBottom>
-                    Selecciona un laboratorio
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Los equipos disponibles se mostrarán aquí
-                  </Typography>
-                </Paper>
-              )}
+
+                    {/* Resumen compacto */}
+                    {equiposSeleccionados.length > 0 && (
+                      <Paper sx={{
+                        p: 2,
+                        borderRadius: 1.5,
+                        border: '1px solid #e0e0e0',
+                        backgroundColor: '#fff8e1'
+                      }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'warning.main', mb: 1 }}>
+                          Resumen de Equipos
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {equiposSeleccionados.map((equipo) => (
+                            <Chip
+                              key={equipo.equipo_id}
+                              label={`${equipo.nombre}`}
+                              variant="outlined"
+                              size="small"
+                              sx={{ borderRadius: 1 }}
+                            />
+                          ))}
+                        </Box>
+                      </Paper>
+                    )}
+                  </>
+                )}
             </Box>
           </Box>
         )}
@@ -1649,7 +1613,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
         >
           Cancelar
         </Button>
-        
+
         <Button
           onClick={handleSubmit}
           disabled={loading || !canSubmit()}

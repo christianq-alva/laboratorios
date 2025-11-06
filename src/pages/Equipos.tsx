@@ -19,8 +19,10 @@ import { EquipoForm } from '../components/Equipos/EquipoForm'
 import { ActividadEquipos } from '../components/Equipos/ActividadEquipos'
 import { ImportacionMasivaEquipos } from '../components/Equipos/ImportacionMasivaEquipos'
 import { equipoService, type Equipo } from '../services/equipoService'
+import { useApi } from '../hooks/useApi'
 
 export const Equipos: React.FC = () => {
+  const { execute } = useApi()
   // Estados para formulario y eliminación
   const [formOpen, setFormOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -114,51 +116,26 @@ export const Equipos: React.FC = () => {
     if (!selectedEquipo) return
 
     setDeleteLoading(true)
-    try {
-      console.log('🗑️ Intentando eliminar equipo:', selectedEquipo.id)
-      const result = await equipoService.delete(selectedEquipo.id)
+    console.log('🗑️ Intentando eliminar equipo:', selectedEquipo.id)
+    const result = await execute(() => equipoService.delete(selectedEquipo.id))
 
-      if (result.success) {
-        console.log('✅ Equipo eliminado correctamente')
-        setDeleteOpen(false)
-        setSelectedEquipo(null)
-        setRefresh(prev => !prev)
-        setSnackbar({
-          open: true,
-          message: 'Equipo eliminado correctamente',
-          severity: 'success'
-        })
-      } else {
-        console.error('❌ Error al eliminar equipo:', result)
-        setSnackbar({
-          open: true,
-          message: result.message || 'Error al eliminar el equipo',
-          severity: 'error'
-        })
-      }
-    } catch (err: any) {
-      console.error('❌ Error de conexión:', {
-        error: err.message,
-        response: err.response?.data,
-        status: err.response?.status
-      })
-
-      let errorMessage = 'Error de conexión al eliminar el equipo'
-
-      if (err.response?.status === 403) {
-        errorMessage = 'No tienes permisos para eliminar este equipo'
-      } else if (err.response?.data?.message) {
-        errorMessage = err.response.data.message
-      }
-
+    if (result.error) {
       setSnackbar({
         open: true,
-        message: errorMessage,
+        message: result.error,
         severity: 'error'
       })
-    } finally {
-      setDeleteLoading(false)
+    } else if (result.data) {
+      setSnackbar({
+        open: true,
+        message: result.data.message || 'Equipo eliminado correctamente',
+        severity: 'success'
+      })
+      setDeleteOpen(false)
+      setSelectedEquipo(null)
+      setRefresh(prev => !prev)
     }
+    setDeleteLoading(false)
   }
 
   // Función para manejar el refresh completado
@@ -192,7 +169,7 @@ export const Equipos: React.FC = () => {
           >
             Nuevo Equipo
           </Button>
-          
+
           <Button
             variant="outlined"
             startIcon={<FileUpload />}

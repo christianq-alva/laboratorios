@@ -43,7 +43,7 @@ import {
   Share,
   Download,
 } from '@mui/icons-material'
-import { horarioService, type Horario } from '../../services/horarioService'
+import { horarioService, type HorarioSimple } from '../../services/horarioService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
 import dayjs from 'dayjs'
 import 'dayjs/locale/es'
@@ -51,6 +51,7 @@ import isoWeek from 'dayjs/plugin/isoWeek'
 import isBetween from 'dayjs/plugin/isBetween'
 import './CalendarioSimple.css'
 import { TIME_BLOCKS } from '../../utils/timeBlocks'
+import { useApi } from '../../hooks/useApi'
 
 // Configurar dayjs
 dayjs.extend(isoWeek)
@@ -67,13 +68,13 @@ interface HorarioEvento {
   horaFin: string
   color: string
   cantidad_alumnos?: number
-  horarioOriginal: Horario
+  horarioOriginal: HorarioSimple
 }
 
 interface CalendarioSimpleProps {
-  onEdit?: (horario: Horario) => void
-  onDelete?: (horario: Horario) => void
-  onView?: (horario: Horario) => void
+  onEdit?: (horario: HorarioSimple) => void
+  onDelete?: (horario: HorarioSimple) => void
+  onView?: (horario: HorarioSimple) => void
   onNewHorario?: () => void
   onShare?: (laboratorioId?: number) => void
   onExport?: () => void
@@ -84,7 +85,7 @@ interface CalendarioSimpleProps {
 // Colores por tipo de actividad - Paleta UPeU
 const getColorByTipo = (descripcion: string | null | undefined): string => {
   if (!descripcion) return '#6b7280' // Gris
-  
+
   const desc = descripcion.toLowerCase()
   if (desc.includes('reproductor')) return '#d32f2f' // Rojo
   if (desc.includes('neurología') || desc.includes('neurologia')) return '#2e5984' // Azul medio
@@ -106,19 +107,20 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
   refresh = false,
   onRefreshComplete,
 }) => {
-  const [horarios, setHorarios] = useState<Horario[]>([])
+  const { execute } = useApi()
+  const [horarios, setHorarios] = useState<HorarioSimple[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedEvent, setSelectedEvent] = useState<Horario | null>(null)
+  const [selectedEvent, setSelectedEvent] = useState<HorarioSimple | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [currentWeek, setCurrentWeek] = useState(dayjs().startOf('isoWeek'))
   const [initialWeekSet, setInitialWeekSet] = useState(false)
-  
+
   // Estados para laboratorios (jefes con múltiples labs)
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
   const [selectedLaboratorio, setSelectedLaboratorio] = useState<number | 'all'>('all')
   const [userRole, setUserRole] = useState<string>('')
-  
+
   // Estados para filtros
   const [filtroLaboratorio, setFiltroLaboratorio] = useState<string>('')
   const [filtroDocente, setFiltroDocente] = useState<string>('')
@@ -126,65 +128,55 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
 
   // Cargar laboratorios del usuario
   const fetchLaboratorios = useCallback(async () => {
-    try {
-      const result = await laboratorioService.getAll()
-      if (result.success) {
-        setLaboratorios(result.data)
-        //setUserRole(result.data.user_role || '')
-        
-        // Si solo tiene un lab, seleccionarlo automáticamente
-        if (result.data.length === 1) {
-          setSelectedLaboratorio(result.data[0].id)
-        }
+    const result = await execute(() => laboratorioService.getAll())
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      setLaboratorios(result.data?.data || [])
+      //setUserRole(result.data.user_role || '')
+
+      // Si solo tiene un lab, seleccionarlo automáticamente
+      if (result.data?.data?.length === 1) {
+        setSelectedLaboratorio(result.data?.data?.[0].id || 0)
       }
-    } catch (err) {
-      console.error('Error al cargar laboratorios:', err)
     }
   }, [])
 
   // Cargar horarios
   const fetchHorarios = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const result = await horarioService.getAll()
-      
-      if (result.success) {
-        const horariosData = result.data || []
-        setHorarios(horariosData)
-        setUserRole(result.user_role || '')
-        
-        // Inicializar con la semana actual
-        if (!initialWeekSet) {
-          const semanaActual = dayjs().startOf('isoWeek')
-          console.log('🎯 Inicializando calendario simple con la semana actual:', semanaActual.format('YYYY-MM-DD'))
-          setCurrentWeek(semanaActual)
-          setInitialWeekSet(true)
-        }
-      } else {
-        setError(result.message || 'Error al cargar horarios')
-      }
-    } catch (err: unknown) {
-      console.error('Error al cargar horarios:', err)
-      setError('Error de conexión al cargar horarios')
-    } finally {
-      setLoading(false)
+    setLoading(true)
+    setError(null)
+
+    const result = await execute(() => horarioService.getAll())
+
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      setHorarios(result.data?.data)
+      //setUserRole(result.user_role || '')
     }
+    // Inicializar con la semana actual
+    if (!initialWeekSet) {
+      const semanaActual = dayjs().startOf('isoWeek')
+      console.log('🎯 Inicializando calendario simple con la semana actual:', semanaActual.format('YYYY-MM-DD'))
+      setCurrentWeek(semanaActual)
+      setInitialWeekSet(true)
+    }
+    setLoading(false)
   }, [])
 
   // Filtrar horarios por semana actual, laboratorio seleccionado y filtros
   const horariosSemana = useMemo(() => {
     const inicioSemana = currentWeek.startOf('isoWeek')
     const finSemana = currentWeek.endOf('isoWeek')
-    
+
     return horarios.filter(horario => {
       // Verificar si el horario está en la semana actual
       const fechaHorario = dayjs(horario.fecha_inicio)
       if (!fechaHorario.isBetween(inicioSemana, finSemana, null, '[]')) {
         return false
       }
-      
+
       // Filtrar por laboratorio seleccionado (solo para jefes con múltiples labs)
       if (selectedLaboratorio !== 'all') {
         const laboratorioSeleccionado = laboratorios.find(lab => lab.id === selectedLaboratorio)
@@ -192,13 +184,13 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
           return false
         }
       }
-      
+
       // Aplicar filtros adicionales
-      const cumpleLaboratorio = !filtroLaboratorio || 
+      const cumpleLaboratorio = !filtroLaboratorio ||
         horario.laboratorio?.toLowerCase().includes(filtroLaboratorio.toLowerCase())
-      const cumpleDocente = !filtroDocente || 
+      const cumpleDocente = !filtroDocente ||
         horario.docente?.toLowerCase().includes(filtroDocente.toLowerCase())
-      
+
       return cumpleLaboratorio && cumpleDocente
     })
   }, [horarios, currentWeek, selectedLaboratorio, laboratorios, filtroLaboratorio, filtroDocente])
@@ -206,29 +198,29 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
   // Organizar eventos por día y hora
   const eventosPorDiaYHora = useMemo(() => {
     const eventos: Record<string, HorarioEvento[]> = {}
-    
+
     DIAS_SEMANA.forEach((_, diaIndex) => {
       TIME_BLOCKS.forEach(block => {
         const key = `${diaIndex}-${block.start}`
         eventos[key] = []
       })
     })
-    
+
     horariosSemana.forEach(horario => {
       const fecha = dayjs(horario.fecha_inicio)
       const diaIndex = fecha.isoWeekday() - 1 // 0 = Lunes, 4 = Viernes
-      
+
       if (diaIndex >= 0 && diaIndex < 7) { // Todos los días de la semana
         const horaInicio = fecha.format('HH:mm')
         const horaFin = dayjs(horario.fecha_fin).format('HH:mm')
-        
+
         // Encontrar el slot de tiempo correspondiente
         TIME_BLOCKS.forEach(block => {
           const slotStart = dayjs(`2024-01-01 ${block.start}`)
           const slotEnd = dayjs(`2024-01-01 ${block.end}`)
           const eventoStart = dayjs(`2024-01-01 ${horaInicio}`)
           const eventoEnd = dayjs(`2024-01-01 ${horaFin}`)
-          
+
           // Verificar si el evento ocupa este slot
           if (
             (eventoStart.isBefore(slotEnd) && eventoEnd.isAfter(slotStart)) ||
@@ -236,7 +228,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
           ) {
             const key = `${diaIndex}-${block.start}`
             if (!eventos[key]) eventos[key] = []
-            
+
             eventos[key].push({
               id: horario.id,
               laboratorio: horario.laboratorio || '',
@@ -253,7 +245,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
         })
       }
     })
-    
+
     return eventos
   }, [horariosSemana])
 
@@ -276,7 +268,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
     setFiltroDocente('')
     // Resetear el selector de laboratorio para admin y jefes con múltiples labs
     if ((userRole === 'Jefe de Laboratorio' && laboratorios.length > 1) ||
-        (userRole === 'Administrador' && laboratorios.length > 0)) {
+      (userRole === 'Administrador' && laboratorios.length > 0)) {
       setSelectedLaboratorio('all')
     }
   }
@@ -285,7 +277,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
   useEffect(() => {
     fetchLaboratorios()
     fetchHorarios()
-    
+
     // Verificar si viene navegación desde dashboard
     const dashboardNav = localStorage.getItem('dashboard_navigation')
     if (dashboardNav) {
@@ -331,7 +323,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
       </Alert>
     )
   }
-  
+
   return (
     <Box sx={{ p: 2 }}>
       {/* Header con navegación */}
@@ -342,18 +334,18 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
               Calendario Semanal
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
-              <Chip 
-                label={`${horariosSemana.length} horarios`} 
-                color="primary" 
+              <Chip
+                label={`${horariosSemana.length} horarios`}
+                color="primary"
                 size="small"
               />
-              <Chip 
-                label={`${horarios.length} total`} 
+              <Chip
+                label={`${horarios.length} total`}
                 size="small"
                 variant="outlined"
               />
               {selectedLaboratorio !== 'all' && laboratorios.length > 0 && (
-                <Chip 
+                <Chip
                   label={`${laboratorios.find(lab => lab.id === selectedLaboratorio)?.nombre || 'Laboratorio'}`}
                   color="secondary"
                   size="small"
@@ -361,7 +353,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                 />
               )}
             </Box>
-            
+
             {/* Selector de laboratorio para múltiples labs */}
             {laboratorios.length > 1 && (
               <FormControl size="small" sx={{ minWidth: 200, mt: 1 }}>
@@ -394,14 +386,14 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
               </FormControl>
             )}
           </Box>
-          
+
           {/* Navegación de semanas */}
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <IconButton onClick={handlePreviousWeek} size="small">
                 <ChevronLeft />
               </IconButton>
-              
+
               <Button
                 variant="outlined"
                 size="small"
@@ -411,18 +403,18 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
               >
                 {currentWeek.format('DD/MM/YYYY')} - {currentWeek.add(6, 'day').format('DD/MM/YYYY')}
               </Button>
-              
+
               <IconButton onClick={handleNextWeek} size="small">
                 <ChevronRight />
               </IconButton>
             </Box>
-            
+
             {/* Indicador del laboratorio activo */}
             {(userRole === 'Jefe de Laboratorio' || userRole === 'Administrador') && selectedLaboratorio !== 'all' && (
-              <Alert 
-                severity="info" 
-                sx={{ 
-                  py: 0.5, 
+              <Alert
+                severity="info"
+                sx={{
+                  py: 0.5,
                   fontSize: '0.75rem',
                   '& .MuiAlert-message': { py: 0 }
                 }}
@@ -431,7 +423,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
               </Alert>
             )}
           </Box>
-          
+
           {/* Acciones */}
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button
@@ -442,7 +434,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
             >
               Filtros
             </Button>
-            
+
             {onShare && (userRole === 'Jefe de Laboratorio' || userRole === 'Administrador') && (
               <Button
                 variant="outlined"
@@ -454,7 +446,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                 Compartir
               </Button>
             )}
-            
+
             {onExport && (userRole === 'Jefe de Laboratorio' || userRole === 'Administrador') && (
               <Button
                 variant="outlined"
@@ -466,7 +458,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                 Descargar
               </Button>
             )}
-            
+
             {onNewHorario && (
               <Button
                 variant="contained"
@@ -502,7 +494,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                 ),
               }}
             />
-            
+
             <TextField
               label="Docente"
               value={filtroDocente}
@@ -517,8 +509,8 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                 ),
               }}
             />
-            
-            
+
+
             <Button
               variant="outlined"
               onClick={limpiarFiltros}
@@ -530,18 +522,18 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
         </Paper>
       </Collapse>
 
-              {/* Tabla de calendario */}
-        <TableContainer 
-          id="calendario-exportable"
-          component={Paper} 
-          sx={{ maxHeight: 'calc(100vh - 300px)' }}
-        >
-          <Table stickyHeader size="small">
+      {/* Tabla de calendario */}
+      <TableContainer
+        id="calendario-exportable"
+        component={Paper}
+        sx={{ maxHeight: 'calc(100vh - 300px)' }}
+      >
+        <Table stickyHeader size="small">
           <TableHead>
             <TableRow>
-              <TableCell 
-                sx={{ 
-                  fontWeight: 'bold', 
+              <TableCell
+                sx={{
+                  fontWeight: 'bold',
                   backgroundColor: '#f5f5f5',
                   width: 100,
                   borderRight: '2px solid #e0e0e0'
@@ -549,37 +541,37 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
               >
                 Hora
               </TableCell>
-                              {DIAS_SEMANA.map((dia, index) => {
-                  const dayDate = currentWeek.add(index, 'day')
-                  const isToday = dayDate.isSame(dayjs(), 'day')
-                  return (
-                    <TableCell 
-                      key={dia} 
-                      align="center"
-                      sx={{ 
-                        fontWeight: 'bold',
-                        backgroundColor: isToday ? '#e3f2fd' : '#f5f5f5',
-                        minWidth: 180,
-                        borderRight: index < 6 ? '1px solid #e0e0e0' : 'none',
-                        borderTop: isToday ? '3px solid #2196f3' : 'none'
-                      }}
-                    >
-                      <Typography variant="subtitle2" sx={{ color: isToday ? '#1976d2' : 'inherit' }}>
-                        {dia}
-                      </Typography>
-                      <Typography variant="caption" color={isToday ? 'primary' : 'text.secondary'}>
-                        {dayDate.format('DD/MM')}
-                      </Typography>
-                    </TableCell>
-                  )
-                })}
+              {DIAS_SEMANA.map((dia, index) => {
+                const dayDate = currentWeek.add(index, 'day')
+                const isToday = dayDate.isSame(dayjs(), 'day')
+                return (
+                  <TableCell
+                    key={dia}
+                    align="center"
+                    sx={{
+                      fontWeight: 'bold',
+                      backgroundColor: isToday ? '#e3f2fd' : '#f5f5f5',
+                      minWidth: 180,
+                      borderRight: index < 6 ? '1px solid #e0e0e0' : 'none',
+                      borderTop: isToday ? '3px solid #2196f3' : 'none'
+                    }}
+                  >
+                    <Typography variant="subtitle2" sx={{ color: isToday ? '#1976d2' : 'inherit' }}>
+                      {dia}
+                    </Typography>
+                    <Typography variant="caption" color={isToday ? 'primary' : 'text.secondary'}>
+                      {dayDate.format('DD/MM')}
+                    </Typography>
+                  </TableCell>
+                )
+              })}
             </TableRow>
           </TableHead>
           <TableBody>
             {TIME_BLOCKS.map((block) => (
               <TableRow key={block.id} hover>
-                <TableCell 
-                  sx={{ 
+                <TableCell
+                  sx={{
                     fontWeight: 500,
                     backgroundColor: '#fafafa',
                     borderRight: '2px solid #e0e0e0',
@@ -593,25 +585,25 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                     {block.start} - {block.end}
                   </Typography>
                 </TableCell>
-                                  {DIAS_SEMANA.map((_, diaIndex) => {
-                    const key = `${diaIndex}-${block.start}`
-                    const eventos = eventosPorDiaYHora[key] || []
-                    const dayDate = currentWeek.add(diaIndex, 'day')
-                    const isToday = dayDate.isSame(dayjs(), 'day')
-                    
-                    return (
-                      <TableCell 
-                        key={key}
-                        sx={{ 
-                          p: 0.3,
-                          borderRight: diaIndex < 6 ? '1px solid #e0e0e0' : 'none',
-                          verticalAlign: 'top',
-                          height: 65, // Aumentado para acomodar más información
-                          backgroundColor: eventos.length > 0 
-                            ? (isToday ? '#e8f4fd' : '#fafafa')
-                            : (isToday ? '#f3f8fe' : 'white')
-                        }}
-                      >
+                {DIAS_SEMANA.map((_, diaIndex) => {
+                  const key = `${diaIndex}-${block.start}`
+                  const eventos = eventosPorDiaYHora[key] || []
+                  const dayDate = currentWeek.add(diaIndex, 'day')
+                  const isToday = dayDate.isSame(dayjs(), 'day')
+
+                  return (
+                    <TableCell
+                      key={key}
+                      sx={{
+                        p: 0.3,
+                        borderRight: diaIndex < 6 ? '1px solid #e0e0e0' : 'none',
+                        verticalAlign: 'top',
+                        height: 65, // Aumentado para acomodar más información
+                        backgroundColor: eventos.length > 0
+                          ? (isToday ? '#e8f4fd' : '#fafafa')
+                          : (isToday ? '#f3f8fe' : 'white')
+                      }}
+                    >
                       {eventos.map(evento => (
                         <Card
                           key={evento.id}
@@ -633,9 +625,9 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                         >
                           <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
                             {/* Hora */}
-                            <Typography 
-                              variant="caption" 
-                              sx={{ 
+                            <Typography
+                              variant="caption"
+                              sx={{
                                 fontWeight: 'bold',
                                 display: 'block',
                                 fontSize: '0.7rem',
@@ -645,11 +637,11 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                             >
                               {evento.horaInicio} - {evento.horaFin}
                             </Typography>
-                            
+
                             {/* Nombre del curso/descripción */}
-                            <Typography 
-                              variant="caption" 
-                              sx={{ 
+                            <Typography
+                              variant="caption"
+                              sx={{
                                 fontWeight: 600,
                                 display: 'block',
                                 fontSize: '0.65rem',
@@ -660,11 +652,11 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                             >
                               {evento.descripcion}
                             </Typography>
-                            
+
                             {/* Docente */}
-                            <Typography 
-                              variant="caption" 
-                              sx={{ 
+                            <Typography
+                              variant="caption"
+                              sx={{
                                 display: 'block',
                                 fontSize: '0.6rem',
                                 opacity: 0.9,
@@ -673,11 +665,11 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                             >
                               {evento.docente}
                             </Typography>
-                            
+
                             {/* Grupo y Laboratorio en la misma línea */}
-                            <Typography 
-                              variant="caption" 
-                              sx={{ 
+                            <Typography
+                              variant="caption"
+                              sx={{
                                 display: 'block',
                                 fontSize: '0.6rem',
                                 opacity: 0.85,
@@ -707,18 +699,18 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             {Array.from(new Set(horariosSemana.map(h => h.color || getColorByTipo(h.descripcion))))
               .map((color) => {
-                const horariosConEsteColor = horariosSemana.filter(h => 
+                const horariosConEsteColor = horariosSemana.filter(h =>
                   (h.color || getColorByTipo(h.descripcion)) === color
                 )
                 const primerHorario = horariosConEsteColor[0]
                 const descripcionTipo = primerHorario?.descripcion?.split(' ')[0] || 'Actividad'
-                
+
                 return (
-                  <Chip 
+                  <Chip
                     key={color}
                     label={`${descripcionTipo} (${horariosConEsteColor.length})`}
-                    size="small" 
-                    sx={{ backgroundColor: color, color: 'white' }} 
+                    size="small"
+                    sx={{ backgroundColor: color, color: 'white' }}
                   />
                 )
               })
@@ -728,8 +720,8 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
       )}
 
       {/* Dialog para detalles del evento */}
-      <Dialog 
-        open={dialogOpen} 
+      <Dialog
+        open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         maxWidth="sm"
         fullWidth
@@ -791,7 +783,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                     {selectedEvent.laboratorio}
                   </Typography>
                 </Box>
-                
+
                 <Box>
                   <Typography variant="body2" color="text.secondary">
                     Docente
@@ -800,7 +792,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                     {selectedEvent.docente}
                   </Typography>
                 </Box>
-                
+
                 <Box>
                   <Typography variant="body2" color="text.secondary">
                     Grupo
@@ -809,7 +801,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                     {selectedEvent.grupo}
                   </Typography>
                 </Box>
-                
+
                 <Box>
                   <Typography variant="body2" color="text.secondary">
                     Descripción
@@ -818,9 +810,9 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                     {selectedEvent.descripcion}
                   </Typography>
                 </Box>
-                
+
                 <Divider />
-                
+
                 <Box>
                   <Typography variant="body2" color="text.secondary">
                     Horario
@@ -829,7 +821,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                     {dayjs(selectedEvent.fecha_inicio).format('DD/MM/YYYY HH:mm')} - {dayjs(selectedEvent.fecha_fin).format('HH:mm')}
                   </Typography>
                 </Box>
-                
+
                 {selectedEvent.cantidad_alumnos && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">

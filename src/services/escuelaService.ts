@@ -1,5 +1,5 @@
 import { api } from './api'
-import type { ApiResponse, ApiMessageResponse, ApiCreateUpdateResponse } from './types'
+import type { ApiMessageResponse, ApiCreateUpdateResponse, ApiDataResponse } from './types'
 
 export interface Escuela {
   id: number
@@ -12,13 +12,13 @@ export interface CreateEscuelaData {
 
 export const escuelaService = {
   // Obtener todas las escuelas
-  getAll: async (): Promise<ApiResponse<Escuela[]>> => {
+  getAll: async (): Promise<ApiDataResponse<Escuela[]>> => {
     const response = await api.get('/escuelas')
     return response.data
   },
 
   // Obtener una escuela por ID
-  getById: async (id: number): Promise<ApiResponse<Escuela>> => {
+  getById: async (id: number): Promise<ApiDataResponse<Escuela>> => {
     const response = await api.get(`/escuelas/${id}`)
     return response.data
   },

@@ -32,8 +32,10 @@ import { UsuarioForm } from '../components/Configuracion/Usuarios/UsuarioForm'
 import { tipoEquipoService, type TipoEquipo } from '../services/tipoEquipoService'
 import { escuelaService, type Escuela } from '../services/escuelaService'
 import { docenteService, type Docente } from '../services/docenteService'
-import { insumoService, type Insumo2 } from '../services/insumoService'
+import { insumoService, type Insumo } from '../services/insumoService'
 import { laboratorioService, type Laboratorio } from '../services/laboratorioService'
+import { usuarioService, type Usuario } from '../services/usuarioService'
+import { useApi } from '../hooks/useApi'
 
 
 
@@ -57,6 +59,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => {
 }
 
 export const Configuracion: React.FC = () => {
+  const { execute } = useApi()
   const [tabValue, setTabValue] = useState(0)
 
   // Estado para Tipos de Equipo
@@ -76,12 +79,12 @@ export const Configuracion: React.FC = () => {
   const [docenteToDelete, setDocenteToDelete] = useState<Docente | null>(null)
 
   // Estado para Catálogo de Insumos
-  const [insumos, setInsumos] = useState<Insumo2[]>([])
+  const [insumos, setInsumos] = useState<Insumo[]>([])
   const [loadingInsumos, setLoadingInsumos] = useState(false)
   const [insumoFormOpen, setInsumoFormOpen] = useState(false)
-  const [editingInsumo, setEditingInsumo] = useState<Insumo2 | null>(null)
+  const [editingInsumo, setEditingInsumo] = useState<Insumo | null>(null)
   const [insumoDeleteDialogOpen, setInsumoDeleteDialogOpen] = useState(false)
-  const [insumoToDelete, setInsumoToDelete] = useState<Insumo2 | null>(null)
+  const [insumoToDelete, setInsumoToDelete] = useState<Insumo | null>(null)
 
   //Importación masiva
   const [importacionMasivaOpen, setImportacionMasivaOpen] = useState(false)
@@ -104,10 +107,12 @@ export const Configuracion: React.FC = () => {
   const [escuelaToDelete, setEscuelaToDelete] = useState<Escuela | null>(null)
 
   // Estado para Usuarios
+  const [usuarios, setUsuarios] = useState<Usuario[]>([])
+  const [loadingUsuarios, setLoadingUsuarios] = useState(false)
   const [usuarioFormOpen, setUsuarioFormOpen] = useState(false)
-  const [editingUsuario, setEditingUsuario] = useState<any | null>(null)
+  const [editingUsuario, setEditingUsuario] = useState<Usuario | null>(null)
   const [usuarioDeleteDialogOpen, setUsuarioDeleteDialogOpen] = useState(false)
-  const [usuarioToDelete, setUsuarioToDelete] = useState<any | null>(null)
+  const [usuarioToDelete, setUsuarioToDelete] = useState<Usuario | null>(null)
 
   // Snackbar
   const [snackbar, setSnackbar] = useState({
@@ -119,91 +124,105 @@ export const Configuracion: React.FC = () => {
   // Cargar tipos de equipo
   const loadTiposEquipo = async () => {
     setLoadingTipos(true)
-    const response = await tipoEquipoService.getAllWithCountEquipos()
+    const result = await execute(() => tipoEquipoService.getAllWithCountEquipos())
 
-    if (response.success && response.data) {
-      setTiposEquipo(response.data)
-    } else {
+    if (result.error) {
       setSnackbar({
         open: true,
-        message: response.message || 'Error al cargar tipos de equipo',
+        message: result.error,
         severity: 'error'
       })
+    } else if (result.data) {
+      setTiposEquipo(result.data.data)
     }
-    
+
     setLoadingTipos(false)
   }
 
   // Cargar catálogo de insumos
   const loadCatalogoInsumos = async () => {
     setLoadingInsumos(true)
-    const response = await insumoService.getAllInsumos()
-    
-    if (response.success && response.data) {
-      setInsumos(response.data)
-    } else {
+    const result = await execute(() => insumoService.getAllInsumos())
+
+    if (result.error) {
       setSnackbar({
         open: true,
-        message: response.message || 'Error al cargar catálogo de insumos',
+        message: result.error,
         severity: 'error'
       })
+    } else if (result.data) {
+      setInsumos(result.data.data)
     }
-    
+
     setLoadingInsumos(false)
   }
 
   // Cargar docentes
   const loadDocentes = async () => {
     setLoadingDocentes(true)
-    const response = await docenteService.getAll()
-    
-    if (response.success && response.data) {
-      setDocentes(response.data)
-    } else {
+    const result = await execute(() => docenteService.getAll())
+    if (result.error) {
       setSnackbar({
         open: true,
-        message: response.message || 'Error al cargar docentes',
+        message: result.error,
         severity: 'error'
       })
+    } else if (result.data) {
+      setDocentes(result.data.data)
     }
-    
     setLoadingDocentes(false)
   }
 
   // Cargar laboratorios
   const loadLaboratorios = async () => {
     setLoadingLaboratorios(true)
-    const response = await laboratorioService.getAll()
-    
-    if (response.success && response.data) {
-      setLaboratorios(response.data)
-    } else {
+    const result = await execute(() => laboratorioService.getAll())
+
+    if (result.error) {
       setSnackbar({
         open: true,
-        message: response.message || 'Error al cargar laboratorios',
+        message: result.error,
         severity: 'error'
       })
+    } else if (result.data) {
+      setLaboratorios(result.data.data)
     }
-    
     setLoadingLaboratorios(false)
   }
 
   // Cargar escuelas
   const loadEscuelas = async () => {
     setLoadingEscuelas(true)
-    const response = await escuelaService.getAll()
-    
-    if (response.success && response.data) {
-      setEscuelas(response.data)
-    } else {
+    const result = await execute(() => escuelaService.getAll())
+
+    if (result.error) {
       setSnackbar({
         open: true,
-        message: response.message || 'Error al cargar escuelas',
+        message: result.error,
         severity: 'error'
       })
+    } else if (result.data) {
+      setEscuelas(result.data.data)
     }
-    
     setLoadingEscuelas(false)
+  }
+
+  // Cargar usuarios
+  const loadUsuarios = async () => {
+    setLoadingUsuarios(true)
+    const result = await execute(() => usuarioService.getAll())
+
+    if (result.error) {
+      setSnackbar({
+        open: true,
+        message: result.error,
+        severity: 'error'
+      })
+    } else if (result.data) {
+      setUsuarios(result.data.data)
+    }
+
+    setLoadingUsuarios(false)
   }
 
   // Cargar datos al montar o cambiar de tab
@@ -218,6 +237,8 @@ export const Configuracion: React.FC = () => {
       loadLaboratorios()
     } else if (tabValue === 4) {
       loadEscuelas()
+    } else if (tabValue === 5) {
+      loadUsuarios()
     }
   }, [tabValue])
 
@@ -254,23 +275,23 @@ export const Configuracion: React.FC = () => {
   const handleDeleteConfirm = async () => {
     if (!tipoToDelete) return
 
-    const result = await tipoEquipoService.delete(tipoToDelete.id)
-    
-    if (result.success) {
+    const result = await execute(() => tipoEquipoService.delete(tipoToDelete.id))
+
+    if (result.error) {
       setSnackbar({
         open: true,
-        message: result.message || 'Tipo eliminado exitosamente',
+        message: result.error,
+        severity: 'error'
+      })
+    } else if (result.data) {
+      setSnackbar({
+        open: true,
+        message: result.data.message || 'Tipo eliminado exitosamente',
         severity: 'success'
       })
       loadTiposEquipo()
-    } else {
-      setSnackbar({
-        open: true,
-        message: result.message || 'Error al eliminar tipo de equipo',
-        severity: 'error'
-      })
     }
-    
+
     setDeleteDialogOpen(false)
     setTipoToDelete(null)
   }
@@ -308,23 +329,23 @@ export const Configuracion: React.FC = () => {
   const handleDeleteDocenteConfirm = async () => {
     if (!docenteToDelete) return
 
-    const result = await docenteService.delete(docenteToDelete.id)
-    
-    if (result.success) {
+    const result = await execute(() => docenteService.delete(docenteToDelete.id))
+
+    if (result.error) {
       setSnackbar({
         open: true,
-        message: result.message || 'Docente eliminado exitosamente',
+        message: result.error,
+        severity: 'error'
+      })
+    } else if (result.data) {
+      setSnackbar({
+        open: true,
+        message: result.data.message || 'Docente eliminado exitosamente',
         severity: 'success'
       })
       loadDocentes()
-    } else {
-      setSnackbar({
-        open: true,
-        message: result.message || 'Error al eliminar docente',
-        severity: 'error'
-      })
     }
-    
+
     setDocenteDeleteDialogOpen(false)
     setDocenteToDelete(null)
   }
@@ -334,7 +355,7 @@ export const Configuracion: React.FC = () => {
     setInsumoFormOpen(true)
   }
 
-  const handleEditInsumo = (insumo: Insumo2) => {
+  const handleEditInsumo = (insumo: Insumo) => {
     setEditingInsumo(insumo)
     setInsumoFormOpen(true)
   }
@@ -353,7 +374,7 @@ export const Configuracion: React.FC = () => {
     })
   }
 
-  const handleDeleteInsumoClick = (insumo: Insumo2) => {
+  const handleDeleteInsumoClick = (insumo: Insumo) => {
     setInsumoToDelete(insumo)
     setInsumoDeleteDialogOpen(true)
   }
@@ -361,23 +382,23 @@ export const Configuracion: React.FC = () => {
   const handleDeleteInsumoConfirm = async () => {
     if (!insumoToDelete) return
 
-    const result = await insumoService.delete(insumoToDelete.id)
-    
-    if (result.success) {
+    const result = await execute(() => insumoService.delete(insumoToDelete.id))
+
+    if (result.error) {
       setSnackbar({
         open: true,
-        message: result.message || 'Insumo eliminado exitosamente',
+        message: result.error,
+        severity: 'error'
+      })
+    } else if (result.data) {
+      setSnackbar({
+        open: true,
+        message: result.data.message || 'Insumo eliminado exitosamente',
         severity: 'success'
       })
       loadCatalogoInsumos()
-    } else {
-      setSnackbar({
-        open: true,
-        message: result.message || 'Error al eliminar insumo',
-        severity: 'error'
-      })
     }
-    
+
     setInsumoDeleteDialogOpen(false)
     setInsumoToDelete(null)
   }
@@ -413,63 +434,45 @@ export const Configuracion: React.FC = () => {
   }
 
   const handleChangeLaboratorioStatus = async (laboratorio: Laboratorio, estado: 'Activo' | 'En Mantenimiento' | 'Inhabilitado' | 'Baja') => {
-    try {
-      const result = await laboratorioService.changeStatus(laboratorio.id, estado)
+    const result = await execute(() => laboratorioService.changeStatus(laboratorio.id, estado))
 
-      if (result.success) {
-        loadLaboratorios()
-        setSnackbar({
-          open: true,
-          message: `Estado cambiado a "${estado}" correctamente`,
-          severity: 'success'
-        })
-      } else {
-        setSnackbar({
-          open: true,
-          message: result.message || 'Error al cambiar el estado',
-          severity: 'error'
-        })
-      }
-    } catch (error: any) {
+    if (result.error) {
       setSnackbar({
         open: true,
-        message: error.response?.data?.message || 'Error de conexión al cambiar el estado',
+        message: result.error,
         severity: 'error'
       })
+    } else if (result.data) {
+      setSnackbar({
+        open: true,
+        message: result.data.message || `Estado cambiado a "${estado}" correctamente`,
+        severity: 'success'
+      })
+      loadLaboratorios()
     }
   }
 
   const handleDeleteLaboratorioConfirm = async () => {
     if (!laboratorioToDelete) return
 
-    try {
-      const result = await laboratorioService.delete(laboratorioToDelete.id)
+    const result = await execute(() => laboratorioService.delete(laboratorioToDelete.id))
 
-      if (result.success) {
-        setSnackbar({
-          open: true,
-          message: 'Laboratorio eliminado exitosamente',
-          severity: 'success'
-        })
-        loadLaboratorios()
-      } else {
-        setSnackbar({
-          open: true,
-          message: result.message || 'Error al eliminar el laboratorio',
-          severity: 'error'
-        })
-      }
-    } catch (error: any) {
-      console.error('Error al eliminar laboratorio:', error)
+    if (result.error) {
       setSnackbar({
         open: true,
-        message: error.response?.data?.message || 'Error al eliminar laboratorio',
+        message: result.error,
         severity: 'error'
       })
-    } finally {
-      setLaboratorioDeleteDialogOpen(false)
-      setLaboratorioToDelete(null)
+    } else if (result.data) {
+      setSnackbar({
+        open: true,
+        message: result.data.message || 'Laboratorio eliminado exitosamente',
+        severity: 'success'
+      })
+      loadLaboratorios()
     }
+    setLaboratorioDeleteDialogOpen(false)
+    setLaboratorioToDelete(null)
   }
 
   // Handlers para Escuelas
@@ -505,34 +508,24 @@ export const Configuracion: React.FC = () => {
   const handleDeleteEscuelaConfirm = async () => {
     if (!escuelaToDelete) return
 
-    try {
-      const result = await escuelaService.delete(escuelaToDelete.id)
+    const result = await execute(() => escuelaService.delete(escuelaToDelete.id))
 
-      if (result.success) {
-        setSnackbar({
-          open: true,
-          message: 'Escuela eliminada exitosamente',
-          severity: 'success'
-        })
-        loadEscuelas()
-      } else {
-        setSnackbar({
-          open: true,
-          message: result.message || 'Error al eliminar la escuela',
-          severity: 'error'
-        })
-      }
-    } catch (error: any) {
-      console.error('Error al eliminar escuela:', error)
+    if (result.error) {
       setSnackbar({
         open: true,
-        message: error.response?.data?.message || 'Error al eliminar escuela',
+        message: result.error,
         severity: 'error'
       })
-    } finally {
-      setEscuelaDeleteDialogOpen(false)
-      setEscuelaToDelete(null)
+    } else if (result.data) {
+      setSnackbar({
+        open: true,
+        message: result.data.message || 'Escuela eliminada exitosamente',
+        severity: 'success'
+      })
+      loadEscuelas()
     }
+    setEscuelaDeleteDialogOpen(false)
+    setEscuelaToDelete(null)
   }
 
   // Handlers para Usuarios
@@ -541,7 +534,7 @@ export const Configuracion: React.FC = () => {
     setUsuarioFormOpen(true)
   }
 
-  const handleEditUsuario = (usuario: any) => {
+  const handleEditUsuario = (usuario: Usuario) => {
     setEditingUsuario(usuario)
     setUsuarioFormOpen(true)
   }
@@ -551,15 +544,16 @@ export const Configuracion: React.FC = () => {
     setEditingUsuario(null)
   }
 
-  const handleUsuarioFormSuccess = () => {
+  const handleUsuarioFormSuccess = (message?: string) => {
+    loadUsuarios()
     setSnackbar({
       open: true,
-      message: editingUsuario ? 'Usuario actualizado exitosamente' : 'Usuario creado exitosamente',
+      message: message || (editingUsuario ? 'Usuario actualizado exitosamente' : 'Usuario creado exitosamente'),
       severity: 'success'
     })
   }
 
-  const handleDeleteUsuarioClick = (usuario: any) => {
+  const handleDeleteUsuarioClick = (usuario: Usuario) => {
     setUsuarioToDelete(usuario)
     setUsuarioDeleteDialogOpen(true)
   }
@@ -567,26 +561,44 @@ export const Configuracion: React.FC = () => {
   const handleDeleteUsuarioConfirm = async () => {
     if (!usuarioToDelete) return
 
-    try {
-      // TODO: Implementar llamada a API
-      // await usuarioService.delete(usuarioToDelete.id)
-      console.log('Eliminar usuario:', usuarioToDelete)
-      
+    const result = await execute(() => usuarioService.delete(usuarioToDelete.id))
+
+    if (result.error) {
       setSnackbar({
         open: true,
-        message: 'Usuario eliminado exitosamente',
-        severity: 'success'
-      })
-    } catch (error: any) {
-      console.error('Error al eliminar usuario:', error)
-      setSnackbar({
-        open: true,
-        message: error.response?.data?.message || 'Error al eliminar usuario',
+        message: result.error,
         severity: 'error'
       })
-    } finally {
-      setUsuarioDeleteDialogOpen(false)
-      setUsuarioToDelete(null)
+    } else if (result.data) {
+      setSnackbar({
+        open: true,
+        message: result.data.message || 'Usuario eliminado exitosamente',
+        severity: 'success'
+      })
+      loadUsuarios()
+    }
+
+    setUsuarioDeleteDialogOpen(false)
+    setUsuarioToDelete(null)
+  }
+
+  const handleToggleUsuarioEstado = async (usuario: Usuario) => {
+    const nuevoEstado = usuario.estado === 'activo' ? 'inactivo' : 'activo'
+    const result = await execute(() => usuarioService.updateEstado(usuario.id, nuevoEstado))
+
+    if (result.error) {
+      setSnackbar({
+        open: true,
+        message: result.error,
+        severity: 'error'
+      })
+    } else if (result.data) {
+      setSnackbar({
+        open: true,
+        message: result.data.message || `Usuario ${nuevoEstado === 'activo' ? 'activado' : 'desactivado'} exitosamente`,
+        severity: 'success'
+      })
+      loadUsuarios()
     }
   }
 
@@ -910,10 +922,18 @@ export const Configuracion: React.FC = () => {
             </Box>
 
             {/* Tabla */}
-            <UsuariosTable
-              onEdit={handleEditUsuario}
-              onDelete={handleDeleteUsuarioClick}
-            />
+            {loadingUsuarios ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <UsuariosTable
+                usuarios={usuarios}
+                onEdit={handleEditUsuario}
+                onDelete={handleDeleteUsuarioClick}
+                onToggleEstado={handleToggleUsuarioEstado}
+              />
+            )}
           </Box>
         </TabPanel>
       </Paper>
@@ -1123,7 +1143,7 @@ export const Configuracion: React.FC = () => {
         <DialogTitle>Confirmar Eliminación</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            ¿Está seguro que desea eliminar al usuario "{usuarioToDelete?.nombre}"?
+            ¿Está seguro que desea eliminar al usuario "{usuarioToDelete?.nombre_completo}"?
             <Alert severity="warning" sx={{ mt: 2 }}>
               Esta acción no se puede deshacer. El usuario perderá acceso al sistema permanentemente.
             </Alert>

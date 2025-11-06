@@ -33,20 +33,23 @@ import { useAuth } from '../context/authContext'
 import { dashboardService } from '../services/dashboardService'
 import { CalendarView } from '../components/Dashboard/CalendarView'
 import type { DashboardStats } from '../services/dashboardService'
+import { useApi } from '../hooks/useApi'
 
 // ============================================
 // LAZY LOADING - Modal de Horario
 // ============================================
 // Se carga solo cuando el usuario hace clic en "Nuevo Horario"
 // Esto evita cargar insumoService y laboratorioService al entrar al dashboard
-const HorarioFormSimple = lazy(() => 
-  import('../components/Horarios/HorarioFormSimple').then(m => ({ 
-    default: m.HorarioFormSimple 
+const HorarioFormSimple = lazy(() =>
+  import('../components/Horarios/HorarioFormSimple').then(m => ({
+    default: m.HorarioFormSimple
   }))
 )
 
 export const Dashboard: React.FC = () => {
+
   const { user } = useAuth()
+  const { execute } = useApi()
   const navigate = useNavigate()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -58,24 +61,20 @@ export const Dashboard: React.FC = () => {
   })
 
   const fetchStats = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const result = await dashboardService.getStats()
-      
-      if (result.success && result.data) {
-        setStats(result.data)
-      } else {
-        setError(result.message || 'Error al cargar estadísticas')
-      }
-    } catch (err: any) {
-      console.error('Error fetching dashboard stats:', err)
-      setError('Error de conexión. Intenta nuevamente.')
-    } finally {
-      setLoading(false)
+    setLoading(true)
+    setError(null)
+
+    const result = await execute(() => dashboardService.getStats())
+
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      setStats(result.data.data)
     }
+    setLoading(false)
   }
+
+
 
   const handleNewHorario = () => {
     setHorarioFormOpen(true)
@@ -97,12 +96,12 @@ export const Dashboard: React.FC = () => {
       horarioId,
       timestamp: Date.now()
     }))
-    
+
     setNavigationSnackbar({
       open: true,
       message: 'Navegando al calendario semanal...'
     })
-    
+
     // Navegar a la página de horarios
     setTimeout(() => {
       navigate('/horarios')
@@ -128,15 +127,15 @@ export const Dashboard: React.FC = () => {
   if (error) {
     return (
       <Box>
-        <Alert 
-          severity="error" 
+        <Alert
+          severity="error"
           sx={{ mb: 2 }}
           action={
-            <Button 
-              size="small" 
-              color="error" 
-              variant="outlined" 
-              startIcon={<Refresh />} 
+            <Button
+              size="small"
+              color="error"
+              variant="outlined"
+              startIcon={<Refresh />}
               onClick={fetchStats}
             >
               Reintentar
@@ -177,10 +176,10 @@ export const Dashboard: React.FC = () => {
       </Box>
 
       {/* Estadísticas principales - Versión compacta */}
-      <Box sx={{ 
-        display: 'flex', 
-        gap: 2, 
-        mb: 3, 
+      <Box sx={{
+        display: 'flex',
+        gap: 2,
+        mb: 3,
         flexWrap: 'wrap',
         justifyContent: 'center'
       }}>
@@ -216,8 +215,8 @@ export const Dashboard: React.FC = () => {
 
       {/* Calendario de Horarios */}
       <Box sx={{ mb: 4 }}>
-        <CalendarView 
-          onRefresh={fetchStats} 
+        <CalendarView
+          onRefresh={fetchStats}
           onNewHorario={handleNewHorario}
           onNavigateToLab={handleNavigateToLab}
         />
@@ -233,24 +232,24 @@ export const Dashboard: React.FC = () => {
               Actividad de Horarios
             </Typography>
             <Divider sx={{ mb: 2 }} />
-            
+
             <List dense>
               <ListItem sx={{ px: 0 }}>
                 <ListItemIcon>
                   <Today color="success" />
                 </ListItemIcon>
-                <ListItemText 
-                  primary="Hoy" 
+                <ListItemText
+                  primary="Hoy"
                   secondary={`${stats.horarios.hoy} reservas programadas`}
                 />
               </ListItem>
-              
+
               <ListItem sx={{ px: 0 }}>
                 <ListItemIcon>
                   <DateRange color="info" />
                 </ListItemIcon>
-                <ListItemText 
-                  primary="Esta semana" 
+                <ListItemText
+                  primary="Esta semana"
                   secondary={`${stats.horarios.estaSemana} reservas en total`}
                 />
               </ListItem>
@@ -262,7 +261,7 @@ export const Dashboard: React.FC = () => {
                   Laboratorios más activos:
                 </Typography>
                 {stats.horarios.porLaboratorio.slice(0, 3).map((lab, index) => (
-                  <Chip 
+                  <Chip
                     key={index}
                     label={`${lab.laboratorio}: ${lab.cantidad}`}
                     size="small"
@@ -283,7 +282,7 @@ export const Dashboard: React.FC = () => {
               Docentes por Escuela
             </Typography>
             <Divider sx={{ mb: 2 }} />
-            
+
             {stats.docentes.porEscuela.length > 0 ? (
               <List dense>
                 {stats.docentes.porEscuela.slice(0, 5).map((escuela, index) => (
@@ -291,8 +290,8 @@ export const Dashboard: React.FC = () => {
                     <ListItemIcon>
                       <CheckCircle color="success" />
                     </ListItemIcon>
-                    <ListItemText 
-                      primary={escuela.escuela} 
+                    <ListItemText
+                      primary={escuela.escuela}
                       secondary={`${escuela.cantidad} docentes`}
                     />
                   </ListItem>

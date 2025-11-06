@@ -35,9 +35,9 @@ import {
   Delete,
   Refresh
 } from '@mui/icons-material'
-import { insumoService, type DatoValidado } from '../../services/insumoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
 import dayjs from 'dayjs'
+import { inventarioService, type DatoValidado } from '../../services/inventarioService'
 
 interface CargaMasivaModalProps {
   open: boolean
@@ -119,7 +119,7 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
       setLoading(true)
       setError(null)
 
-      const response = await insumoService.descargarPlantillaExcel()
+      const response = await inventarioService.descargarPlantillaExcel()
 
       // Crear un blob y descargarlo
       const blob = new Blob([response.data], {
@@ -164,7 +164,7 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
       const formData = new FormData()
       formData.append('archivo_excel', archivo)
 
-      const response = await insumoService.procesarArchivoExcel(formData,
+      const response = await inventarioService.procesarArchivoExcel(formData,
         laboratorioId
       )
       setResultado(response.data)
@@ -186,7 +186,7 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
       setProcesando(true)
       setError(null)
 
-      await insumoService.ejecutarReabastecimientoMasivo({
+      await inventarioService.ejecutarReabastecimientoMasivo({
         //conversión
         datos_reabastecimiento: resultado.datos_validados.map(d => ({
           insumo_id: d.insumo_id,

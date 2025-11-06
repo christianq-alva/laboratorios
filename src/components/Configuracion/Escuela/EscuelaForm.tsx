@@ -14,22 +14,24 @@ import {
 } from '@mui/material'
 import { Close } from '@mui/icons-material'
 import { escuelaService, type Escuela, type CreateEscuelaData } from '../../../services/escuelaService'
+import { useApi } from '../../../hooks/useApi'
 
 interface EscuelaFormProps {
   open: boolean
   onClose: () => void
-  onSuccess: () => void
+  onSuccess: (message?: string) => void
   escuela?: Escuela | null
 }
 
 export const EscuelaForm: React.FC<EscuelaFormProps> = ({ open, onClose, onSuccess, escuela }) => {
+  const { execute } = useApi()
   const [formData, setFormData] = useState<CreateEscuelaData>({
     nombre: ''
   })
-  
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   const isEditing = Boolean(escuela)
 
   // Cargar datos cuando se abre el modal
@@ -59,30 +61,25 @@ export const EscuelaForm: React.FC<EscuelaFormProps> = ({ open, onClose, onSucce
     setLoading(true)
     setError(null)
 
-    try {
-      // Validaciones
-      if (!formData.nombre?.trim()) {
-        throw new Error('El nombre es requerido')
-      }
-
-      let result
-      if (isEditing && escuela) {
-        result = await escuelaService.update(escuela.id, formData)
-      } else {
-        result = await escuelaService.create(formData)
-      }
-
-      if (result.success) {
-        onSuccess()
-        onClose()
-      } else {
-        setError(result.message || 'Error al guardar la escuela')
-      }
-    } catch (err: any) {
-      setError(err.message || 'Error de conexión')
-    } finally {
-      setLoading(false)
+    // Validaciones
+    if (!formData.nombre?.trim()) {
+      throw new Error('El nombre es requerido')
     }
+
+    let result
+    if (isEditing && escuela) {
+      result = await execute(() => escuelaService.update(escuela.id, formData))
+    } else {
+      result = await execute(() => escuelaService.create(formData))
+    }
+
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      onSuccess(result.data.message)
+      onClose()
+    }
+    setLoading(false)
   }
 
   const handleClose = () => {

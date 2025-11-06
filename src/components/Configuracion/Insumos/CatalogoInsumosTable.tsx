@@ -16,12 +16,12 @@ import {
   TextField
 } from '@mui/material'
 import { Edit, Delete, LibraryBooks, Search, Clear } from '@mui/icons-material'
-import type { Insumo2 } from '../../../services/insumoService'
+import type { Insumo } from '../../../services/insumoService'
 
 interface CatalogoInsumosTableProps {
-  insumos: Insumo2[]
-  onEdit: (insumo: Insumo2) => void
-  onDelete: (insumo: Insumo2) => void
+  insumos: Insumo[]
+  onEdit: (insumo: Insumo) => void
+  onDelete: (insumo: Insumo) => void
 }
 
 export const CatalogoInsumosTable: React.FC<CatalogoInsumosTableProps> = ({

@@ -20,15 +20,17 @@ import { Close } from '@mui/icons-material'
 import { laboratorioService } from '../../../services/laboratorioService'
 import type { Laboratorio, CreateLaboratorioData, Escuela } from '../../../services/laboratorioService'
 import { escuelaService } from '../../../services/escuelaService'
+import { useApi } from '../../../hooks/useApi'
 
 interface LaboratorioFormProps {
   open: boolean
   onClose: () => void
-  onSuccess: () => void
+  onSuccess: (message?: string) => void
   laboratorio?: Laboratorio | null
 }
 
 export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose, onSuccess, laboratorio }) => {
+  const { execute } = useApi()
   // Estado del formulario incluyendo código, piso y estado
   const [formData, setFormData] = useState<CreateLaboratorioData>({
     codigo: '',
@@ -38,32 +40,31 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
     piso: '',
     estado: 'Activo'
   })
-  
+
   const [escuelas, setEscuelas] = useState<Escuela[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingEscuelas, setLoadingEscuelas] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   const isEditing = Boolean(laboratorio)
 
   // Función para obtener escuelas
   const fetchEscuelas = async () => {
-    try {
-      setLoadingEscuelas(true)
-      const result = await escuelaService.getAll()
-      setEscuelas(result.data || [])
-    } catch (err) {
-      console.error('Error al cargar escuelas:', err)
-    } finally {
-      setLoadingEscuelas(false)
+    setLoadingEscuelas(true)
+    const result = await execute(() => escuelaService.getAll())
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      setEscuelas(result.data.data)
     }
+    setLoadingEscuelas(false)
   }
 
   // Effect para cargar datos cuando se abre el modal
   useEffect(() => {
     if (open) {
       fetchEscuelas()
-      
+
       if (laboratorio) {
         // Modo edición - cargar datos del laboratorio incluyendo código, piso y estado
         setFormData({
@@ -85,7 +86,7 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
           estado: 'Activo'
         })
       }
-      
+
       setError(null)
     }
   }, [laboratorio, open])
@@ -93,11 +94,11 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
   // Manejar cambios en campos de texto
   const handleChange = (field: keyof CreateLaboratorioData) => (event: React.ChangeEvent<HTMLInputElement>) => {
     let value: string | number = event.target.value
-    
+
     if (field === 'escuela_id') {
       value = parseInt(value) || 0
     }
-    
+
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
@@ -112,42 +113,37 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
     setLoading(true)
     setError(null)
 
-    try {
-      // Validaciones
-      if (!formData.codigo?.trim()) {
-        throw new Error('El código es requerido')
-      }
-      if (!formData.nombre?.trim()) {
-        throw new Error('El nombre es requerido')
-      }
-      if (!formData.ubicacion?.trim()) {
-        throw new Error('La ubicación es requerida')
-      }
-      if (!formData.piso?.toString().trim()) {
-        throw new Error('El piso es requerido')
-      }
-      if (formData.escuela_id <= 0) {
-        throw new Error('Debe seleccionar una escuela')
-      }
-
-      let result
-      if (isEditing && laboratorio) {
-        result = await laboratorioService.update(laboratorio.id, formData)
-      } else {
-        result = await laboratorioService.create(formData)
-      }
-
-      if (result.success) {
-        onSuccess()
-        onClose()
-      } else {
-        setError(result.message || 'Error al guardar el laboratorio')
-      }
-    } catch (err: any) {
-      setError(err.message || 'Error de conexión')
-    } finally {
-      setLoading(false)
+    // Validaciones
+    if (!formData.codigo?.trim()) {
+      throw new Error('El código es requerido')
     }
+    if (!formData.nombre?.trim()) {
+      throw new Error('El nombre es requerido')
+    }
+    if (!formData.ubicacion?.trim()) {
+      throw new Error('La ubicación es requerida')
+    }
+    if (!formData.piso?.toString().trim()) {
+      throw new Error('El piso es requerido')
+    }
+    if (formData.escuela_id <= 0) {
+      throw new Error('Debe seleccionar una escuela')
+    }
+
+    let result
+    if (isEditing && laboratorio) {
+      result = await execute(() => laboratorioService.update(laboratorio.id, formData))
+    } else {
+      result = await execute(() => laboratorioService.create(formData))
+    }
+
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      onSuccess(result.data.message)
+      onClose()
+    }
+    setLoading(false)
   }
 
   const handleClose = () => {

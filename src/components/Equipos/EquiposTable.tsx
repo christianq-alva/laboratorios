@@ -23,6 +23,7 @@ import {
 import { Edit, Delete, Build, Info, Search, Clear } from '@mui/icons-material'
 import { equipoService, type Equipo } from '../../services/equipoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
+import { useApi } from '../../hooks/useApi'
 
 interface EquiposTableProps {
   onEdit?: (equipo: Equipo) => void
@@ -37,6 +38,7 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
   refresh,
   onRefreshComplete,
 }) => {
+  const { execute } = useApi()
   const [equipos, setEquipos] = useState<Equipo[]>([])
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
   const [selectedLaboratorio, setSelectedLaboratorio] = useState<number | 'all'>('all')
@@ -50,28 +52,28 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
     setError(null)
 
     // Cargar laboratorios para el filtro
-    const laboratoriosResponse = await laboratorioService.getAll()
-    if (laboratoriosResponse.success) {
-      setLaboratorios(laboratoriosResponse.data)
-    } else {
-      setError(laboratoriosResponse.message || 'Error al cargar laboratorios')
+    const laboratoriosResponse = await execute(() => laboratorioService.getAll())
+    if (laboratoriosResponse.error) {
+      setError(laboratoriosResponse.error)
+    } else if (laboratoriosResponse.data) {
+      setLaboratorios(laboratoriosResponse.data.data)
     }
 
     // Cargar equipos
     let equiposResponse
     if (selectedLaboratorio === 'all') {
-      equiposResponse = await equipoService.getAll()  
+      equiposResponse = await execute(() => equipoService.getAll())
     } else {
-      equiposResponse = await equipoService.getByLaboratorio(selectedLaboratorio as number)
+      equiposResponse = await execute(() => equipoService.getByLaboratorio(selectedLaboratorio as number))
     }
-    if (equiposResponse.success) {
-      setEquipos(equiposResponse.data)
-    } else {
-      setError(equiposResponse.message || 'Error al cargar equipos')
+    if (equiposResponse.error) {
+      setError(equiposResponse.error)
+    } else if (equiposResponse.data) {
+      setEquipos(equiposResponse.data.data)
     }
 
-    onRefreshComplete?.()
     setLoading(false)
+    onRefreshComplete?.()
   }
 
   // Efecto para cargar datos iniciales

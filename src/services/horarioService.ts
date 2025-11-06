@@ -1,4 +1,5 @@
 import { api } from './api'
+import type { ApiDataResponse, ApiMessageResponse } from './types'
 
 // Interfaces para horarios
 export interface Horario {
@@ -24,6 +25,8 @@ export interface Horario {
 export interface HorarioSimple {
   id: number
   laboratorio_id: number
+  docente_id: number
+  grupo_id: number
   descripcion: string
   fecha_inicio: string
   fecha_fin: string
@@ -34,6 +37,13 @@ export interface HorarioSimple {
   escuela?: string
   ciclo?: string
   grupo?: string
+  estado: string
+  insumos_requeridos?: number
+}
+
+export interface HorarioFull extends HorarioSimple {
+  insumos?: InsumoHorario[]
+  equipos?: EquipoHorario[]
 }
 
 export interface InsumoHorario {
@@ -48,7 +58,6 @@ export interface InsumoHorario {
 export interface EquipoHorario {
   id: number
   nombre: string
-  cantidad_usada: number
   marca?: string
   modelo?: string
   codigo?: string
@@ -91,13 +100,12 @@ export interface CreateHorarioData {
   fecha_fin: string
   cantidad_alumnos?: number
   color?: string
-  insumos: Array<{
+  insumos?: Array<{
     insumo_id: number
     cantidad: number
   }>
   equipos?: Array<{
     equipo_id: number
-    cantidad: number
   }>
 }
 
@@ -165,7 +173,7 @@ export const horarioService = {
     return response.data
   },
 
-  getById: async (id: number) => {
+  getById: async (id: number): Promise<ApiDataResponse<HorarioFull>> => {
     const response = await api.get(`/horarios/${id}`)
     return response.data
   },
@@ -182,10 +190,8 @@ export const horarioService = {
     return response.data
   },
 
-  delete: async (id: number) => {
-    console.log('🗑️ Eliminando horario:', id)
+  delete: async (id: number): Promise<ApiMessageResponse> => {
     const response = await api.delete(`/horarios/${id}`)
-    console.log('✅ Respuesta del servidor:', response.data)
     return response.data
   },
 
@@ -221,17 +227,6 @@ export const horarioService = {
     return response.data
   },
 
-  // Obtener equipos por laboratorio
-  getEquiposByLaboratorio: async (laboratorio_id: number) => {
-    try {
-      console.log('🔍 Cargando equipos para laboratorio:', laboratorio_id)
-      const response = await api.get(`/equipos/${laboratorio_id}`)
-      return response.data
-    } catch (error) {
-      return { success: false, data: [], message: 'Error al cargar equipos' }
-    }
-  },
-
   // 📊 Obtener actividad de horarios
   getActividad: async (filters?: {
     laboratorio_id?: number
@@ -240,21 +235,16 @@ export const horarioService = {
     accion?: string
     usuario_id?: number
   }) => {
-    try {
-      const params = new URLSearchParams()
+    const params = new URLSearchParams()
 
-      if (filters?.laboratorio_id) params.append('laboratorio_id', filters.laboratorio_id.toString())
-      if (filters?.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio)
-      if (filters?.fecha_fin) params.append('fecha_fin', filters.fecha_fin)
-      if (filters?.accion) params.append('accion', filters.accion)
-      if (filters?.usuario_id) params.append('usuario_id', filters.usuario_id.toString())
+    if (filters?.laboratorio_id) params.append('laboratorio_id', filters.laboratorio_id.toString())
+    if (filters?.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio)
+    if (filters?.fecha_fin) params.append('fecha_fin', filters.fecha_fin)
+    if (filters?.accion) params.append('accion', filters.accion)
+    if (filters?.usuario_id) params.append('usuario_id', filters.usuario_id.toString())
 
-      const response = await api.get(`/horarios/actividad?${params.toString()}`)
-      return response.data
-    } catch (error) {
-      console.error('❌ Error al obtener actividad de horarios:', error)
-      return { success: false, data: [], message: 'Error al obtener actividad' }
-    }
+    const response = await api.get(`/horarios/actividad?${params.toString()}`)
+    return response.data
   },
 
   // Cerrar horario y registrar consumo de insumos
@@ -272,12 +262,7 @@ export const horarioService = {
       entrada_detalle_id?: number | null
     }>
   }) => {
-    try {
-      const response = await api.post(`/horarios/cerrar`, data)
-      return response.data
-    } catch (error: any) {
-      console.error('❌ Error al cerrar horario:', error)
-      throw new Error(error.response?.data?.message || 'Error al cerrar el horario')
-    }
+    const response = await api.post(`/horarios/cerrar`, data)
+    return response.data
   }
 } 

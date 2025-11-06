@@ -21,7 +21,7 @@ import { Close, Build } from '@mui/icons-material'
 import { equipoService, type Equipo } from '../../services/equipoService'
 import { tipoEquipoService, type TipoEquipo } from '../../services/tipoEquipoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
-
+import { useApi } from '../../hooks/useApi'
 interface EquipoFormProps {
   open: boolean
   onClose: () => void
@@ -30,6 +30,7 @@ interface EquipoFormProps {
 }
 
 export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess, equipo }) => {
+  const { execute } = useApi()
   const [formData, setFormData] = useState({
     codigo: '',
     nombre: '',
@@ -46,7 +47,7 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
     tipo_equipo_id: 0,
     laboratorio_id: 0
   })
-  
+
   const [tiposEquipo, setTiposEquipo] = useState<TipoEquipo[]>([])
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
   const [loading, setLoading] = useState(false)
@@ -72,24 +73,23 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
   }, [open, equipo, laboratorios.length])
 
   const loadInitialData = async () => {
-    try {
-      setLoadingData(true)
-      const [tiposResult, laboratoriosResult] = await Promise.all([
-        tipoEquipoService.getActivos(),
-        laboratorioService.getAll()
-      ])
-      if (tiposResult.success) {
-        setTiposEquipo(tiposResult.data || [])
-      }
-      if (laboratoriosResult.success) {
-        setLaboratorios(laboratoriosResult.data || [])
-      }
-    } catch (err) {
-      console.error('Error loading initial data:', err)
-      setError('Error al cargar datos iniciales')
-    } finally {
-      setLoadingData(false)
+
+    setLoadingData(true)
+    const [tiposResult, laboratoriosResult] = await Promise.all([
+      execute(() => tipoEquipoService.getActivos()),
+      execute(() => laboratorioService.getAll())
+    ])
+    if (tiposResult.error) {
+      setError(tiposResult.error)
+    } else if (tiposResult.data) {
+      setTiposEquipo(tiposResult.data.data || [])
     }
+    if (laboratoriosResult.error) {
+      setError(laboratoriosResult.error)
+    } else if (laboratoriosResult.data) {
+      setLaboratorios(laboratoriosResult.data.data || [])
+    }
+    setLoadingData(false)
   }
 
   const loadEquipoData = (equipoData: Equipo) => {
@@ -143,64 +143,58 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
   }
 
   const handleSubmit = async () => {
-    try {
-      setLoading(true)
-      setError(null)
+    setLoading(true)
+    setError(null)
 
-      // Validaciones
-      if (!formData.nombre.trim()) {
-        setError('El nombre es requerido')
+    // Validaciones
+    if (!formData.nombre.trim()) {
+      setError('El nombre es requerido')
+      return
+    }
+
+    // Validar fechas de mantenimiento
+    if (formData.fecha_ultimo_mantenimiento && formData.fecha_proximo_mantenimiento) {
+      const fechaUltimo = new Date(formData.fecha_ultimo_mantenimiento)
+      const fechaProximo = new Date(formData.fecha_proximo_mantenimiento)
+
+      if (fechaProximo < fechaUltimo) {
+        setError('La fecha del próximo mantenimiento no puede ser anterior a la fecha del último mantenimiento')
+        setLoading(false)
         return
       }
-
-      // Validar fechas de mantenimiento
-      if (formData.fecha_ultimo_mantenimiento && formData.fecha_proximo_mantenimiento) {
-        const fechaUltimo = new Date(formData.fecha_ultimo_mantenimiento)
-        const fechaProximo = new Date(formData.fecha_proximo_mantenimiento)
-        
-        if (fechaProximo < fechaUltimo) {
-          setError('La fecha del próximo mantenimiento no puede ser anterior a la fecha del último mantenimiento')
-          setLoading(false)
-          return
-        }
-      }
-
-      // Preparar datos
-      const equipoData = {
-        ...formData,
-        codigo: formData.codigo.trim(),
-        nombre: formData.nombre.trim(),
-        descripcion: formData.descripcion.trim(),
-        marca: formData.marca.trim(),
-        modelo: formData.modelo.trim(),
-        numero_serie: formData.numero_serie.trim(),
-        comentarios: formData.comentarios.trim(),
-        fecha_adquisicion: formData.fecha_adquisicion && formData.fecha_adquisicion.trim() ? formData.fecha_adquisicion : undefined,
-        fecha_ultimo_mantenimiento: formData.fecha_ultimo_mantenimiento && formData.fecha_ultimo_mantenimiento.trim() ? formData.fecha_ultimo_mantenimiento : undefined,
-        fecha_proximo_mantenimiento: formData.fecha_proximo_mantenimiento && formData.fecha_proximo_mantenimiento.trim() ? formData.fecha_proximo_mantenimiento : undefined,
-        tipo_equipo_id: formData.tipo_equipo_id > 0 ? formData.tipo_equipo_id : undefined,
-        laboratorio_id: formData.laboratorio_id > 0 ? formData.laboratorio_id : undefined
-      }
-
-      let result
-      if (isEditing && equipo) {
-        result = await equipoService.update(equipo.id, equipoData)
-      } else {
-        result = await equipoService.create(equipoData)
-      }
-
-      if (result.success) {
-        onSuccess()
-        onClose()
-      } else {
-        setError(result.message || 'Error al guardar el equipo')
-      }
-    } catch (err: any) {
-      console.error('Error al enviar equipo:', err)
-      setError(err.message || 'Error de conexión')
-    } finally {
-      setLoading(false)
     }
+
+    // Preparar datos
+    const equipoData = {
+      ...formData,
+      codigo: formData.codigo.trim(),
+      nombre: formData.nombre.trim(),
+      descripcion: formData.descripcion.trim(),
+      marca: formData.marca.trim(),
+      modelo: formData.modelo.trim(),
+      numero_serie: formData.numero_serie.trim(),
+      comentarios: formData.comentarios.trim(),
+      fecha_adquisicion: formData.fecha_adquisicion && formData.fecha_adquisicion.trim() ? formData.fecha_adquisicion : undefined,
+      fecha_ultimo_mantenimiento: formData.fecha_ultimo_mantenimiento && formData.fecha_ultimo_mantenimiento.trim() ? formData.fecha_ultimo_mantenimiento : undefined,
+      fecha_proximo_mantenimiento: formData.fecha_proximo_mantenimiento && formData.fecha_proximo_mantenimiento.trim() ? formData.fecha_proximo_mantenimiento : undefined,
+      tipo_equipo_id: formData.tipo_equipo_id > 0 ? formData.tipo_equipo_id : undefined,
+      laboratorio_id: formData.laboratorio_id > 0 ? formData.laboratorio_id : undefined
+    }
+
+    let result
+    if (isEditing && equipo) {
+      result = await execute(() => equipoService.update(equipo.id, equipoData))
+    } else {
+      result = await execute(() => equipoService.create(equipoData))
+    }
+
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      onSuccess()
+      onClose()
+    }
+    setLoading(false)
   }
 
   const handleClose = () => {
@@ -210,10 +204,10 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
   }
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={handleClose} 
-      maxWidth="md" 
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="md"
       fullWidth
       PaperProps={{ sx: { borderRadius: 2 } }}
     >
@@ -250,7 +244,7 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
               <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', mb: 2 }}>
                 Información del Equipo
               </Typography>
-              
+
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <TextField
                   fullWidth
@@ -261,7 +255,7 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
                   disabled={loading}
                   required
                 />
-                
+
                 <TextField
                   fullWidth
                   label="Nombre del equipo"
@@ -416,7 +410,7 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
                       min: formData.fecha_ultimo_mantenimiento || undefined
                     }}
                     helperText={
-                      formData.fecha_ultimo_mantenimiento 
+                      formData.fecha_ultimo_mantenimiento
                         ? "Debe ser posterior a la fecha del último mantenimiento"
                         : "Dejar vacío si no aplica"
                     }
@@ -448,7 +442,7 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
         >
           Cancelar
         </Button>
-        
+
         <Button
           onClick={handleSubmit}
           disabled={loading || !formData.nombre.trim() || !formData.codigo.trim()}

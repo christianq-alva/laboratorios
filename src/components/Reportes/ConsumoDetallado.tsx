@@ -26,8 +26,10 @@ import {
   type FiltrosReporte as FiltrosType,
   formatearNumero
 } from '../../services/reporteService'
+import { useApi } from '../../hooks/useApi'
 
 const ConsumoDetallado: React.FC = () => {
+  const { execute } = useApi()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [consumoData, setConsumoData] = useState<ConsumoResumen[]>([])
@@ -42,21 +44,15 @@ const ConsumoDetallado: React.FC = () => {
   const cargarConsumo = async (nuevosFiltros?: FiltrosType) => {
     setLoading(true)
     setError(null)
-    
-    try {
-      const filtrosAplicar = nuevosFiltros || filtros
-      const response = await reporteService.getConsumoResumen(filtrosAplicar)
-      
-      if (response.success) {
-        setConsumoData(response.data)
-      } else {
-        setError(response.message || 'Error al cargar el reporte de consumo')
-      }
-    } catch (err: any) {
-      setError(err.message || 'Error al cargar los datos de consumo')
-    } finally {
-      setLoading(false)
+
+    const filtrosAplicar = nuevosFiltros || filtros
+    const result = await execute(() => reporteService.getConsumoResumen(filtrosAplicar))
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      setConsumoData(result.data.data)
     }
+    setLoading(false)
   }
 
   const handleFiltrosChange = (nuevosFiltros: FiltrosType) => {
@@ -109,13 +105,13 @@ const ConsumoDetallado: React.FC = () => {
     }, {})
 
     return {
-      porPeriodo: Object.values(consumoPorPeriodo).sort((a: any, b: any) => 
+      porPeriodo: Object.values(consumoPorPeriodo).sort((a: any, b: any) =>
         a.periodo.localeCompare(b.periodo)
       ),
-      porLaboratorio: Object.values(consumoPorLab).sort((a: any, b: any) => 
+      porLaboratorio: Object.values(consumoPorLab).sort((a: any, b: any) =>
         b.total_consumido - a.total_consumido
       ).slice(0, 10), // Top 10
-      porCategoria: Object.values(consumoPorCat).sort((a: any, b: any) => 
+      porCategoria: Object.values(consumoPorCat).sort((a: any, b: any) =>
         b.total_consumido - a.total_consumido
       )
     }
@@ -156,7 +152,7 @@ const ConsumoDetallado: React.FC = () => {
               variant="contained"
               startIcon={<ExportIcon />}
               onClick={() => exportarReporte('csv')}
-              sx={{ 
+              sx={{
                 bgcolor: 'rgba(255,255,255,0.2)',
                 '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }
               }}
@@ -167,7 +163,7 @@ const ConsumoDetallado: React.FC = () => {
               variant="outlined"
               startIcon={<ExportIcon />}
               onClick={() => exportarReporte('json')}
-              sx={{ 
+              sx={{
                 borderColor: 'rgba(255,255,255,0.5)',
                 color: 'white',
                 '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' }
@@ -268,16 +264,16 @@ const ConsumoDetallado: React.FC = () => {
                     <TableCell>{row.laboratorio_nombre}</TableCell>
                     <TableCell>{row.insumo_nombre}</TableCell>
                     <TableCell>
-                      <Chip 
-                        label={row.categoria} 
-                        size="small" 
+                      <Chip
+                        label={row.categoria}
+                        size="small"
                         variant="outlined"
                         color="primary"
                       />
                     </TableCell>
                     <TableCell>{row.unidad_medida}</TableCell>
                     <TableCell align="right">
-                      <Typography 
+                      <Typography
                         color={row.total_consumido > 0 ? 'error' : 'text.secondary'}
                         fontWeight={row.total_consumido > 0 ? 600 : 400}
                       >
@@ -285,7 +281,7 @@ const ConsumoDetallado: React.FC = () => {
                       </Typography>
                     </TableCell>
                     <TableCell align="right">
-                      <Typography 
+                      <Typography
                         color={row.total_ingresado > 0 ? 'success.main' : 'text.secondary'}
                         fontWeight={row.total_ingresado > 0 ? 600 : 400}
                       >
@@ -295,7 +291,7 @@ const ConsumoDetallado: React.FC = () => {
                     <TableCell align="center">
                       <Box display="flex" gap={0.5} justifyContent="center">
                         {row.num_movimientos_salida > 0 && (
-                          <Chip 
+                          <Chip
                             label={`${row.num_movimientos_salida} salidas`}
                             size="small"
                             color="error"
@@ -303,7 +299,7 @@ const ConsumoDetallado: React.FC = () => {
                           />
                         )}
                         {row.num_movimientos_entrada > 0 && (
-                          <Chip 
+                          <Chip
                             label={`${row.num_movimientos_entrada} entradas`}
                             size="small"
                             color="success"
@@ -330,7 +326,7 @@ const ConsumoDetallado: React.FC = () => {
             setPage(0)
           }}
           labelRowsPerPage="Filas por página:"
-          labelDisplayedRows={({ from, to, count }) => 
+          labelDisplayedRows={({ from, to, count }) =>
             `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
           }
         />

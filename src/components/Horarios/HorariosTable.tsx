@@ -34,12 +34,13 @@ import {
   Visibility,
 } from '@mui/icons-material'
 import { horarioService } from '../../services/horarioService'
-import type { Horario } from '../../services/horarioService'
+import type { HorarioSimple } from '../../services/horarioService'
+import { useApi } from '../../hooks/useApi'
 
 interface HorariosTableProps {
-  onEdit: (horario: Horario) => void
-  onDelete: (horario: Horario) => void
-  onView?: (horario: Horario) => void
+  onEdit: (horario: HorarioSimple) => void
+  onDelete: (horario: HorarioSimple) => void
+  onView?: (horario: HorarioSimple) => void
   refresh: boolean
   onRefreshComplete: () => void
 }
@@ -51,47 +52,24 @@ export const HorariosTable: React.FC<HorariosTableProps> = ({
   refresh,
   onRefreshComplete,
 }) => {
-  const [horarios, setHorarios] = useState<Horario[]>([])
+  const [horarios, setHorarios] = useState<HorarioSimple[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
-  const [selectedHorario, setSelectedHorario] = useState<Horario | null>(null)
-
+  const [selectedHorario, setSelectedHorario] = useState<HorarioSimple | null>(null)
+  const { execute } = useApi()
   const fetchHorarios = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      console.log('🔍 Iniciando fetchHorarios...')
-      const result = await horarioService.getAll()
-      console.log('🔍 Respuesta completa del servidor:', result)
-      
-      if (result.success) {
-        console.log('📋 Horarios recibidos en frontend:', {
-          total: result.data?.length || 0,
-          primer_horario: result.data?.[0] ? {
-            id: result.data[0].id,
-            laboratorio: result.data[0].laboratorio,
-            docente: result.data[0].docente,
-            grupo: result.data[0].grupo,
-            escuela: result.data[0].escuela,
-            ciclo: result.data[0].ciclo,
-            insumos_count: result.data[0].insumos?.length || 0
-          } : null,
-          user_role: result.user_role,
-          laboratorios_asignados: result.laboratorios_asignados
-        })
-        setHorarios(result.data || [])
-      } else {
-        console.error('❌ Error en respuesta:', result.message)
-        setError(result.message || 'Error al cargar horarios')
-      }
-    } catch (err: any) {
-      console.error('❌ Error de conexión:', err)
-      setError('Error de conexión al servidor')
-    } finally {
-      setLoading(false)
+    setLoading(true)
+    setError(null)
+
+    const result = await execute(() => horarioService.getAll())
+
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      setHorarios(result.data.data || [])
     }
+    setLoading(false)
   }
 
   useEffect(() => {
@@ -108,7 +86,7 @@ export const HorariosTable: React.FC<HorariosTableProps> = ({
     }
   }, [refresh])
 
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, horario: Horario) => {
+  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, horario: HorarioSimple) => {
     setAnchorEl(event.currentTarget)
     setSelectedHorario(horario)
   }
@@ -205,7 +183,7 @@ export const HorariosTable: React.FC<HorariosTableProps> = ({
             {horarios.map((horario) => {
               const fechaInicio = formatDateTime(horario.fecha_inicio)
               const fechaFin = formatDateTime(horario.fecha_fin)
-              
+
               return (
                 <TableRow key={horario.id} hover>
                   {/* Laboratorio */}
@@ -268,9 +246,9 @@ export const HorariosTable: React.FC<HorariosTableProps> = ({
 
                   {/* Descripción */}
                   <TableCell>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
+                    <Typography
+                      variant="body2"
+                      sx={{
                         maxWidth: 200,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -286,14 +264,14 @@ export const HorariosTable: React.FC<HorariosTableProps> = ({
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Inventory fontSize="small" color="action" />
-                      <Badge 
-                        badgeContent={horario.insumos?.length || 0} 
+                      <Badge
+                        badgeContent={horario.insumos_requeridos}
                         color="primary"
                         showZero
                       >
-                        <Chip 
-                          label="Ver" 
-                          size="small" 
+                        <Chip
+                          label="Ver"
+                          size="small"
                           variant="outlined"
                           sx={{ cursor: onView ? 'pointer' : 'default' }}
                           onClick={onView ? () => onView(horario) : undefined}
@@ -304,11 +282,11 @@ export const HorariosTable: React.FC<HorariosTableProps> = ({
 
                   {/* Estado */}
                   <TableCell>
-                    <Chip 
+                    <Chip
                       label={horario.estado == 'C' ? "Cerrado" : "Programado"}
                       color={horario.estado == 'C' ? "default" : "success"}
-                      size="small" 
-                      variant="outlined" 
+                      size="small"
+                      variant="outlined"
                     />
                   </TableCell>
 
@@ -348,14 +326,14 @@ export const HorariosTable: React.FC<HorariosTableProps> = ({
             <ListItemText>Ver detalles</ListItemText>
           </MenuItem>
         )}
-        
+
         <MenuItem onClick={handleEdit}>
           <ListItemIcon>
             <Edit fontSize="small" />
           </ListItemIcon>
           <ListItemText>Editar horario</ListItemText>
         </MenuItem>
-        
+
         <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
           <ListItemIcon>
             <Delete fontSize="small" color="error" />

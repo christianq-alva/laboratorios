@@ -29,6 +29,7 @@ export const defineAbilitiesFor = (user) => {
     }
 
     // Permisos generales (sin condiciones de laboratorio)
+    can('read', 'Inventario') // ← Permitir leer inventario
     can('read', 'Horario') // ← Permitir leer horarios
     can('read', 'TipoEquipo') // ← Permitir leer tipos de equipo
     can('read', 'Docente') // ← Permitir leer docentes

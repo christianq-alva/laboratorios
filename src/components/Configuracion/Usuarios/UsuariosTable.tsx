@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import {
-  Box,
   Table,
   TableBody,
   TableCell,
@@ -9,98 +8,78 @@ import {
   TableRow,
   Paper,
   IconButton,
-  Typography,
   Chip,
+  Tooltip,
+  Box,
+  Typography,
+  TablePagination,
+  Avatar,
+  Switch,
   Menu,
   MenuItem,
   ListItemIcon,
   ListItemText,
-  Tooltip,
-  Avatar,
 } from '@mui/material'
-import {
-  MoreVert,
-  Edit,
-  Delete,
-  Person,
-  AdminPanelSettings,
-  SupervisorAccount,
-  School,
-} from '@mui/icons-material'
-
-interface Usuario {
-  id: number
-  nombre: string
-  usuario: string
-  rol: 'Administrador' | 'Jefe de Laboratorio'
-  laboratorios: number[]
-  estado: 'Activo' | 'Inactivo'
-}
+import { Edit, Delete, Person, AdminPanelSettings, SupervisorAccount, School, MoreVert } from '@mui/icons-material'
+import type { Usuario } from '../../../services/usuarioService'
 
 interface UsuariosTableProps {
+  usuarios: Usuario[]
   onEdit: (usuario: Usuario) => void
   onDelete: (usuario: Usuario) => void
+  onToggleEstado: (usuario: Usuario) => void
 }
 
-// Usuarios mock para maquetación
-const USUARIOS_MOCK: Usuario[] = [
-  {
-    id: 1,
-    nombre: 'Carlos Mendoza',
-    usuario: 'cmendoza',
-    rol: 'Administrador',
-    laboratorios: [],
-    estado: 'Activo',
-  },
-  {
-    id: 2,
-    nombre: 'María García',
-    usuario: 'mgarcia',
-    rol: 'Jefe de Laboratorio',
-    laboratorios: [1, 2],
-    estado: 'Activo',
-  },
-  {
-    id: 3,
-    nombre: 'Juan Pérez',
-    usuario: 'jperez',
-    rol: 'Jefe de Laboratorio',
-    laboratorios: [3],
-    estado: 'Activo',
-  },
-  {
-    id: 4,
-    nombre: 'Ana Torres',
-    usuario: 'atorres',
-    rol: 'Administrador',
-    laboratorios: [],
-    estado: 'Activo',
-  },
-  {
-    id: 5,
-    nombre: 'Roberto Silva',
-    usuario: 'rsilva',
-    rol: 'Jefe de Laboratorio',
-    laboratorios: [4, 5],
-    estado: 'Inactivo',
-  },
-]
-
-const LABORATORIOS_MOCK = [
-  { id: 1, codigo: 'LAB-001' },
-  { id: 2, codigo: 'LAB-002' },
-  { id: 3, codigo: 'LAB-003' },
-  { id: 4, codigo: 'LAB-004' },
-  { id: 5, codigo: 'LAB-005' },
-]
-
 export const UsuariosTable: React.FC<UsuariosTableProps> = ({
+  usuarios,
   onEdit,
   onDelete,
+  onToggleEstado
 }) => {
-  const [usuarios] = useState<Usuario[]>(USUARIOS_MOCK)
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [selectedUsuario, setSelectedUsuario] = useState<Usuario | null>(null)
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '-'
+    return new Date(dateString).toLocaleDateString('es-PE', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
+
+  // Funciones para manejar la paginación
+  const handleChangePage = (_event: unknown, newPage: number) => {
+    setPage(newPage)
+  }
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10))
+    setPage(0)
+  }
+
+  // Calcular los usuarios a mostrar según la página actual
+  const paginatedUsuarios = usuarios.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  )
+
+  const getInitials = (nombre: string) => {
+    const names = nombre.split(' ')
+    return names.length > 1
+      ? `${names[0][0]}${names[1][0]}`
+      : nombre.substring(0, 2).toUpperCase()
+  }
+
+  const getRolColor = (rol: string) => {
+    return rol === 'Administrador' ? 'error' : 'primary'
+  }
+
+  const getEstadoColor = (estado: string) => {
+    return estado === 'activo' ? 'success' : 'default'
+  }
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, usuario: Usuario) => {
     setAnchorEl(event.currentTarget)
@@ -126,150 +105,154 @@ export const UsuariosTable: React.FC<UsuariosTableProps> = ({
     handleMenuClose()
   }
 
-  const getInitials = (nombre: string) => {
-    const names = nombre.split(' ')
-    return names.length > 1
-      ? `${names[0][0]}${names[1][0]}`
-      : nombre.substring(0, 2)
-  }
-
-  const getRolIcon = (rol: string) => {
-    return rol === 'Administrador' 
-      ? <AdminPanelSettings fontSize="small" color="error" />
-      : <SupervisorAccount fontSize="small" color="primary" />
-  }
-
-  const getRolColor = (rol: string) => {
-    return rol === 'Administrador' ? 'error' : 'primary'
-  }
-
-  const getEstadoColor = (estado: string) => {
-    return estado === 'Activo' ? 'success' : 'default'
+  if (usuarios.length === 0) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        alignItems: 'center', 
+        justifyContent: 'center',
+        py: 8,
+        color: 'text.secondary'
+      }}>
+        <Person sx={{ fontSize: 64, mb: 2, opacity: 0.3 }} />
+        <Typography variant="h6" gutterBottom>
+          No hay usuarios registrados
+        </Typography>
+        <Typography variant="body2">
+          Crea el primer usuario para empezar
+        </Typography>
+      </Box>
+    )
   }
 
   return (
-    <Box>
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
-        <Table>
-          <TableHead sx={{ bgcolor: 'grey.50' }}>
-            <TableRow>
-              <TableCell>Usuario</TableCell>
-              <TableCell>Rol</TableCell>
-              <TableCell>Laboratorios</TableCell>
-              <TableCell>Estado</TableCell>
-              <TableCell align="center" width={80}>Acciones</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {usuarios.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
-                  <Person sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
-                  <Typography color="text.secondary">
-                    No hay usuarios registrados
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              usuarios.map((usuario) => (
-                <TableRow 
-                  key={usuario.id}
-                  hover
-                  sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                >
-                  {/* Usuario */}
-                  <TableCell>
-                    <Box display="flex" alignItems="center" gap={1.5}>
-                      <Avatar 
-                        sx={{ 
-                          width: 36, 
-                          height: 36,
-                          bgcolor: getRolColor(usuario.rol) + '.main',
-                          fontSize: '0.875rem',
-                        }}
-                      >
-                        {getInitials(usuario.nombre)}
-                      </Avatar>
-                      <Box>
-                        <Typography variant="body2" fontWeight={500}>
-                          {usuario.nombre}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          @{usuario.usuario}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </TableCell>
-
-                  {/* Rol */}
-                  <TableCell>
-                    <Chip
-                      icon={getRolIcon(usuario.rol)}
-                      label={usuario.rol}
-                      size="small"
-                      color={getRolColor(usuario.rol)}
-                      variant="outlined"
-                    />
-                  </TableCell>
-
-                  {/* Laboratorios */}
-                  <TableCell>
-                    {usuario.rol === 'Administrador' ? (
-                      <Chip 
-                        label="Todos"
+    <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 2 }}>
+      <Table>
+        <TableHead>
+          <TableRow sx={{ backgroundColor: 'primary.main' }}>
+            <TableCell sx={{ color: 'white', fontWeight: 600 }}>Usuario</TableCell>
+            <TableCell sx={{ color: 'white', fontWeight: 600 }}>Rol</TableCell>
+            <TableCell sx={{ color: 'white', fontWeight: 600 }}>Laboratorios</TableCell>
+            <TableCell sx={{ color: 'white', fontWeight: 600 }}>Estado</TableCell>
+            <TableCell sx={{ color: 'white', fontWeight: 600 }}>Fecha Creación</TableCell>
+            <TableCell sx={{ color: 'white', fontWeight: 600 }} align="center">
+              Acciones
+            </TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {paginatedUsuarios.map((usuario) => (
+            <TableRow 
+              key={usuario.id}
+              sx={{ 
+                '&:hover': { backgroundColor: 'action.hover' },
+                '&:last-child td, &:last-child th': { border: 0 }
+              }}
+            >
+              <TableCell>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Avatar 
+                    sx={{ 
+                      width: 36, 
+                      height: 36,
+                      bgcolor: getRolColor(usuario.rol_nombre) + '.main',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    {getInitials(usuario.nombre_completo)}
+                  </Avatar>
+                  <Box>
+                    <Typography variant="body2" fontWeight={500}>
+                      {usuario.nombre_completo}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      @{usuario.usuario}
+                    </Typography>
+                  </Box>
+                </Box>
+              </TableCell>
+              <TableCell>
+                <Chip
+                  icon={usuario.rol_nombre === 'Administrador' 
+                    ? <AdminPanelSettings fontSize="small" /> 
+                    : <SupervisorAccount fontSize="small" />}
+                  label={usuario.rol_nombre}
+                  size="small"
+                  color={getRolColor(usuario.rol_nombre)}
+                  variant="outlined"
+                />
+              </TableCell>
+              <TableCell>
+                {usuario.rol_nombre === 'Administrador' ? (
+                  <Chip 
+                    label="Todos"
+                    size="small"
+                    variant="outlined"
+                    color="default"
+                  />
+                ) : usuario.laboratorios_nombres && usuario.laboratorios_nombres.length > 0 ? (
+                  <Box display="flex" gap={0.5} flexWrap="wrap">
+                    {usuario.laboratorios_nombres.map((lab) => (
+                      <Chip
+                        key={lab.id}
+                        icon={<School fontSize="small" />}
+                        label={lab.codigo}
                         size="small"
                         variant="outlined"
-                        color="default"
                       />
-                    ) : usuario.laboratorios.length === 0 ? (
-                      <Typography variant="caption" color="text.secondary">
-                        Sin asignar
-                      </Typography>
-                    ) : (
-                      <Box display="flex" gap={0.5} flexWrap="wrap">
-                        {usuario.laboratorios.map((labId) => {
-                          const lab = LABORATORIOS_MOCK.find(l => l.id === labId)
-                          return (
-                            <Chip
-                              key={labId}
-                              icon={<School fontSize="small" />}
-                              label={lab?.codigo || labId}
-                              size="small"
-                              variant="outlined"
-                            />
-                          )
-                        })}
-                      </Box>
-                    )}
-                  </TableCell>
-
-                  {/* Estado */}
-                  <TableCell>
-                    <Chip
-                      label={usuario.estado}
-                      size="small"
-                      color={getEstadoColor(usuario.estado)}
-                      variant="filled"
-                    />
-                  </TableCell>
-
-                  {/* Acciones */}
-                  <TableCell align="center">
-                    <Tooltip title="Más opciones">
-                      <IconButton
-                        size="small"
-                        onClick={(e) => handleMenuClick(e, usuario)}
-                      >
-                        <MoreVert />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                    ))}
+                  </Box>
+                ) : (
+                  <Typography variant="caption" color="text.secondary">
+                    Sin asignar
+                  </Typography>
+                )}
+              </TableCell>
+              <TableCell>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Chip
+                    label={usuario.estado === 'activo' ? 'Activo' : 'Inactivo'}
+                    size="small"
+                    color={getEstadoColor(usuario.estado)}
+                    variant="filled"
+                  />
+                  <Switch
+                    size="small"
+                    checked={usuario.estado === 'activo'}
+                    onChange={() => onToggleEstado(usuario)}
+                    color="success"
+                  />
+                </Box>
+              </TableCell>
+              <TableCell>{formatDate(usuario.created_at)}</TableCell>
+              <TableCell align="center">
+                <Tooltip title="Más opciones">
+                  <IconButton
+                    size="small"
+                    onClick={(e) => handleMenuClick(e, usuario)}
+                  >
+                    <MoreVert />
+                  </IconButton>
+                </Tooltip>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <TablePagination
+        rowsPerPageOptions={[5, 10, 25, 50]}
+        component="div"
+        count={usuarios.length}
+        rowsPerPage={rowsPerPage}
+        page={page}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        labelRowsPerPage="Filas por página:"
+        labelDisplayedRows={({ from, to, count }) => 
+          `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
+        }
+      />
 
       {/* Menú contextual */}
       <Menu
@@ -293,7 +276,7 @@ export const UsuariosTable: React.FC<UsuariosTableProps> = ({
           <ListItemText>Eliminar</ListItemText>
         </MenuItem>
       </Menu>
-    </Box>
+    </TableContainer>
   )
 }
 

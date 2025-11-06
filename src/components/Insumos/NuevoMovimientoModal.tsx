@@ -33,7 +33,7 @@ import {
   TrendingDown,
 } from '@mui/icons-material'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
-import { insumoService, type InsumoSaldo } from '../../services/insumoService'
+import { inventarioService, type InsumoSaldo } from '../../services/inventarioService'
 
 interface NuevoMovimientoModalProps {
   open: boolean
@@ -140,7 +140,7 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
 
   const loadInsumos = async () => {
     try {
-      const response = await insumoService.getWithStock(laboratorioId)
+      const response = await inventarioService.getWithStock(laboratorioId)
       console.log(response);
       setInsumos(response.data || [])
     } catch (error: any) {
@@ -151,7 +151,7 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
   const loadInsumosDisponibles = async () => {
     try {
       console.log('Pidiendo insumos con saldo',);
-      const response = await insumoService.getWithPositiveStock(laboratorioId)
+      const response = await inventarioService.getWithPositiveStock(laboratorioId)
       console.log(response);
       setInsumosSaldo(response.data || []);
     } catch (error: any) {
@@ -161,7 +161,7 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
 
   const loadLotesDisponibles = async () => {
     try {
-      const response = await insumoService.getLotesConSaldo(laboratorioId, insumoSeleccionado)
+      const response = await inventarioService.getLotesConSaldo(laboratorioId, insumoSeleccionado)
       setLotesDisponibles(response.data || [])
     } catch (error: any) {
       console.error('Error al cargar lotes disponibles:', error)
@@ -252,7 +252,7 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
     setError(null)
 
     try {
-      await insumoService.registrarMovimiento({
+      await inventarioService.registrarMovimiento({
         laboratorio_id: laboratorioId,
         fecha_movimiento: fechaMovimiento,
         tipo_movimiento: tipoMovimiento,

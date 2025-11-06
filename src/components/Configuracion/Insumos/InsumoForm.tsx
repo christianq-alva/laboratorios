@@ -17,12 +17,13 @@ import {
 } from '@mui/material'
 import { Close, Inventory, Info } from '@mui/icons-material'
 import { insumoService, type Insumo } from '../../../services/insumoService'
+import { useApi } from '../../../hooks/useApi'
 
 
 interface InsumoFormProps {
   open: boolean
   onClose: () => void
-  onSuccess: () => void
+  onSuccess: (message?: string) => void
   insumo?: Insumo | null
 }
 
@@ -32,7 +33,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
   onSuccess,
   insumo
 }) => {
-
+  const { execute } = useApi()
   const [formData, setFormData] = useState({
     nombre: '',
     descripcion: '',
@@ -85,7 +86,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
       setError('La unidad de medida es requerida')
       return false
     }
-    
+
     setError(null)
     return true
   }
@@ -95,37 +96,38 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
     if (!validateForm()) return
 
     setLoading(true)
-    try {
-      const insumoData = {
-        nombre: formData.nombre.trim(),
-        descripcion: formData.descripcion.trim(),
-        unidad_medida: formData.unidad_medida.trim(),
-        categoria: formData.categoria,
-        presentacion: formData.presentacion.trim()
-      }
-
-      if (insumo) {
-        // Actualizar insumo existente
-        await insumoService.update(insumo.id, insumoData)
-      } else {
-        // Crear nuevo insumo (solo el maestro, sin stock)
-        await insumoService.create(insumoData)
-      }
-
-      onSuccess()
-      onClose()
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
+    const insumoData = {
+      nombre: formData.nombre.trim(),
+      descripcion: formData.descripcion.trim(),
+      unidad_medida: formData.unidad_medida.trim(),
+      categoria: formData.categoria,
+      presentacion: formData.presentacion.trim()
     }
+
+    let result
+    if (insumo) {
+      // Actualizar insumo existente
+      result = await execute(() => insumoService.update(insumo.id, insumoData))
+    } else {
+      // Crear nuevo insumo (solo el maestro, sin stock)
+      result = await execute(() => insumoService.create(insumoData))
+    }
+
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      onSuccess(result.data.message)
+      onClose()
+    }
+    setLoading(false)
   }
 
+
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      maxWidth="md" 
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
       fullWidth
       PaperProps={{
         sx: {
@@ -156,17 +158,17 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {/* Información básica del insumo */}
-          <Box sx={{ 
-            p: 3, 
-            backgroundColor: '#f0f7ff', 
+          <Box sx={{
+            p: 3,
+            backgroundColor: '#f0f7ff',
             borderRadius: 1.5,
             border: '1px solid #e3f2fd',
             boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
           }}>
-            <Typography variant="h6" gutterBottom sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 1, 
+            <Typography variant="h6" gutterBottom sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
               color: 'primary.main',
               mb: 2,
               fontWeight: 600
@@ -174,13 +176,13 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
               <Info />
               Información del Insumo
             </Typography>
-            
+
             <Alert severity="info" sx={{ mb: 2, borderRadius: 1.5 }}>
               <Typography variant="body2">
                 Crea el insumo maestro. Los datos de stock, lote y fecha de vencimiento se registrarán al agregar un movimiento de entrada en el inventario.
               </Typography>
             </Alert>
-          
+
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
               <TextField
                 label="Nombre del Insumo"
@@ -189,7 +191,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
                 required
                 sx={{ minWidth: 250, flex: 1 }}
               />
-              
+
               <TextField
                 label="Unidad de Medida"
                 value={formData.unidad_medida}
@@ -230,7 +232,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
                 </Select>
               </FormControl>
             </Box>
-            
+
             <TextField
               fullWidth
               label="Descripción"
@@ -259,7 +261,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
         <Button onClick={onClose} variant="outlined">
           Cancelar
         </Button>
-        <Button 
+        <Button
           onClick={handleSubmit}
           variant="contained"
           disabled={loading}

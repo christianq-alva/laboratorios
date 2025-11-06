@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios, { AxiosError } from 'axios'
 import { config } from '../config/environment'
 
 // 🏗️ CREAR INSTANCIA BASE DE AXIOS
@@ -9,6 +9,15 @@ export const api = axios.create({
   }
 })
 
+// Interfaz para errores enriquecidos
+export interface ApiError extends AxiosError {
+  isUnauthorized?: boolean
+  isNetworkError?: boolean
+  isValidationError?: boolean
+  isServerError?: boolean
+  validationErrors?: Record<string, string[]>
+}
+
 // 🎫 INTERCEPTOR: Agregar token automáticamente
 api.interceptors.request.use(
   (config) => {
@@ -18,89 +27,63 @@ api.interceptors.request.use(
     }
     return config
   },
-  (error) => {
-    return Promise.reject(error)
-  }
+  (error) => Promise.reject(error)
 )
 
-// 🚨 INTERCEPTOR: Normalizar errores automáticamente
+// 🚨 INTERCEPTOR: Enriquecer errores con flags útiles
 api.interceptors.response.use(
   // ✅ Respuesta exitosa (status 200-299)
-  (response) => {
-    // Retornar la respuesta tal cual (el backend ya tiene { success, message, data })
-    return response
-  },
-  
+  (response) => response,
+
   // ❌ Error HTTP (status 400-599) o error de red
-  (error) => {
-    // Logging mejorado
+  (error: AxiosError) => {
+    const apiError = error as ApiError
+    const errorData = error.response?.data as any
+    // Logging
     console.error('🚨 Error en API:', {
       status: error.response?.status,
-      message: error.response?.data?.message,
-      url: error.config?.url,
-      method: error.config?.method,
-      timestamp: new Date().toISOString(),
-      hasResponse: !!error.response,
-      hasRequest: !!error.request
+      message: errorData?.message,
+      endpoint: `${error.config?.method?.toUpperCase()} ${error.config?.url}`,
+      timestamp: new Date().toISOString()
     })
-    
-    // Manejar 401 (token expirado o no autorizado)
-    if (error.response?.status === 401) {
-      console.log('❌ Token expirado o no autorizado, limpiando sesión')
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      
-      // Redirigir al login
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login'
-      }
-    }
-    
-    // ✅ NORMALIZAR ERROR: Convertir a estructura consistente
+
+    // Enriquecer error con flags útiles
     if (error.response) {
       // Error del backend (status 400-599)
-      // El backend ya envía { success: false, message: "..." }
-      return Promise.resolve({
-        data: error.response.data || {
-          success: false,
-          message: 'Error del servidor'
+      const status = error.response.status
+
+      apiError.isUnauthorized = status === 401
+      apiError.isNetworkError = false
+      apiError.isValidationError = status === 400 || status === 422
+      apiError.isServerError = status >= 500
+
+      // Extraer errores de validación si existen
+      if (apiError.isValidationError && error.response.data) {
+        const data = error.response.data as any
+        if (data.errors) {
+          apiError.validationErrors = data.errors
         }
-      })
+      }
+
+      // Agregar mensaje al error si existe
+      if (errorData?.message) {
+        (apiError as any).message = errorData.message
+      }
     } else if (error.request) {
       // Error de red (sin respuesta del servidor)
-      // Esto significa falta de conexión al servidor
-      console.error('❌ Error de conexión: No se pudo conectar al servidor')
-      
-      // Limpiar sesión si hay token (por seguridad)
-      const token = localStorage.getItem('token')
-      if (token) {
-        console.log('⚠️ Limpiando sesión por falta de conexión')
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-      }
-      
-      // Redirigir al login por falta de conexión
-      if (window.location.pathname !== '/login') {
-        console.log('🔄 Redirigiendo al login por falta de conexión')
-        window.location.href = '/login'
-      }
-      
-      return Promise.resolve({
-        data: {
-          success: false,
-          message: 'Error de conexión. No se pudo conectar al servidor. Por favor, verifica tu conexión a internet.'
-        }
-      })
+      apiError.isUnauthorized = false
+      apiError.isNetworkError = true
+      apiError.isValidationError = false
+      apiError.isServerError = false
     } else {
       // Error inesperado (configuración, timeout, etc.)
-      console.error('❌ Error inesperado:', error.message)
-      
-      return Promise.resolve({
-        data: {
-          success: false,
-          message: 'Error inesperado. Por favor, intenta nuevamente.'
-        }
-      })
+      apiError.isUnauthorized = false
+      apiError.isNetworkError = false
+      apiError.isValidationError = false
+      apiError.isServerError = false
     }
+
+    // Rechazar con error enriquecido
+    return Promise.reject(apiError)
   }
 )
