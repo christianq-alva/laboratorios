@@ -14,27 +14,27 @@ import {
   Divider,
   Link,
 } from '@mui/material'
-import { 
-  LockOutlined, 
-  PersonOutline, 
-  Visibility, 
+import {
+  LockOutlined,
+  PersonOutline,
+  Visibility,
   VisibilityOff,
   Science,
 } from '@mui/icons-material'
-import { useAuth } from '../../context/authContext'
+import { useAuth } from '../../hooks/useAuth'
 
 export const Login: React.FC = () => {
   const [usuario, setUsuario] = useState('')
   const [contrasena, setContrasena] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
-  
+
   const { login, loading } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    
+
     const result = await login({ usuario, contrasena })
 
     if (!result.success) {
@@ -58,7 +58,7 @@ export const Login: React.FC = () => {
       }}
     >
       <Container maxWidth="sm">
-        <Card 
+        <Card
           elevation={1}
           sx={{
             borderRadius: 3,
@@ -86,10 +86,10 @@ export const Login: React.FC = () => {
 
             {/* Error Alert */}
             {error && (
-              <Alert 
-                severity="error" 
-                sx={{ 
-                  mb: 3, 
+              <Alert
+                severity="error"
+                sx={{
+                  mb: 3,
                   borderRadius: 2,
                   border: '1px solid #ffebe9',
                   backgroundColor: '#ffebe9',
@@ -106,10 +106,10 @@ export const Login: React.FC = () => {
             {/* Formulario */}
             <Box component="form" onSubmit={handleSubmit}>
               <Box sx={{ mb: 3 }}>
-                <Typography variant="body2" component="label" sx={{ 
-                  display: 'block', 
-                  mb: 1, 
-                  fontWeight: 600, 
+                <Typography variant="body2" component="label" sx={{
+                  display: 'block',
+                  mb: 1,
+                  fontWeight: 600,
                   color: '#24292f',
                   fontSize: '0.875rem'
                 }}>
@@ -130,7 +130,7 @@ export const Login: React.FC = () => {
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ 
+                  sx={{
                     '& .MuiOutlinedInput-root': {
                       borderRadius: 2,
                       backgroundColor: '#f6f8fa',
@@ -160,12 +160,12 @@ export const Login: React.FC = () => {
                   }}
                 />
               </Box>
-              
+
               <Box sx={{ mb: 4 }}>
-                <Typography variant="body2" component="label" sx={{ 
-                  display: 'block', 
-                  mb: 1, 
-                  fontWeight: 600, 
+                <Typography variant="body2" component="label" sx={{
+                  display: 'block',
+                  mb: 1,
+                  fontWeight: 600,
                   color: '#24292f',
                   fontSize: '0.875rem'
                 }}>
@@ -192,7 +192,7 @@ export const Login: React.FC = () => {
                           onClick={handleTogglePassword}
                           edge="end"
                           size="small"
-                          sx={{ 
+                          sx={{
                             color: '#656d76',
                             '&:hover': {
                               backgroundColor: 'rgba(9, 105, 218, 0.1)',
@@ -204,7 +204,7 @@ export const Login: React.FC = () => {
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ 
+                  sx={{
                     '& .MuiOutlinedInput-root': {
                       borderRadius: 2,
                       backgroundColor: '#f6f8fa',
@@ -234,7 +234,7 @@ export const Login: React.FC = () => {
                   }}
                 />
               </Box>
-              
+
               <Button
                 type="submit"
                 fullWidth
@@ -291,10 +291,10 @@ export const Login: React.FC = () => {
           <Typography variant="body2" color="#656d76" sx={{ mb: 1 }}>
             ¿Necesitas ayuda?
           </Typography>
-          <Link 
-            href="#" 
-            sx={{ 
-              color: '#0969da', 
+          <Link
+            href="#"
+            sx={{
+              color: '#0969da',
               textDecoration: 'none',
               fontWeight: 500,
               '&:hover': {

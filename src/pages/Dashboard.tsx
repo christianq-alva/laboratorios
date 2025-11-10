@@ -29,7 +29,7 @@ import {
   Warning,
   Refresh
 } from '@mui/icons-material'
-import { useAuth } from '../context/authContext'
+import { useAuth } from '../hooks/useAuth'
 import { dashboardService } from '../services/dashboardService'
 import { CalendarView } from '../components/Dashboard/CalendarView'
 import type { DashboardStats } from '../services/dashboardService'

@@ -25,7 +25,7 @@ import {
   Logout
 } from '@mui/icons-material'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../../context/authContext'
+import { useAuth } from '../../hooks/useAuth' 
 
 const DRAWER_WIDTH = 280
 
