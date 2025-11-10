@@ -75,9 +75,15 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
   }
 
   const handleConfigurarInsumos = () => {
-    setConfigurarInsumosOpen(true)
-    handleMenuClose()
+    if (selectedLab) {
+      console.log("selectedLab para configurar insumos", selectedLab)
+      setConfigurarInsumosOpen(true)
+    }
   }
+  const handleCloseConfigurarInsumos = () => {
+    setConfigurarInsumosOpen(false)
+    handleMenuClose()
+  } 
 
   const handleDelete = () => {
     if (selectedLab) {
@@ -112,7 +118,7 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
   // Filtrar laboratorios por término de búsqueda
   const filteredLaboratorios = useMemo(() => {
     if (!searchTerm) return laboratorios
-    
+
     const searchLower = searchTerm.toLowerCase()
     return laboratorios.filter(lab => (
       (lab.codigo && lab.codigo.toLowerCase().includes(searchLower)) ||
@@ -195,111 +201,111 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
 
       <TableContainer component={Paper}>
         <Table>
-        <TableHead>
-          <TableRow sx={{ backgroundColor: 'grey.50' }}>
-            <TableCell sx={{ fontWeight: 600, width: '12%' }}>Código</TableCell>
-            <TableCell sx={{ fontWeight: 600, width: '25%' }}>Laboratorio</TableCell>
-            <TableCell sx={{ fontWeight: 600, width: '20%' }}>Ubicación</TableCell>
-            <TableCell sx={{ fontWeight: 600, width: '8%' }}>Piso</TableCell>
-            <TableCell sx={{ fontWeight: 600, width: '20%' }}>Escuela</TableCell>
-            <TableCell sx={{ fontWeight: 600, width: '10%' }}>Estado</TableCell>
-            <TableCell align="center" sx={{ fontWeight: 600, width: '5%' }}>Acciones</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {filteredLaboratorios.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                <Box sx={{ textAlign: 'center' }}>
-                  <School sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
-                  <Typography variant="h6" color="text.secondary" gutterBottom>
-                    No se encontraron laboratorios
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {searchTerm 
-                      ? `No hay laboratorios que coincidan con "${searchTerm}"`
-                      : 'No hay laboratorios registrados en el sistema'
-                    }
-                  </Typography>
-                </Box>
-              </TableCell>
+          <TableHead>
+            <TableRow sx={{ backgroundColor: 'grey.50' }}>
+              <TableCell sx={{ fontWeight: 600, width: '12%' }}>Código</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '25%' }}>Laboratorio</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '20%' }}>Ubicación</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '8%' }}>Piso</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '20%' }}>Escuela</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '10%' }}>Estado</TableCell>
+              <TableCell align="center" sx={{ fontWeight: 600, width: '5%' }}>Acciones</TableCell>
             </TableRow>
-          ) : (
-            paginatedLaboratorios.map((lab) => (
-            <TableRow key={lab.id} hover>
-              {/* Código */}
-              <TableCell>
-                <Chip 
-                  label={lab.codigo || 'N/A'} 
-                  size="small" 
-                  color="secondary"
-                  variant="outlined"
-                  sx={{ fontFamily: 'monospace', fontWeight: 600 }}
-                />
-              </TableCell>
+          </TableHead>
+          <TableBody>
+            {filteredLaboratorios.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <School sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
+                    <Typography variant="h6" color="text.secondary" gutterBottom>
+                      No se encontraron laboratorios
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {searchTerm
+                        ? `No hay laboratorios que coincidan con "${searchTerm}"`
+                        : 'No hay laboratorios registrados en el sistema'
+                      }
+                    </Typography>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ) : (
+              paginatedLaboratorios.map((lab) => (
+                <TableRow key={lab.id} hover>
+                  {/* Código */}
+                  <TableCell>
+                    <Chip
+                      label={lab.codigo || 'N/A'}
+                      size="small"
+                      color="secondary"
+                      variant="outlined"
+                      sx={{ fontFamily: 'monospace', fontWeight: 600 }}
+                    />
+                  </TableCell>
 
-              {/* Nombre */}
-              <TableCell>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <School fontSize="small" color="primary" />
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {lab.nombre}
-                  </Typography>
-                </Box>
-              </TableCell>
+                  {/* Nombre */}
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <School fontSize="small" color="primary" />
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {lab.nombre}
+                      </Typography>
+                    </Box>
+                  </TableCell>
 
-              {/* Ubicación */}
-              <TableCell>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <LocationOn fontSize="small" color="action" />
-                  <Typography variant="body2">{lab.ubicacion}</Typography>
-                </Box>
-              </TableCell>
+                  {/* Ubicación */}
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <LocationOn fontSize="small" color="action" />
+                      <Typography variant="body2">{lab.ubicacion}</Typography>
+                    </Box>
+                  </TableCell>
 
-              {/* Piso */}
-              <TableCell>
-                <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.secondary' }}>
-                  {lab.piso}
-                </Typography>
-              </TableCell>
+                  {/* Piso */}
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.secondary' }}>
+                      {lab.piso}
+                    </Typography>
+                  </TableCell>
 
-              {/* Escuela */}
-              <TableCell>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <AccountBalance fontSize="small" color="action" />
-                  <Typography variant="body2">
-                    {lab.escuela || 'Escuela no asignada'}
-                  </Typography>
-                </Box>
-              </TableCell>
+                  {/* Escuela */}
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <AccountBalance fontSize="small" color="action" />
+                      <Typography variant="body2">
+                        {lab.escuela || 'Escuela no asignada'}
+                      </Typography>
+                    </Box>
+                  </TableCell>
 
-              {/* Estado */}
-              <TableCell>
-                <Chip 
-                  label={lab.estado || 'Activo'} 
-                  color={getEstadoColor(lab.estado || 'Activo') as any} 
-                  size="small" 
-                  variant="filled" 
-                />
-              </TableCell>
+                  {/* Estado */}
+                  <TableCell>
+                    <Chip
+                      label={lab.estado || 'Activo'}
+                      color={getEstadoColor(lab.estado || 'Activo') as any}
+                      size="small"
+                      variant="filled"
+                    />
+                  </TableCell>
 
-              {/* Acciones */}
-              <TableCell align="center">
-                <Tooltip title="Más opciones">
-                  <IconButton
-                    size="small"
-                    onClick={(e) => handleMenuClick(e, lab)}
-                    sx={{ color: 'grey.600' }}
-                  >
-                    <MoreVert />
-                  </IconButton>
-                </Tooltip>
-              </TableCell>
-            </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+                  {/* Acciones */}
+                  <TableCell align="center">
+                    <Tooltip title="Más opciones">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => handleMenuClick(e, lab)}
+                        sx={{ color: 'grey.600' }}
+                      >
+                        <MoreVert />
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </TableContainer>
 
       {/* Paginación */}
@@ -312,7 +318,7 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
         labelRowsPerPage="Filas por página:"
-        labelDisplayedRows={({ from, to, count }) => 
+        labelDisplayedRows={({ from, to, count }) =>
           `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
         }
         sx={{
@@ -342,13 +348,13 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
           </ListItemIcon>
           <ListItemText>Configurar Insumos</ListItemText>
         </MenuItem>
-        
+
         {/* Separador visual */}
         <MenuItem disabled sx={{ borderTop: 1, borderColor: 'divider', mt: 1, pt: 1 }}>
           <ListItemText primary="Cambiar Estado:" sx={{ fontSize: '0.875rem', color: 'text.secondary' }} />
         </MenuItem>
-        
-        <MenuItem 
+
+        <MenuItem
           onClick={() => handleChangeStatus('Activo')}
           disabled={selectedLab?.estado === 'Activo'}
         >
@@ -357,8 +363,8 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
           </ListItemIcon>
           <ListItemText>Activo</ListItemText>
         </MenuItem>
-        
-        <MenuItem 
+
+        <MenuItem
           onClick={() => handleChangeStatus('En Mantenimiento')}
           disabled={selectedLab?.estado === 'En Mantenimiento'}
         >
@@ -367,8 +373,8 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
           </ListItemIcon>
           <ListItemText>En Mantenimiento</ListItemText>
         </MenuItem>
-        
-        <MenuItem 
+
+        <MenuItem
           onClick={() => handleChangeStatus('Inhabilitado')}
           disabled={selectedLab?.estado === 'Inhabilitado'}
         >
@@ -377,8 +383,8 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
           </ListItemIcon>
           <ListItemText>Inhabilitado</ListItemText>
         </MenuItem>
-        
-        <MenuItem 
+
+        <MenuItem
           onClick={() => handleChangeStatus('Baja')}
           disabled={selectedLab?.estado === 'Baja'}
         >
@@ -387,11 +393,11 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
           </ListItemIcon>
           <ListItemText>Baja</ListItemText>
         </MenuItem>
-        
+
         {/* Separador para eliminar */}
         <MenuItem disabled sx={{ borderTop: 1, borderColor: 'divider', mt: 1 }}>
         </MenuItem>
-        
+
         <MenuItem onClick={handleDelete}>
           <ListItemIcon>
             <Delete fontSize="small" />
@@ -403,7 +409,7 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
       {/* Modal de configuración de insumos */}
       <ConfigurarInsumosModal
         open={configurarInsumosOpen}
-        onClose={() => setConfigurarInsumosOpen(false)}
+        onClose={handleCloseConfigurarInsumos}
         laboratorio={selectedLab ? {
           id: selectedLab.id,
           nombre: selectedLab.nombre,

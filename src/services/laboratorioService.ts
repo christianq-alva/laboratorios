@@ -57,5 +57,17 @@ export const laboratorioService = {
   changeStatus: async (id: number, estado: 'Activo' | 'En Mantenimiento' | 'Inhabilitado' | 'Baja'): Promise<ApiMessageResponse> => {
     const response = await api.patch(`/laboratorios/${id}/estado`, { estado })
     return response.data
+  },
+
+  // Obtener insumos configurados de un laboratorio
+  getInsumos: async (id: number): Promise<ApiDataResponse<any[]>> => {
+    const response = await api.get(`/laboratorios/${id}/insumos`)
+    return response.data
+  },
+
+  // Configurar insumos de un laboratorio
+  configurarInsumos: async (id: number, insumo_ids: number[]): Promise<ApiMessageResponse> => {
+    const response = await api.put(`/laboratorios/${id}/insumos`, { insumo_ids })
+    return response.data
   }
 } 

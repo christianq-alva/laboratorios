@@ -6,7 +6,9 @@ import {
   createLaboratorio,
   updateLaboratorio,
   deleteLaboratorio,
-  changeEstadoLaboratorio
+  changeEstadoLaboratorio,
+  getInsumosLaboratorio,
+  configurarInsumosLaboratorio
 } from '../controllers/laboratorioController.js'
 
 const router = express.Router()
@@ -46,6 +48,18 @@ router.patch('/:id/estado',
   changeEstadoLaboratorio
 )
 
+// Obtener insumos configurados de un laboratorio
+router.get('/:id/insumos',
+  authenticateToken,
+  authorizeResource('read', 'Laboratorio'),
+  getInsumosLaboratorio
+)
 
+// Configurar insumos de un laboratorio
+router.put('/:id/insumos',
+  authenticateToken,
+  authorizeResource('update', 'Laboratorio'),
+  configurarInsumosLaboratorio
+)
 
 export default router

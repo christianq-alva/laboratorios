@@ -136,7 +136,7 @@ export const User = {
 
       // Preparar laboratorio_ids como JSON
       let laboratorioIdsJson = null
-      if (data.laboratorios && data.laboratorios.length > 0) {
+      if (data.laboratorio_ids && data.laboratorio_ids.length > 0) {
         // Verificar que el rol sea Jefe de Laboratorio
         const [rolRows] = await connection.execute(
           'SELECT nombre FROM roles WHERE id = ?',
@@ -144,7 +144,7 @@ export const User = {
         )
         
         if (rolRows[0]?.nombre === 'Jefe de Laboratorio') {
-          laboratorioIdsJson = JSON.stringify(data.laboratorios)
+          laboratorioIdsJson = JSON.stringify(data.laboratorio_ids)
         }
       }
 
@@ -205,7 +205,7 @@ export const User = {
       }
 
       // Actualizar laboratorio_ids como JSON
-      if (data.laboratorios !== undefined || data.rol_id) {
+      if (data.laboratorio_ids !== undefined || data.rol_id) {
         let rolId = data.rol_id
         if (!rolId) {
           const [userRows] = await connection.execute('SELECT rol_id FROM usuarios WHERE id = ?', [id])
@@ -220,8 +220,8 @@ export const User = {
           
           let laboratorioIdsJson = null
           // Si es Jefe de Laboratorio y hay laboratorios, guardarlos
-          if (rolRows[0]?.nombre === 'Jefe de Laboratorio' && data.laboratorios && data.laboratorios.length > 0) {
-            laboratorioIdsJson = JSON.stringify(data.laboratorios)
+          if (rolRows[0]?.nombre === 'Jefe de Laboratorio' && data.laboratorio_ids && data.laboratorio_ids.length > 0) {
+            laboratorioIdsJson = JSON.stringify(data.laboratorio_ids)
           }
           // Si cambió a Administrador, limpiar laboratorio_ids
           // Si es Jefe pero no se proporcionaron laboratorios, mantener null o vacío

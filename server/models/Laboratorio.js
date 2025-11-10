@@ -76,4 +76,57 @@ export const Laboratorio = {
         `)
         return laboratorioInsumos;
     },
+
+    // Obtener insumos configurados para un laboratorio
+    getInsumosByLaboratorio: async (laboratorio_id) => {
+        const [insumos] = await pool.execute(`
+            SELECT 
+                i.id,
+                i.codigo,
+                i.nombre,
+                i.descripcion,
+                i.unidad_medida,
+                i.categoria,
+                i.presentacion
+            FROM inventario_insumos ii
+            INNER JOIN insumos i ON i.id = ii.insumo_id
+            WHERE ii.laboratorio_id = ?
+            ORDER BY i.nombre
+        `, [laboratorio_id])
+        return insumos
+    },
+
+    // Configurar insumos para un laboratorio (reemplaza todos los insumos configurados)
+    configurarInsumos: async (laboratorio_id, insumo_ids) => {
+        const connection = await pool.getConnection()
+        try {
+            await connection.beginTransaction()
+
+            // Eliminar todos los insumos configurados para este laboratorio
+            await connection.execute(
+                'DELETE FROM inventario_insumos WHERE laboratorio_id = ?',
+                [laboratorio_id]
+            )
+
+            // Insertar los nuevos insumos configurados
+            if (insumo_ids && insumo_ids.length > 0) {
+                const values = insumo_ids.map(insumo_id => [laboratorio_id, insumo_id])
+                const placeholders = values.map(() => '(?, ?)').join(', ')
+                const flatValues = values.flat()
+                
+                await connection.execute(
+                    `INSERT INTO inventario_insumos (laboratorio_id, insumo_id) VALUES ${placeholders}`,
+                    flatValues
+                )
+            }
+
+            await connection.commit()
+            return true
+        } catch (error) {
+            await connection.rollback()
+            throw error
+        } finally {
+            connection.release()
+        }
+    },
 }

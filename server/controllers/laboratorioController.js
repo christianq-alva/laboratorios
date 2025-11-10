@@ -218,3 +218,106 @@ export const changeEstadoLaboratorio = async (req, res) => {
     })
   }
 }
+
+// Obtener insumos configurados para un laboratorio
+export const getInsumosLaboratorio = async (req, res) => {
+  try {
+    const { id } = req.params
+    const laboratorioId = parseInt(id, 10)
+    
+    // Validar ID
+    if (isNaN(laboratorioId) || laboratorioId <= 0) {
+      return res.status(400).json({
+        message: 'ID de laboratorio inválido'
+      })
+    }
+
+    // Verificar que el laboratorio existe
+    const labCheck = await Laboratorio.exists(laboratorioId)
+    if (!labCheck) {
+      return res.status(404).json({
+        message: 'Laboratorio no encontrado'
+      })
+    }
+
+    // Verificar permisos para Jefe de Laboratorio
+    if (req.user.rol === 'Jefe de Laboratorio') {
+      if (!req.user.laboratorio_ids.includes(laboratorioId)) {
+        return res.status(403).json({
+          message: 'No tienes permisos para ver los insumos de este laboratorio'
+        })
+      }
+    }
+
+    const insumos = await Laboratorio.getInsumosByLaboratorio(laboratorioId)
+    
+    res.status(200).json({
+      data: insumos
+    })
+  } catch (error) {
+    console.error('Error al obtener insumos del laboratorio:', error)
+    res.status(500).json({
+      message: 'Error al obtener insumos del laboratorio'
+    })
+  }
+}
+
+// Configurar insumos para un laboratorio
+export const configurarInsumosLaboratorio = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { insumo_ids } = req.body
+    const laboratorioId = parseInt(id, 10)
+    
+    // Validar ID
+    if (isNaN(laboratorioId) || laboratorioId <= 0) {
+      return res.status(400).json({
+        message: 'ID de laboratorio inválido'
+      })
+    }
+
+    // Validar que insumo_ids sea un array
+    if (!Array.isArray(insumo_ids)) {
+      return res.status(400).json({
+        message: 'insumo_ids debe ser un array'
+      })
+    }
+
+    // Verificar que el laboratorio existe
+    const labCheck = await Laboratorio.exists(laboratorioId)
+    if (!labCheck) {
+      return res.status(404).json({
+        message: 'Laboratorio no encontrado'
+      })
+    }
+
+    // Verificar permisos para Jefe de Laboratorio
+    if (req.user.rol === 'Jefe de Laboratorio') {
+      if (!req.user.laboratorio_ids.includes(laboratorioId)) {
+        return res.status(403).json({
+          message: 'No tienes permisos para configurar insumos de este laboratorio'
+        })
+      }
+    }
+
+    // Validar que todos los insumo_ids sean números válidos
+    const insumoIdsValidos = insumo_ids
+      .map(id => parseInt(id, 10))
+      .filter(id => !isNaN(id) && id > 0)
+
+    await Laboratorio.configurarInsumos(laboratorioId, insumoIdsValidos)
+    
+    res.status(200).json({
+      message: 'Insumos configurados correctamente',
+      data: {
+        laboratorio_id: laboratorioId,
+        insumos_configurados: insumoIdsValidos.length
+      }
+    })
+  } catch (error) {
+    console.error('Error al configurar insumos del laboratorio:', error)
+    res.status(500).json({
+      message: 'Error al configurar insumos del laboratorio'
+    })
+  }
+}

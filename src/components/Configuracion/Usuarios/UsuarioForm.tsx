@@ -31,6 +31,7 @@ import {
 import { usuarioService, type Usuario } from '../../../services/usuarioService'
 import { laboratorioService, type Laboratorio } from '../../../services/laboratorioService'
 import { useApi } from '../../../hooks/useApi'
+import { rolService, type Rol } from '../../../services/rolService'
 
 interface UsuarioFormProps {
   open: boolean
@@ -38,16 +39,6 @@ interface UsuarioFormProps {
   onSuccess: (message?: string) => void
   usuario: Usuario | null
 }
-
-interface Rol {
-  id: number
-  nombre: string
-}
-
-const ROLES: Rol[] = [
-  { id: 1, nombre: 'Administrador' },
-  { id: 2, nombre: 'Jefe de Laboratorio' },
-]
 
 export const UsuarioForm: React.FC<UsuarioFormProps> = ({
   open,
@@ -68,26 +59,36 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
   const [loading, setLoading] = useState(false)
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
   const [loadingLaboratorios, setLoadingLaboratorios] = useState(false)
-
+  const [roles, setRoles] = useState<Rol[]>([])
+  const [loadingRoles, setLoadingRoles] = useState(false)
   // Cargar laboratorios al abrir el formulario
   useEffect(() => {
     if (open) {
       loadLaboratorios()
+      loadRoles()
     }
   }, [open])
 
   const loadLaboratorios = async () => {
     setLoadingLaboratorios(true)
-    try {
-      const response = await laboratorioService.getAll()
-      if (response.data) {
-        setLaboratorios(response.data)
-      }
-    } catch (error) {
-      console.error('Error al cargar laboratorios:', error)
-    } finally {
-      setLoadingLaboratorios(false)
+    const response = await execute(() => laboratorioService.getAll())
+    if (response.error) {
+      console.error('Error al cargar laboratorios:', response.error)
+    } else if (response.data) {
+      setLaboratorios(response.data.data)
     }
+    setLoadingLaboratorios(false)
+  }
+
+  const loadRoles = async () => {
+    setLoadingRoles(true)
+    const response = await execute(() => rolService.getAll())
+    if (response.error) {
+      console.error('Error al cargar roles:', response.error)
+    } else if (response.data) {
+      setRoles(response.data.data)
+    }
+    setLoadingRoles(false)
   }
 
   useEffect(() => {
@@ -147,7 +148,7 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
     if (formData.contrasena && formData.contrasena.length < 6) {
       newErrors.contrasena = 'La contraseña debe tener al menos 6 caracteres'
     }
-    const selectedRol = ROLES.find(r => r.id === formData.rol_id)
+    const selectedRol = roles.find(r => r.id === formData.rol_id)
     if (selectedRol?.nombre === 'Jefe de Laboratorio' && formData.laboratorio_ids.length === 0) {
       newErrors.laboratorio_ids = 'Debe asignar al menos un laboratorio'
     }
@@ -211,7 +212,7 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
     onClose()
   }
 
-  const selectedRol = ROLES.find(r => r.id === formData.rol_id)
+  const selectedRol = roles.find(r => r.id === formData.rol_id)
 
   return (
     <Dialog
@@ -317,11 +318,12 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
               value={formData.rol_id}
               label="Rol"
               onChange={(e) => handleChange('rol_id', Number(e.target.value))}
+              disabled={loadingRoles}
             >
               <MenuItem value={0}>
                 <em>Seleccionar rol</em>
               </MenuItem>
-              {ROLES.map((rol) => (
+              {roles.map((rol: Rol) => (
                 <MenuItem key={rol.id} value={rol.id}>
                   {rol.nombre}
                 </MenuItem>

@@ -42,8 +42,11 @@ export const getById = async (req, res) => {
 // Crear un nuevo usuario
 export const createUsuario = async (req, res) => {
   try {
-    const { nombre_completo, usuario, contrasena, rol_id, laboratorios } = req.body
+    const { nombre_completo, usuario, contrasena, rol_id, laboratorio_ids } = req.body
     // Validaciones
+
+    console.log('laboratorio_ids', laboratorio_ids)
+
     if (!nombre_completo || nombre_completo.trim() === '') {
       return res.status(400).json({
         message: 'El nombre completo es obligatorio'
@@ -70,7 +73,7 @@ export const createUsuario = async (req, res) => {
       })
     }
     // Validar que si es Jefe de Laboratorio, tenga al menos un laboratorio
-    if (rol_id === 2 && (!laboratorios || laboratorios.length === 0)) {
+    if (rol_id === 2 && (!laboratorio_ids || laboratorio_ids.length === 0)) {
       return res.status(400).json({
         message: 'Los jefes de laboratorio deben tener al menos un laboratorio asignado'
       })
@@ -80,7 +83,7 @@ export const createUsuario = async (req, res) => {
       usuario: usuario.trim(),
       contrasena: contrasena,
       rol_id: rol_id,
-      laboratorios: laboratorios || []
+      laboratorio_ids: laboratorio_ids || []
     })
     const nuevoUsuario = await User.getById(usuarioId)
     res.status(201).json({
@@ -104,7 +107,7 @@ export const updateUsuario = async (req, res) => {
   try {
     const { id } = req.params
     const usuarioId = parseInt(id, 10)
-    const { nombre_completo, usuario, contrasena, rol_id, laboratorios } = req.body
+    const { nombre_completo, usuario, contrasena, rol_id, laboratorio_ids } = req.body
     // Validar ID
     if (isNaN(usuarioId) || usuarioId <= 0) {
       return res.status(400).json({
@@ -135,7 +138,7 @@ export const updateUsuario = async (req, res) => {
       })
     }
     // Validar que si es Jefe de Laboratorio, tenga al menos un laboratorio
-    if (rol_id === 2 && laboratorios !== undefined && laboratorios.length === 0) {
+    if (rol_id === 2 && laboratorio_ids !== undefined && laboratorio_ids.length === 0) {
       return res.status(400).json({
         message: 'Los jefes de laboratorio deben tener al menos un laboratorio asignado'
       })
@@ -145,7 +148,7 @@ export const updateUsuario = async (req, res) => {
     if (usuario !== undefined) data.usuario = usuario.trim()
     if (contrasena !== undefined) data.contrasena = contrasena
     if (rol_id !== undefined) data.rol_id = rol_id
-    if (laboratorios !== undefined) data.laboratorios = laboratorios
+    if (laboratorio_ids !== undefined) data.laboratorio_ids = laboratorio_ids
     const actualizado = await User.update(usuarioId, data)
     if (!actualizado) {
       return res.status(404).json({

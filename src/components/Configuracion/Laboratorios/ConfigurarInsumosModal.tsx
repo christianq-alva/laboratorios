@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -18,11 +18,9 @@ import {
   Divider,
   Alert,
   IconButton,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   ListItemButton,
+  CircularProgress,
+  Paper,
 } from '@mui/material'
 import {
   Close,
@@ -33,10 +31,14 @@ import {
   Inventory,
   LocationOn,
 } from '@mui/icons-material'
+import { laboratorioService } from '../../../services/laboratorioService'
+import { insumoService, type Insumo } from '../../../services/insumoService'
+import { useApi } from '../../../hooks/useApi'
 
 interface ConfigurarInsumosModalProps {
   open: boolean
   onClose: () => void
+  onSuccess?: (message?: string) => void
   laboratorio: {
     id: number
     nombre: string
@@ -45,51 +47,67 @@ interface ConfigurarInsumosModalProps {
   } | null
 }
 
-// Laboratorios de ejemplo para la maquetación
-const LABORATORIOS_MOCK = [
-  { id: 1, nombre: 'Lab. de Química Analítica', codigo: 'LAB-001', ubicacion: 'Piso 2, Ala A' },
-  { id: 2, nombre: 'Lab. de Física', codigo: 'LAB-002', ubicacion: 'Piso 3, Ala B' },
-  { id: 3, nombre: 'Lab. de Biología', codigo: 'LAB-003', ubicacion: 'Piso 1, Ala C' },
-  { id: 4, nombre: 'Lab. de Microbiología', codigo: 'LAB-004', ubicacion: 'Piso 2, Ala D' },
-  { id: 5, nombre: 'Lab. de Computación', codigo: 'LAB-005', ubicacion: 'Piso 4, Ala A' },
-]
-
-// Insumos de ejemplo para la maquetación
-const INSUMOS_MOCK = [
-  { id: 1, codigo: 'INS-001', nombre: 'Ácido Sulfúrico 98%', categoria: 'Reactivos', unidad: 'Litro' },
-  { id: 2, codigo: 'INS-002', nombre: 'Pipeta volumétrica 25ml', categoria: 'Materiales', unidad: 'Unidad' },
-  { id: 3, codigo: 'INS-003', nombre: 'Matraz aforado 100ml', categoria: 'Materiales', unidad: 'Unidad' },
-  { id: 4, codigo: 'INS-004', nombre: 'Hidróxido de Sodio', categoria: 'Reactivos', unidad: 'Kilogramo' },
-  { id: 5, codigo: 'INS-005', nombre: 'Probeta graduada 250ml', categoria: 'Materiales', unidad: 'Unidad' },
-  { id: 6, codigo: 'INS-006', nombre: 'Etanol 96%', categoria: 'Reactivos', unidad: 'Litro' },
-  { id: 7, codigo: 'INS-007', nombre: 'Vaso de precipitados 500ml', categoria: 'Materiales', unidad: 'Unidad' },
-  { id: 8, codigo: 'INS-008', nombre: 'E. coli', categoria: 'Material_Biologico', unidad: 'Cultivo' },
-]
-
 export const ConfigurarInsumosModal: React.FC<ConfigurarInsumosModalProps> = ({
   open,
   onClose,
+  onSuccess,
   laboratorio,
 }) => {
-  const [selectedLaboratorioId, setSelectedLaboratorioId] = useState<number>(laboratorio?.id || 0)
+  const { execute } = useApi()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedInsumos, setSelectedInsumos] = useState<number[]>([])
+  const [insumos, setInsumos] = useState<Insumo[]>([])
+  const [loadingInsumos, setLoadingInsumos] = useState(false)
+  const [loadingConfigurados, setLoadingConfigurados] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  // Actualizar laboratorio seleccionado cuando cambie el prop
-  React.useEffect(() => {
-    if (laboratorio?.id) {
-      setSelectedLaboratorioId(laboratorio.id)
+  // Cargar insumos disponibles y los configurados cuando se abre el modal
+  useEffect(() => {
+    if (open && laboratorio?.id) {
+      loadInsumos()
+      loadInsumosConfigurados()
     }
-  }, [laboratorio])
+  }, [open, laboratorio])
+
+  // Cargar todos los insumos disponibles
+  const loadInsumos = async () => {
+    if (!laboratorio?.id) return
+    
+    setLoadingInsumos(true)
+    setError(null)
+    const response = await execute(() => insumoService.getAllInsumos())
+    
+    if (response.error) {
+      setError('Error al cargar los insumos disponibles')
+      console.error('Error al cargar insumos:', response.error)
+    } else if (response.data) {
+      setInsumos(response.data.data || [])
+    }
+    setLoadingInsumos(false)
+  }
+
+  // Cargar insumos ya configurados para este laboratorio
+  const loadInsumosConfigurados = async () => {
+    if (!laboratorio?.id) return
+    
+    setLoadingConfigurados(true)
+    const response = await execute(() => laboratorioService.getInsumos(laboratorio.id))
+    
+    if (response.error) {
+      console.error('Error al cargar insumos configurados:', response.error)
+    } else if (response.data) {
+      const insumosConfigurados = response.data.data || []
+      setSelectedInsumos(insumosConfigurados.map((ins: Insumo) => ins.id))
+    }
+    setLoadingConfigurados(false)
+  }
 
   // Filtrar insumos por búsqueda
-  const filteredInsumos = INSUMOS_MOCK.filter(insumo =>
+  const filteredInsumos = insumos.filter(insumo =>
     insumo.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    insumo.codigo.toLowerCase().includes(searchTerm.toLowerCase())
+    insumo.codigo?.toLowerCase().includes(searchTerm.toLowerCase())
   )
-
-  // Obtener laboratorio seleccionado
-  const laboratorioSeleccionado = LABORATORIOS_MOCK.find(lab => lab.id === selectedLaboratorioId)
 
   // Toggle selección de insumo
   const handleToggleInsumo = (insumoId: number) => {
@@ -100,12 +118,24 @@ export const ConfigurarInsumosModal: React.FC<ConfigurarInsumosModalProps> = ({
     )
   }
 
-  // Seleccionar todos
+  // Seleccionar todos los insumos filtrados
   const handleSelectAll = () => {
     if (selectedInsumos.length === filteredInsumos.length) {
-      setSelectedInsumos([])
+      // Deseleccionar todos los filtrados
+      const filteredIds = filteredInsumos.map(i => i.id)
+      setSelectedInsumos(prev => prev.filter(id => !filteredIds.includes(id)))
     } else {
-      setSelectedInsumos(filteredInsumos.map(i => i.id))
+      // Seleccionar todos los filtrados
+      const filteredIds = filteredInsumos.map(i => i.id)
+      setSelectedInsumos(prev => {
+        const newSelection = [...prev]
+        filteredIds.forEach(id => {
+          if (!newSelection.includes(id)) {
+            newSelection.push(id)
+          }
+        })
+        return newSelection
+      })
     }
   }
 
@@ -113,22 +143,29 @@ export const ConfigurarInsumosModal: React.FC<ConfigurarInsumosModalProps> = ({
   const handleClose = () => {
     setSearchTerm('')
     setSelectedInsumos([])
-    setSelectedLaboratorioId(0)
+    setError(null)
     onClose()
   }
 
-  // Guardar configuración (placeholder)
+  // Guardar configuración
   const handleSave = async () => {
-    // TODO: Implementar llamada a API
-    // const result = await laboratorioService.configurarInsumos(selectedLaboratorioId, selectedInsumos)
-    console.log('Guardar configuración:', {
-      laboratorioId: selectedLaboratorioId,
-      laboratorioNombre: laboratorioSeleccionado?.nombre,
-      insumosSeleccionados: selectedInsumos,
-    })
-    
-    // TODO: Mostrar mensaje de éxito/error
-    handleClose()
+    if (!laboratorio?.id) return
+
+    setSaving(true)
+    setError(null)
+
+    const result = await execute(() => 
+      laboratorioService.configurarInsumos(laboratorio.id, selectedInsumos)
+    )
+
+    if (result.error) {
+      setError(result.error)
+    } else {
+      onSuccess?.(result.data?.message || 'Insumos configurados correctamente')
+      handleClose()
+    }
+
+    setSaving(false)
   }
 
   const getCategoriaColor = (categoria: string) => {
@@ -143,6 +180,13 @@ export const ConfigurarInsumosModal: React.FC<ConfigurarInsumosModalProps> = ({
         return 'default'
     }
   }
+
+  // No mostrar el modal si no hay laboratorio
+  if (!laboratorio) {
+    return null
+  }
+
+  const insumosSeleccionadosFiltrados = filteredInsumos.filter(i => selectedInsumos.includes(i.id)).length
 
   return (
     <Dialog 
@@ -168,47 +212,48 @@ export const ConfigurarInsumosModal: React.FC<ConfigurarInsumosModalProps> = ({
             Configurar Insumos
           </Typography>
         </Box>
-        <IconButton onClick={handleClose} size="small">
+        <IconButton onClick={handleClose} size="small" disabled={saving}>
           <Close />
         </IconButton>
       </DialogTitle>
 
       <DialogContent sx={{ p: 0 }}>
-        {/* Selector de Laboratorio */}
+        {/* Información del Laboratorio (solo lectura) */}
         <Box sx={{ p: 2, pb: 1 }}>
-          <FormControl fullWidth>
-            <InputLabel id="laboratorio-select-label">Seleccionar Laboratorio</InputLabel>
-            <Select
-              labelId="laboratorio-select-label"
-              value={selectedLaboratorioId}
-              label="Seleccionar Laboratorio"
-              onChange={(e) => setSelectedLaboratorioId(e.target.value as number)}
-              startAdornment={
-                <InputAdornment position="start">
-                  <LocationOn color="primary" />
-                </InputAdornment>
-              }
-            >
-              <MenuItem value={0} disabled>
-                <em>Selecciona un laboratorio</em>
-              </MenuItem>
-              {LABORATORIOS_MOCK.map((lab) => (
-                <MenuItem key={lab.id} value={lab.id}>
-                  <Box>
-                    <Typography variant="body2" fontWeight={500}>
-                      {lab.nombre}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {lab.codigo} • {lab.ubicacion}
-                    </Typography>
-                  </Box>
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Paper 
+            elevation={0} 
+            sx={{ 
+              p: 2, 
+              bgcolor: 'grey.50',
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 1
+            }}
+          >
+            <Box display="flex" alignItems="center" gap={1.5}>
+              <LocationOn color="primary" />
+              <Box>
+                <Typography variant="body1" fontWeight={600}>
+                  {laboratorio.nombre}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {laboratorio.codigo} {laboratorio.ubicacion && `• ${laboratorio.ubicacion}`}
+                </Typography>
+              </Box>
+            </Box>
+          </Paper>
         </Box>
 
         <Divider />
+
+        {/* Mensaje de error */}
+        {error && (
+          <Box sx={{ px: 2, pt: 2 }}>
+            <Alert severity="error" onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          </Box>
+        )}
 
         {/* Barra de búsqueda y acciones */}
         <Box sx={{ px: 2, py: 2 }}>
@@ -219,6 +264,7 @@ export const ConfigurarInsumosModal: React.FC<ConfigurarInsumosModalProps> = ({
               placeholder="Buscar insumo por nombre o código..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              disabled={loadingInsumos || saving}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -227,7 +273,11 @@ export const ConfigurarInsumosModal: React.FC<ConfigurarInsumosModalProps> = ({
                 ),
                 endAdornment: searchTerm && (
                   <InputAdornment position="end">
-                    <IconButton size="small" onClick={() => setSearchTerm('')}>
+                    <IconButton 
+                      size="small" 
+                      onClick={() => setSearchTerm('')}
+                      disabled={saving}
+                    >
                       <Close fontSize="small" />
                     </IconButton>
                   </InputAdornment>
@@ -238,16 +288,19 @@ export const ConfigurarInsumosModal: React.FC<ConfigurarInsumosModalProps> = ({
               variant="outlined"
               size="small"
               onClick={handleSelectAll}
+              disabled={loadingInsumos || saving || filteredInsumos.length === 0}
               sx={{ minWidth: 120 }}
             >
-              {selectedInsumos.length === filteredInsumos.length ? 'Deseleccionar' : 'Seleccionar'} Todo
+              {insumosSeleccionadosFiltrados === filteredInsumos.length && filteredInsumos.length > 0
+                ? 'Deseleccionar' 
+                : 'Seleccionar'} Todo
             </Button>
           </Box>
 
           {/* Contador de seleccionados */}
           <Box mt={1} display="flex" justifyContent="flex-end" alignItems="center">
             <Chip 
-              label={`${selectedInsumos.length} tipos de insumo seleccionados`}
+              label={`${selectedInsumos.length} tipo${selectedInsumos.length !== 1 ? 's' : ''} de insumo seleccionado${selectedInsumos.length !== 1 ? 's' : ''}`}
               color="primary"
               size="small"
               variant={selectedInsumos.length > 0 ? 'filled' : 'outlined'}
@@ -264,11 +317,15 @@ export const ConfigurarInsumosModal: React.FC<ConfigurarInsumosModalProps> = ({
           maxHeight: 'calc(80vh - 400px)',
           px: 2,
         }}>
-          {filteredInsumos.length === 0 ? (
+          {loadingInsumos || loadingConfigurados ? (
+            <Box py={4} display="flex" justifyContent="center">
+              <CircularProgress />
+            </Box>
+          ) : filteredInsumos.length === 0 ? (
             <Box py={4} textAlign="center">
               <Science sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
               <Typography color="text.secondary">
-                No se encontraron insumos
+                {searchTerm ? 'No se encontraron insumos con ese criterio' : 'No hay insumos disponibles'}
               </Typography>
             </Box>
           ) : (
@@ -283,6 +340,7 @@ export const ConfigurarInsumosModal: React.FC<ConfigurarInsumosModalProps> = ({
                 >
                   <ListItemButton
                     onClick={() => handleToggleInsumo(insumo.id)}
+                    disabled={saving}
                     sx={{
                       borderRadius: 1,
                       border: '1px solid',
@@ -294,34 +352,35 @@ export const ConfigurarInsumosModal: React.FC<ConfigurarInsumosModalProps> = ({
                     }}
                   >
                     <ListItemIcon>
-                    <Checkbox
-                      edge="start"
-                      checked={isSelected}
-                      icon={<RadioButtonUnchecked />}
-                      checkedIcon={<CheckCircle />}
-                      color="primary"
-                    />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <Typography variant="body1" fontWeight={500}>
-                          {insumo.nombre}
+                      <Checkbox
+                        edge="start"
+                        checked={isSelected}
+                        icon={<RadioButtonUnchecked />}
+                        checkedIcon={<CheckCircle />}
+                        color="primary"
+                        disabled={saving}
+                      />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Typography variant="body1" fontWeight={500}>
+                            {insumo.nombre}
+                          </Typography>
+                          <Chip
+                            label={insumo.categoria?.replace('_', ' ') || 'Sin categoría'}
+                            size="small"
+                            color={getCategoriaColor(insumo.categoria || '')}
+                            variant="outlined"
+                          />
+                        </Box>
+                      }
+                      secondary={
+                        <Typography variant="caption" color="text.secondary">
+                          Código: {insumo.codigo || 'N/A'} • Unidad: {insumo.unidad_medida || 'N/A'}
                         </Typography>
-                        <Chip
-                          label={insumo.categoria.replace('_', ' ')}
-                          size="small"
-                          color={getCategoriaColor(insumo.categoria)}
-                          variant="outlined"
-                        />
-                      </Box>
-                    }
-                    secondary={
-                      <Typography variant="caption" color="text.secondary">
-                        Código: {insumo.codigo} • Unidad: {insumo.unidad}
-                      </Typography>
-                    }
-                  />
+                      }
+                    />
                   </ListItemButton>
                 </ListItem>
               )
@@ -332,8 +391,8 @@ export const ConfigurarInsumosModal: React.FC<ConfigurarInsumosModalProps> = ({
         {/* Información adicional */}
         <Box sx={{ px: 2, pt: 2 }}>
           <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
-            Selecciona un laboratorio y los tipos de insumo que se habilitarán para él.
-            Los insumos seleccionados podrán ser asignados a este laboratorio.
+            Selecciona los tipos de insumo que estarán disponibles para este laboratorio.
+            Los insumos seleccionados podrán ser gestionados en el inventario de este laboratorio.
           </Alert>
         </Box>
       </DialogContent>
@@ -344,19 +403,22 @@ export const ConfigurarInsumosModal: React.FC<ConfigurarInsumosModalProps> = ({
         borderTop: '1px solid',
         borderColor: 'divider',
       }}>
-        <Button onClick={handleClose} variant="outlined">
+        <Button 
+          onClick={handleClose} 
+          variant="outlined"
+          disabled={saving}
+        >
           Cancelar
         </Button>
         <Button 
           onClick={handleSave} 
           variant="contained"
-          disabled={selectedInsumos.length === 0 || selectedLaboratorioId === 0}
-          startIcon={<CheckCircle />}
+          disabled={saving || !laboratorio}
+          startIcon={saving ? <CircularProgress size={16} /> : <CheckCircle />}
         >
-          Guardar Configuración
+          {saving ? 'Guardando...' : 'Guardar Configuración'}
         </Button>
       </DialogActions>
     </Dialog>
   )
 }
-
