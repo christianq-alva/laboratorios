@@ -95,7 +95,10 @@ export const authorizeResource = (action, resource) => {
       } catch (error) {
         console.error('💥 Error en authorizeResource:', error)
         console.error('💥 Stack trace:', error.stack)
-        res.status(500).json({ success: false, message: 'Error de autorización' })
+        res.status(500).json({ 
+          success: false, 
+          message: 'Error de autorización' 
+        })
       }
     }
   }

@@ -5,31 +5,31 @@ export const defineAbilitiesFor = (user) => {
 
   console.log('🔍 defineAbilitiesFor user:', user) // ← AGREGAR DEBUG
 
-  // 🔴 ADMIN: Puede hacer TODO
+  // Usuario con rol Administrador puede hacer TODO
   if (user.rol === 'Administrador') {
     can('manage', 'all')
     return build()
   }
 
-  // 🟡 JEFE DE LABORATORIO: Solo sus laboratorios
+  // Usuario con rol Jefe de Laboratorio puede hacer:
   if (user.rol === 'Jefe de Laboratorio') {
-    const labIds = user.laboratorio_ids || [] // ← USAR ARRAY
+    const labIds = user.laboratorio_ids || []
 
-
+    // Permisos con condiciones de laboratorio     
     if (labIds.length > 0) {
-      // Para cada laboratorio que maneja
+    
       labIds.forEach(labId => {
         can(['create', 'read', 'update', 'delete'], 'Horario', { laboratorio_id: labId })
         can(['create', 'read'], 'Incidencia', { laboratorio_id: labId })
         can(['create', 'read', 'update', 'delete'], 'Equipo', { laboratorio_id: labId })
-        can(['create', 'read', 'update', 'delete'], 'Insumo', { laboratorio_id: labId })
         can(['create', 'read', 'update', 'delete'], 'Reserva', { laboratorio_id: labId })
         can(['read', 'update'], 'Laboratorio', { id: labId })
       })
     }
 
-    // Permisos generales (sin condiciones de laboratorio)
-    can('read', 'Inventario') // ← Permitir leer inventario
+    // Permisos sin condiciones de laboratorio
+    can(['create', 'read', 'update', 'delete'], 'Inventario') // ← Permitir gestionar inventario
+    can('read', 'Insumo') // ← Permitir leer insumos
     can('read', 'Horario') // ← Permitir leer horarios
     can('read', 'TipoEquipo') // ← Permitir leer tipos de equipo
     can('read', 'Docente') // ← Permitir leer docentes

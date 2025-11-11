@@ -22,6 +22,7 @@ export const createShareLink = async (req, res) => {
     if (req.user.rol === 'Jefe de Laboratorio') {
       if (!req.user.laboratorio_ids.includes(parseInt(laboratorio_id))) {
         return res.status(403).json({
+          success: false,
           message: 'No tienes permisos para compartir este laboratorio'
         })
       }
@@ -33,6 +34,7 @@ export const createShareLink = async (req, res) => {
     )
     if (labCheck.length === 0) {
       return res.status(404).json({
+        success: false,
         message: 'Laboratorio no encontrado'
       })
     }
@@ -99,6 +101,7 @@ export const createShareLink = async (req, res) => {
       PORT: process.env.PORT
     })
     res.status(201).json({
+      success: true,
       message: 'Enlace compartible creado exitosamente',
       data: {
         id: shareId,
@@ -114,6 +117,7 @@ export const createShareLink = async (req, res) => {
   } catch (error) {
     console.error('❌ Error al crear enlace compartible:', error)
     res.status(500).json({
+      success: false,
       message: 'Error interno del servidor'
     })
   }
@@ -126,6 +130,7 @@ export const getPublicHorarios = async (req, res) => {
     console.log('🌐 Obteniendo horarios públicos:', { laboratorio_id, token: token?.substring(0, 20) + '...' })
     if (!token) {
       return res.status(401).json({
+        success: false,
         message: 'Token requerido'
       })
     }
@@ -135,12 +140,14 @@ export const getPublicHorarios = async (req, res) => {
       decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key')
     } catch (err) {
       return res.status(401).json({
+        success: false,
         message: 'Token inválido o expirado'
       })
     }
     // Verificar que el token es para este laboratorio
     if (decoded.laboratorio_id !== parseInt(laboratorio_id)) {
       return res.status(403).json({
+        success: false,
         message: 'Token no válido para este laboratorio'
       })
     }
@@ -152,17 +159,20 @@ export const getPublicHorarios = async (req, res) => {
     `, [token, laboratorio_id])
     if (linkCheck.length === 0) {
       return res.status(404).json({
+        success: false,
         message: 'Enlace no encontrado'
       })
     }
     const link = linkCheck[0]
     if (!link.activo) {
       return res.status(403).json({
+        success: false,
         message: 'Enlace desactivado'
       })
     }
     if (new Date() > new Date(link.fecha_expiracion)) {
       return res.status(403).json({
+        success: false,
         message: 'Enlace expirado'
       })
     }
@@ -175,6 +185,7 @@ export const getPublicHorarios = async (req, res) => {
     `, [laboratorio_id])
     if (laboratorio.length === 0) {
       return res.status(404).json({
+        success: false,
         message: 'Laboratorio no encontrado'
       })
     }
@@ -264,7 +275,8 @@ export const getPublicHorarios = async (req, res) => {
       ORDER BY c.nombre
     `, [laboratorio_id])
     console.log('✅ Horarios públicos obtenidos:', horariosConInsumos.length)
-    res.json({
+    res.status(200).json({
+      success: true,
       data: {
         laboratorio: laboratorio[0],
         horarios: horariosConInsumos,
@@ -277,6 +289,7 @@ export const getPublicHorarios = async (req, res) => {
   } catch (error) {
     console.error('❌ Error al obtener horarios públicos:', error)
     res.status(500).json({
+      success: false,
       message: 'Error interno del servidor'
     })
   }
@@ -323,6 +336,7 @@ export const getUserShareLinks = async (req, res) => {
       expirado: new Date() > new Date(enlace.fecha_expiracion)
     }))
     res.json({
+      success: true,
       data: enlacesConUrl
     })
   } catch (error) {
@@ -346,6 +360,7 @@ export const deactivateShareLink = async (req, res) => {
     `, [id, userId])
     if (linkCheck.length === 0) {
       return res.status(404).json({
+        success: false,
         message: 'Enlace no encontrado'
       })
     }
@@ -357,11 +372,13 @@ export const deactivateShareLink = async (req, res) => {
     `, [id])
     console.log('🔇 Enlace desactivado:', id)
     res.json({
+      success: true,
       message: `Enlace para ${linkCheck[0].laboratorio_nombre} desactivado`
     })
   } catch (error) {
     console.error('❌ Error al desactivar enlace:', error)
     res.status(500).json({
+      success: false,
       message: 'Error interno del servidor'
     })
   }
