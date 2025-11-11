@@ -91,7 +91,8 @@ export interface FiltrosReporte {
 }
 
 export interface ReporteResponse<T> {
-  data: T
+  data: T,
+  success: boolean,
   filtros?: any
   total_registros?: number
   message?: string

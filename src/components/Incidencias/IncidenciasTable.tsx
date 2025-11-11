@@ -77,6 +77,7 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
       setFilteredIncidencias(response.data.data || [])
     }
     setLoading(false)
+    onRefreshComplete?.() //Temporalmente
   }
 
   // Efecto para cargar datos iniciales

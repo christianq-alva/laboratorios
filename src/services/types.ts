@@ -19,6 +19,7 @@ export type ApiResponse<T = void> = {
 export type ApiDataResponse<T> = {
   data: T
   message?: string
+  success: boolean //Temporalmente
 }
 
 /** 

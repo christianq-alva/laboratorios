@@ -133,6 +133,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
       setError(result.error)
     } else if (result.data) {
       setLaboratorios(result.data?.data || [])
+      setUserRole('') // temporalmente, se borra el rol del usuario
       //setUserRole(result.data.user_role || '')
 
       // Si solo tiene un lab, seleccionarlo automáticamente
@@ -435,7 +436,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
               Filtros
             </Button>
 
-            {onShare && (userRole === 'Jefe de Laboratorio' || userRole === 'Administrador') && (
+            {onShare /* && (userRole === 'Jefe de Laboratorio' || userRole === 'Administrador') */ && (
               <Button
                 variant="outlined"
                 startIcon={<Share />}
