@@ -68,15 +68,10 @@ export const inventarioService = {
 
     //Obtener solo los insumos con stock de un laboratorio
     getWithPositiveStock: async (laboratorio_id: number): Promise<ApiDataResponse<InsumoSaldo[]>> => {
-        try {
-            const params = new URLSearchParams()
-            params.append('laboratorio_id', laboratorio_id.toString());
-            const response = await api.get(`/inventario/insumos-con-saldo-positivo?${params.toString()}`)
-            return response.data
-        } catch (error: any) {
-            console.error('Error al obtener insumos con saldo:', error)
-            throw new Error(error.response?.data?.message || 'Error al obtener insumos con saldo')
-        }
+        const params = new URLSearchParams()
+        params.append('laboratorio_id', laboratorio_id.toString());
+        const response = await api.get(`/inventario/insumos-con-saldo-positivo?${params.toString()}`)
+        return response.data
     },
 
     //Obtener listado de movimiento con filtro de laboratorio, rango de fechas y tipo de movimiento
@@ -221,13 +216,7 @@ export const inventarioService = {
             entrada_detalle_id?: number | null  // Para salidas: ID del lote de entrada a reducir
         }>
     }): Promise<{ success: boolean; message: string; movimiento_id: number }> => {
-        try {
-            console.log('📝 Registrando movimiento manual:', data)
-            const response = await api.post('/inventario/movimiento-manual', data)
-            return response.data
-        } catch (error: any) {
-            console.error('Error al registrar movimiento:', error)
-            throw new Error(error.response?.data?.message || 'Error al registrar movimiento')
-        }
+        const response = await api.post('/inventario/movimiento-manual', data)
+        return response.data
     }
 }

@@ -34,6 +34,7 @@ import {
 } from '@mui/icons-material'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
 import { inventarioService, type InsumoSaldo } from '../../services/inventarioService'
+import { useApi } from '../../hooks/useApi'
 
 interface NuevoMovimientoModalProps {
   open: boolean
@@ -70,8 +71,9 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
   onClose,
   onSuccess
 }) => {
+  const { execute } = useApi()
   const [laboratorioId, setLaboratorioId] = useState<number>(0)
-  const [fechaMovimiento, setFechaMovimiento] = useState<string | null>(null)
+  const [fechaMovimiento, setFechaMovimiento] = useState<string | null>(null)
   const [tipoMovimiento, setTipoMovimiento] = useState<'entrada' | 'salida'>('entrada')
   const [observaciones, setObservaciones] = useState('')
   const [detalles, setDetalles] = useState<DetalleMovimiento[]>([])
@@ -126,45 +128,40 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
 
   const loadInitialData = async () => {
     setLoadingData(true)
-    try {
-      setFechaMovimiento(new Date().toISOString().split('T')[0])
-      const response = await laboratorioService.getAll()
-      setLaboratorios(response.data || [])
-    } catch (error: any) {
-      setError('Error al cargar laboratorios')
-      console.error('Error:', error)
-    } finally {
-      setLoadingData(false)
+    setFechaMovimiento(new Date().toISOString().split('T')[0])
+    const response = await execute(() => laboratorioService.getAll())
+    if (response.error) {
+      setError(response.error)
+    } else if (response.data) {
+      setLaboratorios(response.data.data || [])
     }
+    setLoadingData(false)
   }
 
   const loadInsumos = async () => {
-    try {
-      const response = await inventarioService.getWithStock(laboratorioId)
-      console.log(response);
-      setInsumos(response.data || [])
-    } catch (error: any) {
-      console.error('Error al cargar insumos:', error)
+    const response = await execute(() => inventarioService.getWithStock(laboratorioId))
+    if (response.error) {
+      setError(response.error)
+    } else if (response.data) {
+      setInsumos(response.data.data || [])
     }
   }
 
   const loadInsumosDisponibles = async () => {
-    try {
-      console.log('Pidiendo insumos con saldo',);
-      const response = await inventarioService.getWithPositiveStock(laboratorioId)
-      console.log(response);
-      setInsumosSaldo(response.data || []);
-    } catch (error: any) {
-      console.error('Error al cargar insumos disponibles:', error)
+    const response = await execute(() => inventarioService.getWithPositiveStock(laboratorioId))
+    if (response.error) {
+      setError(response.error)
+    } else if (response.data) {
+      setInsumosSaldo(response.data.data || [])
     }
   }
 
   const loadLotesDisponibles = async () => {
-    try {
-      const response = await inventarioService.getLotesConSaldo(laboratorioId, insumoSeleccionado)
-      setLotesDisponibles(response.data || [])
-    } catch (error: any) {
-      console.error('Error al cargar lotes disponibles:', error)
+    const response = await execute(() => inventarioService.getLotesConSaldo(laboratorioId, insumoSeleccionado))
+    if (response.error) {
+      setError(response.error)
+    } else if (response.data) {
+      setLotesDisponibles(response.data.data || [])
     }
   }
 
@@ -251,29 +248,27 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
     setLoading(true)
     setError(null)
 
-    try {
-      await inventarioService.registrarMovimiento({
-        laboratorio_id: laboratorioId,
-        fecha_movimiento: fechaMovimiento,
-        tipo_movimiento: tipoMovimiento,
-        observaciones: observaciones.trim() || null,
-        reserva_id: null,
-        detalles: detalles.map(d => ({
-          insumo_id: d.insumo_id,
-          cantidad: d.cantidad,
-          lote: d.lote || null,
-          fecha_vencimiento: d.fecha_vencimiento || null,
-          entrada_detalle_id: d.entrada_detalle_id || null
-        }))
-      })
-
+    const response = await execute(() => inventarioService.registrarMovimiento({
+      laboratorio_id: laboratorioId,
+      fecha_movimiento: fechaMovimiento,
+      tipo_movimiento: tipoMovimiento,
+      observaciones: observaciones.trim() || null,
+      reserva_id: null,
+      detalles: detalles.map(d => ({
+        insumo_id: d.insumo_id,
+        cantidad: d.cantidad,
+        lote: d.lote || null,
+        fecha_vencimiento: d.fecha_vencimiento || null,
+        entrada_detalle_id: d.entrada_detalle_id || null
+      }))
+    }))
+    if (response.error) {
+      setError(response.error)
+    } else if (response.data) {
       onSuccess()
       onClose()
-    } catch (error: any) {
-      setError(error.message || 'Error al registrar el movimiento')
-    } finally {
-      setLoading(false)
     }
+    setLoading(false)
   }
 
   const getTipoMovimientoColor = () => {
