@@ -55,24 +55,6 @@ export const Dashboard: React.FC = () => {
         />
       </Box>
 
-<<<<<<< Updated upstream
-=======
-      {/* Formulario de nuevo horario - Lazy Loading */}
-      {horarioFormOpen && (
-        <Suspense fallback={
-          <Box display="flex" justifyContent="center" alignItems="center" p={3}>
-            <CircularProgress />
-          </Box>
-        }>
-          <HorarioFormSimple
-            open={horarioFormOpen}
-            onClose={handleHorarioFormClose}
-            onSuccess={handleHorarioFormSuccess}
-          />
-        </Suspense>
-      )}
-
->>>>>>> Stashed changes
       {/* Snackbar de navegación */}
       <Snackbar
         open={navigationSnackbar.open}
