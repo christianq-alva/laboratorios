@@ -358,33 +358,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onNavigateToLab }) =
             ))}
           </Box>
         </Box>
-
-        {/* Estadísticas del mes */}
-        <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-            Resumen del mes:
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            <Chip
-              label={`${horarios.length} horarios programados`}
-              color="primary"
-              variant="outlined"
-              size="small"
-            />
-            <Chip
-              label={`${new Set(horarios.map(h => h.start.format('YYYY-MM-DD'))).size} días con actividad`}
-              color="secondary"
-              variant="outlined"
-              size="small"
-            />
-            <Chip
-              label={`${new Set(horarios.map(h => h.laboratorio)).size} laboratorios utilizados`}
-              color="success"
-              variant="outlined"
-              size="small"
-            />
-          </Box>
-        </Box>
       </CardContent>
 
       {/* Diálogo de detalles del día */}
