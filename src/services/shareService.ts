@@ -1,5 +1,6 @@
 import { api } from './api'
 import { config } from '../config/environment'
+import type { ApiDataResponse } from './types'
 
 export interface ShareLink {
   id: number
@@ -61,46 +62,27 @@ export interface CreateShareLinkData {
 }
 
 export const shareService = {
+  // Obtener enlaces del usuario
+  getMyShareLinks: async (): Promise<ApiDataResponse<ShareLink[]>> => {
+    const response = await api.get('/share/my-links')
+    return response.data
+  },
   // Crear enlace compartible
   createShareLink: async (data: CreateShareLinkData) => {
-    try {
-      console.log('🔗 Creando enlace compartible:', data)
-      const response = await api.post('/share/create', data)
-      console.log('🔗 Respuesta del backend:', response.data)
-      return response.data
-    } catch (error: any) {
-      console.error('❌ Error al crear enlace:', error)
-      throw new Error(error.response?.data?.message || 'Error al crear enlace compartible')
-    }
+    const response = await api.post('/share/create', data)
+    return response.data
   },
-
-  // Obtener enlaces del usuario
-  getMyShareLinks: async () => {
-    try {
-      const response = await api.get('/share/my-links')
-      return response.data
-    } catch (error: any) {
-      console.error('❌ Error al obtener enlaces:', error)
-      throw new Error(error.response?.data?.message || 'Error al obtener enlaces')
-    }
-  },
-
   // Desactivar enlace
   deactivateShareLink: async (id: number) => {
-    try {
-      const response = await api.put(`/share/deactivate/${id}`)
-      return response.data
-    } catch (error: any) {
-      console.error('❌ Error al desactivar enlace:', error)
-      throw new Error(error.response?.data?.message || 'Error al desactivar enlace')
-    }
+    const response = await api.put(`/share/deactivate/${id}`)
+    return response.data
   },
 
   // Obtener horarios públicos (sin autenticación)
   getPublicHorarios: async (laboratorioId: number, token: string): Promise<PublicData> => {
     try {
       console.log('🌐 Obteniendo horarios públicos:', { laboratorioId, token: token.substring(0, 20) + '...' })
-      
+
       // Hacer petición directa sin el interceptor de autenticación
       const baseUrl = config.isDevelopment ? 'http://localhost:3000' : config.baseUrl
       const response = await fetch(`${baseUrl}/api/share/public/${laboratorioId}?token=${encodeURIComponent(token)}`, {
@@ -109,18 +91,18 @@ export const shareService = {
           'Content-Type': 'application/json',
         },
       })
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }))
         throw new Error(errorData.message || `Error ${response.status}`)
       }
-      
+
       const data = await response.json()
-      
-      if (!data.success) {
+
+      if (data.message && !data.data) {
         throw new Error(data.message || 'Error al obtener horarios')
       }
-      
+
       return data.data
     } catch (error: any) {
       console.error('❌ Error al obtener horarios públicos:', error)
@@ -128,39 +110,6 @@ export const shareService = {
     }
   },
 
-  // Validar token público
-  validatePublicToken: async (laboratorioId: number, token: string): Promise<boolean> => {
-    try {
-      await shareService.getPublicHorarios(laboratorioId, token)
-      return true
-    } catch (error) {
-      return false
-    }
-  },
-
   // Copiar enlace al portapapeles
-  copyToClipboard: async (url: string): Promise<boolean> => {
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(url)
-        return true
-      } else {
-        // Fallback para navegadores más antiguos
-        const textArea = document.createElement('textarea')
-        textArea.value = url
-        textArea.style.position = 'fixed'
-        textArea.style.left = '-999999px'
-        textArea.style.top = '-999999px'
-        document.body.appendChild(textArea)
-        textArea.focus()
-        textArea.select()
-        const success = document.execCommand('copy')
-        document.body.removeChild(textArea)
-        return success
-      }
-    } catch (error) {
-      console.error('Error al copiar al portapapeles:', error)
-      return false
-    }
-  }
+
 }

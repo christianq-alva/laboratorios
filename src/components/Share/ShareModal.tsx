@@ -35,6 +35,8 @@ import {
 import { shareService, type ShareLink } from '../../services/shareService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
 import dayjs from 'dayjs'
+import { useApi } from '../../hooks/useApi'
+import { copyToClipboard } from '../../utils/clipboard'
 
 interface ShareModalProps {
   open: boolean
@@ -47,13 +49,14 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   onClose,
   selectedLaboratorioId
 }) => {
+  const { execute } = useApi()
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
   const [shareLinks, setShareLinks] = useState<ShareLink[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingLinks, setLoadingLinks] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  
+
   // Estados del formulario
   const [selectedLabId, setSelectedLabId] = useState<number>(selectedLaboratorioId || 0)
   const [expirationDays, setExpirationDays] = useState<number>(30)
@@ -73,27 +76,25 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   }, [selectedLaboratorioId])
 
   const loadInitialData = async () => {
-    try {
-      setLoadingLinks(true)
-      
-      const [labsResult, linksResult] = await Promise.all([
-        laboratorioService.getAll(),
-        shareService.getMyShareLinks()
-      ])
-      
-      if (labsResult.success) {
-        setLaboratorios(labsResult.data || [])
-      }
-      
-      if (linksResult.success) {
-        setShareLinks(linksResult.data || [])
-      }
-    } catch (err: any) {
-      console.error('Error al cargar datos:', err)
-      setError(err.message || 'Error al cargar datos')
-    } finally {
-      setLoadingLinks(false)
+    setLoadingLinks(true)
+
+    const [labsResult, linksResult] = await Promise.all([
+      await execute(() => laboratorioService.getAll()),
+      await execute(() => shareService.getMyShareLinks())
+    ])
+
+    if (labsResult.error) {
+      setError(labsResult.error)
+    } else if (labsResult.data) {
+      setLaboratorios(labsResult.data.data)
     }
+
+    if (linksResult.error) {
+      setError(linksResult.error)
+    } else if (linksResult.data) {
+      setShareLinks(linksResult.data.data)
+    }
+    setLoadingLinks(false)
   }
 
   const handleCreateLink = async () => {
@@ -102,71 +103,64 @@ export const ShareModal: React.FC<ShareModalProps> = ({
       return
     }
 
-    try {
-      setLoading(true)
-      setError(null)
-      setSuccess(null)
-      
-      const result = await shareService.createShareLink({
-        laboratorio_id: selectedLabId,
-        expires_in_days: expirationDays
-      })
-      
-      if (result.success) {
-        console.log('🔗 URL recibida del backend:', result.data.url)
-        setSuccess(`Enlace creado para ${result.data.laboratorio_nombre}`)
-        
-        // Recargar enlaces
-        const linksResult = await shareService.getMyShareLinks()
-        if (linksResult.success) {
-          setShareLinks(linksResult.data || [])
-        }
-        
-        // Copiar automáticamente al portapapeles
-        const copied = await shareService.copyToClipboard(result.data.url)
-        if (copied) {
-          setSuccess(prev => prev + ' • Copiado al portapapeles')
-        }
+    setLoading(true)
+    setError(null)
+    setSuccess(null)
+
+    const result = await execute(() => shareService.createShareLink({
+      laboratorio_id: selectedLabId,
+      expires_in_days: expirationDays
+    }))
+
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      setSuccess(`Enlace creado para ${result.data.laboratorio_nombre}`)
+
+      // Recargar enlaces
+      const linksResult = await execute(() => shareService.getMyShareLinks())
+      if (linksResult.error) {
+        setError(linksResult.error)
+      } else if (linksResult.data) {
+        setShareLinks(linksResult.data.data)
       }
-    } catch (err: any) {
-      setError(err.message || 'Error al crear enlace')
-    } finally {
-      setLoading(false)
+
+      // Copiar automáticamente al portapapeles
+      const copied = await copyToClipboard(result.data.data.url)
+      if (copied) {
+        setSuccess(prev => prev + ' • Copiado al portapapeles')
+      }
     }
+    setLoading(false)
   }
 
   const handleCopyLink = async (url: string, labName: string) => {
-    try {
-      const copied = await shareService.copyToClipboard(url)
-      if (copied) {
-        setSuccess(`Enlace de ${labName} copiado al portapapeles`)
-      } else {
-        setError('No se pudo copiar el enlace')
-      }
-    } catch (err) {
-      setError('Error al copiar enlace')
+    const copied = await copyToClipboard(url)
+    if (copied) {
+      setSuccess(`Enlace de ${labName} copiado al portapapeles`)
+    } else {
+      setError('No se pudo copiar el enlace')
     }
   }
 
   const handleDeactivateLink = async (id: number, labName: string) => {
-    try {
-      setLoadingLinks(true)
-      
-      const result = await shareService.deactivateShareLink(id)
-      if (result.success) {
-        setSuccess(`Enlace de ${labName} desactivado`)
-        
-        // Recargar enlaces
-        const linksResult = await shareService.getMyShareLinks()
-        if (linksResult.success) {
-          setShareLinks(linksResult.data || [])
-        }
+    setLoadingLinks(true)
+
+    const result = await execute(() => shareService.deactivateShareLink(id))
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      setSuccess(`Enlace de ${labName} desactivado`)
+
+      // Recargar enlaces
+      const linksResult = await execute(() => shareService.getMyShareLinks())
+      if (linksResult.error) {
+        setError(linksResult.error)
+      } else if (linksResult.data) {
+        setShareLinks(linksResult.data.data)
       }
-    } catch (err: any) {
-      setError(err.message || 'Error al desactivar enlace')
-    } finally {
-      setLoadingLinks(false)
     }
+    setLoadingLinks(false)
   }
 
   const handleClose = () => {
@@ -178,8 +172,8 @@ export const ShareModal: React.FC<ShareModalProps> = ({
 
 
   return (
-    <Dialog 
-      open={open} 
+    <Dialog
+      open={open}
       onClose={handleClose}
       maxWidth="md"
       fullWidth
@@ -206,7 +200,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
               {error}
             </Alert>
           )}
-          
+
           {success && (
             <Alert severity="success" onClose={() => setSuccess(null)}>
               {success}
@@ -216,7 +210,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
           {/* Información */}
           <Alert severity="info" icon={<Visibility />}>
             <Typography variant="body2">
-              Los enlaces compartibles permiten que cualquier persona vea los horarios de un laboratorio 
+              Los enlaces compartibles permiten que cualquier persona vea los horarios de un laboratorio
               sin necesidad de iniciar sesión. Solo tendrán permisos de visualización.
             </Typography>
           </Alert>
@@ -227,7 +221,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
               <Link />
               Crear Nuevo Enlace
             </Typography>
-            
+
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <FormControl sx={{ minWidth: 250 }}>
                 <InputLabel>Laboratorio</InputLabel>
@@ -250,7 +244,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                   ))}
                 </Select>
               </FormControl>
-              
+
               <FormControl sx={{ minWidth: 150 }}>
                 <InputLabel>Expiración</InputLabel>
                 <Select
@@ -265,7 +259,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                   <MenuItem value={365}>1 año</MenuItem>
                 </Select>
               </FormControl>
-              
+
               <Button
                 variant="contained"
                 onClick={handleCreateLink}
@@ -286,7 +280,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
               <Schedule />
               Enlaces Activos ({shareLinks.filter(link => link.activo && !link.expirado).length})
             </Typography>
-            
+
             {loadingLinks ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
                 <CircularProgress />
@@ -312,7 +306,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                           </Typography>
                         </Box>
                       </Box>
-                      
+
                       <ListItemText
                         secondary={
                           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
@@ -341,7 +335,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                           </Box>
                         }
                       />
-                      
+
                       <ListItemSecondaryAction>
                         <Box sx={{ display: 'flex', gap: 1 }}>
                           <Tooltip title="Copiar enlace">
@@ -353,7 +347,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                               <ContentCopy />
                             </IconButton>
                           </Tooltip>
-                          
+
                           <Tooltip title="Abrir en nueva pestaña">
                             <IconButton
                               size="small"
@@ -363,7 +357,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                               <Visibility />
                             </IconButton>
                           </Tooltip>
-                          
+
                           <Tooltip title="Desactivar enlace">
                             <IconButton
                               size="small"
