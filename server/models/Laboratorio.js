@@ -4,8 +4,10 @@ export const Laboratorio = {
 
     getAll: async () => {
         const [laboratorios] = await pool.execute(`
-            SELECT * FROM laboratorios
-            ORDER BY codigo, nombre
+            SELECT l.id, l.codigo, l.nombre, l.ubicacion, l.escuela_id, l.piso, l.estado, e.nombre as escuela 
+            FROM laboratorios
+            LEFT JOIN escuelas e ON l.escuela_id = e.id
+            ORDER BY l.codigo, l.nombre
         `)
         return laboratorios;
     },
@@ -63,7 +65,12 @@ export const Laboratorio = {
     },
 
     getLaboratorioById: async (id) => {
-        const [rows] = await pool.execute('SELECT * FROM laboratorios WHERE id = ?', [id])
+        const [rows] = await pool.execute(`
+            SELECT l.id, l.codigo, l.nombre, l.ubicacion, l.escuela_id, l.piso, l.estado, e.nombre as escuela 
+            FROM laboratorios l
+            LEFT JOIN escuelas e ON l.escuela_id = e.id
+            WHERE l.id = ?
+        `, [id])
         return rows[0];
     },
     getLaboratorioInsumos: async () => {

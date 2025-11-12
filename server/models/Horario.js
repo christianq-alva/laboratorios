@@ -487,5 +487,49 @@ export const Horario = {
         const [horarios] = await pool.execute(query, params)
 
         return horarios;
+    },
+    getDocentesReservasByLaboratorio: async (laboratorio_id) => {
+        const [docentes] = await pool.execute(`
+            SELECT DISTINCT d.nombre
+            FROM reservas r
+            JOIN docentes d ON r.docente_id = d.id
+            WHERE r.laboratorio_id = ?
+        `, [laboratorio_id])
+        return docentes;
+    },
+    getCiclosReservasByLaboratorio: async (laboratorio_id) => {
+        const [ciclos] = await pool.execute(`
+            SELECT DISTINCT c.nombre
+            FROM reservas r
+            JOIN grupos g ON r.grupo_id = g.id
+            JOIN ciclos c ON g.ciclo_id = c.id
+            WHERE r.laboratorio_id = ?
+        `, [laboratorio_id])
+        return ciclos;
+    },
+    getPublicHorarios: async (laboratorio_id) => {
+        const [horarios] = await pool.execute(`
+            SELECT 
+                r.id as reserva_id,
+                r.fecha_inicio,
+                r.fecha_fin,
+                r.cantidad_alumnos,
+                r.descripcion,
+                r.color,
+                l.nombre as laboratorio,
+                d.nombre as docente,
+                e.nombre as escuela,
+                c.nombre as ciclo,
+                g.nombre as grupo
+            FROM reservas r
+            LEFT JOIN laboratorios l ON r.laboratorio_id = l.id
+            LEFT JOIN docentes d ON r.docente_id = d.id
+            LEFT JOIN grupos g ON r.grupo_id = g.id
+            LEFT JOIN escuelas e ON g.escuela_id = e.id
+            LEFT JOIN ciclos c ON g.ciclo_id = c.id
+            WHERE r.laboratorio_id = ?
+            ORDER BY r.fecha_inicio DESC
+        `, [laboratorio_id])
+        return horarios;
     }
 }
