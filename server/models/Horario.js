@@ -95,8 +95,11 @@ export const Horario = {
     getInsumosRequeridosByHorario: async (reserva_id) => {
         const [insumos] = await pool.execute(`
             SELECT 
-              dri.insumo_id as id,
+              i.id,
+              i.codigo,
               i.nombre,
+              i.categoria,
+              i.unidad_medida,
               dri.cantidad_usada
             FROM detalle_reserva_insumos dri
             JOIN insumos i ON dri.insumo_id = i.id

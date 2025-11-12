@@ -49,10 +49,10 @@ export interface HorarioFull extends HorarioSimple {
 export interface InsumoHorario {
   id: number
   nombre: string
+  codigo: string
+  categoria: string
+  unidad_medida: string
   cantidad_usada: number
-  stock_disponible?: number
-  descripcion?: string
-  unidad_medida?: string
 }
 
 export interface EquipoHorario {
@@ -126,13 +126,7 @@ export interface Grupo {
   ciclo?: string
 }
 
-export interface Insumo {
-  id: number
-  nombre: string
-  descripcion?: string
-  stock_disponible?: number
-  stock_total_lotes?: number
-}
+
 
 export interface ConflictoHorario {
   tipo: 'laboratorio' | 'docente'

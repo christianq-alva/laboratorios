@@ -45,7 +45,6 @@ import type {
   CreateHorarioData,
   Ciclo,
   Grupo,
-  Insumo,
   ConflictoHorario,
   HorarioFull
 } from '../../services/horarioService'
@@ -54,7 +53,7 @@ import { TIME_BLOCKS, getBlockLabel, combineDateWithTime } from '../../utils/tim
 import { escuelaService, type Escuela } from '../../services/escuelaService'
 import { docenteService, type Docente } from '../../services/docenteService'
 import { useApi } from '../../hooks/useApi'
-import { inventarioService, type InsumoSaldo } from '../../services/inventarioService'
+import type { Insumo } from '../../services/insumoService'
 
 interface HorarioFormProps {
   open: boolean
@@ -66,8 +65,9 @@ interface HorarioFormProps {
 interface InsumoSeleccionado {
   insumo_id: number
   nombre: string
+  codigo: string
+  unidad_medida: string
   cantidad: number
-  stock_disponible: number
 }
 
 interface EquipoSeleccionado {
@@ -115,7 +115,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
   const [escuelas, setEscuelas] = useState<Escuela[]>([])
   const [ciclos, setCiclos] = useState<Ciclo[]>([])
   const [grupos, setGrupos] = useState<Grupo[]>([])
-  const [insumosDisponibles, setInsumosDisponibles] = useState<InsumoSaldo[]>([])
+  const [insumosDisponibles, setInsumosDisponibles] = useState<Insumo[]>([])
   const [insumosSeleccionados, setInsumosSeleccionados] = useState<InsumoSeleccionado[]>([])
   const [equiposDisponibles, setEquiposDisponibles] = useState<Equipo[]>([])
   const [equiposSeleccionados, setEquiposSeleccionados] = useState<EquipoSeleccionado[]>([])
@@ -247,15 +247,16 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     // Cargar insumos seleccionados
     console.log('horarioData.insumos', horarioData.insumos)
     if (horarioData.insumos && horarioData.insumos.length > 0) {
-      const insumosConStock = horarioData.insumos.map(i => ({
+      const insumosSeleccionados = horarioData.insumos.map(i => ({
 
         insumo_id: i.id,
         nombre: i.nombre,
         cantidad: i.cantidad_usada,
-        stock_disponible: i.stock_disponible || 0
+        codigo: i.codigo || '',
+        unidad_medida: i.unidad_medida || ''
       })
       )
-      setInsumosSeleccionados(insumosConStock)
+      setInsumosSeleccionados(insumosSeleccionados)
     }
 
     // Cargar equipos seleccionados
@@ -268,17 +269,6 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       setEquiposSeleccionados(equiposSeleccionadosData)
     }
   }
-  useEffect(() => {
-    if (insumosSeleccionados.length > 0 && insumosDisponibles.length > 0) {
-      setInsumosSeleccionados(prev => prev.map(insumo => {
-        const insumoDisponible = insumosDisponibles.find(id => id.id === insumo.insumo_id)
-        return {
-          ...insumo,
-          stock_disponible: insumoDisponible?.stock_disponible || insumo.stock_disponible
-        }
-      }))
-    }
-  }, [insumosDisponibles])
 
   const resetForm = () => {
     setFormData({
@@ -336,7 +326,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
   const loadInsumosByLaboratorio = async (laboratorio_id: number) => {
 
     setInsumosDisponibles([])
-    const result = await execute(() => inventarioService.getWithStock(laboratorio_id))
+    const result = await execute(() => laboratorioService.getInsumos(laboratorio_id))
     if (result.error) {
       setError(result.error)
     } else if (result.data) {
@@ -436,12 +426,13 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
   // Manejo de insumos
   const agregarInsumo = (insumo: Insumo) => {
     const yaSeleccionado = insumosSeleccionados.find(i => i.insumo_id === insumo.id)
-    if (!yaSeleccionado && (insumo.stock_disponible || 0) > 0) {
+    if (!yaSeleccionado) {
       const nuevoInsumo: InsumoSeleccionado = {
         insumo_id: insumo.id,
         nombre: insumo.nombre,
         cantidad: 1,
-        stock_disponible: insumo.stock_disponible || 0
+        codigo: insumo.codigo,
+        unidad_medida: insumo.unidad_medida
       }
       setInsumosSeleccionados(prev => [...prev, nuevoInsumo])
     }
@@ -458,12 +449,11 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     // Validar límites
     if (cantidad <= 0) {
       eliminarInsumo(insumo_id)
-    } else if (cantidad <= insumo.stock_disponible) {
+    } else {
       setInsumosSeleccionados(prev =>
         prev.map(i => i.insumo_id === insumo_id ? { ...i, cantidad } : i)
       )
     }
-    // Si la cantidad excede el stock, no hacer nada
   }
 
   // Manejo de equipos
@@ -1213,8 +1203,6 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                         <List dense>
                           {insumosDisponibles.map((insumo) => {
                             const yaSeleccionado = insumosSeleccionados.some(i => i.insumo_id === insumo.id)
-                            const stockColor = (insumo.stock_disponible || 0) === 0 ? 'error' :
-                              (insumo.stock_disponible || 0) < 10 ? 'warning' : 'success'
                             return (
                               <Box
                                 key={insumo.id}
@@ -1242,17 +1230,10 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                                   <Typography variant="body2" sx={{ fontWeight: 500 }}>
                                     {insumo.nombre}
                                   </Typography>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Typography variant="caption" color="text.secondary">
-                                      Stock:
-                                    </Typography>
-                                    <Chip
-                                      label={insumo.stock_disponible || 0}
-                                      size="small"
-                                      color={stockColor}
-                                      variant="outlined"
-                                    />
-                                  </Box>
+                                  <Typography variant="caption" color="text.secondary">
+                                    Código: {insumo.codigo} • Unidad: {insumo.unidad_medida}
+                                  </Typography>
+
                                 </Box>
                                 <IconButton
                                   size="small"
@@ -1301,25 +1282,14 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                     <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
                       <List dense>
                         {insumosSeleccionados.map((insumo) => {
-                          const stockRestante = insumo.stock_disponible - insumo.cantidad
-                          const stockColor = stockRestante === 0 ? 'error' :
-                            stockRestante < 5 ? 'warning' : 'success'
                           return (
                             <ListItem key={insumo.insumo_id}>
                               <ListItemText
-                                primary={insumo.nombre}
+                                primary={insumo.nombre + ' (' + insumo.unidad_medida + ')'}
                                 secondary={
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Typography variant="caption" color="text.secondary">
-                                      Restante:
-                                    </Typography>
-                                    <Chip
-                                      label={stockRestante}
-                                      size="small"
-                                      color={stockColor}
-                                      variant="outlined"
-                                    />
-                                  </Box>
+                                  <Typography variant="caption" color="text.secondary">
+                                    Código: {insumo.codigo}
+                                  </Typography>
                                 }
                               />
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -1346,7 +1316,6 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                                   <IconButton
                                     size="small"
                                     onClick={() => actualizarCantidadInsumo(insumo.insumo_id, insumo.cantidad + 1)}
-                                    disabled={insumo.cantidad >= insumo.stock_disponible}
                                     color="primary"
                                   >
                                     <Add />
@@ -1367,32 +1336,6 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                       </List>
                     </Box>
                   </Paper>
-
-                  {/* Resumen compacto */}
-                  {insumosSeleccionados.length > 0 && (
-                    <Paper sx={{
-                      p: 2,
-                      borderRadius: 1.5,
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                      border: '1px solid #e8e8e8',
-                      backgroundColor: '#fff8e1'
-                    }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'warning.main', mb: 1 }}>
-                        Resumen de Insumos
-                      </Typography>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                        {insumosSeleccionados.map((insumo) => (
-                          <Chip
-                            key={insumo.insumo_id}
-                            label={`${insumo.nombre} (${insumo.cantidad})`}
-                            variant="outlined"
-                            size="small"
-                            sx={{ borderRadius: 1 }}
-                          />
-                        ))}
-                      </Box>
-                    </Paper>
-                  )}
                 </>
               )}
             </Box>
@@ -1572,31 +1515,6 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                         </List>
                       </Box>
                     </Paper>
-
-                    {/* Resumen compacto */}
-                    {equiposSeleccionados.length > 0 && (
-                      <Paper sx={{
-                        p: 2,
-                        borderRadius: 1.5,
-                        border: '1px solid #e0e0e0',
-                        backgroundColor: '#fff8e1'
-                      }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'warning.main', mb: 1 }}>
-                          Resumen de Equipos
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                          {equiposSeleccionados.map((equipo) => (
-                            <Chip
-                              key={equipo.equipo_id}
-                              label={`${equipo.nombre}`}
-                              variant="outlined"
-                              size="small"
-                              sx={{ borderRadius: 1 }}
-                            />
-                          ))}
-                        </Box>
-                      </Paper>
-                    )}
                   </>
                 )}
             </Box>

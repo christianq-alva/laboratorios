@@ -1,4 +1,5 @@
 import { api } from './api'
+import type { Insumo } from './insumoService'
 import type {   ApiMessageResponse, ApiCreateUpdateResponse, ApiDataResponse } from './types'
 
 export interface Laboratorio {
@@ -60,7 +61,7 @@ export const laboratorioService = {
   },
 
   // Obtener insumos configurados de un laboratorio
-  getInsumos: async (id: number): Promise<ApiDataResponse<any[]>> => {
+  getInsumos: async (id: number): Promise<ApiDataResponse<Insumo[]>> => {
     const response = await api.get(`/laboratorios/${id}/insumos`)
     return response.data
   },

@@ -294,7 +294,7 @@ export const updateHorario = async (req, res) => {
       })
     }
     // Obtener datos del horario
-    const horarioExists = await Horario.exitsById(reserva_id)
+    const horarioExists = await Horario.exitsById(horarioId)
     if (!horarioExists) {
       return res.status(404).json({
         message: 'Horario no encontrado'
