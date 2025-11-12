@@ -27,8 +27,7 @@ import {
   Schedule,
   Person,
   Group,
-  Close,
-  Add
+  Close
 } from '@mui/icons-material'
 import dayjs, { Dayjs } from 'dayjs'
 import 'dayjs/locale/es'
@@ -39,8 +38,6 @@ import { useApi } from '../../hooks/useApi'
 dayjs.locale('es')
 
 interface CalendarViewProps {
-  onRefresh?: () => void
-  onNewHorario?: () => void
   onNavigateToLab?: (laboratorioId: number, horarioId: number) => void
 }
 
@@ -62,7 +59,7 @@ interface HorarioEvent {
   }>
 }
 
-export const CalendarView: React.FC<CalendarViewProps> = ({ onNewHorario, onNavigateToLab }) => {
+export const CalendarView: React.FC<CalendarViewProps> = ({ onNavigateToLab }) => {
   const { execute } = useApi()
   const [currentDate, setCurrentDate] = useState<Dayjs>(dayjs())
   const [horarios, setHorarios] = useState<HorarioEvent[]>([])
@@ -306,17 +303,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onNewHorario, onNavi
               Hoy
             </Button>
 
-            {onNewHorario && (
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<Add />}
-                onClick={onNewHorario}
-                sx={{ ml: 1 }}
-              >
-                Nuevo Horario
-              </Button>
-            )}
           </Box>
         </Box>
 
