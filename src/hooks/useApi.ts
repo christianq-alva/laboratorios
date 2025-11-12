@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { ApiError } from '../services/api.ts'
+import { useAuth } from './useAuth'
 
 interface ApiResult<T> {
     data?: T
@@ -10,6 +11,7 @@ interface ApiResult<T> {
 
 export const useApi = () => {
     const navigate = useNavigate()
+    const { logout } = useAuth()
 
     const execute = useCallback(async <T,>(
         apiCall: () => Promise<T>
@@ -23,27 +25,30 @@ export const useApi = () => {
 
             // Manejar errores 401 (logout + redirect)
             if (apiError.isUnauthorized) {
-                console.log('❌ Token expirado o no autorizado, limpiando sesión')
-                localStorage.removeItem('token')
-                localStorage.removeItem('user')
+                // Verificar si es un intento de login 
+                const isLoginAttempt = apiError.config?.url?.includes('/auth/login') ||
+                    apiError.config?.url === '/auth/login'
 
-                // Redirigir al login
-                if (window.location.pathname !== '/login') {
-                    navigate('/login')
+                if (isLoginAttempt) {
+                    // Es un error de credenciales en login, solo retornar el error
+                    const errorData = (apiError.response?.data as any)
+                    return {
+                        error: errorData?.message || 'Credenciales incorrectas',
+                    }
                 }
+
+                // Es un token expirado/inválido en una petición autenticada
+                console.log('❌ Token expirado o no autorizado, limpiando sesión')
+
+                setTimeout(() => {
+                    logout()
+                    navigate('/login')
+                }, 1000)
 
                 return {
                     error: 'Sesión expirada. Por favor, inicia sesión nuevamente.',
                 }
             }
-
-            // Manejar errores de red
-            if (apiError.isNetworkError) {
-                return {
-                    error: 'Error de conexión. No se pudo conectar al servidor. Por favor, verifica tu conexión a internet.',
-                }
-            }
-
             // Manejar errores de validación
             if (apiError.isValidationError) {
                 const message = (apiError.response?.data as any).message || 'Error de validación'
