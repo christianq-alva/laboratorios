@@ -18,15 +18,7 @@ export const createShareLink = async (req, res) => {
     const { laboratorio_id, expires_in_days = 365 } = req.body
     const userId = req.user.userId
     console.log('🔗 Creando enlace compartible:', { laboratorio_id, userId, expires_in_days })
-    // Verificar que el usuario tiene permisos sobre este laboratorio
-    if (req.user.rol === 'Jefe de Laboratorio') {
-      if (!req.user.laboratorio_ids.includes(parseInt(laboratorio_id))) {
-        return res.status(403).json({
-          success: false,
-          message: 'No tienes permisos para compartir este laboratorio'
-        })
-      }
-    }
+
     // Verificar que el laboratorio existe
     const [labCheck] = await pool.execute(
       'SELECT id, nombre, ubicacion FROM laboratorios WHERE id = ?',

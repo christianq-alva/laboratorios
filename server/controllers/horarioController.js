@@ -114,7 +114,6 @@ export const getHorario = async (req, res) => {
       equipos: equipos
     }
 
-    console.log('horarioConInsumos', horarioConInsumos)
     res.status(200).json({
       data: horarioConInsumos
     })
@@ -182,16 +181,7 @@ export const createHorario = async (req, res) => {
         conflicto_detalle: cruce.conflicto
       })
     }
-    // Verificación de permisos
-    if (req.user.rol === 'Jefe de Laboratorio') {
-      const labIds = req.user.laboratorio_ids || []
-      if (!labIds.includes(parseInt(laboratorio_id))) {
-        await connection.rollback()
-        return res.status(403).json({
-          message: `Solo puedes crear horarios en tus laboratorios: ${labIds.join(', ')}`
-        })
-      }
-    }
+
     // Verificación: Verificar stock de insumos
     for (const insumo of insumos) {
       const stockSuficiente = await Inventario.validarSaldoByInsumoId(
@@ -303,15 +293,12 @@ export const updateHorario = async (req, res) => {
         conflicto_detalle: cruce.conflicto
       })
     }
-    // Verificación de permisos
-    if (req.user.rol === 'Jefe de Laboratorio') {
-      const [existing] = await connection.execute('SELECT laboratorio_id FROM reservas WHERE id = ?', [horarioId])
-      if (existing.length === 0 || !req.user.laboratorio_ids.includes(existing[0].laboratorio_id)) {
-        await connection.rollback()
-        return res.status(403).json({
-          message: 'Solo puedes editar horarios de tus laboratorios'
-        })
-      }
+    // Obtener datos del horario
+    const horarioExists = await Horario.exitsById(reserva_id)
+    if (!horarioExists) {
+      return res.status(404).json({
+        message: 'Horario no encontrado'
+      })
     }
     // Eliminar registros antiguos de insumos y equipos
     await Horario.deleteHorarioInsumos(horarioId, connection)

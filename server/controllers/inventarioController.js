@@ -300,13 +300,7 @@ export const getLotesConSaldo = async (req, res) => {
         message: 'El insumo_id es requerido'
       })
     }
-    const labId = parseInt(laboratorio_id)
-    // Verificar permisos
-    if (req.user.rol !== 'Administrador' && !req.user.laboratorio_ids.includes(labId)) {
-      return res.status(403).json({
-        message: 'No tienes permisos para ver los lotes de este laboratorio'
-      })
-    }
+
     const lotes = await Inventario.getLotesConSaldo(laboratorio_id, insumo_id);
     res.status(200).json({
       data: lotes

@@ -90,14 +90,7 @@ export const updateLaboratorio = async (req, res) => {
         message: 'La escuela seleccionada no existe'
       })
     }
-    // Verificar permisos para Jefe de Laboratorio
-    if (req.user.rol === 'Jefe de Laboratorio') {
-      if (!req.user.laboratorio_ids.includes(parseInt(id))) {
-        return res.status(403).json({
-          message: 'No tienes permisos para editar este laboratorio'
-        })
-      }
-    }
+
     // Validaciones básicas
     if (!codigo || !codigo.trim()) {
       return res.status(400).json({
@@ -141,14 +134,7 @@ export const deleteLaboratorio = async (req, res) => {
         message: 'Laboratorio no encontrado'
       })
     }
-    // Verificar permisos para Jefe de Laboratorio
-    if (req.user.rol === 'Jefe de Laboratorio') {
-      if (!req.user.laboratorio_ids.includes(parseInt(id))) {
-        return res.status(403).json({
-          message: 'No tienes permisos para eliminar este laboratorio'
-        })
-      }
-    }
+
     // Eliminar laboratorio
     const affectedRows = await Laboratorio.delete(id)
     if (affectedRows === 0) {
@@ -189,14 +175,7 @@ export const changeEstadoLaboratorio = async (req, res) => {
         message: `Estado inválido. Debe ser uno de: ${estadosValidos.join(', ')}`
       })
     }
-    // Verificar permisos para Jefe de Laboratorio
-    if (req.user.rol === 'Jefe de Laboratorio') {
-      if (!req.user.laboratorio_ids.includes(parseInt(id))) {
-        return res.status(403).json({
-          message: 'No tienes permisos para cambiar el estado de este laboratorio'
-        })
-      }
-    }
+
     // Actualizar solo el estado
     const affectedRows = await Laboratorio.updateEstado(id, estado)
     if (affectedRows === 0) {
@@ -224,7 +203,7 @@ export const getInsumosLaboratorio = async (req, res) => {
   try {
     const { id } = req.params
     const laboratorioId = parseInt(id, 10)
-    
+
     // Validar ID
     if (isNaN(laboratorioId) || laboratorioId <= 0) {
       return res.status(400).json({
@@ -240,17 +219,8 @@ export const getInsumosLaboratorio = async (req, res) => {
       })
     }
 
-    // Verificar permisos para Jefe de Laboratorio
-    if (req.user.rol === 'Jefe de Laboratorio') {
-      if (!req.user.laboratorio_ids.includes(laboratorioId)) {
-        return res.status(403).json({
-          message: 'No tienes permisos para ver los insumos de este laboratorio'
-        })
-      }
-    }
-
     const insumos = await Laboratorio.getInsumosByLaboratorio(laboratorioId)
-    
+
     res.status(200).json({
       data: insumos
     })
@@ -268,7 +238,7 @@ export const configurarInsumosLaboratorio = async (req, res) => {
     const { id } = req.params
     const { insumo_ids } = req.body
     const laboratorioId = parseInt(id, 10)
-    
+
     // Validar ID
     if (isNaN(laboratorioId) || laboratorioId <= 0) {
       return res.status(400).json({
@@ -291,22 +261,13 @@ export const configurarInsumosLaboratorio = async (req, res) => {
       })
     }
 
-    // Verificar permisos para Jefe de Laboratorio
-    if (req.user.rol === 'Jefe de Laboratorio') {
-      if (!req.user.laboratorio_ids.includes(laboratorioId)) {
-        return res.status(403).json({
-          message: 'No tienes permisos para configurar insumos de este laboratorio'
-        })
-      }
-    }
-
     // Validar que todos los insumo_ids sean números válidos
     const insumoIdsValidos = insumo_ids
       .map(id => parseInt(id, 10))
       .filter(id => !isNaN(id) && id > 0)
 
     await Laboratorio.configurarInsumos(laboratorioId, insumoIdsValidos)
-    
+
     res.status(200).json({
       message: 'Insumos configurados correctamente',
       data: {
