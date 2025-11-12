@@ -33,6 +33,7 @@ import {
 } from '@mui/icons-material'
 import { horarioService, type Horario } from '../../services/horarioService'
 import { CerrarHorarioModal } from './CerrarHorarioModal'
+import { RegistrarInsumosDrawer } from './RegistrarInsumosDrawer'
 import dayjs from 'dayjs'
 
 interface HorarioDetalleProps {
@@ -50,6 +51,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [cerrarHorarioOpen, setCerrarHorarioOpen] = useState(false)
+  const [drawerPruebaOpen, setDrawerPruebaOpen] = useState(false)
 
   // Cargar detalles del horario
   const loadHorario = async () => {
@@ -392,6 +394,13 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
         <Button onClick={handleClose} variant="outlined">
           Cerrar
         </Button>
+        <Button 
+          onClick={() => setDrawerPruebaOpen(true)}
+          variant="contained"
+          color="primary"
+        >
+          Prueba
+        </Button>
         {horario && horario.insumos && horario.insumos.length > 0 && (
           <Button 
             variant="contained" 
@@ -411,6 +420,16 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
         onSuccess={handleCerrarHorarioSuccess}
         horarioId={horarioId}
         fecha= {dayjs(horario?.fecha_inicio).format('YYYY-MM-DD')}
+      />
+
+      {/* Drawer para registrar insumos */}
+      <RegistrarInsumosDrawer
+        open={drawerPruebaOpen}
+        onClose={() => setDrawerPruebaOpen(false)}
+        horario={horario}
+        onSaveInsumosUsados={(insumos) => {
+          console.log('Insumos usados guardados:', insumos)
+        }}
       />
     </Dialog>
   )
