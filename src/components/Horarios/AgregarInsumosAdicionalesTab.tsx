@@ -142,19 +142,19 @@ export const AgregarInsumosAdicionalesTab: React.FC<AgregarInsumosAdicionalesTab
     <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', gap: 3 }}>
       {/* Columna Izquierda: Agregar Insumos Adicionales */}
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'auto' }}>
-        <Alert severity="info" sx={{ mb: 2 }}>
+        <Alert severity="info" sx={{ mb: 1 }}>
           <Typography variant="body2">
             Agrega insumos adicionales que no estaban en los requeridos inicialmente. Selecciona el insumo, cantidad y lote.
           </Typography>
         </Alert>
 
         {/* Formulario para agregar insumo */}
-        <Paper elevation={0} sx={{ p: 3, bgcolor: 'grey.50', borderRadius: 2, mb: 2 }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 3 }}>
+        <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2, mb: 1 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1.5 }}>
           Agregar Insumo Adicional
         </Typography>
 
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           {/* Selector de insumo */}
           <Autocomplete
             options={insumosFiltrados}
@@ -295,20 +295,21 @@ export const AgregarInsumosAdicionalesTab: React.FC<AgregarInsumosAdicionalesTab
             </Alert>
           )}
 
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
             <Box
               component="button"
               onClick={handleAgregar}
               disabled={!insumoSeleccionado || cantidad <= 0 || (lotesInsumoSeleccionado.length > 0 && !loteDetalleId)}
               sx={{
-                px: 3,
-                py: 1.5,
+                px: 2,
+                py: 1,
                 bgcolor: 'primary.main',
                 color: 'white',
                 border: 'none',
                 borderRadius: 1,
                 cursor: 'pointer',
                 fontWeight: 600,
+                fontSize: '0.875rem',
                 '&:hover': {
                   bgcolor: 'primary.dark'
                 },
@@ -326,11 +327,11 @@ export const AgregarInsumosAdicionalesTab: React.FC<AgregarInsumosAdicionalesTab
 
         {/* Lista de insumos disponibles */}
         {insumosFiltrados.length > 0 && (
-          <Paper elevation={0} sx={{ p: 3, bgcolor: 'grey.50', borderRadius: 2 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+          <Paper elevation={0} sx={{ p: 1.5, bgcolor: 'grey.50', borderRadius: 2 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
               Insumos Disponibles ({insumosFiltrados.length})
             </Typography>
-            <List sx={{ maxHeight: 300, overflow: 'auto' }}>
+            <List sx={{ maxHeight: 'calc(100vh - 500px)', overflow: 'auto', py: 0 }}>
               {insumosFiltrados.map((insumo) => (
                 <ListItemButton
                   key={insumo.id}
@@ -342,7 +343,8 @@ export const AgregarInsumosAdicionalesTab: React.FC<AgregarInsumosAdicionalesTab
                     border: 1,
                     borderColor: insumoSeleccionado?.id === insumo.id ? 'primary.main' : 'divider',
                     borderRadius: 1,
-                    mb: 1,
+                    mb: 0.5,
+                    py: 0.75,
                     bgcolor: insumoSeleccionado?.id === insumo.id ? 'action.selected' : 'transparent'
                   }}
                 >
