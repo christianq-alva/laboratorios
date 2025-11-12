@@ -17,7 +17,7 @@ import {
 } from '@mui/material'
 import { Search, Inventory, Add } from '@mui/icons-material'
 import { insumoService, type Insumo } from '../../services/insumoService'
-import { InsumosUsadosForm, type InsumoUsado, type LoteDisponible } from './InsumosUsadosForm'
+import { InsumosUsadosForm, type InsumoUsado, type LoteDisponible } from './RegistrarInsumosDrawer'
 
 interface AgregarInsumosAdicionalesTabProps {
   insumosUsados: InsumoUsado[]

@@ -6,14 +6,35 @@ import {
   IconButton,
   Button,
   Tabs,
-  Tab
+  Tab,
+  TextField,
+  Select,
+  MenuItem
 } from '@mui/material'
-import { Close, CheckCircle } from '@mui/icons-material'
+import { Close, CheckCircle, Add } from '@mui/icons-material'
 import { RegistrarInsumosUsadosTab } from './RegistrarInsumosUsadosTab'
 import { AgregarInsumosAdicionalesTab } from './AgregarInsumosAdicionalesTab'
 import type { Horario } from '../../services/horarioService'
-import type { InsumoUsado, LoteDisponible } from './InsumosUsadosForm'
-import { insumoService } from '../../services/insumoService'
+import { inventarioService } from '../../services/inventarioService'
+
+// Tipos locales
+export interface InsumoUsado {
+  id: number
+  nombre: string
+  cantidad: number
+  unidad_medida: string
+  cantidad_requerida: number
+  lote_detalle_id?: number
+  lote?: string
+  uniqueId?: string | number
+}
+
+export interface LoteDisponible {
+  detalle_id: number
+  lote: string
+  saldo: number
+  fecha_vencimiento: string | null
+}
 
 interface RegistrarInsumosDrawerProps {
   open: boolean
@@ -63,10 +84,10 @@ export const RegistrarInsumosDrawer: React.FC<RegistrarInsumosDrawerProps> = ({
     if (!horario?.laboratorio_id) return
     
     try {
-      const response = await insumoService.getWithStock(horario.laboratorio_id)
+      const response = await inventarioService.getWithStock(horario.laboratorio_id)
       if (response.data) {
         const stockMap: Record<number, number> = {}
-        response.data.forEach((insumo) => {
+        response.data.forEach((insumo: { id: number; stock_disponible: number }) => {
           stockMap[insumo.id] = insumo.stock_disponible || 0
         })
         setStockDisponible(stockMap)
@@ -136,10 +157,9 @@ export const RegistrarInsumosDrawer: React.FC<RegistrarInsumosDrawerProps> = ({
     // Cargar lotes si no están cargados
     if (!lotesDisponiblesOriginal[insumo.id] && horario?.laboratorio_id) {
       try {
-        const { insumoService } = await import('../../services/insumoService')
-        const response = await insumoService.getLotesConSaldo(horario.laboratorio_id, insumo.id)
+        const response = await inventarioService.getLotesConSaldo(horario.laboratorio_id, insumo.id)
         if (response.data && response.data.length > 0) {
-          const lotesMapeados: LoteDisponible[] = response.data.map((lote: any) => ({
+          const lotesMapeados: LoteDisponible[] = response.data.map((lote) => ({
             detalle_id: lote.detalle_id,
             lote: lote.lote,
             saldo: lote.saldo,
@@ -272,3 +292,101 @@ export const RegistrarInsumosDrawer: React.FC<RegistrarInsumosDrawerProps> = ({
   )
 }
 
+// Componente InsumosUsadosForm
+interface InsumosUsadosFormProps {
+  insumosUsados: InsumoUsado[]
+  lotesDisponibles: Record<number, LoteDisponible[]>
+  onActualizarCantidad: (uniqueId: string | number, nuevaCantidad: number) => void
+  onActualizarLote: (uniqueId: string | number, loteDetalleId: number, lote: string) => void
+  onEliminar: (uniqueId: string | number) => void
+  onAgregarOtroLote?: (insumoId: number) => void
+}
+
+export const InsumosUsadosForm: React.FC<InsumosUsadosFormProps> = ({
+  insumosUsados,
+  lotesDisponibles,
+  onActualizarCantidad,
+  onActualizarLote,
+  onEliminar,
+  onAgregarOtroLote
+}) => {
+  // Agrupar insumos por ID para mostrar múltiples lotes del mismo insumo
+  const insumosAgrupados = insumosUsados.reduce((acc, insumo) => {
+    const key = insumo.id
+    if (!acc[key]) {
+      acc[key] = []
+    }
+    acc[key].push(insumo)
+    return acc
+  }, {} as Record<number, InsumoUsado[]>)
+
+  return (
+    <Box sx={{ flex: 1, overflow: 'auto' }}>
+      {insumosUsados.length === 0 ? (
+        <Box sx={{ textAlign: 'center', py: 4 }}>
+          <Typography variant="body2" color="text.secondary">
+            No hay insumos agregados
+          </Typography>
+        </Box>
+      ) : (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {Object.entries(insumosAgrupados).map(([insumoId, lotes]) => (
+            <Box key={insumoId} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  {lotes[0].nombre}
+                </Typography>
+                {onAgregarOtroLote && (lotesDisponibles[Number(insumoId)] || []).length > 0 && (
+                  <IconButton
+                    size="small"
+                    onClick={() => onAgregarOtroLote(Number(insumoId))}
+                    disabled={(lotesDisponibles[Number(insumoId)] || []).length === 0}
+                  >
+                    <Add />
+                  </IconButton>
+                )}
+              </Box>
+              {lotes.map((insumo) => (
+                <Box key={insumo.uniqueId || insumo.id} sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
+                  <TextField
+                    type="number"
+                    size="small"
+                    label="Cantidad"
+                    value={insumo.cantidad}
+                    onChange={(e) => onActualizarCantidad(insumo.uniqueId || insumo.id, Number(e.target.value))}
+                    sx={{ width: 100 }}
+                  />
+                  <Select
+                    size="small"
+                    value={insumo.lote_detalle_id || ''}
+                    onChange={(e) => {
+                      const loteDetalleId = Number(e.target.value)
+                      const loteSeleccionado = (lotesDisponibles[insumo.id] || []).find(l => l.detalle_id === loteDetalleId)
+                      if (loteSeleccionado) {
+                        onActualizarLote(insumo.uniqueId || insumo.id, loteDetalleId, loteSeleccionado.lote)
+                      }
+                    }}
+                    sx={{ flex: 1 }}
+                  >
+                    {(lotesDisponibles[insumo.id] || []).map((lote) => (
+                      <MenuItem key={lote.detalle_id} value={lote.detalle_id}>
+                        {lote.lote} (Saldo: {lote.saldo})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={() => onEliminar(insumo.uniqueId || insumo.id)}
+                  >
+                    <Close />
+                  </IconButton>
+                </Box>
+              ))}
+            </Box>
+          ))}
+        </Box>
+      )}
+    </Box>
+  )
+}

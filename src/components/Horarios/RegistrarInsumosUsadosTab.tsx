@@ -8,7 +8,7 @@ import {
 } from '@mui/material'
 import { Inventory, Add } from '@mui/icons-material'
 import { InsumosRequeridosList } from './InsumosRequeridosList'
-import { InsumosUsadosForm, type InsumoUsado, type LoteDisponible } from './InsumosUsadosForm'
+import { InsumosUsadosForm, type InsumoUsado, type LoteDisponible } from './RegistrarInsumosDrawer'
 import type { Horario } from '../../services/horarioService'
 
 interface RegistrarInsumosUsadosTabProps {
