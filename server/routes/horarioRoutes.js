@@ -1,6 +1,6 @@
 import express from 'express'
 import { authenticateToken } from '../middleware/auth.js'
-import { authorize, authorizeResource } from '../middleware/authorize.js'
+import { authorize } from '../middleware/authorize.js'
 import {
   getHorarios,
   getHorario,
@@ -51,9 +51,9 @@ router.post('/',
 
 // ✏️ EDITAR HORARIO
 router.put('/:id',
-  authenticateToken,                    // Solo verificar JWT
-  authorize('update', 'Horario'),       // Verificar permiso general
-  updateHorario                         // El controlador maneja la lógica específica
+  authenticateToken,
+  authorize('update', 'Horario'),
+  updateHorario
 )
 
 // 🗑️ ELIMINAR HORARIO

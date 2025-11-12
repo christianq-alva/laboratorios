@@ -1,6 +1,6 @@
 import express from 'express'
 import { authenticateToken } from '../middleware/auth.js'
-import { authorize, authorizeResource } from '../middleware/authorize.js'
+import { authorize } from '../middleware/authorize.js'
 import {
   getLaboratorios,
   createLaboratorio,
@@ -30,35 +30,35 @@ router.post('/',
 // Actualizar laboratorio
 router.put('/:id',
   authenticateToken,
-  authorizeResource('update', 'Laboratorio'),
+  authorize('update', 'Laboratorio'),
   updateLaboratorio
 )
 
 // Eliminar laboratorio
 router.delete('/:id',
   authenticateToken,
-  authorize('delete', 'Laboratorio'),
+  authorize('update', 'Laboratorio'),
   deleteLaboratorio
 )
 
 // Cambiar estado de un laboratorio
 router.patch('/:id/estado',
   authenticateToken,
-  authorizeResource('update', 'Laboratorio'),
+  authorize('update', 'Laboratorio'),
   changeEstadoLaboratorio
 )
 
 // Obtener insumos configurados de un laboratorio
 router.get('/:id/insumos',
   authenticateToken,
-  authorizeResource('read', 'Laboratorio'),
+  authorize('read', 'Laboratorio'),
   getInsumosLaboratorio
 )
 
 // Configurar insumos de un laboratorio
 router.put('/:id/insumos',
   authenticateToken,
-  authorizeResource('update', 'Laboratorio'),
+  authorize('update', 'Laboratorio'),
   configurarInsumosLaboratorio
 )
 

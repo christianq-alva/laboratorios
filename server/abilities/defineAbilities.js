@@ -3,8 +3,6 @@ import { AbilityBuilder, createMongoAbility } from '@casl/ability'
 export const defineAbilitiesFor = (user) => {
   const { can, cannot, build } = new AbilityBuilder(createMongoAbility)
 
-  console.log('🔍 defineAbilitiesFor user:', user) // ← AGREGAR DEBUG
-
   // Usuario con rol Administrador puede hacer TODO
   if (user.rol === 'Administrador') {
     can('manage', 'all')
@@ -13,33 +11,26 @@ export const defineAbilitiesFor = (user) => {
 
   // Usuario con rol Jefe de Laboratorio puede hacer:
   if (user.rol === 'Jefe de Laboratorio') {
-    const labIds = user.laboratorio_ids || []
 
-    // Permisos con condiciones de laboratorio     
-    if (labIds.length > 0) {
-    
-      labIds.forEach(labId => {
-        can(['create', 'read', 'update', 'delete'], 'Horario', { laboratorio_id: labId })
-        can(['create', 'read'], 'Incidencia', { laboratorio_id: labId })
-        can(['create', 'read', 'update', 'delete'], 'Equipo', { laboratorio_id: labId })
-        can(['create', 'read', 'update', 'delete'], 'Reserva', { laboratorio_id: labId })
-        can(['read', 'update'], 'Laboratorio', { id: labId })
-      })
-    }
-
-    // Permisos sin condiciones de laboratorio
-    can(['create', 'read', 'update', 'delete'], 'Inventario') // ← Permitir gestionar inventario
-    can('read', 'Insumo') // ← Permitir leer insumos
-    can('read', 'Horario') // ← Permitir leer horarios
-    can('read', 'TipoEquipo') // ← Permitir leer tipos de equipo
-    can('read', 'Docente') // ← Permitir leer docentes
-    can('read', 'Ciclo') // ← Permitir leer ciclos
-    can('read', 'Grupo') // ← Permitir leer grupos
-    can('read', 'Escuela') // ← Permitir leer escuelas
+    // Permisos generales para el Jefe de Laboratorio
+    // El Middleware de autorización se encarga de verificar si el usuario tiene permisos para el laboratorio
+    can(['create', 'read', 'update', 'delete'], 'Horario')
+    can(['create', 'read'], 'Incidencia')
+    can(['create', 'read', 'update', 'delete'], 'Equipo')
+    can(['create', 'read', 'update', 'delete'], 'Reserva')
+    can(['read', 'update'], 'Laboratorio')
+    can(['create', 'read', 'update', 'delete'], 'Inventario')
+    can('read', 'Insumo')
+    can('read', 'Horario')
+    can('read', 'TipoEquipo')
+    can('read', 'Docente')
+    can('read', 'Ciclo')
+    can('read', 'Grupo')
+    can('read', 'Escuela')
 
     return build()
   }
 
-  // 🟢 ROL POR DEFECTO: Sin permisos
+  // Rol diferente a Administrador o Jefe de Laboratorio: Sin permisos asignados
   return build()
 }

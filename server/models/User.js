@@ -16,15 +16,15 @@ export const User = {
       JOIN roles r ON u.rol_id = r.id
       WHERE u.usuario = ? AND u.contrasena = ?
     `;
-    
+
     const [userRows] = await pool.execute(userQuery, [usuario, contrasena])
-    
+
     if (userRows.length === 0) {
       return null
     }
-    
+
     const user = userRows[0]
-    
+
     return user
   },
 
@@ -36,7 +36,7 @@ export const User = {
       JOIN rol_permiso rp ON p.id = rp.permiso_id
       WHERE rp.rol_id = ?
     `, [rolId])
-    
+
     return rows
   },
 
@@ -70,7 +70,7 @@ export const User = {
             FROM laboratorios
             WHERE id IN (${placeholders})
           `, user.laboratorio_ids)
-          
+
           user.laboratorios_nombres = labRows.map(row => ({
             id: row.id,
             codigo: row.codigo,
@@ -142,7 +142,7 @@ export const User = {
           'SELECT nombre FROM roles WHERE id = ?',
           [data.rol_id]
         )
-        
+
         if (rolRows[0]?.nombre === 'Jefe de Laboratorio') {
           laboratorioIdsJson = JSON.stringify(data.laboratorio_ids)
         }
@@ -211,13 +211,13 @@ export const User = {
           const [userRows] = await connection.execute('SELECT rol_id FROM usuarios WHERE id = ?', [id])
           rolId = userRows[0]?.rol_id
         }
-        
+
         if (rolId) {
           const [rolRows] = await connection.execute(
             'SELECT nombre FROM roles WHERE id = ?',
             [rolId]
           )
-          
+
           let laboratorioIdsJson = null
           // Si es Jefe de Laboratorio y hay laboratorios, guardarlos
           if (rolRows[0]?.nombre === 'Jefe de Laboratorio' && data.laboratorio_ids && data.laboratorio_ids.length > 0) {
@@ -225,7 +225,7 @@ export const User = {
           }
           // Si cambió a Administrador, limpiar laboratorio_ids
           // Si es Jefe pero no se proporcionaron laboratorios, mantener null o vacío
-          
+
           updates.push('laboratorio_ids = ?')
           values.push(laboratorioIdsJson)
         }
@@ -275,5 +275,14 @@ export const User = {
     } catch (error) {
       throw error
     }
+  },
+  // Obtener laboratorios del usuario
+  getLaboratoriosById: async (id) => {
+    const [rows] = await pool.execute(`
+      SELECT laboratorio_ids
+      FROM usuarios
+      WHERE id = ?
+    `, [id])
+    return rows[0]?.laboratorio_ids
   }
 }
