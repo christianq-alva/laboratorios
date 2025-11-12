@@ -15,11 +15,11 @@ export const defineAbilitiesFor = (user) => {
     // Permisos generales para el Jefe de Laboratorio
     // El Middleware de autorización se encarga de verificar si el usuario tiene permisos para el laboratorio
     can(['create', 'read', 'update', 'delete'], 'Horario')
-    can(['create', 'read'], 'Incidencia')
-    can(['create', 'read', 'update', 'delete'], 'Equipo')
-    can(['create', 'read', 'update', 'delete'], 'Reserva')
-    can(['read', 'update'], 'Laboratorio')
     can(['create', 'read', 'update', 'delete'], 'Inventario')
+    can(['create', 'read', 'update', 'delete'], 'Equipo')
+    can(['create', 'read', 'update'], 'ShareLink')
+    can(['create', 'read'], 'Incidencia')
+    can('read', 'Laboratorio')
     can('read', 'Insumo')
     can('read', 'Horario')
     can('read', 'TipoEquipo')
