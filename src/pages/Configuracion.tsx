@@ -8,12 +8,7 @@ import {
   Button,
   CircularProgress,
   Alert,
-  Snackbar,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  DialogContentText
+  Snackbar
 } from '@mui/material'
 import { Add, Category, Person, LibraryBooks, School, AccountBalance, FileUpload, Group } from '@mui/icons-material'
 import { TiposEquipoTable } from '../components/Configuracion/TipoEquipo/TiposEquipoTable'
@@ -36,6 +31,7 @@ import { insumoService, type Insumo } from '../services/insumoService'
 import { laboratorioService, type Laboratorio } from '../services/laboratorioService'
 import { usuarioService, type Usuario } from '../services/usuarioService'
 import { useApi } from '../hooks/useApi'
+import { DeleteDialog } from '../components/Common/DeleteDialog'
 
 
 
@@ -978,155 +974,6 @@ export const Configuracion: React.FC = () => {
         escuela={editingEscuela}
       />
 
-      {/* Importación masiva*/}
-      <ImportacionMasiva
-        open={importacionMasivaOpen}
-        onClose={handleImportacionMasivaClose}
-        onSuccess={handleImportacionMasivaSuccess}
-      />
-
-      {/* Diálogo de confirmación de eliminación - Tipo de Equipo */}
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-      >
-        <DialogTitle>Confirmar Eliminación</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            ¿Está seguro que desea eliminar el tipo de equipo "{tipoToDelete?.nombre}"?
-          </DialogContentText>
-          {(tipoToDelete?.count_equipos || 0) > 0 && (
-            <Alert severity="warning" sx={{ mt: 2 }}>
-              Este tipo tiene {tipoToDelete?.count_equipos} equipo(s) asociado(s) y no podrá ser eliminado.
-            </Alert>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleDeleteConfirm}
-            color="error"
-            variant="contained"
-          >
-            Eliminar
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Diálogo de confirmación de eliminación - Docente */}
-      <Dialog
-        open={docenteDeleteDialogOpen}
-        onClose={() => setDocenteDeleteDialogOpen(false)}
-      >
-        <DialogTitle>Confirmar Eliminación</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            ¿Está seguro que desea eliminar al docente "{docenteToDelete?.nombre}"?
-            <Alert severity="warning" sx={{ mt: 2 }}>
-              Si este docente tiene horarios asignados, no podrá ser eliminado.
-            </Alert>
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDocenteDeleteDialogOpen(false)}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleDeleteDocenteConfirm}
-            color="error"
-            variant="contained"
-          >
-            Eliminar
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Diálogo de confirmación de eliminación - Laboratorio */}
-      <Dialog
-        open={laboratorioDeleteDialogOpen}
-        onClose={() => setLaboratorioDeleteDialogOpen(false)}
-      >
-        <DialogTitle>Confirmar Eliminación</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            ¿Está seguro que desea eliminar el laboratorio "{laboratorioToDelete?.nombre}"?
-            <Alert severity="warning" sx={{ mt: 2 }}>
-              Esta acción no se puede deshacer. El laboratorio será eliminado permanentemente del sistema.
-            </Alert>
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setLaboratorioDeleteDialogOpen(false)}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleDeleteLaboratorioConfirm}
-            color="error"
-            variant="contained"
-          >
-            Eliminar
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Diálogo de confirmación de eliminación - Insumo */}
-      <Dialog
-        open={insumoDeleteDialogOpen}
-        onClose={() => setInsumoDeleteDialogOpen(false)}
-      >
-        <DialogTitle>Confirmar Eliminación</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            ¿Está seguro que desea eliminar el insumo "{insumoToDelete?.nombre}"?
-          </DialogContentText>
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            Esta acción no se puede deshacer. El insumo será eliminado permanentemente del catálogo.
-          </Alert>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setInsumoDeleteDialogOpen(false)}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleDeleteInsumoConfirm}
-            color="error"
-            variant="contained"
-          >
-            Eliminar
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Diálogo de confirmación de eliminación - Escuela */}
-      <Dialog
-        open={escuelaDeleteDialogOpen}
-        onClose={() => setEscuelaDeleteDialogOpen(false)}
-      >
-        <DialogTitle>Confirmar Eliminación</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            ¿Está seguro que desea eliminar la escuela "{escuelaToDelete?.nombre}"?
-            <Alert severity="warning" sx={{ mt: 2 }}>
-              Si esta escuela tiene laboratorios o docentes asignados, no podrá ser eliminada.
-            </Alert>
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEscuelaDeleteDialogOpen(false)}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleDeleteEscuelaConfirm}
-            color="error"
-            variant="contained"
-          >
-            Eliminar
-          </Button>
-        </DialogActions>
-      </Dialog>
-
       {/* Formulario de Usuario */}
       <UsuarioForm
         open={usuarioFormOpen}
@@ -1135,33 +982,76 @@ export const Configuracion: React.FC = () => {
         usuario={editingUsuario}
       />
 
+      {/* Importación masiva*/}
+      <ImportacionMasiva
+        open={importacionMasivaOpen}
+        onClose={handleImportacionMasivaClose}
+        onSuccess={handleImportacionMasivaSuccess}
+      />
+
+      {/* Diálogo de confirmación de eliminación - Tipo de Equipo */}
+      <DeleteDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        itemName={tipoToDelete?.nombre || ''}
+        itemType="el tipo de equipo"
+        warningMessage={
+          (tipoToDelete?.count_equipos || 0) > 0
+            ? `Este tipo tiene ${tipoToDelete?.count_equipos} equipo(s) asociado(s) y no podrá ser eliminado.`
+            : undefined
+        }
+      />
+
+      {/* Diálogo de confirmación de eliminación - Docente */}
+      <DeleteDialog
+        open={docenteDeleteDialogOpen}
+        onClose={() => setDocenteDeleteDialogOpen(false)}
+        onConfirm={handleDeleteDocenteConfirm}
+        itemName={docenteToDelete?.nombre || ''}
+        itemType="al docente"
+        warningMessage="Si este docente tiene horarios asignados, no podrá ser eliminado."
+      />
+
+      {/* Diálogo de confirmación de eliminación - Laboratorio */}
+      <DeleteDialog
+        open={laboratorioDeleteDialogOpen}
+        onClose={() => setLaboratorioDeleteDialogOpen(false)}
+        onConfirm={handleDeleteLaboratorioConfirm}
+        itemName={laboratorioToDelete?.nombre || ''}
+        itemType="el laboratorio"
+        warningMessage="Esta acción no se puede deshacer. El laboratorio será eliminado permanentemente del sistema."
+      />
+
+      {/* Diálogo de confirmación de eliminación - Insumo */}
+      <DeleteDialog
+        open={insumoDeleteDialogOpen}
+        onClose={() => setInsumoDeleteDialogOpen(false)}
+        onConfirm={handleDeleteInsumoConfirm}
+        itemName={insumoToDelete?.nombre || ''}
+        itemType="el insumo"
+        warningMessage="Esta acción no se puede deshacer. El insumo será eliminado permanentemente del catálogo."
+      />
+
+      {/* Diálogo de confirmación de eliminación - Escuela */}
+      <DeleteDialog
+        open={escuelaDeleteDialogOpen}
+        onClose={() => setEscuelaDeleteDialogOpen(false)}
+        onConfirm={handleDeleteEscuelaConfirm}
+        itemName={escuelaToDelete?.nombre || ''}
+        itemType="la escuela"
+        warningMessage="Si esta escuela tiene laboratorios o docentes asignados, no podrá ser eliminada."
+      />
+
       {/* Diálogo de confirmación de eliminación - Usuario */}
-      <Dialog
+      <DeleteDialog
         open={usuarioDeleteDialogOpen}
         onClose={() => setUsuarioDeleteDialogOpen(false)}
-      >
-        <DialogTitle>Confirmar Eliminación</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            ¿Está seguro que desea eliminar al usuario "{usuarioToDelete?.nombre_completo}"?
-            <Alert severity="warning" sx={{ mt: 2 }}>
-              Esta acción no se puede deshacer. El usuario perderá acceso al sistema permanentemente.
-            </Alert>
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setUsuarioDeleteDialogOpen(false)}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleDeleteUsuarioConfirm}
-            color="error"
-            variant="contained"
-          >
-            Eliminar
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onConfirm={handleDeleteUsuarioConfirm}
+        itemName={usuarioToDelete?.nombre_completo || ''}
+        itemType="al usuario"
+        warningMessage="Esta acción no se puede deshacer. El usuario perderá acceso al sistema permanentemente."
+      />
 
       {/* Snackbar */}
       <Snackbar
