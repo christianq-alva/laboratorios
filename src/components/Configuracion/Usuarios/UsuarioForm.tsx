@@ -27,6 +27,7 @@ import {
   Person,
   Lock,
   School,
+  CheckCircle,
 } from '@mui/icons-material'
 import { usuarioService, type Usuario } from '../../../services/usuarioService'
 import { laboratorioService, type Laboratorio } from '../../../services/laboratorioService'
@@ -372,18 +373,30 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
                     </InputAdornment>
                   }
                 >
-                  {laboratorios.map((lab) => (
-                    <MenuItem key={lab.id} value={lab.id}>
-                      <Box>
-                        <Typography variant="body2">
-                          {lab.nombre}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {lab.codigo}
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                  ))}
+                  {laboratorios.map((lab) => {
+                    const isSelected = formData.laboratorio_ids.includes(lab.id)
+                    return (
+                      <MenuItem key={lab.id} value={lab.id}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                          {isSelected && (
+                            <CheckCircle 
+                              color="primary" 
+                              fontSize="small" 
+                              sx={{ flexShrink: 0 }}
+                            />
+                          )}
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="body2">
+                              {lab.nombre}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {lab.codigo}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </MenuItem>
+                    )
+                  })}
                 </Select>
               )}
               {errors.laboratorio_ids && (
