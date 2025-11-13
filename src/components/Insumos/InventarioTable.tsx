@@ -495,6 +495,7 @@ export const InventarioTable: React.FC<InventarioTableProps> = ({
           setInsumoSeleccionado(null)
         }}
         insumo={insumoSeleccionado}
+        laboratorioId={selectedLaboratorio === "all" ? undefined : selectedLaboratorio}
       />
 
       {/* Modal de detalle de lotes */}

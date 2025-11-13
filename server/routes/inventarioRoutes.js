@@ -6,6 +6,7 @@ import {
     getInsumosWithPositiveStock, 
     getInsumosWithStock, 
     getActividadInsumos, 
+    getActividadDetalleInsumos,
     generarPlantillaReabastecimiento, 
     procesarArchivoExcel, 
     ejecutarReabastecimientoMasivo, 
@@ -44,6 +45,13 @@ router.get('/actividad',
     authenticateToken,
     authorize('read', 'Inventario'),
     getActividadInsumos
+)
+
+//Obtener detalle de movimientos de un insumo específico
+router.get('/actividad-detalle',
+    authenticateToken,
+    authorize('read', 'Inventario'),
+    getActividadDetalleInsumos
 )
 
 //Generar plantilla excel para reabastecimiento masivo

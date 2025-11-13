@@ -132,7 +132,7 @@ export const Inventario = {
         l.codigo as laboratorio_codigo,
         CASE 
           WHEN mid.fecha_vencimiento IS NULL THEN NULL
-          WHEN mid.fecha_vencimiento < CURDATE() THEN 0
+          WHEN mid.fecha_vencimiento < CURDATE() THEN DATEDIFF(mid.fecha_vencimiento, CURDATE())
           ELSE DATEDIFF(mid.fecha_vencimiento, CURDATE())
         END as dias_para_vencer
       FROM movimiento_insumo_detalle mid
@@ -141,6 +141,7 @@ export const Inventario = {
       INNER JOIN laboratorios l ON mi.laboratorio_id = l.id
       WHERE mid.insumo_id = ?
         AND mi.tipo_movimiento = 'entrada'
+        AND COALESCE(mid.saldo, 0) > 0
     `
     const params = [insumo_id]
 
@@ -201,7 +202,8 @@ export const Inventario = {
 
   validarSaldo: async (connection, entrada_detalle_id, cantidad) => {
     const [row] = await connection.execute(`
-          SELECT saldo FROM movimiento_insumo_detalle
+          SELECT saldo 
+          FROM movimiento_insumo_detalle
           WHERE id = ?
         `, [entrada_detalle_id]);
 
@@ -299,6 +301,36 @@ export const Inventario = {
     return rows;
   },
 
+  getActividadDetalleInsumos: async (user_rol, user_laboratorio_ids, laboratorio_id, insumo_id) => {
+    let query = `
+      SELECT 
+        m.id,
+        m.fecha_movimiento,
+        m.tipo_movimiento,
+        m.fecha_ingreso,
+        m.observaciones,
+        l.nombre as laboratorio_nombre,
+        mid.cantidad as cantidad,
+        mid.lote as lote
+      FROM movimientos_insumos m
+      INNER JOIN movimiento_insumo_detalle mid ON m.id = mid.movimiento_id
+      INNER JOIN laboratorios l ON m.laboratorio_id = l.id
+      WHERE mid.insumo_id = ${insumo_id}
+    `
+    // Filtros según permisos del usuario
+    if (user_rol === 'Jefe de Laboratorio' && Array.isArray(user_laboratorio_ids) && user_laboratorio_ids.length) {
+      query += ` AND m.laboratorio_id IN (${user_laboratorio_ids.join(',')})`
+    }
+
+    if (laboratorio_id) {
+      query += ` AND m.laboratorio_id = ${laboratorio_id}`
+    }
+
+    query += ` ORDER BY m.fecha_movimiento DESC LIMIT 100`
+
+    const [rows] = await pool.execute(query)
+    return rows;
+  }, 
   getInsumosConfiguradosByLaboratorio: async (laboratorio_id) => {
     const [insumos] = await pool.execute(`
         SELECT 

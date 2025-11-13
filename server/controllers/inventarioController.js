@@ -352,7 +352,7 @@ export const getLotesPorInsumo = async (req, res) => {
       req.user.rol,
       userLaboratorioIds
     )
-    
+
     res.status(200).json({
       success: true,
       data: lotes
@@ -364,6 +364,22 @@ export const getLotesPorInsumo = async (req, res) => {
     })
   }
 }
+
+export const getActividadDetalleInsumos = async (req, res) => {
+  try {
+    const { insumo_id, laboratorio_id } = req.query
+    const actividad = await Inventario.getActividadDetalleInsumos(req.user.rol, req.user.laboratorio_ids, laboratorio_id, insumo_id)
+    res.status(200).json({
+      data: actividad
+    })
+  } catch (error) {
+    res.status(500).json({
+      message: 'Error al obtener actividad detalle de insumos',
+      error: error.message
+    })
+  }
+}
+
 
 // Registrar movimiento manual (entrada o salida)
 export const registrarMovimientoManual = async (req, res) => {

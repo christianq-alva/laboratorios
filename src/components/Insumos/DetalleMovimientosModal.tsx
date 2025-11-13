@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -16,85 +16,80 @@ import {
   TableRow,
   Paper,
   Chip,
-  Divider
+  Divider,
+  CircularProgress,
+  Alert
 } from '@mui/material'
 import { Close, Inventory, TrendingUp, TrendingDown } from '@mui/icons-material'
-import type { InsumoSaldo } from '../../services/inventarioService'
+import { inventarioService, type InsumoSaldo } from '../../services/inventarioService'
 
 interface Movimiento {
   id: number
-  fecha: string
-  tipo: 'entrada' | 'salida'
+  fecha_movimiento: string
+  tipo_movimiento: 'entrada' | 'salida'
   cantidad: number
-  laboratorio: string
-  observaciones?: string
+  laboratorio_nombre: string
+  observaciones: string | null
+  lote: string | null
+  fecha_ingreso: string | null
 }
 
 interface DetalleMovimientosModalProps {
   open: boolean
   onClose: () => void
   insumo: InsumoSaldo | null
+  laboratorioId?: number
 }
 
 export const DetalleMovimientosModal: React.FC<DetalleMovimientosModalProps> = ({
   open,
   onClose,
-  insumo
+  insumo,
+  laboratorioId
 }) => {
-  // Datos de ejemplo (maqueta)
-  const movimientosEjemplo: Movimiento[] = insumo ? [
-    {
-      id: 1,
-      fecha: '2025-01-15 10:30:00',
-      tipo: 'entrada',
-      cantidad: 50,
-      laboratorio: 'Laboratorio de Química',
-      observaciones: 'Compra inicial'
-    },
-    {
-      id: 2,
-      fecha: '2025-01-20 14:15:00',
-      tipo: 'salida',
-      cantidad: 10,
-      laboratorio: 'Laboratorio de Química',
-      observaciones: 'Uso en práctica de laboratorio'
-    },
-    {
-      id: 3,
-      fecha: '2025-01-25 09:00:00',
-      tipo: 'entrada',
-      cantidad: 30,
-      laboratorio: 'Laboratorio de Química',
-      observaciones: 'Reabastecimiento'
-    },
-    {
-      id: 4,
-      fecha: '2025-02-01 16:45:00',
-      tipo: 'salida',
-      cantidad: 5,
-      laboratorio: 'Laboratorio de Química',
-      observaciones: 'Uso en experimento'
-    },
-    {
-      id: 5,
-      fecha: '2025-02-05 11:20:00',
-      tipo: 'salida',
-      cantidad: 15,
-      laboratorio: 'Laboratorio de Química',
-      observaciones: 'Uso en clase práctica'
+  const [movimientos, setMovimientos] = useState<Movimiento[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadMovimientos = useCallback(async () => {
+    if (!insumo) return
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const response = await inventarioService.getActividadDetalleInsumos(
+        insumo.id,
+        laboratorioId
+      )
+      setMovimientos(response.data || [])
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar los movimientos')
+      console.error('Error al cargar movimientos:', err)
+    } finally {
+      setLoading(false)
     }
-  ] : []
+  }, [insumo, laboratorioId])
+
+  // Cargar movimientos cuando se abre el modal y hay un insumo seleccionado
+  useEffect(() => {
+    if (open && insumo) {
+      loadMovimientos()
+    } else {
+      // Limpiar datos cuando se cierra el modal
+      setMovimientos([])
+      setError(null)
+    }
+  }, [open, insumo, loadMovimientos])
 
   // Calcular totales
-  const totalEntradas = movimientosEjemplo
-    .filter(m => m.tipo === 'entrada')
-    .reduce((sum, m) => sum + m.cantidad, 0)
+  const totalEntradas = movimientos
+    .filter(m => m.tipo_movimiento === 'entrada')
+    .length
   
-  const totalSalidas = movimientosEjemplo
-    .filter(m => m.tipo === 'salida')
-    .reduce((sum, m) => sum + m.cantidad, 0)
-
-  const saldoActual = totalEntradas - totalSalidas
+  const totalSalidas = movimientos
+    .filter(m => m.tipo_movimiento === 'salida')
+    .length
 
   return (
     <Dialog
@@ -162,7 +157,7 @@ export const DetalleMovimientosModal: React.FC<DetalleMovimientosModalProps> = (
                     </Typography>
                   </Box>
                   <Typography variant="h6" sx={{ fontWeight: 600, color: 'success.main' }}>
-                    {totalEntradas} {insumo.unidad_medida}
+                    {totalEntradas} registro(s)
                   </Typography>
                 </Box>
                 <Box sx={{ flex: 1, minWidth: 150 }}>
@@ -173,15 +168,7 @@ export const DetalleMovimientosModal: React.FC<DetalleMovimientosModalProps> = (
                     </Typography>
                   </Box>
                   <Typography variant="h6" sx={{ fontWeight: 600, color: 'error.main' }}>
-                    {totalSalidas} {insumo.unidad_medida}
-                  </Typography>
-                </Box>
-                <Box sx={{ flex: 1, minWidth: 150 }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                    Saldo Actual
-                  </Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    {saldoActual} {insumo.unidad_medida}
+                    {totalSalidas} registro(s)
                   </Typography>
                 </Box>
               </Box>
@@ -193,75 +180,92 @@ export const DetalleMovimientosModal: React.FC<DetalleMovimientosModalProps> = (
             <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
               Historial de Movimientos
             </Typography>
-            <TableContainer component={Paper} variant="outlined">
-              <Table>
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: 'grey.50' }}>
-                    <TableCell sx={{ fontWeight: 600 }}>Fecha</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="center">Tipo</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="right">Cantidad</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Laboratorio</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Observaciones</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {movimientosEjemplo.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          No hay movimientos registrados para este insumo
-                        </Typography>
-                      </TableCell>
+            
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : error ? (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            ) : (
+              <TableContainer component={Paper} variant="outlined">
+                <Table>
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: 'grey.50' }}>
+                      <TableCell sx={{ fontWeight: 600 }}>Fecha</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }} align="center">Tipo</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }} align="right">Cantidad</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Lote</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Laboratorio</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Observaciones</TableCell>
                     </TableRow>
-                  ) : (
-                    movimientosEjemplo.map((movimiento) => (
-                      <TableRow key={movimiento.id} hover>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {new Date(movimiento.fecha).toLocaleDateString('es-ES', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="center">
-                          <Chip
-                            label={movimiento.tipo === 'entrada' ? 'Entrada' : 'Salida'}
-                            size="small"
-                            color={movimiento.tipo === 'entrada' ? 'success' : 'error'}
-                            icon={movimiento.tipo === 'entrada' ? <TrendingUp /> : <TrendingDown />}
-                          />
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              fontWeight: 600,
-                              color: movimiento.tipo === 'entrada' ? 'success.main' : 'error.main'
-                            }}
-                          >
-                            {movimiento.tipo === 'entrada' ? '+' : '-'}{movimiento.cantidad} {insumo.unidad_medida}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {movimiento.laboratorio}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
+                  </TableHead>
+                  <TableBody>
+                    {movimientos.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                           <Typography variant="body2" color="text.secondary">
-                            {movimiento.observaciones || '-'}
+                            No hay movimientos registrados para este insumo
                           </Typography>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                    ) : (
+                      movimientos.map((movimiento) => (
+                        <TableRow key={movimiento.id} hover>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {new Date(movimiento.fecha_movimiento).toLocaleDateString('es-ES', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Chip
+                              label={movimiento.tipo_movimiento === 'entrada' ? 'Entrada' : 'Salida'}
+                              size="small"
+                              color={movimiento.tipo_movimiento === 'entrada' ? 'success' : 'error'}
+                              icon={movimiento.tipo_movimiento === 'entrada' ? <TrendingUp /> : <TrendingDown />}
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                fontWeight: 600,
+                                color: movimiento.tipo_movimiento === 'entrada' ? 'success.main' : 'error.main'
+                              }}
+                            >
+                              {movimiento.tipo_movimiento === 'entrada' ? '+' : '-'}{movimiento.cantidad} {insumo.unidad_medida}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" color="text.secondary">
+                              {movimiento.lote || '-'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {movimiento.laboratorio_nombre}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" color="text.secondary">
+                              {movimiento.observaciones || '-'}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
           </Box>
         ) : (
           <Box sx={{ textAlign: 'center', py: 4 }}>

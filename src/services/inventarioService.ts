@@ -247,5 +247,25 @@ export const inventarioService = {
         }
         const response = await api.get(`/inventario/lotes-por-insumo?${params.toString()}`)
         return response.data
+    },
+
+    // Obtener detalle de movimientos de un insumo específico
+    getActividadDetalleInsumos: async (insumoId: number, laboratorioId?: number): Promise<ApiDataResponse<Array<{
+        id: number
+        fecha_movimiento: string
+        tipo_movimiento: 'entrada' | 'salida'
+        fecha_ingreso: string | null
+        observaciones: string | null
+        laboratorio_nombre: string
+        cantidad: number
+        lote: string | null
+    }>>> => {
+        const params = new URLSearchParams()
+        params.append('insumo_id', insumoId.toString())
+        if (laboratorioId) {
+            params.append('laboratorio_id', laboratorioId.toString())
+        }
+        const response = await api.get(`/inventario/actividad-detalle?${params.toString()}`)
+        return response.data
     }
 }

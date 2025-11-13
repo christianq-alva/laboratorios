@@ -295,11 +295,20 @@ export const DetalleLotesModal: React.FC<DetalleLotesModalProps> = ({
                                       <Typography variant="body2">
                                         {formatFecha(lote.fecha_vencimiento)}
                                       </Typography>
-                                      {lote.dias_para_vencer !== null && (
+                                      
+                                    </Box>
+                                  ) : (
+                                    <Typography variant="body2" color="text.secondary">
+                                      Sin fecha
+                                    </Typography>
+                                  )}
+                                </TableCell>
+                                <TableCell align="center">
+                                {lote.dias_para_vencer !== null && (
                                         <Chip
                                           label={
                                             lote.dias_para_vencer < 0
-                                              ? 'Vencido'
+                                              ? `Vencido`
                                               : lote.dias_para_vencer <= 30
                                               ? `${lote.dias_para_vencer} días`
                                               : 'Vigente'
@@ -318,21 +327,6 @@ export const DetalleLotesModal: React.FC<DetalleLotesModalProps> = ({
                                           }
                                         />
                                       )}
-                                    </Box>
-                                  ) : (
-                                    <Typography variant="body2" color="text.secondary">
-                                      Sin fecha
-                                    </Typography>
-                                  )}
-                                </TableCell>
-                                <TableCell align="center">
-                                  {lote.saldo === 0 ? (
-                                    <Chip label="Agotado" size="small" color="error" />
-                                  ) : lote.saldo < lote.cantidad_original * 0.3 ? (
-                                    <Chip label="Bajo Stock" size="small" color="warning" />
-                                  ) : (
-                                    <Chip label="Disponible" size="small" color="success" />
-                                  )}
                                 </TableCell>
                               </TableRow>
                             ))}
