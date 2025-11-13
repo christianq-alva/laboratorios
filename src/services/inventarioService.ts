@@ -1,6 +1,7 @@
 import type { ApiDataResponse } from "./types"
 import { api } from "./api"
 
+
 export interface DatoValidado {
     fila: number
     insumo_id: number
@@ -50,6 +51,23 @@ export interface LoteInsumo {
     laboratorio_id?: number
 }
 
+export interface Lote {
+    detalle_id: number
+    insumo_id: number
+    insumo_nombre: string
+    insumo_codigo: string
+    unidad_medida: string
+    lote: string
+    cantidad_original: number
+    saldo: number
+    fecha_vencimiento: string | null
+    fecha_ingreso: string
+    fecha_movimiento: string
+    laboratorio_id: number
+    laboratorio_nombre: string
+    laboratorio_codigo: string
+    dias_para_vencer: number | null
+  }
 
 export const inventarioService = {
     //Obtener los insumos y su stock de todos los laboratorios
@@ -217,6 +235,17 @@ export const inventarioService = {
         }>
     }): Promise<{ success: boolean; message: string; movimiento_id: number }> => {
         const response = await api.post('/inventario/movimiento-manual', data)
+        return response.data
+    },
+
+    // Obtener todos los lotes de un insumo agrupados por laboratorio
+    getLotesPorInsumo: async (insumoId: number, laboratorioId?: number): Promise<ApiDataResponse<Lote[]>> => {
+        const params = new URLSearchParams()
+        params.append('insumo_id', insumoId.toString())
+        if (laboratorioId) {
+            params.append('laboratorio_id', laboratorioId.toString())
+        }
+        const response = await api.get(`/inventario/lotes-por-insumo?${params.toString()}`)
         return response.data
     }
 }

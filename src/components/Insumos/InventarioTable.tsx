@@ -19,11 +19,16 @@ import {
   IconButton,
   Tooltip,
   TextField,
-  TablePagination
+  TablePagination,
+  Menu,
+  ListItemIcon,
+  ListItemText
 } from '@mui/material'
-import { Inventory, Science, Search, Clear, Visibility } from '@mui/icons-material'
+import { Inventory, Science, Search, Clear, Visibility, MoreVert, ListAlt } from '@mui/icons-material'
 import { inventarioService, type InsumoSaldo } from '../../services/inventarioService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
+import { DetalleMovimientosModal } from './DetalleMovimientosModal'
+import { DetalleLotesModal } from './DetalleLotesModal'
 
 interface InventarioTableProps {
   refresh?: boolean
@@ -42,6 +47,11 @@ export const InventarioTable: React.FC<InventarioTableProps> = ({
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [detalleModalOpen, setDetalleModalOpen] = useState(false)
+  const [detalleLotesModalOpen, setDetalleLotesModalOpen] = useState(false)
+  const [insumoSeleccionado, setInsumoSeleccionado] = useState<InsumoSaldo | null>(null)
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
+  const [insumoMenuSeleccionado, setInsumoMenuSeleccionado] = useState<InsumoSaldo | null>(null)
 
   // Cargar datos
   const loadData = async () => {
@@ -164,6 +174,36 @@ export const InventarioTable: React.FC<InventarioTableProps> = ({
   // Calcular el total de items para la paginación
   const getTotalCount = () => {
     return filteredInsumos.length
+  }
+
+  // Manejar apertura del menú
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, insumo: InsumoSaldo) => {
+    setMenuAnchorEl(event.currentTarget)
+    setInsumoMenuSeleccionado(insumo)
+  }
+
+  // Manejar cierre del menú
+  const handleMenuClose = () => {
+    setMenuAnchorEl(null)
+    setInsumoMenuSeleccionado(null)
+  }
+
+  // Manejar ver detalle de movimientos desde el menú
+  const handleVerDetalle = () => {
+    if (insumoMenuSeleccionado) {
+      setInsumoSeleccionado(insumoMenuSeleccionado)
+      setDetalleModalOpen(true)
+    }
+    handleMenuClose()
+  }
+
+  // Manejar ver detalle de lotes desde el menú
+  const handleVerDetalleLotes = () => {
+    if (insumoMenuSeleccionado) {
+      setInsumoSeleccionado(insumoMenuSeleccionado)
+      setDetalleLotesModalOpen(true)
+    }
+    handleMenuClose()
   }
 
   if (loading) {
@@ -369,13 +409,13 @@ export const InventarioTable: React.FC<InventarioTableProps> = ({
                   </TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                        <Tooltip title="Ver detalle">
+                        <Tooltip title="Más opciones">
                           <IconButton
                             size="small"
-                            //onClick={() => onEdit(insumo)}
+                            onClick={(e) => handleMenuOpen(e, insumo)}
                             color="primary"
                           >
-                            <Visibility />
+                            <MoreVert />
                           </IconButton>
                         </Tooltip>
                     </Box>
@@ -420,6 +460,53 @@ export const InventarioTable: React.FC<InventarioTableProps> = ({
           </Box>
         </Paper>
       )}
+
+      {/* Menú contextual */}
+      <Menu
+        anchorEl={menuAnchorEl}
+        open={Boolean(menuAnchorEl)}
+        onClose={handleMenuClose}
+        PaperProps={{
+          sx: { boxShadow: 3, borderRadius: 2, minWidth: 200 }
+        }}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+      >
+        <MenuItem onClick={handleVerDetalle}>
+          <ListItemIcon>
+            <Visibility fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Ver detalle de movimientos</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handleVerDetalleLotes}>
+          <ListItemIcon>
+            <ListAlt fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Ver detalle de lotes</ListItemText>
+        </MenuItem>
+        {/* Aquí se pueden agregar más opciones en el futuro */}
+      </Menu>
+
+      {/* Modal de detalle de movimientos */}
+      <DetalleMovimientosModal
+        open={detalleModalOpen}
+        onClose={() => {
+          setDetalleModalOpen(false)
+          setInsumoSeleccionado(null)
+        }}
+        insumo={insumoSeleccionado}
+      />
+
+      {/* Modal de detalle de lotes */}
+      <DetalleLotesModal
+        open={detalleLotesModalOpen}
+        onClose={() => {
+          setDetalleLotesModalOpen(false)
+          setInsumoSeleccionado(null)
+        }}
+        insumo={insumoSeleccionado}
+        laboratorioId={selectedLaboratorio === "all" ? undefined : selectedLaboratorio}
+      />
     </Box>
   )
 } 

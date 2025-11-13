@@ -10,6 +10,7 @@ import {
     procesarArchivoExcel, 
     ejecutarReabastecimientoMasivo, 
     getLotesConSaldo, 
+    getLotesPorInsumo,
     registrarMovimientoManual, 
 } from '../controllers/inventarioController.js'
 import { upload } from '../controllers/insumoController.js'
@@ -70,6 +71,13 @@ router.get('/lotes-con-saldo',
     authenticateToken,
     authorize('read', 'Inventario'),
     getLotesConSaldo
+)
+
+// Obtener todos los lotes de un insumo agrupados por laboratorio
+router.get('/lotes-por-insumo',
+    authenticateToken,
+    authorize('read', 'Inventario'),
+    getLotesPorInsumo
 )
 
 // Registrar movimiento manual (entrada o salida)

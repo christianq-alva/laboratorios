@@ -312,6 +312,59 @@ export const getLotesConSaldo = async (req, res) => {
     })
   }
 }
+
+// Obtener todos los lotes de un insumo agrupados por laboratorio
+export const getLotesPorInsumo = async (req, res) => {
+  try {
+    const { insumo_id, laboratorio_id } = req.query
+    if (!insumo_id) {
+      return res.status(400).json({
+        message: 'El insumo_id es requerido'
+      })
+    }
+
+    // Si se proporciona laboratorio_id, filtrar solo ese laboratorio
+    let userLaboratorioIds = req.user.laboratorio_ids || []
+    if (laboratorio_id) {
+      const labId = parseInt(laboratorio_id)
+      // Si el usuario es Jefe de Laboratorio, verificar que el lab solicitado esté en sus labs asignados
+      if (req.user.rol === 'Jefe de Laboratorio') {
+        if (userLaboratorioIds.length > 0 && !userLaboratorioIds.includes(labId)) {
+          return res.status(403).json({
+            message: 'No tienes acceso a este laboratorio'
+          })
+        }
+      }
+      // Filtrar solo el laboratorio solicitado (para cualquier rol)
+      userLaboratorioIds = [labId]
+    } else {
+      // Si no se proporciona laboratorio_id pero el usuario es Jefe de Laboratorio, usar sus labs asignados
+      if (req.user.rol === 'Jefe de Laboratorio' && userLaboratorioIds.length > 0) {
+        // Ya está configurado correctamente
+      } else if (req.user.rol === 'Administrador') {
+        // Administrador sin filtro: mostrar todos los laboratorios (array vacío = sin filtro)
+        userLaboratorioIds = []
+      }
+    }
+
+    const lotes = await Inventario.getLotesPorInsumo(
+      parseInt(insumo_id),
+      req.user.rol,
+      userLaboratorioIds
+    )
+    
+    res.status(200).json({
+      success: true,
+      data: lotes
+    })
+  } catch (error) {
+    res.status(500).json({
+      message: 'Error al obtener lotes del insumo',
+      error: error.message
+    })
+  }
+}
+
 // Registrar movimiento manual (entrada o salida)
 export const registrarMovimientoManual = async (req, res) => {
   const connection = await pool.getConnection()

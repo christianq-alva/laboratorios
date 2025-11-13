@@ -113,7 +113,21 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
   const [error, setError] = useState<string | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<HorarioSimple | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [currentWeek, setCurrentWeek] = useState(dayjs().startOf('isoWeek'))
+  // Inicializar currentWeek desde localStorage si existe, sino usar la semana actual
+  const [currentWeek, setCurrentWeek] = useState(() => {
+    const savedWeek = localStorage.getItem('calendario_semana_actual')
+    if (savedWeek) {
+      try {
+        const parsed = dayjs(savedWeek)
+        if (parsed.isValid()) {
+          return parsed.startOf('isoWeek')
+        }
+      } catch (e) {
+        console.error('Error al leer semana guardada:', e)
+      }
+    }
+    return dayjs().startOf('isoWeek')
+  })
   const [initialWeekSet, setInitialWeekSet] = useState(false)
 
   // Estados para laboratorios (jefes con múltiples labs)
@@ -156,11 +170,16 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
       setHorarios(result.data?.data)
       //setUserRole(result.user_role || '')
     }
-    // Inicializar con la semana actual
+    // No resetear la semana si ya está establecida (preserva la semana seleccionada)
     if (!initialWeekSet) {
-      const semanaActual = dayjs().startOf('isoWeek')
-      console.log('🎯 Inicializando calendario simple con la semana actual:', semanaActual.format('YYYY-MM-DD'))
-      setCurrentWeek(semanaActual)
+      // Solo inicializar si no hay semana guardada en localStorage
+      const savedWeek = localStorage.getItem('calendario_semana_actual')
+      if (!savedWeek) {
+        const semanaActual = dayjs().startOf('isoWeek')
+        console.log('🎯 Inicializando calendario simple con la semana actual:', semanaActual.format('YYYY-MM-DD'))
+        setCurrentWeek(semanaActual)
+        localStorage.setItem('calendario_semana_actual', semanaActual.format('YYYY-MM-DD'))
+      }
       setInitialWeekSet(true)
     }
     setLoading(false)
@@ -252,15 +271,25 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
 
   // Navegación de semanas
   const handlePreviousWeek = () => {
-    setCurrentWeek(prev => prev.subtract(1, 'week'))
+    setCurrentWeek(prev => {
+      const nuevaSemana = prev.subtract(1, 'week')
+      localStorage.setItem('calendario_semana_actual', nuevaSemana.format('YYYY-MM-DD'))
+      return nuevaSemana
+    })
   }
 
   const handleNextWeek = () => {
-    setCurrentWeek(prev => prev.add(1, 'week'))
+    setCurrentWeek(prev => {
+      const nuevaSemana = prev.add(1, 'week')
+      localStorage.setItem('calendario_semana_actual', nuevaSemana.format('YYYY-MM-DD'))
+      return nuevaSemana
+    })
   }
 
   const handleToday = () => {
-    setCurrentWeek(dayjs().startOf('isoWeek'))
+    const semanaActual = dayjs().startOf('isoWeek')
+    setCurrentWeek(semanaActual)
+    localStorage.setItem('calendario_semana_actual', semanaActual.format('YYYY-MM-DD'))
   }
 
   // Limpiar filtros
@@ -274,8 +303,12 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
     }
   }
 
-  // Cargar datos al montar
+  // Cargar datos al montar (solo una vez)
+  const hasInitialLoadRef = useRef(false)
   useEffect(() => {
+    if (hasInitialLoadRef.current) return
+    hasInitialLoadRef.current = true
+
     fetchLaboratorios()
     fetchHorarios()
 
@@ -295,19 +328,30 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
         console.error('Error al procesar navegación desde dashboard:', err)
       }
     }
-  }, [fetchLaboratorios, fetchHorarios])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Refresh cuando se solicita (siempre que cambie la bandera), evitando el primer render
   const hasMountedRef = useRef(false)
+  const onRefreshCompleteRef = useRef(onRefreshComplete)
+  
+  // Actualizar la referencia cuando cambia onRefreshComplete
+  useEffect(() => {
+    onRefreshCompleteRef.current = onRefreshComplete
+  }, [onRefreshComplete])
+
   useEffect(() => {
     if (!hasMountedRef.current) {
       hasMountedRef.current = true
       return
     }
-    Promise.all([fetchLaboratorios(), fetchHorarios()]).then(() => {
-      onRefreshComplete?.()
-    })
-  }, [refresh, fetchLaboratorios, fetchHorarios, onRefreshComplete])
+    // Solo ejecutar refresh si la bandera refresh cambió explícitamente
+    if (refresh !== undefined) {
+      Promise.all([fetchLaboratorios(), fetchHorarios()]).then(() => {
+        onRefreshCompleteRef.current?.()
+      })
+    }
+  }, [refresh, fetchLaboratorios, fetchHorarios])
 
   if (loading) {
     return (

@@ -112,6 +112,51 @@ export const Inventario = {
     return lotes;
   },
 
+  // Obtener todos los lotes de un insumo agrupados por laboratorio
+  getLotesPorInsumo: async (insumo_id, user_rol, user_laboratorio_ids) => {
+    let query = `
+      SELECT 
+        mid.id as detalle_id,
+        mid.insumo_id,
+        i.nombre as insumo_nombre,
+        i.codigo as insumo_codigo,
+        i.unidad_medida,
+        COALESCE(mid.lote, 'SIN-LOTE') as lote,
+        mid.cantidad as cantidad_original,
+        COALESCE(mid.saldo, 0) as saldo,
+        mid.fecha_vencimiento,
+        mi.fecha_ingreso,
+        mi.fecha_movimiento,
+        l.id as laboratorio_id,
+        l.nombre as laboratorio_nombre,
+        l.codigo as laboratorio_codigo,
+        CASE 
+          WHEN mid.fecha_vencimiento IS NULL THEN NULL
+          WHEN mid.fecha_vencimiento < CURDATE() THEN 0
+          ELSE DATEDIFF(mid.fecha_vencimiento, CURDATE())
+        END as dias_para_vencer
+      FROM movimiento_insumo_detalle mid
+      INNER JOIN movimientos_insumos mi ON mid.movimiento_id = mi.id
+      INNER JOIN insumos i ON mid.insumo_id = i.id
+      INNER JOIN laboratorios l ON mi.laboratorio_id = l.id
+      WHERE mid.insumo_id = ?
+        AND mi.tipo_movimiento = 'entrada'
+    `
+    const params = [insumo_id]
+
+    // Filtro por laboratorios (aplicado cuando se proporciona user_laboratorio_ids)
+    // El controlador ya maneja la lógica de permisos, aquí solo aplicamos el filtro
+    if (user_laboratorio_ids && user_laboratorio_ids.length > 0) {
+      const placeholders = user_laboratorio_ids.map(() => '?').join(',')
+      query += ` AND mi.laboratorio_id IN (${placeholders})`
+      params.push(...user_laboratorio_ids)
+    }
+
+    query += ` ORDER BY l.nombre, COALESCE(mid.fecha_vencimiento, '9999-12-31') ASC, mi.fecha_ingreso DESC`
+
+    const [lotes] = await pool.execute(query, params)
+    return lotes
+  },
 
   registrarMovimientoManual: async (connection, usuario_id, fecha_movimiento, laboratorio_id, tipo_movimiento, observaciones, reserva_id, detalles) => {
     await connection.beginTransaction();

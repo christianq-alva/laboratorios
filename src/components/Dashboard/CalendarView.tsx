@@ -38,7 +38,7 @@ import { useApi } from '../../hooks/useApi'
 dayjs.locale('es')
 
 interface CalendarViewProps {
-  onNavigateToLab?: (laboratorioId: number, horarioId: number) => void
+  onNavigateToLab?: (laboratorioId: number, horarioId: number, fechaHorario?: string) => void
 }
 
 interface HorarioEvent {
@@ -218,7 +218,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onNavigateToLab }) =
                 onClick={(e) => {
                   e.stopPropagation()
                   if (onNavigateToLab) {
-                    onNavigateToLab(horario.laboratorio_id, horario.id)
+                    onNavigateToLab(horario.laboratorio_id, horario.id, horario.start.format('YYYY-MM-DD'))
                   }
                 }}
               >
@@ -418,7 +418,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onNavigateToLab }) =
                             size="small"
                             onClick={() => {
                               if (onNavigateToLab) {
-                                onNavigateToLab(horario.laboratorio_id, horario.id)
+                                onNavigateToLab(horario.laboratorio_id, horario.id, horario.start.format('YYYY-MM-DD'))
                                 setDialogOpen(false)
                               }
                             }}
