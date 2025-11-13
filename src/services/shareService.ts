@@ -109,7 +109,4 @@ export const shareService = {
       throw error
     }
   },
-
-  // Copiar enlace al portapapeles
-
 }

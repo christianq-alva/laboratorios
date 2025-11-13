@@ -20,7 +20,7 @@ export const login = async (req, res) => {
             laboratorio_ids: user.laboratorio_ids || [] // ← Array en lugar de ID único
           },
           JWT_SECRET,
-          { expiresIn: '24h' }
+          { expiresIn: '12h' }
         )
         res.json({
           success: true,

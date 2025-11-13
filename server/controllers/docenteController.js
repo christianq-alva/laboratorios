@@ -2,7 +2,6 @@ import { Docente } from '../models/Docente.js'
 // Obtener todos los docentes
 export const getDocentes = async (req, res) => {
   try {
-    console.log('🔍 Usuario solicitando docentes:', req.user.usuario, req.user.rol)
     const docentes = await Docente.getAll()
     res.status(200).json({
       data: docentes,
@@ -18,7 +17,6 @@ export const getDocentes = async (req, res) => {
 export const getDocente = async (req, res) => {
   try {
     const { id } = req.params
-    console.log('🔍 Buscando docente ID:', id)
     const docente = await Docente.getById(id)
     if (!docente) {
       return res.status(404).json({
@@ -39,7 +37,6 @@ export const getDocente = async (req, res) => {
 export const createDocente = async (req, res) => {
   try {
     const { nombre, correo, escuela_id } = req.body
-    console.log('🔍 Creando docente:', { nombre, correo, usuario: req.user.usuario })
     // Validaciones básicas
     if (!nombre) {
       return res.status(400).json({
@@ -57,7 +54,6 @@ export const createDocente = async (req, res) => {
     }
     // Crear el docente
     const docente_id = await Docente.create({ nombre, correo, escuela_id })
-    console.log('✅ Docente creado con ID:', docente_id)
     res.status(201).json({
       message: 'Docente creado correctamente'
     })
@@ -71,7 +67,6 @@ export const updateDocente = async (req, res) => {
   try {
     const { id } = req.params
     const { nombre, correo, escuela_id } = req.body
-    console.log('🔍 Actualizando docente ID:', id)
     // Verificar que el docente existe
     const existById = await Docente.existsById(id)
     if (!existById) {
@@ -104,7 +99,6 @@ export const updateDocente = async (req, res) => {
 export const deleteDocente = async (req, res) => {
   try {
     const { id } = req.params
-    console.log('🔍 Eliminando docente ID:', id)
     // Verificar que el docente existe
     const existById = await Docente.existsById(id)
     if (!existById) {
@@ -121,7 +115,6 @@ export const deleteDocente = async (req, res) => {
     }
     // Eliminar el docente
     await Docente.delete(id)
-    console.log('✅ Docente eliminado ID:', id)
     res.status(200).json({
       message: 'Docente eliminado correctamente'
     })

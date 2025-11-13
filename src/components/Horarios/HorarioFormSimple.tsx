@@ -164,9 +164,8 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       if (ciclosResult.data) setCiclos(ciclosResult.data || [])
       if (gruposResult.data) setGrupos(gruposResult.data || [])
 
-    } catch (err) {
-      console.error('Error loading initial data:', err)
-      setError('Error al cargar datos iniciales')
+    } catch (err: any) {
+      setError(err.message)
     } finally {
       setLoadingData(false)
     }
