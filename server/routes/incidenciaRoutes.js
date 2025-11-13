@@ -5,7 +5,8 @@ import {
   getIncidencias,
   getIncidencia, 
   createIncidencia,
-  getHorariosParaIncidencias
+  getHorariosParaIncidencias,
+  deleteIncidencia
 } from '../controllers/incidenciaController.js'
 
 const router = express.Router()
@@ -36,6 +37,13 @@ router.get('/horarios/disponibles',
   authenticateToken,
   authorize('read', 'Incidencia'),
   getHorariosParaIncidencias
+)
+
+// 🗑️ ELIMINAR INCIDENCIA
+router.delete('/:id', 
+  authenticateToken,
+  authorize('delete', 'Incidencia'),
+  deleteIncidencia
 )
 
 export default router

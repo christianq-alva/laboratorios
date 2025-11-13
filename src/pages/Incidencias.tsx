@@ -4,15 +4,24 @@ import { Add, ReportProblem } from '@mui/icons-material'
 import { IncidenciasTable } from '../components/Incidencias/IncidenciasTable'
 import { IncidenciaForm } from '../components/Incidencias/IncidenciaForm'
 import { IncidenciaDetalleDialog } from '../components/Incidencias/IncidenciaDetalle'
-import { type Incidencia } from '../services/incidenciaService'
+import { DeleteDialog } from '../components/Common/DeleteDialog'
+import { type Incidencia, incidenciaService } from '../services/incidenciaService'
+import { useApi } from '../hooks/useApi'
 
 export const Incidencias: React.FC = () => {
+  const { execute } = useApi()
+  
   // Estados para el formulario
   const [formOpen, setFormOpen] = useState(false)
   
   // Estados para el detalle
   const [detalleOpen, setDetalleOpen] = useState(false)
   const [selectedIncidenciaId, setSelectedIncidenciaId] = useState<number | null>(null)
+  
+  // Estados para eliminación
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [incidenciaToDelete, setIncidenciaToDelete] = useState<Incidencia | null>(null)
+  const [deleting, setDeleting] = useState(false)
   
   // Estados para refrescar
   const [refresh, setRefresh] = useState(false)
@@ -66,6 +75,47 @@ export const Incidencias: React.FC = () => {
     setSnackbar(prev => ({ ...prev, open: false }))
   }
 
+  // Función para manejar eliminación de incidencia
+  const handleDeleteIncidencia = (incidencia: Incidencia) => {
+    setIncidenciaToDelete(incidencia)
+    setDeleteDialogOpen(true)
+  }
+
+  // Función para cerrar diálogo de eliminación
+  const handleDeleteDialogClose = () => {
+    if (!deleting) {
+      setDeleteDialogOpen(false)
+      setIncidenciaToDelete(null)
+    }
+  }
+
+  // Función para confirmar eliminación
+  const handleConfirmDelete = async () => {
+    if (!incidenciaToDelete) return
+
+    setDeleting(true)
+    const response = await execute(() => incidenciaService.delete(incidenciaToDelete.id))
+
+    if (response.error) {
+      setSnackbar({
+        open: true,
+        message: response.error,
+        severity: 'error'
+      })
+      setDeleting(false)
+    } else {
+      setSnackbar({
+        open: true,
+        message: 'Incidencia eliminada exitosamente',
+        severity: 'success'
+      })
+      setDeleteDialogOpen(false)
+      setIncidenciaToDelete(null)
+      setDeleting(false)
+      setRefresh(prev => !prev)
+    }
+  }
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -91,6 +141,7 @@ export const Incidencias: React.FC = () => {
       {/* Tabla de incidencias */}
       <IncidenciasTable
         onView={handleViewIncidencia}
+        onDelete={handleDeleteIncidencia}
         refresh={refresh}
         onRefreshComplete={handleRefreshComplete}
       />
@@ -107,6 +158,18 @@ export const Incidencias: React.FC = () => {
         open={detalleOpen}
         onClose={handleDetalleClose}
         incidenciaId={selectedIncidenciaId}
+      />
+
+      {/* Diálogo de confirmación de eliminación */}
+      <DeleteDialog
+        open={deleteDialogOpen}
+        onClose={handleDeleteDialogClose}
+        onConfirm={handleConfirmDelete}
+        title="Eliminar Incidencia"
+        itemName={incidenciaToDelete?.titulo || ''}
+        itemType="la incidencia"
+        warningMessage="Esta acción no se puede deshacer."
+        loading={deleting}
       />
 
       {/* Snackbar para notificaciones */}

@@ -19,7 +19,11 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem as SelectMenuItem,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText
 } from '@mui/material'
 import {
   Visibility,
@@ -30,7 +34,9 @@ import {
   Person,
   LocationOn,
   CalendarToday,
-  FilterList
+  FilterList,
+  MoreVert,
+  Delete
 } from '@mui/icons-material'
 import { incidenciaService, type Incidencia } from '../../services/incidenciaService'
 import dayjs from 'dayjs'
@@ -38,12 +44,14 @@ import { useApi } from '../../hooks/useApi'
 
 interface IncidenciasTableProps {
   onView?: (incidencia: Incidencia) => void
+  onDelete?: (incidencia: Incidencia) => void
   refresh?: boolean
   onRefreshComplete?: () => void
 }
 
 export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
   onView,
+  onDelete,
   refresh,
   onRefreshComplete
 }) => {
@@ -53,6 +61,10 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  // Estados para el menú contextual
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const [selectedIncidencia, setSelectedIncidencia] = useState<Incidencia | null>(null)
 
   // Filtros avanzados
   const [filtroFecha, setFiltroFecha] = useState('')
@@ -206,6 +218,31 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
     if (diferencia <= 1) return 'error' // Últimas 24 horas
     if (diferencia <= 7) return 'warning' // Última semana
     return 'default' // Más antigua
+  }
+
+  // Manejo del menú contextual
+  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, incidencia: Incidencia) => {
+    setAnchorEl(event.currentTarget)
+    setSelectedIncidencia(incidencia)
+  }
+
+  const handleMenuClose = () => {
+    setAnchorEl(null)
+    setSelectedIncidencia(null)
+  }
+
+  const handleView = () => {
+    if (selectedIncidencia && onView) {
+      onView(selectedIncidencia)
+    }
+    handleMenuClose()
+  }
+
+  const handleDelete = () => {
+    if (selectedIncidencia && onDelete) {
+      onDelete(selectedIncidencia)
+    }
+    handleMenuClose()
   }
 
   if (loading) {
@@ -366,11 +403,11 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
                   label="Tipo de incidencia"
                   onChange={(e) => setFiltroEstado(e.target.value)}
                 >
-                  <MenuItem value="">Todas</MenuItem>
-                  <MenuItem value="reciente">Recientes (últimas 24h)</MenuItem>
-                  <MenuItem value="semana">Esta semana</MenuItem>
-                  <MenuItem value="mes">Este mes</MenuItem>
-                  <MenuItem value="antigua">Antiguas (+30 días)</MenuItem>
+                  <SelectMenuItem value="">Todas</SelectMenuItem>
+                  <SelectMenuItem value="reciente">Recientes (últimas 24h)</SelectMenuItem>
+                  <SelectMenuItem value="semana">Esta semana</SelectMenuItem>
+                  <SelectMenuItem value="mes">Este mes</SelectMenuItem>
+                  <SelectMenuItem value="antigua">Antiguas (+30 días)</SelectMenuItem>
                 </Select>
               </FormControl>
 
@@ -501,19 +538,15 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
                   </TableCell>
 
                   <TableCell align="center">
-                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                      {onView && (
-                        <Tooltip title="Ver detalles">
-                          <IconButton
-                            size="small"
-                            onClick={() => onView(incidencia)}
-                            color="primary"
-                          >
-                            <Visibility />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                    </Box>
+                    <Tooltip title="Más opciones">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => handleMenuClick(e, incidencia)}
+                        sx={{ color: 'grey.600' }}
+                      >
+                        <MoreVert />
+                      </IconButton>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))
@@ -533,6 +566,36 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
           </Typography>
         </Box>
       )}
+
+      {/* Menú contextual */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+        PaperProps={{
+          sx: { boxShadow: 3, borderRadius: 2 }
+        }}
+      >
+        {onView && (
+          <MenuItem onClick={handleView}>
+            <ListItemIcon>
+              <Visibility fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Ver Incidencia</ListItemText>
+          </MenuItem>
+        )}
+
+        {onDelete && (
+          <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
+            <ListItemIcon>
+              <Delete fontSize="small" color="error" />
+            </ListItemIcon>
+            <ListItemText>Eliminar Incidencia</ListItemText>
+          </MenuItem>
+        )}
+      </Menu>
     </Box>
   )
 } 

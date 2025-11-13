@@ -115,5 +115,35 @@ export const Incidencia = {
     }
 
     return false // Otros roles no pueden crear incidencias
+  },
+
+  // Verificar si el usuario puede eliminar una incidencia
+  canDelete: async (id, user) => {
+    // Obtener la incidencia para verificar permisos
+    const incidencia = await Incidencia.getById(id, user)
+    if (!incidencia) {
+      return false // No existe o no tiene permisos para verla
+    }
+
+    // Admin puede eliminar cualquier incidencia
+    if (user.rol === 'Administrador') {
+      return true
+    }
+
+    // Jefe de Laboratorio puede eliminar incidencias de sus laboratorios
+    if (user.rol === 'Jefe de Laboratorio') {
+      return true // Ya validado en getById
+    }
+
+    return false
+  },
+
+  // Eliminar incidencia
+  delete: async (id) => {
+    const [result] = await pool.execute(`
+      DELETE FROM incidencias WHERE id = ?
+    `, [id])
+    
+    return result.affectedRows > 0
   }
 }

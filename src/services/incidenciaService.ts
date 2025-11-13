@@ -83,5 +83,11 @@ export const incidenciaService = {
   getHorariosDisponibles: async (): Promise<HorariosParaIncidenciasResponse> => {
     const response = await api.get('/incidencias/horarios/disponibles')
     return response.data
+  },
+
+  // Eliminar una incidencia
+  delete: async (id: number): Promise<{ success: boolean; message: string }> => {
+    const response = await api.delete(`/incidencias/${id}`)
+    return response.data
   }
 } 

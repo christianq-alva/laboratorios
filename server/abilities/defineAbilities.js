@@ -18,7 +18,7 @@ export const defineAbilitiesFor = (user) => {
     can(['create', 'read', 'update', 'delete'], 'Inventario')
     can(['create', 'read', 'update', 'delete'], 'Equipo')
     can(['create', 'read', 'update'], 'ShareLink')
-    can(['create', 'read'], 'Incidencia')
+    can(['create', 'read', 'delete'], 'Incidencia')
     can('read', 'Laboratorio')
     can('read', 'Insumo')
     can('read', 'Horario')

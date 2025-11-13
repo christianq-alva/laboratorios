@@ -70,3 +70,51 @@ export const getHorariosParaIncidencias = async (req, res) => {
     })
   }
 }
+
+// Eliminar incidencia
+export const deleteIncidencia = async (req, res) => {
+  try {
+    const { id } = req.params
+    const incidenciaId = parseInt(id, 10)
+    
+    // Validar ID
+    if (isNaN(incidenciaId) || incidenciaId <= 0) {
+      return res.status(400).json({
+        message: 'ID de incidencia inválido'
+      })
+    }
+
+    // Verificar que el usuario puede eliminar esta incidencia
+    const canDelete = await Incidencia.canDelete(incidenciaId, req.user)
+    if (!canDelete) {
+      return res.status(403).json({
+        message: 'No tienes permisos para eliminar esta incidencia'
+      })
+    }
+
+    // Verificar que la incidencia existe
+    const incidencia = await Incidencia.getById(incidenciaId, req.user)
+    if (!incidencia) {
+      return res.status(404).json({
+        message: 'Incidencia no encontrada'
+      })
+    }
+
+    // Eliminar la incidencia
+    const deleted = await Incidencia.delete(incidenciaId)
+    if (!deleted) {
+      return res.status(404).json({
+        message: 'No se pudo eliminar la incidencia'
+      })
+    }
+
+    res.status(200).json({
+      message: 'Incidencia eliminada exitosamente'
+    })
+  } catch (error) {
+    console.error('Error al eliminar incidencia:', error)
+    res.status(500).json({
+      message: 'Error al eliminar la incidencia'
+    })
+  }
+}
