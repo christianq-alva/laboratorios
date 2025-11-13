@@ -182,20 +182,6 @@ export const createHorario = async (req, res) => {
       })
     }
 
-    // Verificación: Verificar stock de insumos
-    for (const insumo of insumos) {
-      const stockSuficiente = await Inventario.validarSaldoByInsumoId(
-        laboratorio_id,
-        insumo.insumo_id,
-        insumo.cantidad
-      )
-      if (!stockSuficiente) {
-        await connection.rollback()
-        return res.status(400).json({
-          message: `Stock insuficiente para insumo ID ${insumo.insumo_id}`
-        })
-      }
-    }
     const reserva_id = await Horario.registroCreateHorario({
       laboratorio_id,
       docente_id,
@@ -303,22 +289,7 @@ export const updateHorario = async (req, res) => {
     // Eliminar registros antiguos de insumos y equipos
     await Horario.deleteHorarioInsumos(horarioId, connection)
     await Horario.deleteHorarioEquipos(horarioId, connection)
-    // Verificación: Verificar stock de nuevos insumos
-    for (const insumo of insumos) {
 
-      console.log('insumo', insumo)
-      const stockSuficiente = await Inventario.validarSaldoByInsumoId(
-        laboratorio_id,
-        insumo.insumo_id,
-        insumo.cantidad
-      )
-      if (!stockSuficiente) {
-        await connection.rollback()
-        return res.status(400).json({
-          message: `Stock insuficiente para insumo ID ${insumo.insumo_id}`
-        })
-      }
-    }
     // Actualizar datos básicos del horario
     await Horario.registroUpdateHorario({ reserva_id: horarioId, laboratorio_id, docente_id, grupo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color }, insumos, equipos, connection)
     await connection.commit()
