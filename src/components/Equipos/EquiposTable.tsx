@@ -152,14 +152,14 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
   const filteredEquipos = equipos.filter(equipo => {
     // Solo filtro de búsqueda local (los demás filtros se aplican en el backend)
     if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase()
-      return (
-        (equipo.codigo && equipo.codigo.toLowerCase().includes(searchLower)) ||
-        equipo.nombre.toLowerCase().includes(searchLower) ||
-        (equipo.descripcion && equipo.descripcion.toLowerCase().includes(searchLower)) ||
-        (equipo.marca && equipo.marca.toLowerCase().includes(searchLower)) ||
-        (equipo.modelo && equipo.modelo.toLowerCase().includes(searchLower))
-      )
+    const searchLower = searchTerm.toLowerCase()
+    return (
+      (equipo.codigo && equipo.codigo.toLowerCase().includes(searchLower)) ||
+      equipo.nombre.toLowerCase().includes(searchLower) ||
+      (equipo.descripcion && equipo.descripcion.toLowerCase().includes(searchLower)) ||
+      (equipo.marca && equipo.marca.toLowerCase().includes(searchLower)) ||
+      (equipo.modelo && equipo.modelo.toLowerCase().includes(searchLower))
+    )
     }
     return true
   })

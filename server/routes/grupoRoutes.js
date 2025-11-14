@@ -24,7 +24,7 @@ router.get(
 // Obtener un grupo por ID
 router.get(
   '/:id',
-  authorize('read', 'Grupo'),
+    authorize('read', 'Grupo'),
   getGrupoById
 )
 
