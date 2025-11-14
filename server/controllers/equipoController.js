@@ -7,7 +7,20 @@ const estadosValidos = ['Operativo', 'En Mantenimiento', 'Fuera de Servicio']
 const condicionesValidas = ['Excelente', 'Bueno', 'Regular', 'Malo']
 export const getEquipos = async (req, res) => {
   try {
-    let equipos = await Equipo.getAll(req.user.rol, req.user.laboratorio_ids)
+    const { tipo_equipo_id, estado, laboratorio_id } = req.query
+    
+    const filters = {}
+    if (tipo_equipo_id) {
+      filters.tipo_equipo_id = parseInt(tipo_equipo_id)
+    }
+    if (estado) {
+      filters.estado = estado
+    }
+    if (laboratorio_id) {
+      filters.laboratorio_id = parseInt(laboratorio_id)
+    }
+    
+    let equipos = await Equipo.getAll(req.user.rol, req.user.laboratorio_ids, filters)
     res.status(200).json({
       data: equipos,
       total_equipos: equipos.length
@@ -21,7 +34,17 @@ export const getEquipos = async (req, res) => {
 export const getEquipoByLaboratorio = async (req, res) => {
   try {
     const { laboratorio_id } = req.params
-    const equipos = await Equipo.getByLaboratorio(laboratorio_id)
+    const { tipo_equipo_id, estado } = req.query
+    
+    const filters = {}
+    if (tipo_equipo_id) {
+      filters.tipo_equipo_id = parseInt(tipo_equipo_id)
+    }
+    if (estado) {
+      filters.estado = estado
+    }
+    
+    const equipos = await Equipo.getByLaboratorio(laboratorio_id, filters)
     res.status(200).json({
       data: equipos
     })

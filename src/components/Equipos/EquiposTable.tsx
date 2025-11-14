@@ -23,6 +23,7 @@ import {
 import { Edit, Delete, Build, Info, Search, Clear } from '@mui/icons-material'
 import { equipoService, type Equipo } from '../../services/equipoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
+import { tipoEquipoService, type TipoEquipo } from '../../services/tipoEquipoService'
 import { useApi } from '../../hooks/useApi'
 
 interface EquiposTableProps {
@@ -41,10 +42,20 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
   const { execute } = useApi()
   const [equipos, setEquipos] = useState<Equipo[]>([])
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
+  const [tiposEquipo, setTiposEquipo] = useState<TipoEquipo[]>([])
   const [selectedLaboratorio, setSelectedLaboratorio] = useState<number | 'all'>('all')
+  const [selectedTipoEquipo, setSelectedTipoEquipo] = useState<number | 'all'>('all')
+  const [selectedEstado, setSelectedEstado] = useState<string | 'all'>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  // Estados disponibles
+  const estadosEquipo = [
+    'Operativo',
+    'En Mantenimiento',
+    'Fuera de Servicio'
+  ]
 
   // Cargar datos
   const loadData = async () => {
@@ -59,12 +70,40 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
       setLaboratorios(laboratoriosResponse.data.data)
     }
 
-    // Cargar equipos
+    // Cargar tipos de equipo para el filtro
+    const tiposEquipoResponse = await execute(() => tipoEquipoService.getActivos())
+    if (tiposEquipoResponse.error) {
+      console.error('Error al cargar tipos de equipo:', tiposEquipoResponse.error)
+    } else if (tiposEquipoResponse.data) {
+      setTiposEquipo(tiposEquipoResponse.data.data || [])
+    }
+
+    // Preparar filtros para la consulta
+    const filters: {
+      tipo_equipo_id?: number
+      estado?: string
+      laboratorio_id?: number
+    } = {}
+
+    if (selectedTipoEquipo !== 'all') {
+      filters.tipo_equipo_id = selectedTipoEquipo as number
+    }
+    if (selectedEstado !== 'all') {
+      filters.estado = selectedEstado as string
+    }
+    if (selectedLaboratorio !== 'all') {
+      filters.laboratorio_id = selectedLaboratorio as number
+    }
+
+    // Cargar equipos con filtros
     let equiposResponse
     if (selectedLaboratorio === 'all') {
-      equiposResponse = await execute(() => equipoService.getAll())
+      equiposResponse = await execute(() => equipoService.getAll(filters))
     } else {
-      equiposResponse = await execute(() => equipoService.getByLaboratorio(selectedLaboratorio as number))
+      equiposResponse = await execute(() => equipoService.getByLaboratorio(selectedLaboratorio as number, {
+        tipo_equipo_id: selectedTipoEquipo !== 'all' ? selectedTipoEquipo as number : undefined,
+        estado: selectedEstado !== 'all' ? selectedEstado : undefined
+      }))
     }
     if (equiposResponse.error) {
       setError(equiposResponse.error)
@@ -79,6 +118,7 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
   // Efecto para cargar datos iniciales
   useEffect(() => {
     loadData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Efecto para refrescar cuando cambia el refresh prop
@@ -86,14 +126,17 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
     if (refresh !== undefined) {
       loadData()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refresh])
 
-  // Efecto para recargar cuando cambia el laboratorio seleccionado
+  // Efecto para recargar cuando cambian los filtros (solo después de la carga inicial)
   useEffect(() => {
-    if (laboratorios.length > 0) {
+    // Evitar ejecución en la carga inicial
+    if (laboratorios.length > 0 || tiposEquipo.length > 0) {
       loadData()
     }
-  }, [selectedLaboratorio])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLaboratorio, selectedTipoEquipo, selectedEstado])
 
   // Función para obtener el color del estado
   const getEstadoColor = (estado: string) => {
@@ -105,10 +148,10 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
     }
   }
 
-  // Función para filtrar equipos por término de búsqueda
+  // Función para filtrar equipos por término de búsqueda (filtros de tipo y estado ya se aplican en el backend)
   const filteredEquipos = equipos.filter(equipo => {
-    if (!searchTerm) return true
-
+    // Solo filtro de búsqueda local (los demás filtros se aplican en el backend)
+    if (searchTerm) {
     const searchLower = searchTerm.toLowerCase()
     return (
       (equipo.codigo && equipo.codigo.toLowerCase().includes(searchLower)) ||
@@ -117,6 +160,8 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
       (equipo.marca && equipo.marca.toLowerCase().includes(searchLower)) ||
       (equipo.modelo && equipo.modelo.toLowerCase().includes(searchLower))
     )
+    }
+    return true
   })
 
   // Función para limpiar búsqueda
@@ -144,9 +189,9 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
     <Box>
       {/* Filtros y búsqueda */}
       <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-        {/* Primera fila: Filtro de laboratorio y resumen */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+        {/* Primera fila: Filtros y resumen */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
             <FormControl sx={{ minWidth: 200 }}>
               <InputLabel>Filtrar por Laboratorio</InputLabel>
               <Select
@@ -158,6 +203,38 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
                 {laboratorios.map((lab) => (
                   <MenuItem key={lab.id} value={lab.id}>
                     {lab.nombre}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl sx={{ minWidth: 200 }}>
+              <InputLabel>Tipo de Equipo</InputLabel>
+              <Select
+                value={selectedTipoEquipo}
+                label="Tipo de Equipo"
+                onChange={(e) => setSelectedTipoEquipo(e.target.value as number | 'all')}
+              >
+                <MenuItem value="all">Todos los Tipos</MenuItem>
+                {tiposEquipo.map((tipo) => (
+                  <MenuItem key={tipo.id} value={tipo.id}>
+                    {tipo.nombre}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl sx={{ minWidth: 200 }}>
+              <InputLabel>Estado de Equipo</InputLabel>
+              <Select
+                value={selectedEstado}
+                label="Estado de Equipo"
+                onChange={(e) => setSelectedEstado(e.target.value)}
+              >
+                <MenuItem value="all">Todos los Estados</MenuItem>
+                {estadosEquipo.map((estado) => (
+                  <MenuItem key={estado} value={estado}>
+                    {estado}
                   </MenuItem>
                 ))}
               </Select>

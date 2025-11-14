@@ -32,7 +32,7 @@ import {
   CheckCircle
 } from '@mui/icons-material'
 import { horarioService, type HorarioFull } from '../../services/horarioService'
-import { CerrarHorarioModal } from './CerrarHorarioModal'
+import { RegistrarInsumosUsadosModal } from './RegistrarInsumosUsadosModal'
 import dayjs from 'dayjs'
 import { useApi } from '../../hooks/useApi'
 interface HorarioDetalleProps {
@@ -50,7 +50,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
   const [horario, setHorario] = useState<HorarioFull | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [cerrarHorarioOpen, setCerrarHorarioOpen] = useState(false)
+  const [registrarInsumosOpen, setRegistrarInsumosOpen] = useState(false)
 
   // Cargar detalles del horario
   const loadHorario = async () => {
@@ -82,14 +82,14 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
     onClose()
   }
 
-  // Función para abrir modal de cerrar horario
-  const handleOpenCerrarHorario = () => {
-    setCerrarHorarioOpen(true)
+  // Función para abrir modal de registrar insumos
+  const handleOpenRegistrarInsumos = () => {
+    setRegistrarInsumosOpen(true)
   }
 
-  // Función para cerrar modal y recargar
-  const handleCerrarHorarioSuccess = () => {
-    setCerrarHorarioOpen(false)
+  // Función para cerrar modal y recargar (maqueta)
+  const handleRegistrarInsumosSuccess = () => {
+    setRegistrarInsumosOpen(false)
     loadHorario() // Recargar datos
   }
 
@@ -280,13 +280,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                               />
                             </Box>
                           }
-                          secondary={
-                            insumo.descripcion && (
-                              <Typography variant="body2" color="text.secondary">
-                                {insumo.descripcion}
-                              </Typography>
-                            )
-                          }
+                          secondary={null}
                         />
                       </ListItem>
                       {index < horario.insumos!.length - 1 && <Divider />}
@@ -386,20 +380,18 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
             variant="contained"
             color="success"
             startIcon={<CheckCircle />}
-            onClick={handleOpenCerrarHorario}
+            onClick={handleOpenRegistrarInsumos}
           >
             Cerrar Horario
           </Button>
         )}
       </DialogActions>
 
-      {/* Modal para cerrar horario */}
-      <CerrarHorarioModal
-        open={cerrarHorarioOpen}
-        onClose={() => setCerrarHorarioOpen(false)}
-        onSuccess={handleCerrarHorarioSuccess}
-        horarioId={horarioId}
-        fecha={dayjs(horario?.fecha_inicio).format('YYYY-MM-DD')}
+      {/* Modal para registrar insumos usados */}
+      <RegistrarInsumosUsadosModal
+        open={registrarInsumosOpen}
+        onClose={() => setRegistrarInsumosOpen(false)}
+        onSuccess={handleRegistrarInsumosSuccess}
       />
     </Dialog>
   )

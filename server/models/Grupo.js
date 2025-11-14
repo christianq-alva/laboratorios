@@ -48,5 +48,62 @@ export const Grupo = {
             WHERE g.id = ?
         `, [id])
         return grupo[0] || null
+    },
+
+    // Crear un nuevo grupo
+    create: async (nombre, escuela_id, ciclo_id) => {
+        const [result] = await pool.execute(
+            'INSERT INTO grupos (nombre, escuela_id, ciclo_id) VALUES (?, ?, ?)',
+            [nombre, escuela_id, ciclo_id]
+        )
+        return result.insertId
+    },
+
+    // Actualizar un grupo
+    update: async (id, nombre, escuela_id, ciclo_id) => {
+        const [result] = await pool.execute(
+            'UPDATE grupos SET nombre = ?, escuela_id = ?, ciclo_id = ? WHERE id = ?',
+            [nombre, escuela_id, ciclo_id, id]
+        )
+        return result.affectedRows
+    },
+
+    // Eliminar un grupo
+    delete: async (id) => {
+        const [result] = await pool.execute('DELETE FROM grupos WHERE id = ?', [id])
+        return result.affectedRows
+    },
+
+    // Verificar si existe un grupo
+    exists: async (id) => {
+        const [rows] = await pool.execute('SELECT id FROM grupos WHERE id = ?', [id])
+        return rows.length > 0
+    },
+
+    // Verificar si existe un grupo con el mismo nombre, escuela y ciclo
+    existsByName: async (nombre, escuela_id, ciclo_id) => {
+        const [rows] = await pool.execute(
+            'SELECT id FROM grupos WHERE nombre = ? AND escuela_id = ? AND ciclo_id = ?',
+            [nombre, escuela_id, ciclo_id]
+        )
+        return rows.length > 0
+    },
+
+    // Verificar si existe un grupo con el mismo nombre, escuela y ciclo excluyendo un ID
+    existsByNameExcludingId: async (nombre, escuela_id, ciclo_id, excludeId) => {
+        const [rows] = await pool.execute(
+            'SELECT id FROM grupos WHERE nombre = ? AND escuela_id = ? AND ciclo_id = ? AND id <> ?',
+            [nombre, escuela_id, ciclo_id, excludeId]
+        )
+        return rows.length > 0
+    },
+
+    // Verificar relaciones del grupo
+    checkRelations: async (id) => {
+        const [reservasCount] = await pool.execute('SELECT COUNT(*) as total FROM reservas WHERE grupo_id = ?', [id])
+        return {
+            reservas: reservasCount[0].total,
+            total: reservasCount[0].total
+        }
     }
 }
