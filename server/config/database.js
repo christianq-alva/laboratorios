@@ -15,7 +15,8 @@ const dbConfig = {
   queueLimit: 0,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   acquireTimeout: 60000,
-  timeout: 60000
+  timeout: 60000,
+  timezone: '-05:00'
 }
 
 console.log('🔧 Configuración de BD:', {

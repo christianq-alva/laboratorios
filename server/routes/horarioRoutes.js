@@ -8,62 +8,62 @@ import {
   updateHorario,
   deleteHorario,
   verificarDisponibilidad,
-  getActividadHorarios, // ← NUEVO
-  cerrarHorario     // ← CERRAR HORARIO
+  getActividadHorarios,
+  cerrarHorario,
 } from '../controllers/horarioController.js'
 
 const router = express.Router()
 
-// ✅ CERRAR HORARIO Y REGISTRAR CONSUMO
+// Cerrar horario y registrar consumo de insumos
 router.post('/cerrar',
   authenticateToken,
   authorize('update', 'Horario'),
   cerrarHorario
 )
 
-// 📅 LISTAR HORARIOS
+// Listar horarios
 router.get('/',
   authenticateToken,
   authorize('read', 'Horario'),
   getHorarios
 )
 
-// 📊 OBTENER ACTIVIDAD DE HORARIOS (debe ir antes de /:id)
+// Obtener actividad de horarios (debe ir antes de /:id)
 router.get('/actividad',
   authenticateToken,
   authorize('read', 'Horario'),
   getActividadHorarios
 )
 
-// 🔍 OBTENER HORARIO ESPECÍFICO
+// Obtener horario específico
 router.get('/:id',
   authenticateToken,
   authorize('read', 'Horario'),
   getHorario
 )
 
-// ➕ CREAR HORARIO
+// Crear horario
 router.post('/',
   authenticateToken,
   authorize('create', 'Horario'),
   createHorario
 )
 
-// ✏️ EDITAR HORARIO
+// Editar horario
 router.put('/:id',
   authenticateToken,
   authorize('update', 'Horario'),
   updateHorario
 )
 
-// 🗑️ ELIMINAR HORARIO
+// Eliminar horario
 router.delete('/:id',
   authenticateToken,
   authorize('delete', 'Horario'),
   deleteHorario
 )
 
-// 🔍 VERIFICAR DISPONIBILIDAD
+// Verificar disponibilidad
 router.post('/verificar-disponibilidad',
   authenticateToken,
   authorize('read', 'Horario'),

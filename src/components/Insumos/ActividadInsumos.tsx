@@ -39,6 +39,7 @@ import {
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
 import { inventarioService, type ActividadInsumo } from '../../services/inventarioService'
 import { useApi } from '../../hooks/useApi'
+import dayjs from 'dayjs'
 
 interface ActividadInsumosProps {
   open: boolean
@@ -293,7 +294,7 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Schedule fontSize="small" color="action" />
                           <Typography variant="body2">
-                            {movimiento.fecha_movimiento}
+                            {dayjs(movimiento.fecha_movimiento).format('DD/MM/YYYY')}
                           </Typography>
                         </Box>
                       </TableCell>

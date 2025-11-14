@@ -45,8 +45,6 @@ export const createUsuario = async (req, res) => {
     const { nombre_completo, usuario, contrasena, rol_id, laboratorio_ids } = req.body
     // Validaciones
 
-    console.log('laboratorio_ids', laboratorio_ids)
-
     if (!nombre_completo || nombre_completo.trim() === '') {
       return res.status(400).json({
         message: 'El nombre completo es obligatorio'

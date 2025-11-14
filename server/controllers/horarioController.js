@@ -5,6 +5,7 @@ import { Inventario } from '../models/Inventario.js'
 import { Laboratorio } from '../models/Laboratorio.js'
 import { Grupo } from '../models/Grupo.js'
 import { Docente } from '../models/Docente.js'
+
 // Función para verificar cruces de horarios
 const verificarCruceHorarios = async (connection, laboratorio_id, docente_id, fecha_inicio, fecha_fin, reserva_id = null) => {
   // Convertir fechas a formato MySQL

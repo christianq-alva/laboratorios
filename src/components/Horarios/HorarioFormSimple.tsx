@@ -896,11 +896,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                         onChange={(e) => {
                           const blockId = e.target.value as string
                           setStartBlockId(blockId)
-
-                          // Si no hay bloque final seleccionado, poner el mismo
-                          if (!endBlockId) {
-                            setEndBlockId(blockId)
-                          }
+                          setEndBlockId(blockId)
 
                           // Actualizar formData
                           if (selectedDate && blockId) {

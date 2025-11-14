@@ -4,7 +4,7 @@ export interface TimeBlock {
   label: string
   start: string
   end: string
-  startMinutes: number // Minutos desde medianoche para facilitar comparaciones
+  startMinutes: number
   endMinutes: number
 }
 

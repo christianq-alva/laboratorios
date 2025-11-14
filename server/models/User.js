@@ -1,4 +1,5 @@
 import { pool } from '../config/database.js'
+import dateUtils from '../utils/dateUtils.js'
 
 export const User = {
   findByCredentials: async (usuario, contrasena) => {
@@ -150,9 +151,9 @@ export const User = {
 
       // Insertar usuario
       const [result] = await connection.execute(
-        `INSERT INTO usuarios (nombre_completo, usuario, contrasena, rol_id, laboratorio_ids) 
-         VALUES (?, ?, ?, ?, ?)`,
-        [data.nombre_completo, data.usuario, data.contrasena, data.rol_id, laboratorioIdsJson]
+        `INSERT INTO usuarios (nombre_completo, usuario, contrasena, rol_id, laboratorio_ids, created_at, updated_at) 
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [data.nombre_completo, data.usuario, data.contrasena, data.rol_id, laboratorioIdsJson, dateUtils.now(), dateUtils.now()]
       )
 
       await connection.commit()
