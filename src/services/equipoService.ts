@@ -61,14 +61,44 @@ export interface ActividadEquipoResponse {
 
 export const equipoService = {
   // Obtener todos los equipos (según permisos del usuario)
-  getAll: async (): Promise<ApiDataResponse<Equipo[]>> => {
-    const response = await api.get('/equipos')
+  getAll: async (filters?: {
+    tipo_equipo_id?: number
+    estado?: string
+    laboratorio_id?: number
+  }): Promise<ApiDataResponse<Equipo[]>> => {
+    const params = new URLSearchParams()
+    if (filters?.tipo_equipo_id) {
+      params.append('tipo_equipo_id', filters.tipo_equipo_id.toString())
+    }
+    if (filters?.estado) {
+      params.append('estado', filters.estado)
+    }
+    if (filters?.laboratorio_id) {
+      params.append('laboratorio_id', filters.laboratorio_id.toString())
+    }
+    
+    const queryString = params.toString()
+    const url = queryString ? `/equipos?${queryString}` : '/equipos'
+    const response = await api.get(url)
     return response.data
   },
 
   // Obtener equipos de un laboratorio específico
-  getByLaboratorio: async (laboratorioId: number): Promise<ApiDataResponse<Equipo[]>> => {
-    const response = await api.get(`/equipos/${laboratorioId}`)
+  getByLaboratorio: async (laboratorioId: number, filters?: {
+    tipo_equipo_id?: number
+    estado?: string
+  }): Promise<ApiDataResponse<Equipo[]>> => {
+    const params = new URLSearchParams()
+    if (filters?.tipo_equipo_id) {
+      params.append('tipo_equipo_id', filters.tipo_equipo_id.toString())
+    }
+    if (filters?.estado) {
+      params.append('estado', filters.estado)
+    }
+    
+    const queryString = params.toString()
+    const url = queryString ? `/equipos/${laboratorioId}?${queryString}` : `/equipos/${laboratorioId}`
+    const response = await api.get(url)
     return response.data
   },
 

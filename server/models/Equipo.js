@@ -135,7 +135,7 @@ export const Equipo = {
     }
   },
 
-  getAll: async (user_rol, user_laboratorio_ids) => {
+  getAll: async (user_rol, user_laboratorio_ids, filters = {}) => {
     //Query base
     let query = `
       SELECT 
@@ -161,19 +161,39 @@ export const Equipo = {
       LEFT JOIN laboratorios lab ON e.laboratorio_id = lab.id
       WHERE 1=1
         `
+    const params = []
+    
     // Filtros según permisos del usuario
     if (user_rol === 'Jefe de Laboratorio') {
       query += ` AND e.laboratorio_id IN (${user_laboratorio_ids.join(',')})`
     }
 
-    const [equipos] = await pool.execute(query)
+    // Filtro por tipo de equipo
+    if (filters.tipo_equipo_id) {
+      query += ` AND e.tipo_equipo_id = ?`
+      params.push(filters.tipo_equipo_id)
+    }
+
+    // Filtro por estado
+    if (filters.estado) {
+      query += ` AND e.estado = ?`
+      params.push(filters.estado)
+    }
+
+    // Filtro por laboratorio
+    if (filters.laboratorio_id) {
+      query += ` AND e.laboratorio_id = ?`
+      params.push(filters.laboratorio_id)
+    }
+
+    const [equipos] = await pool.execute(query, params)
 
     return equipos;
   },
 
-  getByLaboratorio: async (laboratorio_id) => {
+  getByLaboratorio: async (laboratorio_id, filters = {}) => {
     try {
-      const [equipos] = await pool.execute(`
+      let query = `
         SELECT 
           e.id,
           e.codigo,
@@ -196,8 +216,24 @@ export const Equipo = {
         LEFT JOIN tipos_equipo te ON e.tipo_equipo_id = te.id
         LEFT JOIN laboratorios lab ON e.laboratorio_id = lab.id
         WHERE e.laboratorio_id = ?
-        ORDER BY e.codigo, e.nombre
-      `, [laboratorio_id])
+      `
+      const params = [laboratorio_id]
+
+      // Filtro por tipo de equipo
+      if (filters.tipo_equipo_id) {
+        query += ` AND e.tipo_equipo_id = ?`
+        params.push(filters.tipo_equipo_id)
+      }
+
+      // Filtro por estado
+      if (filters.estado) {
+        query += ` AND e.estado = ?`
+        params.push(filters.estado)
+      }
+
+      query += ` ORDER BY e.codigo, e.nombre`
+
+      const [equipos] = await pool.execute(query, params)
 
       return equipos;
 
