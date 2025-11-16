@@ -240,6 +240,11 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
       return
     }
 
+    if (!observaciones.trim()) {
+      setError('Las observaciones son obligatorias')
+      return
+    }
+
     if (detalles.length === 0) {
       setError('Agrega al menos un insumo al movimiento')
       return
@@ -252,7 +257,7 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
       laboratorio_id: laboratorioId,
       fecha_movimiento: fechaMovimiento,
       tipo_movimiento: tipoMovimiento,
-      observaciones: observaciones.trim() || null,
+      observaciones: observaciones.trim(),
       reserva_id: null,
       detalles: detalles.map(d => ({
         insumo_id: d.insumo_id,
@@ -385,6 +390,7 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
                 multiline
                 rows={2}
                 placeholder="Motivo o descripción del movimiento"
+                required
               />
             </Paper>
 
