@@ -14,9 +14,15 @@ import {
   Select,
   MenuItem,
   FormControl,
-  InputLabel
+  InputLabel,
+  Autocomplete,
+  InputAdornment,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText
 } from '@mui/material'
-import { Close, CheckCircle, Inventory, Info, Add, Delete } from '@mui/icons-material'
+import { Close, CheckCircle, Inventory, Info, Add, Delete, Search } from '@mui/icons-material'
 
 interface InsumoRequeridoMock {
   id: number
@@ -42,6 +48,15 @@ interface InsumoUsado {
   registrosLotes: RegistroLote[]
 }
 
+interface InsumoDisponible {
+  id: number
+  nombre: string
+  codigo: string
+  categoria: string
+  descripcion: string
+  unidad: string
+}
+
 interface RegistrarInsumosUsadosModalProps {
   open: boolean
   onClose: () => void
@@ -63,7 +78,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => {
       id={`insumos-tabpanel-${index}`}
       aria-labelledby={`insumos-tab-${index}`}
     >
-      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+      {value === index && <Box>{children}</Box>}
     </div>
   )
 }
@@ -75,6 +90,9 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
 }) => {
   const [tabValue, setTabValue] = useState(0)
   const [insumosUsados, setInsumosUsados] = useState<InsumoUsado[]>([])
+  
+  // Estados para tab de insumos adicionales
+  const [busquedaInsumo, setBusquedaInsumo] = useState<string>('')
 
   // Datos mock de insumos requeridos
   const insumosRequeridos: InsumoRequeridoMock[] = [
@@ -91,6 +109,42 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
     { id: 1, nombre: 'Lote A-001', saldo: 50 },
     { id: 2, nombre: 'Lote B-002', saldo: 30 },
     { id: 3, nombre: 'Lote C-003', saldo: 20 }
+  ]
+
+  // Datos mock de insumos disponibles
+  const insumosDisponibles: InsumoDisponible[] = [
+    {
+      id: 101,
+      nombre: 'Ácidos sulfúrico',
+      codigo: 'INS-0004',
+      categoria: 'Materiales',
+      descripcion: '200 ml',
+      unidad: 'ml'
+    },
+    {
+      id: 102,
+      nombre: 'Alcohol etílico 70%',
+      codigo: 'INS-0010',
+      categoria: 'Reactivos',
+      descripcion: 'Alcohol para desinfección y limpieza',
+      unidad: 'ml'
+    },
+    {
+      id: 103,
+      nombre: 'Guantes de látex',
+      codigo: 'INS-0025',
+      categoria: 'Equipamiento',
+      descripcion: 'Talla M',
+      unidad: 'pares'
+    },
+    {
+      id: 104,
+      nombre: 'Pipetas Pasteur',
+      codigo: 'INS-0032',
+      categoria: 'Material de vidrio',
+      descripcion: 'Desechables',
+      unidad: 'unidades'
+    }
   ]
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -184,6 +238,31 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
     return insumo.registrosLotes.reduce((sum, r) => sum + r.cantidad, 0)
   }
 
+  const handleAgregarInsumoAdicional = (insumo: InsumoDisponible) => {
+    // Verificar si ya está agregado
+    const yaExiste = insumosUsados.find(i => i.insumo.id === insumo.id)
+    if (yaExiste) return
+
+    // Agregar el insumo adicional a la lista de usados con cantidad por defecto de 1
+    const nuevoInsumo: InsumoUsado = {
+      insumo: {
+        id: insumo.id,
+        nombre: insumo.nombre,
+        cantidad: 1,
+        unidad: insumo.unidad
+      },
+      registrosLotes: [
+        {
+          id: `${insumo.id}-${Date.now()}`,
+          loteId: null,
+          cantidad: 1
+        }
+      ]
+    }
+
+    setInsumosUsados([...insumosUsados, nuevoInsumo])
+  }
+
   const handleGuardar = () => {
     // Maqueta: solo cerrar el modal
     if (onSuccess) {
@@ -254,93 +333,237 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
         </Tabs>
       </Box>
 
-      {/* Content */}
+      {/* Content - Layout de 2 columnas */}
       <Box sx={{ flex: 1, overflow: 'auto', px: 3 }}>
-        {/* Tab Panel: Insumos Requeridos */}
-        <TabPanel value={tabValue} index={0}>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-            {/* Columna izquierda: Insumos Requeridos */}
-            <Paper
-              elevation={0}
-              sx={{
-                p: 3,
-                border: 1,
-                borderColor: 'divider',
-                borderRadius: 2,
-                bgcolor: 'grey.50'
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-                <Inventory color="primary" />
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                  Insumos Requeridos
-                </Typography>
-                <Chip
-                  label={insumosRequeridos.length}
-                  size="small"
-                  color="primary"
-                  sx={{ ml: 'auto' }}
-                />
-              </Box>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, py: 1.5 }}>
+          {/* Columna izquierda: Contenido de los tabs */}
+          <Box>
+            {/* Tab Panel: Insumos Requeridos */}
+            <TabPanel value={tabValue} index={0}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 3,
+                  border: 1,
+                  borderColor: 'divider',
+                  borderRadius: 2,
+                  bgcolor: 'grey.50'
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+                  <Inventory color="primary" />
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    Insumos Requeridos
+                  </Typography>
+                  <Chip
+                    label={insumosRequeridos.length}
+                    size="small"
+                    color="primary"
+                    sx={{ ml: 'auto' }}
+                  />
+                </Box>
 
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {insumosRequeridos.map((insumo) => {
+                    const yaAgregado = insumosUsados.find(i => i.insumo.id === insumo.id)
+                    return (
+                      <Paper
+                        key={insumo.id}
+                        variant="outlined"
+                        sx={{
+                          p: 2,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          bgcolor: yaAgregado ? 'success.lighter' : 'background.paper',
+                          cursor: yaAgregado ? 'default' : 'pointer',
+                          opacity: yaAgregado ? 0.6 : 1,
+                          transition: 'all 0.2s',
+                          '&:hover': yaAgregado ? {} : {
+                            bgcolor: 'action.hover',
+                            boxShadow: 1
+                          }
+                        }}
+                        onClick={() => !yaAgregado && handleAgregarInsumo(insumo)}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Inventory sx={{ color: 'text.secondary', fontSize: 20 }} />
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {insumo.nombre}
+                          </Typography>
+                        </Box>
+                        <Chip
+                          label={yaAgregado ? 'Agregado' : `${insumo.cantidad} ${insumo.unidad}`}
+                          size="small"
+                          variant={yaAgregado ? 'filled' : 'outlined'}
+                          color={yaAgregado ? 'success' : 'primary'}
+                        />
+                      </Paper>
+                    )
+                  })}
+                </Box>
+              </Paper>
+            </TabPanel>
+
+            {/* Tab Panel: Agregar Insumos Adicionales */}
+            <TabPanel value={tabValue} index={1}>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {insumosRequeridos.map((insumo) => {
-                  const yaAgregado = insumosUsados.find(i => i.insumo.id === insumo.id)
-                  return (
-                    <Paper
-                      key={insumo.id}
-                      variant="outlined"
-                      sx={{
-                        p: 2,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        bgcolor: yaAgregado ? 'success.lighter' : 'background.paper',
-                        cursor: yaAgregado ? 'default' : 'pointer',
-                        opacity: yaAgregado ? 0.6 : 1,
-                        transition: 'all 0.2s',
-                        '&:hover': yaAgregado ? {} : {
-                          bgcolor: 'action.hover',
-                          boxShadow: 1
-                        }
-                      }}
-                      onClick={() => !yaAgregado && handleAgregarInsumo(insumo)}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Inventory sx={{ color: 'text.secondary', fontSize: 20 }} />
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {insumo.nombre}
-                        </Typography>
-                      </Box>
-                      <Chip
-                        label={yaAgregado ? 'Agregado' : `${insumo.cantidad} ${insumo.unidad}`}
-                        size="small"
-                        variant={yaAgregado ? 'filled' : 'outlined'}
-                        color={yaAgregado ? 'success' : 'primary'}
-                      />
-                    </Paper>
-                  )
-                })}
-              </Box>
-            </Paper>
+                {/* Alerta informativa */}
+                <Alert severity="info" icon={<Info />} sx={{ py: 1 }}>
+                  <Typography variant="body2">
+                    Agrega insumos adicionales que no estaban en los requeridos inicialmente. Selecciona el insumo, cantidad y lote.
+                  </Typography>
+                </Alert>
 
-            {/* Columna derecha: Insumos Usados Realmente */}
-            <Paper
-              elevation={0}
-              sx={{
-                p: 3,
-                border: 1,
-                borderColor: 'divider',
-                borderRadius: 2,
-                bgcolor: 'grey.50'
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-                <CheckCircle color="success" />
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                  Insumos Usados Realmente
-                </Typography>
+                {/* Lista de Insumos Disponibles con buscador integrado */}
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2.5,
+                    border: 1,
+                    borderColor: 'divider',
+                    borderRadius: 2,
+                    bgcolor: 'grey.50'
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                    <Inventory color="primary" />
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                      Insumos Disponibles ({insumosDisponibles.filter(insumo =>
+                        busquedaInsumo
+                          ? insumo.nombre.toLowerCase().includes(busquedaInsumo.toLowerCase()) ||
+                            insumo.codigo.toLowerCase().includes(busquedaInsumo.toLowerCase())
+                          : true
+                      ).length})
+                    </Typography>
+                  </Box>
+
+                  {/* Buscador */}
+                  <TextField
+                    fullWidth
+                    size="small"
+                    placeholder="Escribe para buscar..."
+                    value={busquedaInsumo}
+                    onChange={(e) => setBusquedaInsumo(e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Search fontSize="small" />
+                        </InputAdornment>
+                      )
+                    }}
+                    sx={{ mb: 2 }}
+                  />
+
+                  {/* Lista de insumos */}
+                  <Box
+                    sx={{
+                      maxHeight: 400,
+                      overflow: 'auto',
+                      '&::-webkit-scrollbar': {
+                        width: '6px'
+                      },
+                      '&::-webkit-scrollbar-thumb': {
+                        backgroundColor: 'rgba(0,0,0,0.2)',
+                        borderRadius: '4px'
+                      }
+                    }}
+                  >
+                    <List sx={{ p: 0 }}>
+                      {insumosDisponibles
+                        .filter(insumo =>
+                          busquedaInsumo
+                            ? insumo.nombre.toLowerCase().includes(busquedaInsumo.toLowerCase()) ||
+                              insumo.codigo.toLowerCase().includes(busquedaInsumo.toLowerCase())
+                            : true
+                        )
+                        .map((insumo) => {
+                          const yaAgregado = insumosUsados.find(i => i.insumo.id === insumo.id)
+                          return (
+                            <ListItem
+                              key={insumo.id}
+                              sx={{
+                                mb: 0.75,
+                                p: 1.5,
+                                bgcolor: yaAgregado ? 'success.lighter' : 'background.paper',
+                                borderRadius: 1,
+                                border: 1,
+                                borderColor: 'divider',
+                                cursor: yaAgregado ? 'default' : 'pointer',
+                                opacity: yaAgregado ? 0.6 : 1,
+                                transition: 'all 0.2s',
+                                '&:hover': yaAgregado ? {} : {
+                                  boxShadow: 1,
+                                  borderColor: 'primary.main',
+                                  bgcolor: 'action.hover'
+                                }
+                              }}
+                              onClick={() => !yaAgregado && handleAgregarInsumoAdicional(insumo)}
+                            >
+                              <ListItemIcon sx={{ minWidth: 36 }}>
+                                <Inventory sx={{ color: 'text.secondary', fontSize: 20 }} />
+                              </ListItemIcon>
+                              <ListItemText
+                                primary={
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.25 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {insumo.nombre}
+                                    </Typography>
+                                    <Chip label={insumo.codigo} size="small" variant="outlined" />
+                                    <Chip
+                                      label={insumo.categoria}
+                                      size="small"
+                                      color="primary"
+                                      variant="outlined"
+                                    />
+                                    {yaAgregado && (
+                                      <Chip 
+                                        label="Agregado" 
+                                        size="small" 
+                                        color="success" 
+                                        variant="filled"
+                                      />
+                                    )}
+                                  </Box>
+                                }
+                                secondary={
+                                  <Typography variant="caption" color="text.secondary">
+                                    {insumo.descripcion}
+                                  </Typography>
+                                }
+                              />
+                            </ListItem>
+                          )
+                        })}
+                    </List>
+                  </Box>
+                </Paper>
               </Box>
+            </TabPanel>
+          </Box>
+
+          {/* Columna derecha: Insumos Usados Realmente (siempre visible) */}
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: 2,
+              bgcolor: 'grey.50',
+              position: 'sticky',
+              top: 0,
+              alignSelf: 'flex-start',
+              maxHeight: 'calc(65vh - 200px)',
+              overflow: 'auto'
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+              <CheckCircle color="success" />
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                Insumos Usados Realmente
+              </Typography>
+            </Box>
 
               {insumosUsados.length === 0 ? (
                 <>
@@ -526,57 +749,15 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
                   })}
                 </Box>
               )}
-            </Paper>
-          </Box>
-        </TabPanel>
-
-        {/* Tab Panel: Agregar Insumos Adicionales */}
-        <TabPanel value={tabValue} index={1}>
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minHeight: 300,
-              p: 4
-            }}
-          >
-            <Alert severity="info" sx={{ maxWidth: 600 }}>
-              <Typography variant="body2">
-                En esta sección podrás agregar insumos adicionales que no estaban contemplados en
-                la planificación original del horario.
-              </Typography>
-            </Alert>
-            <Box
-              sx={{
-                mt: 4,
-                p: 6,
-                border: 2,
-                borderStyle: 'dashed',
-                borderColor: 'divider',
-                borderRadius: 2,
-                width: '100%',
-                maxWidth: 800
-              }}
-            >
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                align="center"
-                sx={{ fontStyle: 'italic' }}
-              >
-                Funcionalidad disponible próximamente
-              </Typography>
-            </Box>
-          </Box>
-        </TabPanel>
+          </Paper>
+        </Box>
       </Box>
 
       {/* Footer con botones */}
       <Box
         sx={{
-          p: 3,
+          px: 3,
+          py: 2,
           borderTop: 1,
           borderColor: 'divider',
           bgcolor: 'background.paper',
@@ -590,15 +771,16 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
             ? 'No hay insumos agregados'
             : `${insumosUsados.length} insumo${insumosUsados.length > 1 ? 's' : ''} agregado${insumosUsados.length > 1 ? 's' : ''}`}
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button variant="outlined" onClick={onClose} sx={{ minWidth: 120 }}>
+        <Box sx={{ display: 'flex', gap: 1.5 }}>
+          <Button variant="outlined" onClick={onClose} size="small" sx={{ minWidth: 100 }}>
             Cancelar
           </Button>
           <Button
             variant="contained"
             onClick={handleGuardar}
             disabled={insumosUsados.length === 0}
-            sx={{ minWidth: 180 }}
+            size="small"
+            sx={{ minWidth: 160 }}
             startIcon={<CheckCircle />}
           >
             Guardar Insumos Usados
