@@ -318,6 +318,20 @@ export const Horario = {
         return result.insertId;
 
     },
+    getInsumosRequeridosById: async (reserva_id) => {
+        const [insumos] = await pool.execute(`
+            SELECT 
+              i.id,
+              i.codigo,
+              i.nombre,
+              i.categoria,
+              i.unidad_medida,
+              dri.cantidad_usada
+            FROM detalle_reserva_insumos dri
+            JOIN insumos i ON dri.insumo_id = i.id WHERE reserva_id = ?
+        `, [reserva_id])
+        return insumos;
+    },
     registroUpdateHorario: async (datosHorario, insumos_requeridos, equipos_requeridos, connection) => {
 
         try {

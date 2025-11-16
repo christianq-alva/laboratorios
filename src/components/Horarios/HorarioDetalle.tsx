@@ -29,7 +29,8 @@ import {
   Build,
   CalendarToday,
   People,
-  CheckCircle
+  CheckCircle,
+  LockOpen
 } from '@mui/icons-material'
 import { horarioService, type HorarioFull } from '../../services/horarioService'
 import { RegistrarInsumosUsadosModal } from './RegistrarInsumosUsadosModal'
@@ -38,7 +39,7 @@ import { useApi } from '../../hooks/useApi'
 interface HorarioDetalleProps {
   open: boolean
   onClose: () => void
-  horarioId: number | null
+  horarioId: number
 }
 
 export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
@@ -379,10 +380,10 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
           <Button
             variant="contained"
             color="success"
-            startIcon={<CheckCircle />}
+            startIcon={horario.estado === 'A' ? <CheckCircle /> : <LockOpen />}
             onClick={handleOpenRegistrarInsumos}
-          >
-            Cerrar Horario
+            disabled={horario.estado === 'C'}
+          >{horario.estado === 'A' ? 'Cerrar Horario' : 'Horario Cerrado'}
           </Button>
         )}
       </DialogActions>
@@ -392,6 +393,9 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
         open={registrarInsumosOpen}
         onClose={() => setRegistrarInsumosOpen(false)}
         onSuccess={handleRegistrarInsumosSuccess}
+        horarioId={horarioId}
+        laboratorioId={horario?.laboratorio_id || 0}
+        fecha={dayjs(horario?.fecha_inicio).format('YYYY-MM-DD')}
       />
     </Dialog>
   )

@@ -48,8 +48,8 @@ export interface HorarioFull extends HorarioSimple {
 
 export interface InsumoHorario {
   id: number
-  nombre: string
   codigo: string
+  nombre: string
   categoria: string
   unidad_medida: string
   cantidad_usada: number
@@ -172,10 +172,13 @@ export const horarioService = {
     return response.data
   },
 
+  getInsumosRequeridosById: async (id: number): Promise<ApiDataResponse<InsumoHorario[]>> => {
+    const response = await api.get(`/horarios/${id}/insumos-requeridos`)
+    return response.data
+  },
+
   create: async (data: CreateHorarioData) => {
-    console.log('📤 Enviando datos a /horarios:', data)
     const response = await api.post('/horarios', data)
-    console.log('✅ Respuesta exitosa:', response.data)
     return response.data
   },
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Drawer,
   Box,
@@ -14,53 +14,42 @@ import {
   Select,
   MenuItem,
   FormControl,
-  InputLabel,
-  Autocomplete,
   InputAdornment,
   List,
   ListItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  CircularProgress
 } from '@mui/material'
 import { Close, CheckCircle, Inventory, Info, Add, Delete, Search } from '@mui/icons-material'
-
-interface InsumoRequeridoMock {
-  id: number
-  nombre: string
-  cantidad: number
-  unidad: string
-}
-
-interface LoteMock {
-  id: number
-  nombre: string
-  saldo: number
-}
+import { horarioService, type InsumoHorario } from '../../services/horarioService'
+import { useApi } from '../../hooks/useApi'
+import { inventarioService, type InsumoSaldo, type LoteInsumo } from '../../services/inventarioService'
 
 interface RegistroLote {
-  id: string
-  loteId: number | null
+  id: number
   cantidad: number
 }
 
 interface InsumoUsado {
-  insumo: InsumoRequeridoMock
-  registrosLotes: RegistroLote[]
-}
-
-interface InsumoDisponible {
   id: number
   nombre: string
   codigo: string
   categoria: string
-  descripcion: string
-  unidad: string
+  unidad_medida: string
+  cantidad_usada: number
+  stock_disponible: number
+  registrosLotes: RegistroLote[]
+  lotesDisponibles: LoteInsumo[]
 }
 
 interface RegistrarInsumosUsadosModalProps {
   open: boolean
   onClose: () => void
   onSuccess?: () => void
+  horarioId: number
+  laboratorioId: number
+  fecha: string
 }
 
 // Tabs
@@ -86,189 +75,273 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => {
 export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalProps> = ({
   open,
   onClose,
-  onSuccess
+  onSuccess,
+  horarioId,
+  laboratorioId,
+  fecha
 }) => {
+  const { execute } = useApi()
   const [tabValue, setTabValue] = useState(0)
+  const [insumosRequeridos, setInsumosRequeridos] = useState<InsumoHorario[]>([])
   const [insumosUsados, setInsumosUsados] = useState<InsumoUsado[]>([])
-  
+  const [insumosDisponibles, setInsumosDisponibles] = useState<InsumoSaldo[]>([])
+  const [loading, setLoading] = useState(false)
   // Estados para tab de insumos adicionales
   const [busquedaInsumo, setBusquedaInsumo] = useState<string>('')
 
-  // Datos mock de insumos requeridos
-  const insumosRequeridos: InsumoRequeridoMock[] = [
-    {
-      id: 1,
-      nombre: 'Insumo de prueba',
-      cantidad: 10,
-      unidad: 'unidades'
+  useEffect(() => {
+    if (open) {
+      loadInsumosRequeridos()
+      if (laboratorioId) {
+        loadInsumosDisponibles(laboratorioId)
+      }
     }
-  ]
+  }, [open])
 
-  // Datos mock de lotes disponibles
-  const lotesMock: LoteMock[] = [
-    { id: 1, nombre: 'Lote A-001', saldo: 50 },
-    { id: 2, nombre: 'Lote B-002', saldo: 30 },
-    { id: 3, nombre: 'Lote C-003', saldo: 20 }
-  ]
-
-  // Datos mock de insumos disponibles
-  const insumosDisponibles: InsumoDisponible[] = [
-    {
-      id: 101,
-      nombre: 'Ácidos sulfúrico',
-      codigo: 'INS-0004',
-      categoria: 'Materiales',
-      descripcion: '200 ml',
-      unidad: 'ml'
-    },
-    {
-      id: 102,
-      nombre: 'Alcohol etílico 70%',
-      codigo: 'INS-0010',
-      categoria: 'Reactivos',
-      descripcion: 'Alcohol para desinfección y limpieza',
-      unidad: 'ml'
-    },
-    {
-      id: 103,
-      nombre: 'Guantes de látex',
-      codigo: 'INS-0025',
-      categoria: 'Equipamiento',
-      descripcion: 'Talla M',
-      unidad: 'pares'
-    },
-    {
-      id: 104,
-      nombre: 'Pipetas Pasteur',
-      codigo: 'INS-0032',
-      categoria: 'Material de vidrio',
-      descripcion: 'Desechables',
-      unidad: 'unidades'
+  const loadInsumosRequeridos = async () => {
+    const response = await execute(() => horarioService.getInsumosRequeridosById(horarioId))
+    if (response.error) {
+      //setError(response.error)
+    } else if (response.data) {
+      setInsumosRequeridos(response.data.data)
     }
-  ]
+  }
+  const loadLotesDisponibles = async (insumoId: number) => {
+    try {
+      const response = await execute(() => inventarioService.getLotesConSaldo(laboratorioId, insumoId))
+      if (response.error) {
+        console.error('Error al cargar lotes:', response.error)
+        return []
+      }
+      // Validar que la respuesta tenga la estructura correcta
+      const lotes = response.data?.data || response.data || []
+      // Filtrar lotes inválidos
+      return Array.isArray(lotes)
+        ? lotes.filter(lote => lote && typeof lote.detalle_id === 'number' && lote.detalle_id > 0)
+        : []
+    } catch (error) {
+      console.error('Excepción al cargar lotes:', error)
+      return []
+    }
+  }
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const loadInsumosDisponibles = async (laboratorioId: number) => {
+    const response = await execute(() => inventarioService.getWithStock(laboratorioId))
+    if (response.error) {
+      //setError(response.error)
+    } else if (response.data) {
+      setInsumosDisponibles(response.data.data)
+    }
+  }
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
   }
 
-  const handleAgregarInsumo = (insumo: InsumoRequeridoMock) => {
+  const handleAgregarInsumo = async (insumo: InsumoHorario) => {
     // Verificar si ya está agregado
-    const yaExiste = insumosUsados.find(i => i.insumo.id === insumo.id)
+    const yaExiste = insumosUsados.find(i => i.id === insumo.id)
     if (yaExiste) return
 
-    const nuevoInsumo: InsumoUsado = {
-      insumo,
-      registrosLotes: [
-        {
-          id: `${insumo.id}-${Date.now()}`,
-          loteId: null,
-          cantidad: insumo.cantidad
-        }
-      ]
+    const insumoDisponible = insumosDisponibles.find(i => i.id === insumo.id)
+    if (!insumoDisponible) {
+      //setError('Insumo no disponible')
+      return
     }
+
+    const lotesDisponibles = await loadLotesDisponibles(insumo.id)
+    console.log('🔍 Lotes cargados para insumo:', insumo.nombre, lotesDisponibles)
+
+    if (lotesDisponibles.length === 0) {
+      console.warn('⚠️ No hay lotes disponibles para:', insumo.nombre)
+      return
+    }
+
+    // Validar que el primer lote tenga detalle_id válido
+    const primerLote = lotesDisponibles[0]
+    if (!primerLote || !primerLote.detalle_id) {
+      console.error('❌ Primer lote inválido:', primerLote)
+      return
+    }
+
+    console.log('✅ Creando insumo con lotes:', {
+      insumo: insumo.nombre,
+      cantidadLotes: lotesDisponibles.length,
+      primerLoteId: primerLote.detalle_id
+    })
+
+    const nuevoInsumo: InsumoUsado = {
+      id: insumo.id,
+      nombre: insumo.nombre,
+      codigo: insumo.codigo,
+      categoria: insumo.categoria,
+      unidad_medida: insumo.unidad_medida,
+      cantidad_usada: insumo.cantidad_usada,
+      stock_disponible: insumoDisponible.stock_disponible,
+      registrosLotes: [{
+        id: primerLote.detalle_id,
+        cantidad: insumo.cantidad_usada
+      }],
+      lotesDisponibles: lotesDisponibles
+    }
+
+    console.log('✅ Insumo creado:', nuevoInsumo)
+    console.log('✅ Lotes disponibles en insumo:', nuevoInsumo.lotesDisponibles)
+
     setInsumosUsados([...insumosUsados, nuevoInsumo])
   }
 
   const handleAgregarRegistroLote = (insumoId: number) => {
     setInsumosUsados(prev =>
-      prev.map(insumo =>
-        insumo.insumo.id === insumoId
-          ? {
-              ...insumo,
-              registrosLotes: [
-                ...insumo.registrosLotes,
-                {
-                  id: `${insumoId}-${Date.now()}`,
-                  loteId: null,
-                  cantidad: 0
-                }
-              ]
-            }
-          : insumo
-      )
+      prev.map(insumo => {
+        if (insumo.id === insumoId) {
+          // ✅ Busca el primer lote que NO esté ya usado
+          const loteDisponible = insumo.lotesDisponibles.find(
+            lote => !insumo.registrosLotes.some(r => r.id === lote.detalle_id)
+          )
+          // Si no hay lotes disponibles, no agregues nada
+          if (!loteDisponible) {
+            alert('No hay más lotes disponibles para este insumo')
+            return insumo
+          }
+          return {
+            ...insumo,
+            registrosLotes: [
+              ...insumo.registrosLotes,
+              {
+                id: loteDisponible.detalle_id,  // ✅ Lote no usado
+                cantidad: 1
+              }
+            ]
+          }
+        }
+        return insumo
+      })
     )
   }
 
-  const handleEliminarRegistroLote = (insumoId: number, registroId: string) => {
+  const handleEliminarRegistroLote = (insumoId: number, registroId: number) => {
     setInsumosUsados(prev =>
       prev.map(insumo =>
-        insumo.insumo.id === insumoId
+        insumo.id === insumoId
           ? {
-              ...insumo,
-              registrosLotes: insumo.registrosLotes.filter(r => r.id !== registroId)
-            }
+            ...insumo,
+            registrosLotes: insumo.registrosLotes.filter(r => r.id !== registroId)
+          }
           : insumo
       ).filter(insumo => insumo.registrosLotes.length > 0)
     )
   }
 
-  const handleCambiarLote = (insumoId: number, registroId: string, loteId: number) => {
+  const handleCambiarLote = (insumoId: number, registroIdAntiguo: number, nuevoLoteId: number) => {
     setInsumosUsados(prev =>
-      prev.map(insumo =>
-        insumo.insumo.id === insumoId
-          ? {
-              ...insumo,
-              registrosLotes: insumo.registrosLotes.map(r =>
-                r.id === registroId ? { ...r, loteId } : r
-              )
-            }
-          : insumo
-      )
+      prev.map(insumo => {
+        if (insumo.id === insumoId) {
+          const loteYaUsado = insumo.registrosLotes.some(
+            r => r.id === nuevoLoteId && r.id !== registroIdAntiguo
+          )
+
+          if (loteYaUsado) {
+            //setError('Este lote ya está siendo usado')
+            return insumo
+          }
+
+          return {
+            ...insumo,
+            registrosLotes: insumo.registrosLotes.map(r =>
+              r.id === registroIdAntiguo
+                ? { ...r, id: nuevoLoteId }
+                : r
+            )
+          }
+        }
+        return insumo
+      })
     )
   }
 
-  const handleCambiarCantidad = (insumoId: number, registroId: string, cantidad: number) => {
+  const handleCambiarCantidad = (insumoId: number, registroId: number, cantidad: number) => {
+
     setInsumosUsados(prev =>
       prev.map(insumo =>
-        insumo.insumo.id === insumoId
+        insumo.id === insumoId
           ? {
-              ...insumo,
-              registrosLotes: insumo.registrosLotes.map(r =>
-                r.id === registroId ? { ...r, cantidad: Math.max(0, cantidad) } : r
-              )
-            }
+            ...insumo,
+            registrosLotes: insumo.registrosLotes.map(r =>
+              r.id === registroId ? { ...r, cantidad: Math.max(0, cantidad) } : r
+            )
+          }
           : insumo
       )
     )
   }
 
   const calcularTotalUsado = (insumoId: number): number => {
-    const insumo = insumosUsados.find(i => i.insumo.id === insumoId)
+    const insumo = insumosUsados.find(i => i.id === insumoId)
     if (!insumo) return 0
     return insumo.registrosLotes.reduce((sum, r) => sum + r.cantidad, 0)
   }
 
-  const handleAgregarInsumoAdicional = (insumo: InsumoDisponible) => {
+  const handleAgregarInsumoAdicional = async (insumo: InsumoSaldo) => {
     // Verificar si ya está agregado
-    const yaExiste = insumosUsados.find(i => i.insumo.id === insumo.id)
+    const yaExiste = insumosUsados.find(i => i.id === insumo.id)
     if (yaExiste) return
+
+    const lotesDisponibles = await loadLotesDisponibles(insumo.id)
+    if (lotesDisponibles.length === 0) {
+      return
+    }
+
+    // Validar que el primer lote tenga detalle_id válido
+    const primerLote = lotesDisponibles[0]
+    if (!primerLote || !primerLote.detalle_id) {
+      return
+    }
 
     // Agregar el insumo adicional a la lista de usados con cantidad por defecto de 1
     const nuevoInsumo: InsumoUsado = {
-      insumo: {
-        id: insumo.id,
-        nombre: insumo.nombre,
-        cantidad: 1,
-        unidad: insumo.unidad
-      },
+      id: insumo.id,
+      nombre: insumo.nombre,
+      codigo: insumo.codigo,
+      categoria: insumo.categoria,
+      unidad_medida: insumo.unidad_medida,
+      cantidad_usada: 0,
+      stock_disponible: insumo.stock_disponible,
       registrosLotes: [
         {
-          id: `${insumo.id}-${Date.now()}`,
-          loteId: null,
+          id: primerLote.detalle_id,
           cantidad: 1
         }
-      ]
+      ],
+      lotesDisponibles: lotesDisponibles
     }
 
     setInsumosUsados([...insumosUsados, nuevoInsumo])
   }
 
-  const handleGuardar = () => {
-    // Maqueta: solo cerrar el modal
-    if (onSuccess) {
-      onSuccess()
+  const handleGuardar = async () => {
+    setLoading(true)
+
+    const response = await execute(() => horarioService.cerrarHorario({
+      laboratorio_id: laboratorioId,
+      tipo_movimiento: 'salida',
+      observaciones: `Consumo de inventario en horarioId: ${horarioId!}`,
+      reserva_id: horarioId!,
+      fecha_movimiento: fecha,
+      detalles: insumosUsados.flatMap(c => c.registrosLotes.map(r => ({
+        insumo_id: c.id,
+        cantidad: r.cantidad,
+        lote: null,
+        fecha_vencimiento: null,
+        entrada_detalle_id: r.id
+      })))
+    }))
+    if (response.error) {
+      //setError(response.error)
+    } else if (response.data) {
+      onSuccess?.()
+      onClose?.()
     }
-    onClose()
+    setLoading(false)
   }
 
   return (
@@ -277,15 +350,25 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
       open={open}
       onClose={onClose}
       sx={{
-        zIndex: (theme) => theme.zIndex.modal + 1
+        zIndex: (theme) => theme.zIndex.modal + 1,
+        '& .MuiBackdrop-root': {
+          zIndex: (theme) => theme.zIndex.modal,
+          pointerEvents: 'auto'
+        }
       }}
       PaperProps={{
         sx: {
           height: '80vh',
           borderTopLeftRadius: 16,
           borderTopRightRadius: 16,
-          maxHeight: '80vh'
+          maxHeight: '80vh',
+          overflow: 'auto',
+          zIndex: (theme) => theme.zIndex.modal + 1
         }
+      }}
+      ModalProps={{
+        keepMounted: false,
+        disablePortal: false
       }}
     >
       {/* Header */}
@@ -334,7 +417,7 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
       </Box>
 
       {/* Content - Layout de 2 columnas */}
-      <Box sx={{ flex: 1, overflow: 'auto', px: 3 }}>
+      <Box sx={{ flex: 1, overflow: 'auto', px: 3, position: 'relative', zIndex: 1 }}>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, py: 1.5 }}>
           {/* Columna izquierda: Contenido de los tabs */}
           <Box>
@@ -365,7 +448,7 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {insumosRequeridos.map((insumo) => {
-                    const yaAgregado = insumosUsados.find(i => i.insumo.id === insumo.id)
+                    const yaAgregado = insumosUsados.find(i => i.id === insumo.id)
                     return (
                       <Paper
                         key={insumo.id}
@@ -393,7 +476,7 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
                           </Typography>
                         </Box>
                         <Chip
-                          label={yaAgregado ? 'Agregado' : `${insumo.cantidad} ${insumo.unidad}`}
+                          label={yaAgregado ? 'Agregado' : `${insumo.cantidad_usada} ${insumo.unidad_medida}`}
                           size="small"
                           variant={yaAgregado ? 'filled' : 'outlined'}
                           color={yaAgregado ? 'success' : 'primary'}
@@ -429,12 +512,15 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
                     <Inventory color="primary" />
                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                      Insumos Disponibles ({insumosDisponibles.filter(insumo =>
-                        busquedaInsumo
-                          ? insumo.nombre.toLowerCase().includes(busquedaInsumo.toLowerCase()) ||
+                      Insumos Disponibles ({insumosDisponibles.filter(insumo => {
+                        const esRequerido = insumosRequeridos.some(req => req.id === insumo.id)
+                        if (esRequerido) return false
+                        if (busquedaInsumo) {
+                          return insumo.nombre.toLowerCase().includes(busquedaInsumo.toLowerCase()) ||
                             insumo.codigo.toLowerCase().includes(busquedaInsumo.toLowerCase())
-                          : true
-                      ).length})
+                        }
+                        return true
+                      }).length})
                     </Typography>
                   </Box>
 
@@ -471,14 +557,20 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
                   >
                     <List sx={{ p: 0 }}>
                       {insumosDisponibles
-                        .filter(insumo =>
-                          busquedaInsumo
-                            ? insumo.nombre.toLowerCase().includes(busquedaInsumo.toLowerCase()) ||
+                        .filter(insumo => {
+                          // Excluir insumos que ya están en requeridos
+                          const esRequerido = insumosRequeridos.some(req => req.id === insumo.id)
+                          if (esRequerido) return false
+
+                          // Filtrar por búsqueda
+                          if (busquedaInsumo) {
+                            return insumo.nombre.toLowerCase().includes(busquedaInsumo.toLowerCase()) ||
                               insumo.codigo.toLowerCase().includes(busquedaInsumo.toLowerCase())
-                            : true
-                        )
+                          }
+                          return true
+                        })
                         .map((insumo) => {
-                          const yaAgregado = insumosUsados.find(i => i.insumo.id === insumo.id)
+                          const yaAgregado = insumosUsados.find(i => i.id === insumo.id)
                           return (
                             <ListItem
                               key={insumo.id}
@@ -498,7 +590,7 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
                                   bgcolor: 'action.hover'
                                 }
                               }}
-                              onClick={() => !yaAgregado && handleAgregarInsumoAdicional(insumo)}
+                              onClick={() => !yaAgregado && insumo.stock_disponible > 0 && handleAgregarInsumoAdicional(insumo)}
                             >
                               <ListItemIcon sx={{ minWidth: 36 }}>
                                 <Inventory sx={{ color: 'text.secondary', fontSize: 20 }} />
@@ -516,11 +608,17 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
                                       color="primary"
                                       variant="outlined"
                                     />
+                                    <Chip
+                                      label={`Stock: ${insumo.stock_disponible ? insumo.stock_disponible : 0} ${insumo.unidad_medida}`}
+                                      size="small"
+                                      color={insumo.stock_disponible ? 'success' : 'error'}
+                                      variant="outlined"
+                                    />
                                     {yaAgregado && (
-                                      <Chip 
-                                        label="Agregado" 
-                                        size="small" 
-                                        color="success" 
+                                      <Chip
+                                        label="Agregado"
+                                        size="small"
+                                        color="success"
                                         variant="filled"
                                       />
                                     )}
@@ -528,7 +626,7 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
                                 }
                                 secondary={
                                   <Typography variant="caption" color="text.secondary">
-                                    {insumo.descripcion}
+                                    {insumo.description}
                                   </Typography>
                                 }
                               />
@@ -555,7 +653,11 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
               top: 0,
               alignSelf: 'flex-start',
               maxHeight: 'calc(80vh - 200px)',
-              overflow: 'auto'
+              overflow: 'visible',
+              zIndex: 10,
+              '& > *': {
+                overflow: 'visible'
+              }
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
@@ -565,84 +667,185 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
               </Typography>
             </Box>
 
-              {insumosUsados.length === 0 ? (
-                <>
-                  <Alert
-                    severity="info"
-                    icon={<Info />}
-                    sx={{
-                      bgcolor: 'info.lighter',
-                      '& .MuiAlert-icon': {
-                        color: 'info.main'
-                      }
-                    }}
-                  >
-                    <Typography variant="body2">
-                      Selecciona insumos de la lista izquierda para agregarlos aquí y modificar su
-                      cantidad y lote.
-                    </Typography>
-                  </Alert>
+            {insumosUsados.length === 0 ? (
+              <>
+                <Alert
+                  severity="info"
+                  icon={<Info />}
+                  sx={{
+                    bgcolor: 'info.lighter',
+                    '& .MuiAlert-icon': {
+                      color: 'info.main'
+                    }
+                  }}
+                >
+                  <Typography variant="body2">
+                    Selecciona insumos de la lista izquierda para agregarlos aquí y modificar su
+                    cantidad y lote.
+                  </Typography>
+                </Alert>
 
-                  <Box
-                    sx={{
-                      mt: 3,
-                      p: 4,
-                      border: 2,
-                      borderStyle: 'dashed',
-                      borderColor: 'divider',
-                      borderRadius: 2,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      minHeight: 200
-                    }}
-                  >
-                    <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                      No hay insumos agregados
-                    </Typography>
-                  </Box>
-                </>
-              ) : (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  {insumosUsados.map((insumoUsado) => {
-                    const totalUsado = calcularTotalUsado(insumoUsado.insumo.id)
-                    return (
-                      <Paper
-                        key={insumoUsado.insumo.id}
-                        variant="outlined"
-                        sx={{ p: 2.5, bgcolor: 'background.paper' }}
-                      >
-                        {/* Header del insumo */}
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                          <Inventory sx={{ color: 'primary.main', fontSize: 20 }} />
-                          <Typography variant="body1" sx={{ fontWeight: 600, flex: 1 }}>
-                            {insumoUsado.insumo.nombre}
-                          </Typography>
-                          <Chip
-                            label={`Requerido: ${insumoUsado.insumo.cantidad} ${insumoUsado.insumo.unidad}`}
-                            size="small"
-                            variant="outlined"
-                            color="primary"
-                          />
-                          <Chip
-                            label={`Total: ${totalUsado} ${insumoUsado.insumo.unidad}`}
-                            size="small"
-                            color={totalUsado === insumoUsado.insumo.cantidad ? 'success' : 'warning'}
-                          />
-                        </Box>
+                <Box
+                  sx={{
+                    mt: 3,
+                    p: 4,
+                    border: 2,
+                    borderStyle: 'dashed',
+                    borderColor: 'divider',
+                    borderRadius: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: 200
+                  }}
+                >
+                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                    No hay insumos agregados
+                  </Typography>
+                </Box>
+              </>
+            ) : (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {insumosUsados.map((insumoUsado, insumoIndex) => {
+                  const totalUsado = calcularTotalUsado(insumoUsado.id)
+                  return (
+                    <Paper
+                      key={insumoUsado.id}
+                      variant="outlined"
+                      sx={{
+                        p: 2.5,
+                        bgcolor: 'background.paper',
+                        position: 'relative',
+                        overflow: 'visible',
+                        zIndex: insumosUsados.length - insumoIndex
+                      }}
+                    >
+                      {/* Header del insumo */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                        <Inventory sx={{ color: 'primary.main', fontSize: 20 }} />
+                        <Typography variant="body1" sx={{ fontWeight: 600, flex: 1 }}>
+                          {insumoUsado.nombre}
+                        </Typography>
+                        <Chip
+                          label={`Requerido: ${insumoUsado.cantidad_usada} ${insumoUsado.unidad_medida}`}
+                          size="small"
+                          variant="outlined"
+                          color="primary"
+                        />
+                        <Chip
+                          label={`Disponible: ${insumoUsado.stock_disponible} ${insumoUsado.unidad_medida}`}
+                          size="small"
+                          variant="outlined"
+                          color="primary"
+                        />
+                        <Chip
+                          label={`Total: ${totalUsado} ${insumoUsado.unidad_medida}`}
+                          size="small"
+                          color={totalUsado === insumoUsado.cantidad_usada ? 'success' : 'warning'}
+                        />
+                      </Box>
 
-                        {/* Registros de lotes */}
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                          {insumoUsado.registrosLotes.map((registro) => (
+                      {/* Registros de lotes */}
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, position: 'relative', overflow: 'visible' }}>
+                        {insumoUsado.registrosLotes.map((registro) => {
+                          return (
                             <Box
                               key={registro.id}
                               sx={{
                                 display: 'grid',
                                 gridTemplateColumns: '1fr 1fr auto',
                                 gap: 2,
-                                alignItems: 'start'
+                                alignItems: 'start',
+                                position: 'relative',
+                                overflow: 'visible'
                               }}
                             >
+                              <Box sx={{ position: 'relative', overflow: 'visible' }}>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  sx={{ mb: 0.5, display: 'block' }}
+                                >
+                                  Lote
+                                </Typography>
+                                <FormControl fullWidth size="small">
+                                  <Select
+                                    value={registro.id ? String(registro.id) : ''}
+                                    onChange={(e) => {
+                                      const nuevoLoteId = Number(e.target.value)
+                                      if (nuevoLoteId && nuevoLoteId > 0) {
+                                        handleCambiarLote(
+                                          insumoUsado.id,
+                                          registro.id,
+                                          nuevoLoteId
+                                        )
+                                      }
+                                    }}
+                                    displayEmpty
+                                    error={!registro.id}
+                                    MenuProps={{
+                                      disablePortal: true,
+                                      PaperProps: {
+                                        sx: {
+                                          maxHeight: 300,
+                                          zIndex: 10000,
+                                          boxShadow: '0px 4px 20px rgba(0,0,0,0.15)',
+                                          mt: 0.5,
+                                          position: 'absolute'
+                                        }
+                                      },
+                                      anchorOrigin: {
+                                        vertical: 'bottom',
+                                        horizontal: 'left'
+                                      },
+                                      transformOrigin: {
+                                        vertical: 'top',
+                                        horizontal: 'left'
+                                      },
+                                      disableScrollLock: true,
+                                      disableAutoFocusItem: true
+                                    }}
+                                  >
+                                    {insumoUsado.lotesDisponibles.length === 0 ? (
+                                      <MenuItem value="">
+                                        <em>No hay lotes disponibles</em>
+                                      </MenuItem>
+                                    ) : (
+                                      [
+                                        <MenuItem key="placeholder" value="" disabled>
+                                          <em>Selecciona un lote</em>
+                                        </MenuItem>,
+                                        ...insumoUsado.lotesDisponibles.map((lote) => {
+                                          const loteId = String(lote.detalle_id)
+                                          return (
+                                            <MenuItem
+                                              key={lote.detalle_id}
+                                              value={loteId}
+                                            >
+                                              <Box
+                                                sx={{
+                                                  display: 'flex',
+                                                  justifyContent: 'space-between',
+                                                  width: '100%'
+                                                }}
+                                              >
+                                                <span>{lote.lote || `Lote #${lote.detalle_id}`}</span>
+                                                <Typography
+                                                  variant="caption"
+                                                  color="text.secondary"
+                                                  sx={{ ml: 2 }}
+                                                >
+                                                  Saldo: {lote.saldo || 0}
+                                                </Typography>
+                                              </Box>
+                                            </MenuItem>
+                                          )
+                                        })
+                                      ]
+                                    )}
+                                  </Select>
+                                </FormControl>
+                              </Box>
                               <Box>
                                 <Typography
                                   variant="caption"
@@ -656,17 +859,18 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
                                   size="small"
                                   fullWidth
                                   value={registro.cantidad}
-                                  onChange={(e) =>
+                                  onChange={(e) => {
                                     handleCambiarCantidad(
-                                      insumoUsado.insumo.id,
+                                      insumoUsado.id,
                                       registro.id,
-                                      parseInt(e.target.value) || 0
+                                      Number(e.target.value) || 0
                                     )
+                                  }
                                   }
                                   InputProps={{
                                     endAdornment: (
                                       <Typography variant="body2" color="text.secondary">
-                                        {insumoUsado.insumo.unidad}
+                                        {insumoUsado.unidad_medida}
                                       </Typography>
                                     )
                                   }}
@@ -674,81 +878,35 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
                                 />
                               </Box>
 
-                              <Box>
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                  sx={{ mb: 0.5, display: 'block' }}
-                                >
-                                  Lote
-                                </Typography>
-                                <FormControl fullWidth size="small">
-                                  <Select
-                                    value={registro.loteId || ''}
-                                    onChange={(e) =>
-                                      handleCambiarLote(
-                                        insumoUsado.insumo.id,
-                                        registro.id,
-                                        Number(e.target.value)
-                                      )
-                                    }
-                                    displayEmpty
-                                  >
-                                    <MenuItem value="" disabled>
-                                      Selecciona un lote
-                                    </MenuItem>
-                                    {lotesMock.map((lote) => (
-                                      <MenuItem key={lote.id} value={lote.id}>
-                                        <Box
-                                          sx={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            width: '100%'
-                                          }}
-                                        >
-                                          <span>{lote.nombre}</span>
-                                          <Typography
-                                            variant="caption"
-                                            color="text.secondary"
-                                            sx={{ ml: 2 }}
-                                          >
-                                            Saldo: {lote.saldo}
-                                          </Typography>
-                                        </Box>
-                                      </MenuItem>
-                                    ))}
-                                  </Select>
-                                </FormControl>
-                              </Box>
-
                               <IconButton
                                 color="error"
                                 onClick={() =>
-                                  handleEliminarRegistroLote(insumoUsado.insumo.id, registro.id)
+                                  handleEliminarRegistroLote(insumoUsado.id, registro.id)
                                 }
                                 sx={{ mt: 2.5 }}
                               >
                                 <Delete />
                               </IconButton>
                             </Box>
-                          ))}
+                          )
+                        })}
 
-                          {/* Botón para agregar más registros de lote */}
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            startIcon={<Add />}
-                            onClick={() => handleAgregarRegistroLote(insumoUsado.insumo.id)}
-                            sx={{ alignSelf: 'flex-start', mt: 0.5 }}
-                          >
-                            Agregar lote
-                          </Button>
-                        </Box>
-                      </Paper>
-                    )
-                  })}
-                </Box>
-              )}
+                        {/* Botón para agregar más registros de lote */}
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<Add />}
+                          onClick={() => handleAgregarRegistroLote(insumoUsado.id)}
+                          sx={{ alignSelf: 'flex-start', mt: 0.5 }}
+                        >
+                          Agregar lote
+                        </Button>
+                      </Box>
+                    </Paper>
+                  )
+                })}
+              </Box>
+            )}
           </Paper>
         </Box>
       </Box>
@@ -781,9 +939,9 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
             disabled={insumosUsados.length === 0}
             size="small"
             sx={{ minWidth: 160 }}
-            startIcon={<CheckCircle />}
+            startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <CheckCircle />}
           >
-            Guardar Insumos Usados
+            {loading ? 'Guardando...' : 'Guardar Insumos Usados'}
           </Button>
         </Box>
       </Box>

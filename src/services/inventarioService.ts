@@ -41,14 +41,16 @@ export interface ActividadInsumo {
 
 export interface LoteInsumo {
     detalle_id: number
-    lote: string | null
-    cantidad: number
-    saldo?: number | null
+    insumo_id: number
+    insumo_nombre: string
+    insumo_codigo: string
+    unidad_medida: string
+    lote: string
+    cantidad_original: number
+    saldo: number
     fecha_vencimiento: string | null
-    fecha_ingreso: string | null
-    fecha_movimiento: string | null
-    laboratorio_nombre?: string
-    laboratorio_id?: number
+    fecha_ingreso: string
+    dias_para_vencer: number | null
 }
 
 export interface Lote {
@@ -67,7 +69,7 @@ export interface Lote {
     laboratorio_nombre: string
     laboratorio_codigo: string
     dias_para_vencer: number | null
-  }
+}
 
 export const inventarioService = {
     //Obtener los insumos y su stock de todos los laboratorios
@@ -190,33 +192,12 @@ export const inventarioService = {
     },
 
     //Obtener lotes con saldo disponible por laboratorio e insumo
-    getLotesConSaldo: async (laboratorioId: number, insumoId?: number): Promise<{
-        success: boolean
-        data: Array<{
-            detalle_id: number
-            insumo_id: number
-            insumo_nombre: string
-            insumo_codigo: string
-            unidad_medida: string
-            lote: string
-            cantidad_original: number
-            saldo: number
-            fecha_vencimiento: string | null
-            fecha_ingreso: string
-            dias_para_vencer: number | null
-        }>
-    }> => {
-        try {
-            const params = new URLSearchParams()
-            params.append('laboratorio_id', laboratorioId.toString())
-            if (insumoId) params.append('insumo_id', insumoId.toString())
-
-            const response = await api.get(`/inventario/lotes-con-saldo?${params.toString()}`)
-            return response.data
-        } catch (error: any) {
-            console.error('Error al obtener lotes con saldo:', error)
-            throw new Error(error.response?.data?.message || 'Error al obtener lotes con saldo')
-        }
+    getLotesConSaldo: async (laboratorioId: number, insumoId?: number): Promise<ApiDataResponse<LoteInsumo[]>> => {
+        const params = new URLSearchParams()
+        params.append('laboratorio_id', laboratorioId.toString())
+        if (insumoId) params.append('insumo_id', insumoId.toString())
+        const response = await api.get(`/inventario/lotes-con-saldo?${params.toString()}`)
+        return response.data
     },
 
     // Registrar movimiento manual (entrada o salida)

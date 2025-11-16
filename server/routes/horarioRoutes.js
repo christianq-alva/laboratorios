@@ -10,6 +10,7 @@ import {
   verificarDisponibilidad,
   getActividadHorarios,
   cerrarHorario,
+  getInsumosRequeridosById,
 } from '../controllers/horarioController.js'
 
 const router = express.Router()
@@ -40,6 +41,13 @@ router.get('/:id',
   authenticateToken,
   authorize('read', 'Horario'),
   getHorario
+)
+
+// Obtener insumos requeridos por horario
+router.get('/:id/insumos-requeridos',
+  authenticateToken,
+  authorize('read', 'Horario'),
+  getInsumosRequeridosById
 )
 
 // Crear horario

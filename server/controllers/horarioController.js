@@ -460,3 +460,18 @@ export const cerrarHorario = async (req, res) => {
     connection.release()
   }
 }
+
+// Obtener insumos requeridos por horario
+export const getInsumosRequeridosById = async (req, res) => {
+  try {
+    const { id } = req.params
+    const insumos = await Horario.getInsumosRequeridosById(id)
+    res.status(200).json({
+      data: insumos
+    })
+  } catch (error) {
+    res.status(500).json({
+      message: error.message
+    })
+  }
+}
