@@ -281,10 +281,10 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
       }}
       PaperProps={{
         sx: {
-          height: '65vh',
+          height: '80vh',
           borderTopLeftRadius: 16,
           borderTopRightRadius: 16,
-          maxHeight: '65vh'
+          maxHeight: '80vh'
         }
       }}
     >
@@ -554,7 +554,7 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
               position: 'sticky',
               top: 0,
               alignSelf: 'flex-start',
-              maxHeight: 'calc(65vh - 200px)',
+              maxHeight: 'calc(80vh - 200px)',
               overflow: 'auto'
             }}
           >
