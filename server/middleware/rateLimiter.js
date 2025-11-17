@@ -5,14 +5,15 @@ import rateLimit from 'express-rate-limit'
 // ============================================
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // Máximo 100 peticiones por IP cada 15 minutos
+  max: 1000, // Máximo 1000 peticiones por IP cada 15 minutos
   message: {
     success: false,
-    message: 'Demasiadas peticiones desde esta IP, intenta de nuevo en 15 minutos'
+    message: 'Demasiadas peticiones desde esta IP, intenta de nuevo en 5 minutos'
   },
   standardHeaders: true, // Retorna rate limit info en headers `RateLimit-*`
   legacyHeaders: false, // Desactiva `X-RateLimit-*` headers
   // Función para obtener el identificador único (IP o userId)
+  skip: (req) => req.method === 'OPTIONS',
   keyGenerator: (req) => {
     // Si el usuario está autenticado, usar su ID (más preciso)
     if (req.user?.userId) {
@@ -25,10 +26,10 @@ export const generalLimiter = rateLimit({
   handler: (req, res) => {
     res.status(429).json({
       success: false,
-      message: 'Demasiadas peticiones. Por favor, intenta de nuevo más tarde.',
-      retryAfter: req.rateLimit?.resetTime 
-        ? Math.ceil((req.rateLimit.resetTime - Date.now()) / 1000) 
-        : 900 // Segundos hasta poder intentar de nuevo
+      message: 'Demasiadas peticiones. Por favor, intenta de nuevo en 5 minutos.',
+      retryAfter: req.rateLimit?.resetTime
+        ? Math.ceil((req.rateLimit.resetTime - Date.now()) / 1000)
+        : 300 // Segundos hasta poder intentar de nuevo
     })
   }
 })
@@ -47,6 +48,7 @@ export const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   // Usar IP siempre para login (no hay usuario autenticado aún)
+  skip: (req) => req.method === 'OPTIONS',
   keyGenerator: (req) => {
     return req.ip || req.connection?.remoteAddress || 'unknown'
   },
@@ -55,8 +57,8 @@ export const loginLimiter = rateLimit({
     res.status(429).json({
       success: false,
       message: 'Demasiados intentos de inicio de sesión. Por seguridad, espera 15 minutos antes de intentar nuevamente.',
-      retryAfter: req.rateLimit?.resetTime 
-        ? Math.ceil((req.rateLimit.resetTime - Date.now()) / 1000) 
+      retryAfter: req.rateLimit?.resetTime
+        ? Math.ceil((req.rateLimit.resetTime - Date.now()) / 1000)
         : 900
     })
   },
@@ -78,6 +80,7 @@ export const heavyOperationLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS',
   keyGenerator: (req) => {
     if (req.user?.userId) {
       return `heavy:user:${req.user.userId}`
@@ -88,8 +91,8 @@ export const heavyOperationLimiter = rateLimit({
     res.status(429).json({
       success: false,
       message: 'Has alcanzado el límite de operaciones pesadas. Intenta de nuevo en 1 hora.',
-      retryAfter: req.rateLimit?.resetTime 
-        ? Math.ceil((req.rateLimit.resetTime - Date.now()) / 1000) 
+      retryAfter: req.rateLimit?.resetTime
+        ? Math.ceil((req.rateLimit.resetTime - Date.now()) / 1000)
         : 3600
     })
   }
@@ -104,6 +107,7 @@ export const createLimiter = rateLimit({
   max: 50, // Máximo 50 creaciones por hora
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS',
   keyGenerator: (req) => {
     if (req.user?.userId) {
       return `create:user:${req.user.userId}`
@@ -114,8 +118,8 @@ export const createLimiter = rateLimit({
     res.status(429).json({
       success: false,
       message: 'Has alcanzado el límite de creación de recursos. Intenta de nuevo en 1 hora.',
-      retryAfter: req.rateLimit?.resetTime 
-        ? Math.ceil((req.rateLimit.resetTime - Date.now()) / 1000) 
+      retryAfter: req.rateLimit?.resetTime
+        ? Math.ceil((req.rateLimit.resetTime - Date.now()) / 1000)
         : 3600
     })
   }
@@ -130,6 +134,7 @@ export const publicLimiter = rateLimit({
   max: 30, // 30 peticiones cada 15 minutos
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS',
   keyGenerator: (req) => {
     return req.ip || req.connection?.remoteAddress || 'unknown'
   },
@@ -137,8 +142,8 @@ export const publicLimiter = rateLimit({
     res.status(429).json({
       success: false,
       message: 'Demasiadas peticiones. Intenta de nuevo en 15 minutos.',
-      retryAfter: req.rateLimit?.resetTime 
-        ? Math.ceil((req.rateLimit.resetTime - Date.now()) / 1000) 
+      retryAfter: req.rateLimit?.resetTime
+        ? Math.ceil((req.rateLimit.resetTime - Date.now()) / 1000)
         : 900
     })
   }
