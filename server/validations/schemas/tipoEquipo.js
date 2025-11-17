@@ -10,9 +10,9 @@ export const createTipoEquipoSchema = z.object({
             .max(100, 'El nombre no puede exceder 100 caracteres')
         ,
         descripcion: z.string()
-            .max(255, 'La descripción no puede exceder 255 caracteres')
             .trim()
-            .optional() 
+            .max(255, 'La descripción no puede exceder 255 caracteres')
+            .optional()
             .nullable()
             .transform((val) => val === '' ? null : val)
     })

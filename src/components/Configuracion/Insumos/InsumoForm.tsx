@@ -92,7 +92,8 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
   }
 
   // Enviar formulario
-  const handleSubmit = async () => {
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
     if (!validateForm()) return
 
     setLoading(true)

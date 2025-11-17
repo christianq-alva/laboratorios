@@ -107,28 +107,37 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
     setFormData(prev => ({ ...prev, escuela_id: event.target.value }))
   }
 
+  // Validar formulario
+  const validateForm = () => {
+    if (!formData.nombre.trim()) {
+      setError('El nombre es requerido')
+      return false
+    }
+    if (!formData.codigo?.trim()) {
+      setError('El código es requerido')
+      return false
+    }
+    if (!formData.ubicacion?.trim()) {
+      setError('La ubicación es requerida')
+      return false
+    }
+    if (!formData.piso?.toString().trim()) {
+      setError('El piso es requerido')
+      return false
+    }
+    if (formData.escuela_id <= 0) {
+      setError('Debe seleccionar una escuela')
+      return false
+    }
+    return true
+  }
   // Submit del formulario
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
+    if (!validateForm()) return
+
     setLoading(true)
     setError(null)
-
-    // Validaciones
-    if (!formData.codigo?.trim()) {
-      throw new Error('El código es requerido')
-    }
-    if (!formData.nombre?.trim()) {
-      throw new Error('El nombre es requerido')
-    }
-    if (!formData.ubicacion?.trim()) {
-      throw new Error('La ubicación es requerida')
-    }
-    if (!formData.piso?.toString().trim()) {
-      throw new Error('El piso es requerido')
-    }
-    if (formData.escuela_id <= 0) {
-      throw new Error('Debe seleccionar una escuela')
-    }
 
     let result
     if (isEditing && laboratorio) {

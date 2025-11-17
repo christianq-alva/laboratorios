@@ -55,16 +55,21 @@ export const EscuelaForm: React.FC<EscuelaFormProps> = ({ open, onClose, onSucce
   const handleChange = (field: keyof CreateEscuelaData) => (event: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [field]: event.target.value }))
   }
-
+  // Validar formulario
+  const validateForm = () => {
+    if (!formData.nombre.trim()) {
+      setError('El nombre es requerido')
+      return false
+    }
+    return true
+  } 
+  // Submit del formulario
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
+    if (!validateForm()) return
+
     setLoading(true)
     setError(null)
-
-    // Validaciones
-    if (!formData.nombre?.trim()) {
-      throw new Error('El nombre es requerido')
-    }
 
     let result
     if (isEditing && escuela) {

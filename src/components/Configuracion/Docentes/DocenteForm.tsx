@@ -128,22 +128,30 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
     }
   }, [formData, open])
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault()
-    setLoading(true)
-    setError(null)
-
-    // Validaciones básicas
+  // Validar formulario
+  const validateForm = () => {
     if (!formData.nombre.trim()) {
-      throw new Error('El nombre es requerido')
+      setError('El nombre es requerido')
+      return false
     }
-    // Validar correo solo si se proporciona
     if (formData.correo && formData.correo.trim() && !formData.correo.includes('@')) {
-      throw new Error('El correo debe tener un formato válido')
+      setError('El correo debe tener un formato válido')
+      return false
     }
     if (formData.escuela_id <= 0) {
-      throw new Error('Debe seleccionar una escuela')
+      setError('Debe seleccionar una escuela')
+      return false
     }
+    return true
+  }
+
+  // Submit del formulario
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!validateForm()) return
+
+    setLoading(true)
+    setError(null)
 
     let result
     if (isEditing && docente) {
