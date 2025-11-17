@@ -62,7 +62,8 @@ interface HorarioCalendario {
   end: Date
   laboratorio: string
   docente: string
-  grupo: string
+  escuela: string
+  ciclo: string
   descripcion: string
   color: string
   cantidad_alumnos?: number
@@ -198,7 +199,8 @@ export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
         end: fechaFin,
           laboratorio: horario.laboratorio || 'Laboratorio',
           docente: horario.docente || 'Docente',
-          grupo: horario.grupo || 'Grupo',
+          escuela: horario.escuela || 'Escuela',
+          ciclo: horario.ciclo || 'Ciclo',
           descripcion: horario.descripcion || 'Sin descripción',
           color: getColorByTipo(horario.descripcion),
           cantidad_alumnos: horario.cantidad_alumnos,
@@ -267,7 +269,10 @@ export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
           {event.docente}
         </Typography>
         <Typography variant="caption" sx={{ display: 'block' }}>
-          {event.grupo}
+          {event.ciclo}
+        </Typography>
+        <Typography variant="caption" sx={{ display: 'block' }}>
+          {event.escuela}
         </Typography>
       </Box>
     </Box>
@@ -627,7 +632,10 @@ export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
                     <strong>Docente:</strong> {selectedEvent.docente}
                   </Typography>
                   <Typography variant="subtitle1" gutterBottom>
-                    <strong>Grupo:</strong> {selectedEvent.grupo}
+                    <strong>Ciclo:</strong> {selectedEvent.ciclo}
+                  </Typography>
+                  <Typography variant="subtitle1" gutterBottom>
+                    <strong>Escuela:</strong> {selectedEvent.escuela}
                   </Typography>
                   <Typography variant="subtitle1" gutterBottom>
                     <strong>Descripción:</strong> {selectedEvent.descripcion}

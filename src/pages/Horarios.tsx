@@ -375,9 +375,6 @@ export const Horarios: React.FC = () => {
                 <strong>Docente:</strong> {selectedHorario.docente}
               </Typography>
               <Typography variant="body2" color="text.secondary" gutterBottom>
-                <strong>Grupo:</strong> {selectedHorario.grupo} ({selectedHorario.escuela})
-              </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
                 <strong>Fecha:</strong> {formatDateTime(selectedHorario.fecha_inicio)} - {formatDateTime(selectedHorario.fecha_fin)}
               </Typography>
               <Typography variant="body2" color="text.secondary">

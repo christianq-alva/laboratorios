@@ -8,9 +8,8 @@ export const Horario = {
           r.id,
           r.laboratorio_id,
           r.docente_id,
-          r.grupo_id,
-          g.escuela_id,
-          g.ciclo_id,
+          r.escuela_id,
+          r.ciclo_id,
           r.fecha_inicio,
           r.fecha_fin,
           r.cantidad_alumnos,
@@ -21,14 +20,12 @@ export const Horario = {
           d.nombre as docente,
           e.nombre as escuela,
           c.nombre as ciclo,
-          g.nombre as grupo,
           COUNT(dri.id) as insumos_requeridos
         FROM reservas r
         LEFT JOIN laboratorios l ON r.laboratorio_id = l.id
         LEFT JOIN docentes d ON r.docente_id = d.id
-        LEFT JOIN grupos g ON r.grupo_id = g.id
-        LEFT JOIN escuelas e ON g.escuela_id = e.id
-        LEFT JOIN ciclos c ON g.ciclo_id = c.id
+        LEFT JOIN escuelas e ON r.escuela_id = e.id
+        LEFT JOIN ciclos c ON r.ciclo_id = c.id
         LEFT JOIN detalle_reserva_insumos dri ON r.id = dri.reserva_id
       `
         let params = []
@@ -60,9 +57,8 @@ export const Horario = {
           r.id,
           r.laboratorio_id,
           r.docente_id,
-          r.grupo_id,
-          g.escuela_id,
-          g.ciclo_id,
+          r.escuela_id,
+          r.ciclo_id,
           r.descripcion,
           r.fecha_inicio,
           r.fecha_fin,
@@ -70,15 +66,13 @@ export const Horario = {
           r.estado,
           l.nombre as laboratorio,
           d.nombre as docente,
-          g.nombre as grupo,
           e.nombre as escuela,
           c.nombre as ciclo
         FROM reservas r
         JOIN laboratorios l ON r.laboratorio_id = l.id
         JOIN docentes d ON r.docente_id = d.id
-        JOIN grupos g ON r.grupo_id = g.id
-        JOIN escuelas e ON g.escuela_id = e.id
-        JOIN ciclos c ON g.ciclo_id = c.id
+        JOIN escuelas e ON r.escuela_id = e.id
+        JOIN ciclos c ON r.ciclo_id = c.id
         WHERE r.id = ?
       `, [reserva_id])
 
@@ -136,15 +130,13 @@ export const Horario = {
             d.nombre as docente,
             l.nombre as laboratorio,
             l.ubicacion as laboratorio_ubicacion,
-            g.nombre as grupo,
             e.nombre as escuela,
             c.nombre as ciclo
             FROM reservas r
             JOIN docentes d ON r.docente_id = d.id
             JOIN laboratorios l ON r.laboratorio_id = l.id
-            LEFT JOIN grupos g ON r.grupo_id = g.id
-            LEFT JOIN escuelas e ON g.escuela_id = e.id
-            LEFT JOIN ciclos c ON g.ciclo_id = c.id
+            LEFT JOIN escuelas e ON r.escuela_id = e.id
+            LEFT JOIN ciclos c ON r.ciclo_id = c.id
             WHERE r.laboratorio_id = ?
             AND r.id != COALESCE(?, 0)
             AND (
@@ -169,15 +161,13 @@ export const Horario = {
             l.nombre as laboratorio,
             l.ubicacion as laboratorio_ubicacion,
             d.nombre as docente,
-            g.nombre as grupo,
             e.nombre as escuela,
             c.nombre as ciclo
             FROM reservas r
             JOIN laboratorios l ON r.laboratorio_id = l.id
             JOIN docentes d ON r.docente_id = d.id
-            LEFT JOIN grupos g ON r.grupo_id = g.id
-            LEFT JOIN escuelas e ON g.escuela_id = e.id
-            LEFT JOIN ciclos c ON g.ciclo_id = c.id
+            LEFT JOIN escuelas e ON r.escuela_id = e.id
+            LEFT JOIN ciclos c ON r.ciclo_id = c.id
             WHERE r.docente_id = ?
             AND r.id != COALESCE(?, 0)
             AND (
@@ -276,7 +266,8 @@ export const Horario = {
             const {
                 laboratorio_id,
                 docente_id,
-                grupo_id,
+                escuela_id,
+                ciclo_id,
                 descripcion,
                 fechaInicioMySQL,
                 fechaFinMySQL,
@@ -285,7 +276,7 @@ export const Horario = {
             } = datosHorario;
 
             // 1. CREAR LA RESERVA
-            const reserva_id = await Horario.createHorario(laboratorio_id, docente_id, grupo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, connection)
+            const reserva_id = await Horario.createHorario(laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, connection)
 
             // 2. PROCESAR INSUMOS
             if (insumos_requeridos.length > 0) {
@@ -308,12 +299,12 @@ export const Horario = {
         }
     },
 
-    createHorario: async (laboratorio_id, docente_id, grupo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, connection) => {
+    createHorario: async (laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, connection) => {
 
         const [result] = await connection.execute(`
-        INSERT INTO reservas (laboratorio_id, docente_id, grupo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos, color) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `, [laboratorio_id, docente_id, grupo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color])
+        INSERT INTO reservas (laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos, color) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color])
 
         return result.insertId;
 
@@ -340,7 +331,8 @@ export const Horario = {
                 reserva_id,
                 laboratorio_id,
                 docente_id,
-                grupo_id,
+                escuela_id,
+                ciclo_id,
                 descripcion,
                 fechaInicioMySQL,
                 fechaFinMySQL,
@@ -349,7 +341,7 @@ export const Horario = {
             } = datosHorario;
 
             // 1. CREAR LA RESERVA
-            await Horario.updateHorario(laboratorio_id, docente_id, grupo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, reserva_id, connection)
+            await Horario.updateHorario(laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, reserva_id, connection)
 
             // 2. PROCESAR INSUMOS
             if (insumos_requeridos.length > 0) {
@@ -370,12 +362,12 @@ export const Horario = {
             throw error;
         }
     },
-    updateHorario: async (laboratorio_id, docente_id, grupo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, reserva_id, connection) => {
+    updateHorario: async (laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, reserva_id, connection) => {
         await connection.execute(`
         UPDATE reservas 
-        SET laboratorio_id = ?, docente_id = ?, grupo_id = ?, descripcion = ?, fecha_inicio = ?, fecha_fin = ?, cantidad_alumnos = ?, color = ?
+        SET laboratorio_id = ?, docente_id = ?, escuela_id = ?, ciclo_id = ?, descripcion = ?, fecha_inicio = ?, fecha_fin = ?, cantidad_alumnos = ?, color = ?
         WHERE id = ?
-      `, [laboratorio_id, docente_id, grupo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, reserva_id])
+      `, [laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, reserva_id])
     },
 
     createHorarioInsumos: async (reserva_id, insumos_requeridos, connection) => {
@@ -440,10 +432,9 @@ export const Horario = {
             }).replace(', ', ' ')
 
             const query = `
-      INSERT INTO actividad_horarios (
-        accion, reserva_id, descripcion, usuario_id, ip_address, fecha_actividad
-      ) VALUES (?, ?, ?, ?, ?, ?)
-    `
+                INSERT INTO actividad_horarios (accion, reserva_id, descripcion, usuario_id, ip_address, fecha_actividad) 
+                VALUES (?, ?, ?, ?, ?, ?)
+            `
 
             await pool.execute(query, [accion, reserva_id, descripcion, usuario_id, ip_address, fechaPeru])
             console.log(`📋 Actividad registrada: ${accion} - ${descripcion} (${fechaPeru})`)
@@ -515,8 +506,7 @@ export const Horario = {
         const [ciclos] = await pool.execute(`
             SELECT DISTINCT c.nombre
             FROM reservas r
-            JOIN grupos g ON r.grupo_id = g.id
-            JOIN ciclos c ON g.ciclo_id = c.id
+            JOIN ciclos c ON r.ciclo_id = c.id
             WHERE r.laboratorio_id = ?
         `, [laboratorio_id])
         return ciclos;
@@ -533,14 +523,12 @@ export const Horario = {
                 l.nombre as laboratorio,
                 d.nombre as docente,
                 e.nombre as escuela,
-                c.nombre as ciclo,
-                g.nombre as grupo
+                c.nombre as ciclo
             FROM reservas r
             LEFT JOIN laboratorios l ON r.laboratorio_id = l.id
             LEFT JOIN docentes d ON r.docente_id = d.id
-            LEFT JOIN grupos g ON r.grupo_id = g.id
-            LEFT JOIN escuelas e ON g.escuela_id = e.id
-            LEFT JOIN ciclos c ON g.ciclo_id = c.id
+            LEFT JOIN escuelas e ON r.escuela_id = e.id
+            LEFT JOIN ciclos c ON r.ciclo_id = c.id
             WHERE r.laboratorio_id = ?
             ORDER BY r.fecha_inicio DESC
         `, [laboratorio_id])

@@ -220,7 +220,7 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
         docente: null,
         fechas: null,
         alumnos: null,
-        grupo: null,
+        ciclo: null,
         escuela: null
       }
     }
@@ -232,7 +232,7 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
       docente: null as string | null,
       fechas: null as string | null,
       alumnos: null as string | null,
-      grupo: null as string | null,
+      ciclo: null as string | null,
       escuela: null as string | null
     }
 
@@ -241,8 +241,8 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
         result.laboratorio = part.replace('Lab:', '').trim()
       } else if (part.includes('Docente:')) {
         result.docente = part.replace('Docente:', '').trim()
-      } else if (part.includes('Grupo:')) {
-        result.grupo = part.replace('Grupo:', '').trim()
+      } else if (part.includes('Ciclo:')) {
+        result.ciclo = part.replace('Ciclo:', '').trim()
       } else if (part.includes('Escuela:')) {
         result.escuela = part.replace('Escuela:', '').trim()
       } else if (part.includes('alumnos')) {
@@ -526,9 +526,9 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
                             <Typography variant="caption" color="text.secondary">
                               {(() => {
                                 const info = parseDescripcion(registro.descripcion)
-                                const grupo = info.grupo || registro.grupo_nombre
+                                const ciclo = info.ciclo || registro.ciclo_nombre
                                 const escuela = info.escuela || registro.escuela_nombre
-                                return `${grupo} - ${escuela}`
+                                return `${ciclo} - ${escuela}`
                               })()}
                             </Typography>
                           </Box>

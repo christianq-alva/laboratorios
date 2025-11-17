@@ -62,7 +62,8 @@ interface HorarioEvento {
   id: number
   laboratorio: string
   docente: string
-  grupo: string
+  escuela: string
+  ciclo: string
   descripcion: string
   horaInicio: string
   horaFin: string
@@ -253,7 +254,8 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
               id: horario.id,
               laboratorio: horario.laboratorio || '',
               docente: horario.docente || '',
-              grupo: horario.grupo || '',
+              escuela: horario.escuela || '',
+              ciclo: horario.ciclo || '',
               descripcion: horario.descripcion || '',
               horaInicio,
               horaFin,
@@ -711,7 +713,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                               {evento.docente}
                             </Typography>
 
-                            {/* Grupo y Laboratorio en la misma línea */}
+                            {/* Ciclo y Laboratorio en la misma línea */}
                             <Typography
                               variant="caption"
                               sx={{
@@ -721,7 +723,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                                 lineHeight: 1.1
                               }}
                             >
-                              {evento.grupo} • {evento.laboratorio}
+                              {evento.ciclo} • {evento.laboratorio}
                             </Typography>
                           </CardContent>
                         </Card>
@@ -840,10 +842,19 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
 
                 <Box>
                   <Typography variant="body2" color="text.secondary">
-                    Grupo
+                    Escuela
                   </Typography>
                   <Typography variant="body1">
-                    {selectedEvent.grupo}
+                    {selectedEvent.escuela}
+                  </Typography>
+                </Box>
+
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Ciclo
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedEvent.ciclo}
                   </Typography>
                 </Box>
 

@@ -53,13 +53,6 @@ interface Ciclo {
   nombre: string
 }
 
-interface Grupo {
-  id: number
-  nombre: string
-  escuela_id: number
-  ciclo_id: number
-}
-
 interface CreationResult {
   date: string
   success: boolean
@@ -76,7 +69,8 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
   const [formData, setFormData] = useState({
     laboratorio_id: 0,
     docente_id: 0,
-    grupo_id: 0,
+    escuela_id: 0,
+    ciclo_id: 0,
     descripcion: '',
     cantidad_alumnos: 1,
     color: '#4ecdc4',
@@ -89,11 +83,7 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
   const [docentes, setDocentes] = useState<Docente[]>([])
   const [escuelas, setEscuelas] = useState<Escuela[]>([])
   const [ciclos, setCiclos] = useState<Ciclo[]>([])
-  const [grupos, setGrupos] = useState<Grupo[]>([])
 
-  // Estados de selección en cascada
-  const [selectedEscuela, setSelectedEscuela] = useState<number>(0)
-  const [selectedCiclo, setSelectedCiclo] = useState<number>(0)
 
   // Estados de fechas
   const [newDate, setNewDate] = useState<string>('')
@@ -118,7 +108,8 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
     setFormData({
       laboratorio_id: 0,
       docente_id: 0,
-      grupo_id: 0,
+      escuela_id: 0,
+      ciclo_id: 0,
       descripcion: '',
       cantidad_alumnos: 1,
       color: '#4ecdc4',
@@ -127,8 +118,6 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
     })
     setSelectedDates([])
     setNewDate('')
-    setSelectedEscuela(0)
-    setSelectedCiclo(0)
     setError(null)
     setCreationResults([])
     setShowResults(false)
@@ -156,24 +145,13 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
     }
   }
 
-  // Cargar grupos cuando cambian escuela o ciclo
-  useEffect(() => {
-    if (selectedEscuela && selectedCiclo) {
-      loadGrupos()
-    } else {
-      setGrupos([])
-      setFormData(prev => ({ ...prev, grupo_id: 0 }))
-    }
-  }, [selectedEscuela, selectedCiclo])
+  // Manejo de cambios en escuela/ciclo
+  const handleEscuelaChange = (escuela_id: number) => {
+    setFormData(prev => ({ ...prev, escuela_id: escuela_id, ciclo_id: 0 }))
+  }
 
-  const loadGrupos = async () => {
-    try {
-      const response = await horarioService.getGrupos(selectedEscuela, selectedCiclo)
-      setGrupos(response.data || [])
-    } catch (error) {
-      console.error('Error al cargar grupos:', error)
-      setGrupos([])
-    }
+  const handleCicloChange = (ciclo_id: number) => {
+    setFormData(prev => ({ ...prev, ciclo_id: ciclo_id }))
   }
 
   // Agregar fecha a la lista
@@ -196,7 +174,8 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
     return (
       formData.laboratorio_id > 0 &&
       formData.docente_id > 0 &&
-      formData.grupo_id > 0 &&
+      formData.escuela_id > 0 &&
+      formData.ciclo_id > 0 &&
       formData.descripcion.trim() &&
       formData.cantidad_alumnos > 0 &&
       formData.start_time &&
@@ -227,7 +206,8 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
           const horarioData: CreateHorarioData = {
             laboratorio_id: formData.laboratorio_id,
             docente_id: formData.docente_id,
-            grupo_id: formData.grupo_id,
+            escuela_id: formData.escuela_id,
+            ciclo_id: formData.ciclo_id,
             descripcion: formData.descripcion.trim(),
             fecha_inicio: fechaInicio,
             fecha_fin: fechaFin,
@@ -422,15 +402,16 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
                 />
               </Box>
 
-              {/* Selección de grupo académico */}
+              {/* Selección de escuela y ciclo */}
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
                 <FormControl sx={{ minWidth: 180, flex: 1 }} required>
                   <InputLabel>Escuela</InputLabel>
                   <Select
-                    value={selectedEscuela}
-                    onChange={(e) => setSelectedEscuela(Number(e.target.value))}
+                    value={formData.escuela_id}
+                    onChange={(e) => handleEscuelaChange(Number(e.target.value))}
                     label="Escuela"
                   >
+                    <MenuItem value={0} disabled>Seleccionar escuela</MenuItem>
                     {escuelas.map(escuela => (
                       <MenuItem key={escuela.id} value={escuela.id}>
                         {escuela.nombre}
@@ -442,11 +423,12 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
                 <FormControl sx={{ minWidth: 140 }} required>
                   <InputLabel>Ciclo</InputLabel>
                   <Select
-                    value={selectedCiclo}
-                    onChange={(e) => setSelectedCiclo(Number(e.target.value))}
+                    value={formData.ciclo_id}
+                    onChange={(e) => handleCicloChange(Number(e.target.value))}
                     label="Ciclo"
-                    disabled={!selectedEscuela}
+                    disabled={!formData.escuela_id || formData.escuela_id === 0}
                   >
+                    <MenuItem value={0} disabled>Seleccionar ciclo</MenuItem>
                     {[...ciclos]
                       .sort((a, b) => {
                         const numA = parseInt(a.nombre.replace(/[^\d]/g, '')) || 0;
@@ -458,22 +440,6 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
                           {ciclo.nombre}
                         </MenuItem>
                       ))}
-                  </Select>
-                </FormControl>
-
-                <FormControl sx={{ minWidth: 140 }} required>
-                  <InputLabel>Grupo</InputLabel>
-                  <Select
-                    value={formData.grupo_id}
-                    onChange={(e) => setFormData(prev => ({ ...prev, grupo_id: Number(e.target.value) }))}
-                    label="Grupo"
-                    disabled={!selectedEscuela || !selectedCiclo}
-                  >
-                    {grupos.map(grupo => (
-                      <MenuItem key={grupo.id} value={grupo.id}>
-                        {grupo.nombre}
-                      </MenuItem>
-                    ))}
                   </Select>
                 </FormControl>
               </Box>

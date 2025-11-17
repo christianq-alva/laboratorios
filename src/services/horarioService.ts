@@ -6,7 +6,8 @@ export interface Horario {
   id: number
   laboratorio_id: number
   docente_id: number
-  grupo_id: number
+  escuela_id: number
+  ciclo_id: number
   descripcion: string
   fecha_inicio: string
   fecha_fin: string
@@ -16,7 +17,6 @@ export interface Horario {
   docente?: string
   escuela?: string
   ciclo?: string
-  grupo?: string
   insumos?: InsumoHorario[]
   equipos?: EquipoHorario[]
   estado?: string
@@ -26,7 +26,8 @@ export interface HorarioSimple {
   id: number
   laboratorio_id: number
   docente_id: number
-  grupo_id: number
+  escuela_id: number
+  ciclo_id: number
   descripcion: string
   fecha_inicio: string
   fecha_fin: string
@@ -36,7 +37,6 @@ export interface HorarioSimple {
   docente?: string
   escuela?: string
   ciclo?: string
-  grupo?: string
   estado: string
   insumos_requeridos?: number
 }
@@ -86,7 +86,6 @@ export interface ActividadHorario {
   laboratorio_ubicacion: string
   docente_nombre: string
   docente_correo: string
-  grupo_nombre: string
   escuela_nombre: string
   ciclo_nombre: string
 }
@@ -94,7 +93,8 @@ export interface ActividadHorario {
 export interface CreateHorarioData {
   laboratorio_id: number
   docente_id: number
-  grupo_id: number
+  escuela_id: number
+  ciclo_id: number
   descripcion: string
   fecha_inicio: string
   fecha_fin: string
@@ -116,17 +116,6 @@ export interface Ciclo {
   id: number
   nombre: string
 }
-
-export interface Grupo {
-  id: number
-  nombre: string
-  escuela_id: number
-  ciclo_id: number
-  escuela?: string
-  ciclo?: string
-}
-
-
 
 export interface ConflictoHorario {
   tipo: 'laboratorio' | 'docente'
@@ -206,21 +195,6 @@ export const horarioService = {
 
   getCiclos: async () => {
     const response = await api.get('/ciclos')
-    return response.data
-  },
-
-  getGrupos: async (escuela_id?: number, ciclo_id?: number) => {
-    let url = '/grupos'
-    const params = new URLSearchParams()
-
-    if (escuela_id) params.append('escuela_id', escuela_id.toString())
-    if (ciclo_id) params.append('ciclo_id', ciclo_id.toString())
-
-    if (params.toString()) {
-      url += '?' + params.toString()
-    }
-
-    const response = await api.get(url)
     return response.data
   },
 

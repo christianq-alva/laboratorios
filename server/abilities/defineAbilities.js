@@ -25,7 +25,6 @@ export const defineAbilitiesFor = (user) => {
     can('read', 'TipoEquipo')
     can('read', 'Docente')
     can('read', 'Ciclo')
-    can('read', 'Grupo')
     can('read', 'Escuela')
 
     return build()

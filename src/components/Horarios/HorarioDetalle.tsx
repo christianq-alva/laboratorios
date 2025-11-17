@@ -24,7 +24,6 @@ import {
   Person,
   LocationOn,
   School,
-  Group,
   Inventory,
   Build,
   CalendarToday,
@@ -184,18 +183,6 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
                       {horario.docente}
-                    </Typography>
-                  </Box>
-                </Box>
-
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Group color="action" />
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Grupo
-                    </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {horario.grupo}
                     </Typography>
                   </Box>
                 </Box>
