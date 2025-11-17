@@ -23,7 +23,8 @@ import {
   Menu,
   MenuItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  Autocomplete
 } from '@mui/material'
 import {
   Visibility,
@@ -39,6 +40,7 @@ import {
   Delete
 } from '@mui/icons-material'
 import { incidenciaService, type Incidencia } from '../../services/incidenciaService'
+import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
 import dayjs from 'dayjs'
 import { useApi } from '../../hooks/useApi'
 
@@ -66,6 +68,10 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [selectedIncidencia, setSelectedIncidencia] = useState<Incidencia | null>(null)
 
+  // Estados para laboratorios
+  const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
+  const [filtroLaboratorioObj, setFiltroLaboratorioObj] = useState<Laboratorio | null>(null)
+
   // Filtros avanzados
   const [filtroFecha, setFiltroFecha] = useState('')
   const [filtroFechaInicio, setFiltroFechaInicio] = useState('')
@@ -75,6 +81,14 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
   const [filtroReportadoPor, setFiltroReportadoPor] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
   const [mostrarFiltros, setMostrarFiltros] = useState(false)
+
+  // Cargar laboratorios
+  const loadLaboratorios = async () => {
+    const response = await execute(() => laboratorioService.getAll())
+    if (response.data) {
+      setLaboratorios(response.data)
+    }
+  }
 
   // Cargar datos
   const loadData = async () => {
@@ -95,6 +109,7 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
   // Efecto para cargar datos iniciales
   useEffect(() => {
     loadData()
+    loadLaboratorios()
   }, [])
 
   // Efecto para refrescar cuando cambia el refresh prop
@@ -193,6 +208,7 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
     setFiltroFechaInicio('')
     setFiltroFechaFin('')
     setFiltroLaboratorio('')
+    setFiltroLaboratorioObj(null)
     setFiltroDocente('')
     setFiltroReportadoPor('')
     setFiltroEstado('')
@@ -369,13 +385,23 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
                 sx={{ minWidth: 120 }}
               />
 
-              <TextField
+              <Autocomplete
                 size="small"
-                label="Laboratorio"
-                value={filtroLaboratorio}
-                onChange={(e) => setFiltroLaboratorio(e.target.value)}
-                placeholder="Nombre del laboratorio"
-                sx={{ minWidth: 150 }}
+                options={laboratorios}
+                getOptionLabel={(option) => `${option.nombre} - ${option.ubicacion}`}
+                value={filtroLaboratorioObj}
+                onChange={(event, newValue) => {
+                  setFiltroLaboratorioObj(newValue)
+                  setFiltroLaboratorio(newValue ? newValue.nombre : '')
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Laboratorio"
+                    placeholder="Selecciona un laboratorio"
+                  />
+                )}
+                sx={{ minWidth: 250 }}
               />
 
               <TextField
