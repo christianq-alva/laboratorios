@@ -473,7 +473,7 @@ export const generarPlantillaImportacionEquipos = async (req, res) => {
       ['INSTRUCCIONES PARA IMPORTACIÓN MASIVA DE EQUIPOS'],
       [''],
       ['COLUMNAS OBLIGATORIAS:'],
-      ['• CODIGO: Código del equipo (ej: EQP-0001)'],
+      ['• CODIGO: Código del equipo (Ej.: EQP-0001)'],
       ['• NOMBRE: Nombre del equipo (texto, máximo 255 caracteres)'],
       ['• TIPO_EQUIPO_ID: ID del tipo de equipo'],
       ['• FECHA_ADQUISICION: Fecha de compra (formato YYYY-MM-DD)'],

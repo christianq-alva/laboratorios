@@ -11,6 +11,12 @@ import {
   importacionMasiva,
   upload
 } from '../controllers/insumoController.js'
+import {
+  validate,
+  createInsumoSchema,
+  updateInsumoSchema,
+  deleteInsumoSchema
+} from '../validations/index.js'
 
 const router = express.Router()
 
@@ -18,6 +24,7 @@ const router = express.Router()
 router.post('/',
   authenticateToken,
   authorize('create', 'Insumo'),
+  validate(createInsumoSchema),
   createInsumo
 )
 
@@ -25,6 +32,7 @@ router.post('/',
 router.put('/:id',
   authenticateToken,
   authorize('update', 'Insumo'),
+  validate(updateInsumoSchema),
   updateInsumo
 )
 
@@ -32,6 +40,7 @@ router.put('/:id',
 router.delete('/:id',
   authenticateToken,
   authorize('delete', 'Insumo'),
+  validate(deleteInsumoSchema),
   deleteInsumo
 )
 

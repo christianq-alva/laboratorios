@@ -98,7 +98,7 @@ export const generarPlantillaReabastecimiento = async (req, res) => {
     // Agregar comentarios/validaciones en las celdas
     wsPlantilla['A1'].c = [{
       a: 'Sistema',
-      t: 'Código único del insumo (ej: INS-0001)'
+      t: 'Código único del insumo (Ej.: INS-0001)'
     }]
     wsPlantilla['B1'].c = [{
       a: 'Sistema',

@@ -8,6 +8,13 @@ import {
   updateDocente,
   deleteDocente
 } from '../controllers/docenteController.js'
+import {
+  validate,
+  createDocenteSchema,
+  updateDocenteSchema,
+  getDocenteByIdSchema,
+  deleteDocenteSchema
+} from '../validations/index.js'
 
 const router = express.Router()
 
@@ -22,6 +29,7 @@ router.get('/',
 router.get('/:id', 
   authenticateToken,
   authorize('read', 'Docente'),
+  validate(getDocenteByIdSchema),
   getDocente
 )
 
@@ -29,6 +37,7 @@ router.get('/:id',
 router.post('/', 
   authenticateToken,
   authorize('create', 'Docente'),
+  validate(createDocenteSchema),
   createDocente
 )
 
@@ -36,6 +45,7 @@ router.post('/',
 router.put('/:id', 
   authenticateToken,
   authorize('update', 'Docente'),
+  validate(updateDocenteSchema),
   updateDocente
 )
 
@@ -43,6 +53,7 @@ router.put('/:id',
 router.delete('/:id', 
   authenticateToken,
   authorize('delete', 'Docente'),
+  validate(deleteDocenteSchema),
   deleteDocente
 )
 

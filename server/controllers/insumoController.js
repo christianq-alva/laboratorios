@@ -2,47 +2,38 @@ import { pool } from '../config/database.js'
 import { Insumo } from '../models/Insumo.js'
 import multer from 'multer'
 import XLSX from 'xlsx'
-const categoriasValidas = ['Reactivos', 'Materiales', 'Material_Biologico'];
+
+const categoriasValidas = ['Reactivos', 'Materiales', 'Material_Biologico']
+
 // Crear insumo
 export const createInsumo = async (req, res) => {
   try {
+    // Los datos ya están validados y transformados por el middleware de validación
     const { nombre, descripcion, unidad_medida, categoria, presentacion } = req.body
-    // Validar campos requeridos
-    if (!nombre?.trim()) {
-      return res.status(400).json({
-        message: 'El nombre es requerido'
-      })
-    }
-    if (!unidad_medida?.trim()) {
-      return res.status(400).json({
-        message: 'La unidad de medida es requerida'
-      })
-    }
-    if (!categoriasValidas.includes(categoria)) {
-      return res.status(400).json({
-        message: 'La categoría es inválida'
-      })
-    }
+
     const { insumo_id, codigo } = await Insumo.create(
-      nombre.trim(),
-      descripcion?.trim() || '',
-      unidad_medida.trim(),
+      nombre,
+      descripcion || '',
+      unidad_medida,
       categoria,
-      presentacion?.trim() || ''
+      presentacion || ''
     )
-    // Respuesta exitosa
+
     res.status(201).json({
+      success: true,
       message: 'Insumo creado exitosamente',
       data: {
         id: insumo_id,
         codigo: codigo,
-        nombre: nombre.trim(),
-        unidad_medida: unidad_medida.trim(),
-        categoria: categoria
+        nombre,
+        unidad_medida,
+        categoria
       }
     })
   } catch (error) {
+    console.error('Error al crear insumo:', error)
     res.status(500).json({
+      success: false,
       message: 'Error interno del servidor'
     })
   }
@@ -50,64 +41,49 @@ export const createInsumo = async (req, res) => {
 // Actualizar insumo
 export const updateInsumo = async (req, res) => {
   try {
-    const { id } = req.params
-    const insumoId = parseInt(id, 10)
+    // El ID ya está validado y transformado por el middleware de validación
+    const { id: insumoId } = req.params
     const { nombre, descripcion, unidad_medida, categoria, presentacion } = req.body
-    console.log('🔄 Actualizando insumo:', { id, insumoId, nombre, descripcion, unidad_medida })
-    // Validar ID
-    if (isNaN(insumoId) || insumoId <= 0) {
-      return res.status(400).json({
-        message: 'ID de insumo inválido'
-      })
-    }
-    // Validar datos requeridos
-    if (!nombre?.trim()) {
-      return res.status(400).json({
-        message: 'El nombre es requerido'
-      })
-    }
-    if (!unidad_medida?.trim()) {
-      return res.status(400).json({
-        message: 'La unidad de medida es requerida'
-      })
-    }
-    if (!categoriasValidas.includes(categoria)) {
-      return res.status(400).json({
-        message: 'La categoría es inválida'
-      })
-    }
+
     // Verificar que el insumo existe
     const exists = await Insumo.existsById(insumoId)
     if (!exists) {
       return res.status(404).json({
+        success: false,
         message: 'Insumo no encontrado'
       })
     }
+
     // Actualizar insumo
     const { affectedRows } = await Insumo.updateById(insumoId, {
-      nombre: nombre.trim(),
-      descripcion: descripcion?.trim() || '',
-      unidad_medida: unidad_medida.trim(),
-      categoria: categoria,
-      presentacion: presentacion?.trim() || ''
+      nombre,
+      descripcion: descripcion || '',
+      unidad_medida,
+      categoria,
+      presentacion: presentacion || ''
     })
+
     if (affectedRows === 0) {
       return res.status(404).json({
+        success: false,
         message: 'Insumo no encontrado'
       })
     }
-    // Respuesta exitosa
+
     res.status(200).json({
+      success: true,
       message: 'Insumo actualizado exitosamente',
       data: {
         id: insumoId,
-        nombre: nombre.trim(),
-        descripcion: descripcion?.trim() || '',
-        unidad_medida: unidad_medida.trim()
+        nombre,
+        descripcion: descripcion || '',
+        unidad_medida
       }
     })
   } catch (error) {
+    console.error('Error al actualizar insumo:', error)
     res.status(500).json({
+      success: false,
       message: 'Error interno del servidor'
     })
   }
@@ -117,22 +93,20 @@ export const deleteInsumo = async (req, res) => {
   const connection = await pool.getConnection()
   try {
     await connection.beginTransaction()
-    const { id } = req.params
-    const insumoId = parseInt(id, 10)
-    // Validar ID
-    if (isNaN(insumoId) || insumoId <= 0) {
-      return res.status(400).json({
-        message: 'ID de insumo inválido'
-      })
-    }
+    // El ID ya está validado y transformado por el middleware de validación
+    const { id: insumoId } = req.params
+
     // Verificar que el insumo existe
     const insumo = await Insumo.getById(insumoId, connection)
     if (!insumo) {
+      await connection.rollback()
       return res.status(404).json({
+        success: false,
         message: 'Insumo no encontrado'
       })
     }
-    // Verificar relaciones antes de eliminar
+
+    // Verificar relaciones antes de eliminar (validación de negocio)
     const relations = await Insumo.checkRelations(insumoId, connection)
     if (relations.total > 0) {
       const relaciones = []
@@ -144,19 +118,24 @@ export const deleteInsumo = async (req, res) => {
       }
       await connection.rollback()
       return res.status(409).json({
+        success: false,
         message: `No se puede eliminar. El insumo "${insumo.nombre}" está siendo usado en el sistema: ${relaciones.join(', ')}.`
       })
     }
+
     // Eliminar insumo
     const { affectedRows } = await Insumo.deleteById(insumoId, connection)
     if (affectedRows === 0) {
       await connection.rollback()
       return res.status(404).json({
+        success: false,
         message: 'Insumo no encontrado'
       })
     }
+
     await connection.commit()
     res.status(200).json({
+      success: true,
       message: 'Insumo eliminado exitosamente'
     })
   } catch (error) {
@@ -164,10 +143,13 @@ export const deleteInsumo = async (req, res) => {
     // Manejar errores de restricción de clave foránea
     if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.code === 'ER_ROW_IS_REFERENCED') {
       return res.status(409).json({
-        message: 'No se puede eliminar el insumo porque está siendo usado en el sistema y tiene información relacionada (movimientos, lotes, inventario u otros registros). Primero debes eliminar o modificar estos registros para poder eliminar el insumo.'
+        success: false,
+        message: 'No se puede eliminar. El insumo está siendo usado en el sistema.'
       })
     }
+    console.error('Error al eliminar insumo:', error)
     res.status(500).json({
+      success: false,
       message: 'Error interno del servidor'
     })
   } finally {
@@ -179,10 +161,13 @@ export const getAllInsumos = async (req, res) => {
   try {
     const insumos = await Insumo.getAll()
     res.status(200).json({
+      success: true,
       data: insumos
     })
   } catch (error) {
+    console.error('Error al obtener insumos:', error)
     res.status(500).json({
+      success: false,
       message: 'Error interno del servidor'
     })
   }
@@ -255,12 +240,12 @@ export const generarPlantillaImportacion = async (req, res) => {
       [''],
       ['COLUMNAS OBLIGATORIAS:'],
       ['• NOMBRE: Nombre del insumo (texto, máximo 255 caracteres)'],
-      ['• UNIDAD_MEDIDA: Unidad de medida (ej: Litros, Unidades, Gramos, ml)'],
+      ['• UNIDAD_MEDIDA: Unidad de medida (Ej.: Litros, Unidades, Gramos, ml)'],
       [''],
       ['COLUMNAS OPCIONALES:'],
       ['• DESCRIPCION: Descripción detallada del insumo'],
       ['• CATEGORIA: Reactivos | Materiales | Material_Biologico'],
-      ['• PRESENTACION: Formato de presentación (ej: Frasco 500ml, Caja x 100)'],
+      ['• PRESENTACION: Formato de presentación (Ej.: Frasco 500ml, Caja x 100)'],
       [''],
       [''],
       ['NOTAS IMPORTANTES:'],

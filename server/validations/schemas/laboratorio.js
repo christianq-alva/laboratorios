@@ -26,10 +26,9 @@ export const createLaboratorioSchema = z.object({
         escuela_id: z.number()
             .int('El ID de escuela debe ser un número entero')
             .positive('El ID de escuela debe ser mayor a 0'),
-        piso: z.union([
-            z.string().min(1, 'El piso es obligatorio').trim(),
-            z.number().int('El piso debe ser un número entero')
-        ]).transform((val) => typeof val === 'string' ? val : val.toString()),
+        piso: z.number()
+            .int('El piso debe ser un número entero')
+            .positive('El piso debe ser mayor a 0'),
         estado: z.enum(estadosValidos, {
             errorMap: () => ({ message: `El estado debe ser uno de: ${estadosValidos.join(', ')}` })
         }).default('Activo')
@@ -43,26 +42,25 @@ export const updateLaboratorioSchema = z.object({
     params: idParamSchema,
     body: z.object({
         codigo: z.string()
+            .trim()
             .min(1, 'El código es obligatorio')
-            .max(50, 'El código no puede exceder 50 caracteres')
-            .trim(),
+            .max(50, 'El código no puede exceder 50 caracteres'),
         nombre: z.string()
+            .trim()
             .min(1, 'El nombre es obligatorio')
             .max(100, 'El nombre no puede exceder 100 caracteres')
-            .trim()
             .optional(),
         ubicacion: z.string()
-            .max(100, 'La ubicación no puede exceder 100 caracteres')
             .trim()
+            .max(100, 'La ubicación no puede exceder 100 caracteres')
             .optional(),
         escuela_id: z.number()
             .int('El ID de escuela debe ser un número entero')
             .positive('El ID de escuela debe ser mayor a 0')
             .optional(),
-        piso: z.union([
-            z.string().min(1).trim(),
-            z.number().int()
-        ]).transform((val) => typeof val === 'string' ? val : val.toString())
+        piso: z.number()
+            .int('El piso debe ser un número entero')
+            .positive('El piso debe ser mayor a 0')
             .optional(),
         estado: z.enum(estadosValidos, {
             errorMap: () => ({ message: `El estado debe ser uno de: ${estadosValidos.join(', ')}` })

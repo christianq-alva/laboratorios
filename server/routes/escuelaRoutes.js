@@ -8,6 +8,13 @@ import {
   updateEscuela,
   deleteEscuela
 } from '../controllers/escuelaController.js'
+import {
+  validate,
+  createEscuelaSchema,
+  updateEscuelaSchema,
+  getEscuelaByIdSchema,
+  deleteEscuelaSchema
+} from '../validations/index.js'
 
 const router = express.Router()
 
@@ -24,28 +31,32 @@ router.get(
 // Obtener una escuela por ID
 router.get(
   '/:id', 
-  authorize('read', 'Escuela'), 
+  authorize('read', 'Escuela'),
+  validate(getEscuelaByIdSchema),
   getEscuelaById
 )
 
 // Crear nueva escuela
 router.post(
   '/', 
-  authorize('create', 'Escuela'), 
+  authorize('create', 'Escuela'),
+  validate(createEscuelaSchema),
   createEscuela
 )
 
 // Actualizar escuela
 router.put(
   '/:id', 
-  authorize('update', 'Escuela'), 
+  authorize('update', 'Escuela'),
+  validate(updateEscuelaSchema),
   updateEscuela
 )
 
 // Eliminar escuela
 router.delete(
   '/:id', 
-  authorize('delete', 'Escuela'), 
+  authorize('delete', 'Escuela'),
+  validate(deleteEscuelaSchema),
   deleteEscuela
 )
 
