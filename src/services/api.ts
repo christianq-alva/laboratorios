@@ -44,7 +44,8 @@ api.interceptors.response.use(
       status: error.response?.status,
       message: errorData?.message,
       endpoint: `${error.config?.method?.toUpperCase()} ${error.config?.url}`,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      errors: errorData?.errors
     })
 
     // Enriquecer error con flags útiles
