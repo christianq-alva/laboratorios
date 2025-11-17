@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react'
 import {
   Box,
   Card,
@@ -28,23 +28,34 @@ export const Login: React.FC = () => {
   const [contrasena, setContrasena] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const errorRef = useRef('')
 
-  const { login } = useAuth()
+  const { login, isLoggingIn } = useAuth()
+
+  // Sincronizar ref con estado
+  useEffect(() => {
+    errorRef.current = error
+  }, [error])
+
+  // Restaurar error desde ref si el componente se re-monta (síncrono antes del render)
+  useLayoutEffect(() => {
+    if (errorRef.current && !error) {
+      setError(errorRef.current)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Solo al montar
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    setIsSubmitting(true)
+    errorRef.current = ''
 
-    try {
-      const result = await login({ usuario, contrasena })
+    const result = await login({ usuario, contrasena })
 
-      if (!result.success) {
-        setError(result.message || 'Error al iniciar sesión')
-      }
-    } finally {
-      setIsSubmitting(false)
+    if (!result.success) {
+      const errorMessage = result.message || 'Error al iniciar sesión'
+      errorRef.current = errorMessage
+      setError(errorMessage)
     }
   }
 
@@ -91,23 +102,28 @@ export const Login: React.FC = () => {
             </Box>
 
             {/* Error Alert */}
-            {error && (
+            {error ? (
               <Alert
                 severity="error"
+                onClose={() => setError('')}
                 sx={{
                   mb: 3,
                   borderRadius: 2,
-                  border: '1px solid #ffebe9',
+                  border: '1px solid #cf222e',
                   backgroundColor: '#ffebe9',
                   color: '#cf222e',
                   '& .MuiAlert-icon': {
                     color: '#cf222e'
+                  },
+                  '& .MuiAlert-message': {
+                    color: '#cf222e',
+                    fontWeight: 500
                   }
                 }}
               >
                 {error}
               </Alert>
-            )}
+            ) : null}
 
             {/* Formulario */}
             <Box component="form" onSubmit={handleSubmit}>
@@ -127,7 +143,7 @@ export const Login: React.FC = () => {
                   value={usuario}
                   onChange={(e) => setUsuario(e.target.value)}
                   required
-                  disabled={isSubmitting}
+                  disabled={isLoggingIn}
                   placeholder="Ingresa tu usuario"
                   InputProps={{
                     startAdornment: (
@@ -184,7 +200,7 @@ export const Login: React.FC = () => {
                   value={contrasena}
                   onChange={(e) => setContrasena(e.target.value)}
                   required
-                  disabled={isSubmitting}
+                  disabled={isLoggingIn}
                   placeholder="Ingresa tu contraseña"
                   InputProps={{
                     startAdornment: (
@@ -245,7 +261,7 @@ export const Login: React.FC = () => {
                 type="submit"
                 fullWidth
                 variant="contained"
-                disabled={isSubmitting}
+                disabled={isLoggingIn}
                 sx={{
                   py: 1.5,
                   borderRadius: 2,
@@ -267,7 +283,7 @@ export const Login: React.FC = () => {
                   transition: 'all 0.2s ease',
                 }}
               >
-                {isSubmitting ? (
+                {isLoggingIn ? (
                   <>
                     <CircularProgress size={16} sx={{ mr: 2, color: 'white' }} />
                     Iniciando sesión...

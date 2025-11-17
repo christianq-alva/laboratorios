@@ -1,12 +1,14 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useState, type ReactNode, useEffect } from 'react'
 import { authService, type User, type LoginRequest } from '../services/authService'
+import { type ApiError } from '../services/api'
 
 interface AuthContextType {
   user: User | null
   login: (data: LoginRequest) => Promise<{ success: boolean, message?: string }>
   logout: () => void
   loading: boolean
+  isLoggingIn: boolean
   token: string | null
 }
 
@@ -16,6 +18,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
 
   useEffect(() => {
     const savedToken = localStorage.getItem('token')
@@ -30,7 +33,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [])
 
   const login = async (data: LoginRequest) => {
-    setLoading(true)
+    setIsLoggingIn(true)
     try {
       const response = await authService.login(data)
 
@@ -46,9 +49,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { success: false, message: response.message }
       }
     } catch (error) {
-      return { success: false, message: (error as any).message }
+      const apiError = error as ApiError
+      const errorData = apiError.response?.data as any
+
+      const errorMessage = errorData?.message ||
+        (apiError as any).message ||
+        apiError.message ||
+        'Error al iniciar sesión'
+
+      return { success: false, message: errorMessage }
     } finally {
-      setLoading(false)
+      setIsLoggingIn(false)
     }
   }
 
@@ -60,7 +71,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, token }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, isLoggingIn, token }}>
       {children}
     </AuthContext.Provider>
   )
