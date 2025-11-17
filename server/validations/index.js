@@ -11,4 +11,8 @@ export * from './schemas/docente.js'
 export * from './schemas/escuela.js'
 export * from './schemas/usuario.js'
 export * from './schemas/insumo.js'
+export * from './schemas/equipo.js'
+export * from './schemas/inventario.js'
+export * from './schemas/horario.js'
+export * from './schemas/share.js'
 

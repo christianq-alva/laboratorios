@@ -120,6 +120,14 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
       tipo_movimiento: ''
     })
   }
+  const handleOnClose = () => {
+    setError(null)
+    setActividad([])
+    setLaboratorios([])
+    setLoading(false)
+    handleClearFilters()
+    onClose()
+  }
 
   const getTipoMovimientoColor = (tipo: string, tipoRegistro: string) => {
     if (tipoRegistro === 'crud') {
@@ -196,7 +204,7 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={handleOnClose}
       maxWidth="xl"
       fullWidth
       PaperProps={{ sx: { borderRadius: 2, height: '90vh' } }}
@@ -207,7 +215,7 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
             <History color="primary" />
             Actividad de Equipos
           </Typography>
-          <IconButton onClick={onClose}>
+          <IconButton onClick={handleOnClose}>
             <Close />
           </IconButton>
         </Box>
@@ -273,9 +281,6 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
                 <MenuItem value="crear">Creación</MenuItem>
                 <MenuItem value="actualizar">Actualización</MenuItem>
                 <MenuItem value="eliminar">Eliminación</MenuItem>
-                <MenuItem value="entrada">Ingreso</MenuItem>
-                <MenuItem value="reserva">Reserva</MenuItem>
-                <MenuItem value="devolucion">Devolución</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -321,7 +326,6 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
                   <TableCell sx={{ fontWeight: 600 }}>Tipo</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Equipo</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Marca/Modelo</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Cantidad</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Laboratorio</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Usuario</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Detalles</TableCell>
@@ -388,20 +392,6 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
                       </TableCell>
 
                       <TableCell>
-                        {registro.cantidad ? (
-                          <Chip
-                            label={registro.cantidad}
-                            size="small"
-                            variant="outlined"
-                          />
-                        ) : (
-                          <Typography variant="body2" color="text.secondary">
-                            -
-                          </Typography>
-                        )}
-                      </TableCell>
-
-                      <TableCell>
                         {registro.laboratorio_nombre ? (
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <LocationOn fontSize="small" color="action" />
@@ -436,11 +426,6 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
                             {registro.observaciones}
                           </Typography>
                         </Tooltip>
-                        {registro.reserva_descripcion && (
-                          <Typography variant="caption" color="text.secondary" display="block">
-                            Reserva: {registro.reserva_descripcion}
-                          </Typography>
-                        )}
                       </TableCell>
                     </TableRow>
                   ))
@@ -461,7 +446,7 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 3 }}>
-        <Button onClick={onClose} variant="outlined">
+        <Button onClick={handleOnClose} variant="outlined">
           Cerrar
         </Button>
       </DialogActions>

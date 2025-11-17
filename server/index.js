@@ -37,12 +37,19 @@ app.options(/^\/api\/.*$/, cors({ origin: true, credentials: true }))
 
 // Healthcheck para Railway
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() })
+  res.status(200).json({
+    status: 'OK',
+    timestamp: new Date().toISOString()
+  })
 })
 
 // Health de API (misma-origin)
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', scope: 'api', timestamp: new Date().toISOString() })
+  res.status(200).json({
+    status: 'OK',
+    scope: 'api',
+    timestamp: new Date().toISOString()
+  })
 })
 
 app.use('/api/auth', authRoutes)

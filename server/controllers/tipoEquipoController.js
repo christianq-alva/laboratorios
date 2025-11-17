@@ -1,6 +1,6 @@
 import { TipoEquipo } from '../models/TipoEquipo.js'
 
-export const getAll = async (res) => {
+export const getAll = async (req,res) => {
   // Obtener todos los tipos de equipo
   try {
     const tipos = await TipoEquipo.getAll()
@@ -18,7 +18,7 @@ export const getAll = async (res) => {
 }
 
 // Obtener solo tipos activos
-export const getActivos = async (res) => {
+export const getActivos = async (req,res) => {
   try {
     const tipos = await TipoEquipo.getActivos()
     res.status(200).json({

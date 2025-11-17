@@ -12,6 +12,14 @@ import {
   previsualizarImportacionMasivaEquipos,
   importacionMasivaEquipos
 } from '../controllers/equipoController.js'
+import {
+  validate,
+  createEquipoSchema,
+  updateEquipoSchema,
+  deleteEquipoSchema,
+  getEquipoByLaboratorioSchema,
+  getActividadEquiposSchema
+} from '../validations/index.js'
 import multer from 'multer'
 
 // Configurar multer para upload de archivos
@@ -34,12 +42,14 @@ router.get('/plantilla-importacion',
 router.get('/actividad', 
   authenticateToken,
   authorize('read', 'Equipo'),
+  validate(getActividadEquiposSchema),
   getActividadEquipos
 )
 
 router.get('/:laboratorio_id', 
   authenticateToken, 
-  authorize('read', 'Equipo'), 
+  authorize('read', 'Equipo'),
+  validate(getEquipoByLaboratorioSchema),
   getEquipoByLaboratorio
 )
 
@@ -52,18 +62,21 @@ router.get('/',
 router.post('/', 
   authenticateToken,
   authorize('create', 'Equipo'),
+  validate(createEquipoSchema),
   createEquipo
 )
 
 router.put('/:id', 
   authenticateToken,
   authorize('update', 'Equipo'),
+  validate(updateEquipoSchema),
   updateEquipo
 )
 
 router.delete('/:id',
   authenticateToken,
   authorize('delete', 'Equipo'),
+  validate(deleteEquipoSchema),
   deleteEquipo
 )
 

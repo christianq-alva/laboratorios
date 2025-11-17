@@ -103,7 +103,7 @@ export const Equipo = {
       SELECT COUNT(*) as total 
       FROM detalle_reserva_equipos dre
       INNER JOIN reservas r ON dre.reserva_id = r.id
-      WHERE dre.equipo_id = ? AND r.laboratorio_id = ? AND r.estado = 'P' AND r.fecha_inicio > NOW()`, 
+      WHERE dre.equipo_id = ? AND r.laboratorio_id = ? AND r.estado = 'P' AND r.fecha_inicio > NOW()`,
       [equipo_id, laboratorio_id])
     return rows[0].total > 0
   },
@@ -134,7 +134,56 @@ export const Equipo = {
       // No lanzamos el error para no interrumpir la operación principal
     }
   },
+  getActividadEquipos: async (user_rol, user_laboratorio_ids, filters = { laboratorio_id: null, fecha_inicio: null, fecha_fin: null, tipo_movimiento: null }) => {
+    let queryCRUD = `
+      SELECT 
+        'crud' as tipo_registro,
+        a.id,
+        a.accion as tipo_movimiento,
+        a.fecha_actividad as fecha_movimiento,
+        a.descripcion as observaciones,
+        a.equipo_codigo,
+        a.equipo_nombre,
+        a.equipo_marca,
+        a.equipo_modelo,
+        a.usuario_nombre,
+        a.usuario_rol,
+        NULL as laboratorio_nombre,
+        NULL as cantidad,
+        NULL as reserva_descripcion
+      FROM vista_actividad_equipos a
+      WHERE 1=1
+    `
 
+    const params = []
+    // Filtros según permisos del usuario
+    if (user_rol === 'Jefe de Laboratorio') {
+      // Para movimientos, filtrar por laboratorios del usuario
+      queryCRUD += ` AND a.laboratorio_id IN (${user_laboratorio_ids.join(',')})`
+    }
+    // Filtros opcionales para ambas consultas
+    if (filters.laboratorio_id) {
+      queryCRUD += ` AND a.laboratorio_id = ?`
+      params.push(filters.laboratorio_id)
+    }
+    if (filters.fecha_inicio) {
+      queryCRUD += ` AND DATE(a.fecha_actividad) >= ?`
+      params.push(filters.fecha_inicio)
+    }
+    if (filters.fecha_fin) {
+      queryCRUD += ` AND DATE(a.fecha_actividad) <= ?`
+      params.push(filters.fecha_fin)
+    }
+    if (filters.tipo_movimiento) {
+      queryCRUD += ` AND a.accion = ?`
+      params.push(filters.tipo_movimiento)
+    }
+    queryCRUD += ` ORDER BY a.fecha_actividad DESC`
+
+    const [rows] = await pool.execute(queryCRUD, params)
+
+    return rows;
+  },
   getAll: async (user_rol, user_laboratorio_ids, filters = {}) => {
     //Query base
     let query = `
@@ -162,7 +211,7 @@ export const Equipo = {
       WHERE 1=1
         `
     const params = []
-    
+
     // Filtros según permisos del usuario
     if (user_rol === 'Jefe de Laboratorio') {
       query += ` AND e.laboratorio_id IN (${user_laboratorio_ids.join(',')})`

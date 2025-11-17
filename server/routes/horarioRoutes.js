@@ -12,6 +12,17 @@ import {
   cerrarHorario,
   getInsumosRequeridosById,
 } from '../controllers/horarioController.js'
+import {
+  validate,
+  getHorarioByIdSchema,
+  getInsumosRequeridosByIdSchema,
+  getActividadHorariosSchema,
+  createHorarioSchema,
+  updateHorarioSchema,
+  deleteHorarioSchema,
+  verificarDisponibilidadSchema,
+  cerrarHorarioSchema
+} from '../validations/index.js'
 
 const router = express.Router()
 
@@ -19,6 +30,7 @@ const router = express.Router()
 router.post('/cerrar',
   authenticateToken,
   authorize('update', 'Horario'),
+  validate(cerrarHorarioSchema),
   cerrarHorario
 )
 
@@ -33,6 +45,7 @@ router.get('/',
 router.get('/actividad',
   authenticateToken,
   authorize('read', 'Horario'),
+  validate(getActividadHorariosSchema),
   getActividadHorarios
 )
 
@@ -40,6 +53,7 @@ router.get('/actividad',
 router.get('/:id',
   authenticateToken,
   authorize('read', 'Horario'),
+  validate(getHorarioByIdSchema),
   getHorario
 )
 
@@ -47,6 +61,7 @@ router.get('/:id',
 router.get('/:id/insumos-requeridos',
   authenticateToken,
   authorize('read', 'Horario'),
+  validate(getInsumosRequeridosByIdSchema),
   getInsumosRequeridosById
 )
 
@@ -54,6 +69,7 @@ router.get('/:id/insumos-requeridos',
 router.post('/',
   authenticateToken,
   authorize('create', 'Horario'),
+  validate(createHorarioSchema),
   createHorario
 )
 
@@ -61,6 +77,7 @@ router.post('/',
 router.put('/:id',
   authenticateToken,
   authorize('update', 'Horario'),
+  validate(updateHorarioSchema),
   updateHorario
 )
 
@@ -68,6 +85,7 @@ router.put('/:id',
 router.delete('/:id',
   authenticateToken,
   authorize('delete', 'Horario'),
+  validate(deleteHorarioSchema),
   deleteHorario
 )
 
@@ -75,6 +93,7 @@ router.delete('/:id',
 router.post('/verificar-disponibilidad',
   authenticateToken,
   authorize('read', 'Horario'),
+  validate(verificarDisponibilidadSchema),
   verificarDisponibilidad
 )
 

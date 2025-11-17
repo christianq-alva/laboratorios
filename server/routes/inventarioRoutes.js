@@ -14,6 +14,18 @@ import {
     getLotesPorInsumo,
     registrarMovimientoManual, 
 } from '../controllers/inventarioController.js'
+import {
+    validate,
+    getInsumosWithStockSchema,
+    getInsumosWithPositiveStockSchema,
+    getActividadInsumosSchema,
+    getActividadDetalleInsumosSchema,
+    procesarArchivoExcelSchema,
+    ejecutarReabastecimientoMasivoSchema,
+    getLotesConSaldoSchema,
+    getLotesPorInsumoSchema,
+    registrarMovimientoManualSchema
+} from '../validations/index.js'
 import { upload } from '../controllers/insumoController.js'
 
 
@@ -30,6 +42,7 @@ router.get('/all-con-saldo',
 router.get('/insumos-con-saldo',
     authenticateToken,
     authorize('read', 'Inventario'),
+    validate(getInsumosWithStockSchema),
     getInsumosWithStock
 )
 
@@ -37,6 +50,7 @@ router.get('/insumos-con-saldo',
 router.get('/insumos-con-saldo-positivo',
     authenticateToken,
     authorize('read', 'Inventario'),
+    validate(getInsumosWithPositiveStockSchema),
     getInsumosWithPositiveStock
 )
 
@@ -44,6 +58,7 @@ router.get('/insumos-con-saldo-positivo',
 router.get('/actividad',
     authenticateToken,
     authorize('read', 'Inventario'),
+    validate(getActividadInsumosSchema),
     getActividadInsumos
 )
 
@@ -51,6 +66,7 @@ router.get('/actividad',
 router.get('/actividad-detalle',
     authenticateToken,
     authorize('read', 'Inventario'),
+    validate(getActividadDetalleInsumosSchema),
     getActividadDetalleInsumos
 )
 
@@ -66,18 +82,21 @@ router.post('/procesar-excel',
     authenticateToken,
     authorize('create', 'Inventario'),
     upload.single('archivo_excel'),
+    validate(procesarArchivoExcelSchema),
     procesarArchivoExcel
 )
 //Ejecutar reabastecimiento masivo 
 router.post('/reabastecimiento-masivo',
     authenticateToken,
     authorize('create', 'Inventario'),
+    validate(ejecutarReabastecimientoMasivoSchema),
     ejecutarReabastecimientoMasivo
 )
 //Obtener lotes con saldo disponible por insumo y laboratorio
 router.get('/lotes-con-saldo',
     authenticateToken,
     authorize('read', 'Inventario'),
+    validate(getLotesConSaldoSchema),
     getLotesConSaldo
 )
 
@@ -85,6 +104,7 @@ router.get('/lotes-con-saldo',
 router.get('/lotes-por-insumo',
     authenticateToken,
     authorize('read', 'Inventario'),
+    validate(getLotesPorInsumoSchema),
     getLotesPorInsumo
 )
 
@@ -92,6 +112,7 @@ router.get('/lotes-por-insumo',
 router.post('/movimiento-manual',
     authenticateToken,
     authorize('create', 'Inventario'),
+    validate(registrarMovimientoManualSchema),
     registrarMovimientoManual
 )
 export default router
