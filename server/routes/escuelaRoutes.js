@@ -18,47 +18,39 @@ import {
 
 const router = express.Router()
 
-// Todas las rutas requieren autenticación
-router.use(authenticateToken)
-
 // Obtener todas las escuelas
-router.get(
-  '/',
+router.get('/', 
+  authenticateToken,
   authorize('read', 'Escuela'),
-  getEscuelas
-)
+  getEscuelas)
 
 // Obtener una escuela por ID
-router.get(
-  '/:id', 
+router.get('/:id', 
+  authenticateToken,
   authorize('read', 'Escuela'),
   validate(getEscuelaByIdSchema),
-  getEscuelaById
-)
+  getEscuelaById)
 
 // Crear nueva escuela
-router.post(
-  '/', 
+router.post('/', 
+  authenticateToken,
   authorize('create', 'Escuela'),
   validate(createEscuelaSchema),
-  createEscuela
-)
+  createEscuela)
 
 // Actualizar escuela
-router.put(
-  '/:id', 
+router.put('/:id', 
+  authenticateToken,
   authorize('update', 'Escuela'),
   validate(updateEscuelaSchema),
-  updateEscuela
-)
+  updateEscuela)
 
 // Eliminar escuela
-router.delete(
-  '/:id', 
+router.delete('/:id', 
+  authenticateToken,
   authorize('delete', 'Escuela'),
   validate(deleteEscuelaSchema),
-  deleteEscuela
-)
+  deleteEscuela)
 
 export default router
 

@@ -11,40 +11,37 @@ import {
 
 const router = express.Router()
 
-// Todas las rutas requieren autenticación
-router.use(authenticateToken)
-
 // Obtener todos los grupos
-router.get(
-  '/',
+router.get('/',
+  authenticateToken,
   authorize('read', 'Grupo'),
   getGrupos
 )
 
 // Obtener un grupo por ID
-router.get(
-  '/:id',
-    authorize('read', 'Grupo'),
+router.get('/:id',
+  authenticateToken,
+  authorize('read', 'Grupo'),
   getGrupoById
 )
 
 // Crear nuevo grupo
-router.post(
-  '/',
+router.post('/',
+  authenticateToken,
   authorize('create', 'Grupo'),
   createGrupo
 )
 
 // Actualizar grupo
-router.put(
-  '/:id',
+router.put('/:id',
+  authenticateToken,
   authorize('update', 'Grupo'),
   updateGrupo
 )
 
 // Eliminar grupo
-router.delete(
-  '/:id',
+router.delete('/:id',
+  authenticateToken,
   authorize('delete', 'Grupo'),
   deleteGrupo
 )

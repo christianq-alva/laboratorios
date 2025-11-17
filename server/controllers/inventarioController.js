@@ -8,38 +8,49 @@ export const getAllInsumosWithStock = async (req, res) => {
   try {
     const [insumos] = await Inventario.getAllInsumosConSaldo(req.user.rol, req.user.laboratorio_ids)
     res.status(200).json({
+      success: true,
       data: insumos
     })
   } catch (error) {
+    console.error('Error al obtener insumos con stock:', error)
     res.status(500).json({
+      success: false,
       message: error.message
     })
   }
 }
 //Obtener los insumos y su stock de un laboratorio
 export const getInsumosWithStock = async (req, res) => {
-  const { laboratorio_id } = req.query;
   try {
+    // El laboratorio_id ya está validado y transformado por el middleware de validación
+    const { laboratorio_id } = req.query
     const [insumos] = await Inventario.getInsumosConSaldo(laboratorio_id)
     res.status(200).json({
+      success: true,
       data: insumos
     })
   } catch (error) {
+    console.error('Error al obtener insumos con stock por laboratorio:', error)
     res.status(500).json({
+      success: false,
       message: error.message
     })
   }
 }
 //Obtener solo los insumos con stock de un laboratorio
 export const getInsumosWithPositiveStock = async (req, res) => {
-  const { laboratorio_id } = req.query;
   try {
+    // El laboratorio_id ya está validado y transformado por el middleware de validación
+    const { laboratorio_id } = req.query
     const [insumos] = await Inventario.getInsumosConSaldoPositivo(laboratorio_id)
     res.status(200).json({
+      success: true,
       data: insumos
     })
   } catch (error) {
+    console.error('Error al obtener insumos con stock positivo:', error)
     res.status(500).json({
+      success: false,
       message: error.message
     })
   }
@@ -47,6 +58,7 @@ export const getInsumosWithPositiveStock = async (req, res) => {
 // Obtener actividad de movimientos de insumos
 export const getActividadInsumos = async (req, res) => {
   try {
+    // Los parámetros ya están validados y transformados por el middleware de validación
     const { laboratorio_id, fecha_inicio, fecha_fin, tipo_movimiento } = req.query
     const rows = await Inventario.getActividadInsumos(req.user.rol, req.user.laboratorio_ids, laboratorio_id, fecha_inicio, fecha_fin, tipo_movimiento)
     // Convertir fechas al formato ISO para el frontend
@@ -58,6 +70,7 @@ export const getActividadInsumos = async (req, res) => {
       reserva_fecha_fin: row.reserva_fecha_fin ? new Date(row.reserva_fecha_fin).toISOString() : null
     }))
     res.status(200).json({
+      success: true,
       data: actividadConFechasISO,
       total_movimientos: rows.length,
       filtros_aplicados: {
@@ -68,14 +81,16 @@ export const getActividadInsumos = async (req, res) => {
       }
     })
   } catch (error) {
+    console.error('Error al obtener actividad de insumos:', error)
     res.status(500).json({
+      success: false,
       message: error.message
     })
   }
 }
 export const generarPlantillaReabastecimiento = async (req, res) => {
   try {
-    console.log('📊 Generando plantilla Excel para carga masiva...')
+    
     // Obtener todos los insumos y laboratorios con códigos
     const insumos_laboratorios = await Laboratorio.getLaboratorioInsumos()
     // Crear workbook
@@ -138,6 +153,7 @@ export const generarPlantillaReabastecimiento = async (req, res) => {
   } catch (error) {
     console.error('Error generando plantilla Excel:', error)
     res.status(500).json({
+      success: false,
       message: 'Error al generar la plantilla Excel'
     })
   }
@@ -147,10 +163,12 @@ export const procesarArchivoExcel = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
+        success: false,
         message: 'No se ha subido ningún archivo'
       })
     }
-    const { laboratorio_id } = req.query;
+    // El laboratorio_id ya está validado y transformado por el middleware de validación
+    const { laboratorio_id } = req.query
     // Leer el archivo Excel desde el buffer
     const workbook = XLSX.read(req.file.buffer, { type: 'buffer' })
     const sheetName = workbook.SheetNames[0]
@@ -160,6 +178,7 @@ export const procesarArchivoExcel = async (req, res) => {
     // Validar que tenga datos
     if (jsonData.length < 2) {
       return res.status(400).json({
+        success: false,
         message: 'El archivo Excel debe contener al menos una fila de datos además del encabezado'
       })
     }
@@ -171,6 +190,7 @@ export const procesarArchivoExcel = async (req, res) => {
     )
     if (!headersValid) {
       return res.status(400).json({
+        success: false,
         message: 'El archivo debe contener las columnas: CODIGO_INSUMO, LOTE, FECHA_VENCIMIENTO, CANTIDAD'
       })
     }
@@ -206,6 +226,7 @@ export const procesarArchivoExcel = async (req, res) => {
     console.log(laboratorio_id)
     if (datosReabastecimiento.length === 0) {
       return res.status(400).json({
+        success: false,
         message: 'No se encontraron datos válidos para procesar',
         errores: errores
       })
@@ -242,6 +263,7 @@ export const procesarArchivoExcel = async (req, res) => {
       });
     }
     res.status(200).json({
+      success: true,
       message: 'Archivo procesado exitosamente',
       data: {
         archivo: req.file.originalname,
@@ -253,7 +275,9 @@ export const procesarArchivoExcel = async (req, res) => {
       }
     })
   } catch (error) {
+    console.error('Error al procesar archivo Excel:', error)
     res.status(500).json({
+      success: false,
       message: 'Error al procesar el archivo Excel',
       error: error.message
     })
@@ -263,14 +287,16 @@ export const procesarArchivoExcel = async (req, res) => {
 export const ejecutarReabastecimientoMasivo = async (req, res) => {
   const connection = await pool.getConnection()
   try {
+    // Los datos ya están validados y transformados por el middleware de validación
     const { datos_reabastecimiento, fecha_movimiento, motivo_general, laboratorio_id } = req.body
     const userId = req.user.userId
     await Inventario.registrarMovimientoManual(connection, userId, fecha_movimiento, laboratorio_id, 'entrada', motivo_general, null, datos_reabastecimiento)
     res.status(200).json({
+      success: true,
       message: 'Reabastecimiento masivo completado exitosamente',
       data: {
         total_registros: datos_reabastecimiento.length,
-        registros_procesados: 0,
+        registros_procesados: datos_reabastecimiento.length,
         registros_fallidos: 0,
         motivo: motivo_general,
         resultados: []
@@ -278,7 +304,9 @@ export const ejecutarReabastecimientoMasivo = async (req, res) => {
     })
   } catch (error) {
     await connection.rollback()
+    console.error('Error al ejecutar reabastecimiento masivo:', error)
     res.status(500).json({
+      success: false,
       message: 'Error interno al ejecutar el reabastecimiento masivo',
       error: error.message
     })
@@ -289,24 +317,18 @@ export const ejecutarReabastecimientoMasivo = async (req, res) => {
 //Obtener lotes con saldo disponible por laboratorio e insumo
 export const getLotesConSaldo = async (req, res) => {
   try {
+    // Los IDs ya están validados y transformados por el middleware de validación
     const { laboratorio_id, insumo_id } = req.query
-    if (!laboratorio_id) {
-      return res.status(400).json({
-        message: 'El laboratorio_id es requerido'
-      })
-    }
-    if (!insumo_id) {
-      return res.status(400).json({
-        message: 'El insumo_id es requerido'
-      })
-    }
 
-    const lotes = await Inventario.getLotesConSaldo(laboratorio_id, insumo_id);
+    const lotes = await Inventario.getLotesConSaldo(laboratorio_id, insumo_id)
     res.status(200).json({
+      success: true,
       data: lotes
     })
   } catch (error) {
+    console.error('Error al obtener lotes con saldo:', error)
     res.status(500).json({
+      success: false,
       message: 'Error al obtener lotes con saldo',
       error: error.message
     })
@@ -316,27 +338,23 @@ export const getLotesConSaldo = async (req, res) => {
 // Obtener todos los lotes de un insumo agrupados por laboratorio
 export const getLotesPorInsumo = async (req, res) => {
   try {
+    // Los IDs ya están validados y transformados por el middleware de validación
     const { insumo_id, laboratorio_id } = req.query
-    if (!insumo_id) {
-      return res.status(400).json({
-        message: 'El insumo_id es requerido'
-      })
-    }
 
     // Si se proporciona laboratorio_id, filtrar solo ese laboratorio
     let userLaboratorioIds = req.user.laboratorio_ids || []
     if (laboratorio_id) {
-      const labId = parseInt(laboratorio_id)
       // Si el usuario es Jefe de Laboratorio, verificar que el lab solicitado esté en sus labs asignados
       if (req.user.rol === 'Jefe de Laboratorio') {
-        if (userLaboratorioIds.length > 0 && !userLaboratorioIds.includes(labId)) {
+        if (userLaboratorioIds.length > 0 && !userLaboratorioIds.includes(laboratorio_id)) {
           return res.status(403).json({
+            success: false,
             message: 'No tienes acceso a este laboratorio'
           })
         }
       }
       // Filtrar solo el laboratorio solicitado (para cualquier rol)
-      userLaboratorioIds = [labId]
+      userLaboratorioIds = [laboratorio_id]
     } else {
       // Si no se proporciona laboratorio_id pero el usuario es Jefe de Laboratorio, usar sus labs asignados
       if (req.user.rol === 'Jefe de Laboratorio' && userLaboratorioIds.length > 0) {
@@ -348,7 +366,7 @@ export const getLotesPorInsumo = async (req, res) => {
     }
 
     const lotes = await Inventario.getLotesPorInsumo(
-      parseInt(insumo_id),
+      insumo_id,
       req.user.rol,
       userLaboratorioIds
     )
@@ -358,7 +376,9 @@ export const getLotesPorInsumo = async (req, res) => {
       data: lotes
     })
   } catch (error) {
+    console.error('Error al obtener lotes por insumo:', error)
     res.status(500).json({
+      success: false,
       message: 'Error al obtener lotes del insumo',
       error: error.message
     })
@@ -367,13 +387,17 @@ export const getLotesPorInsumo = async (req, res) => {
 
 export const getActividadDetalleInsumos = async (req, res) => {
   try {
+    // Los IDs ya están validados y transformados por el middleware de validación
     const { insumo_id, laboratorio_id } = req.query
     const actividad = await Inventario.getActividadDetalleInsumos(req.user.rol, req.user.laboratorio_ids, laboratorio_id, insumo_id)
     res.status(200).json({
+      success: true,
       data: actividad
     })
   } catch (error) {
+    console.error('Error al obtener actividad detalle de insumos:', error)
     res.status(500).json({
+      success: false,
       message: 'Error al obtener actividad detalle de insumos',
       error: error.message
     })
@@ -385,35 +409,23 @@ export const getActividadDetalleInsumos = async (req, res) => {
 export const registrarMovimientoManual = async (req, res) => {
   const connection = await pool.getConnection()
   try {
+    // Los datos ya están validados y transformados por el middleware de validación
     const { laboratorio_id, tipo_movimiento, fecha_movimiento, observaciones, reserva_id, detalles } = req.body
-    // Validaciones básicas
-    if (!laboratorio_id) {
-      return res.status(400).json({
-        message: 'El laboratorio_id es requerido'
-      })
-    }
-    if (!tipo_movimiento || !['entrada', 'salida'].includes(tipo_movimiento)) {
-      return res.status(400).json({
-        message: 'El tipo_movimiento debe ser "entrada" o "salida"'
-      })
-    }
-    if (!detalles || !Array.isArray(detalles) || detalles.length === 0) {
-      return res.status(400).json({
-        message: 'Los detalles del movimiento son requeridos'
-      })
-    }
+
     const movimientoId = await Inventario.registrarMovimientoManual(connection, req.user.userId, fecha_movimiento, laboratorio_id, tipo_movimiento, observaciones, reserva_id, detalles)
-    //Respuesta
+
     res.status(200).json({
+      success: true,
       message: `Movimiento de ${tipo_movimiento} registrado correctamente`,
       movimiento_id: movimientoId
     })
   } catch (error) {
+    console.error('Error al registrar movimiento manual:', error)
     res.status(500).json({
+      success: false,
       message: error.message || 'Error al registrar el movimiento'
     })
-  }
-  finally {
+  } finally {
     connection.release()
   }
 }

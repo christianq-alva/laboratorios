@@ -10,24 +10,29 @@ import { authenticateToken } from '../middleware/auth.js'
 
 const router = express.Router()
 
-// Middleware de autenticación para todas las rutas
-router.use(authenticateToken)
-
-// 📊 Rutas de Reportes de Consumo
-
 // GET /api/reportes/consumo-resumen - Obtener resumen de consumo mensual/anual
-router.get('/consumo-resumen', getConsumoResumen)
+router.get('/consumo-resumen', 
+  authenticateToken,
+  getConsumoResumen)
 
 // GET /api/reportes/dashboard-ejecutivo - Obtener datos del dashboard ejecutivo
-router.get('/dashboard-ejecutivo', getDashboardEjecutivo)
+router.get('/dashboard-ejecutivo', 
+  authenticateToken,
+  getDashboardEjecutivo)
 
 // GET /api/reportes/top-insumos - Obtener top insumos más consumidos
-router.get('/top-insumos', getTopInsumosConsumidos)
+router.get('/top-insumos', 
+  authenticateToken,
+  getTopInsumosConsumidos)
 
 // GET /api/reportes/analisis-eficiencia - Obtener análisis de eficiencia por laboratorio
-router.get('/analisis-eficiencia', getAnalisisEficiencia)
+router.get('/analisis-eficiencia', 
+  authenticateToken,
+  getAnalisisEficiencia)
 
 // GET /api/reportes/exportar - Exportar reportes en diferentes formatos
-router.get('/exportar', exportarReporte)
+router.get('/exportar', 
+  authenticateToken,
+  exportarReporte)
 
 export default router

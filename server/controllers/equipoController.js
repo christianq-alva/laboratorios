@@ -3,12 +3,14 @@ import { Equipo } from '../models/Equipo.js'
 import XLSX from 'xlsx'
 import { Laboratorio } from '../models/Laboratorio.js'
 import { TipoEquipo } from '../models/TipoEquipo.js'
+
+// Constantes para validación en importación masiva
 const estadosValidos = ['Operativo', 'En Mantenimiento', 'Fuera de Servicio']
 const condicionesValidas = ['Excelente', 'Bueno', 'Regular', 'Malo']
 export const getEquipos = async (req, res) => {
   try {
     const { tipo_equipo_id, estado, laboratorio_id } = req.query
-    
+
     const filters = {}
     if (tipo_equipo_id) {
       filters.tipo_equipo_id = parseInt(tipo_equipo_id)
@@ -19,23 +21,27 @@ export const getEquipos = async (req, res) => {
     if (laboratorio_id) {
       filters.laboratorio_id = parseInt(laboratorio_id)
     }
-    
+
     let equipos = await Equipo.getAll(req.user.rol, req.user.laboratorio_ids, filters)
     res.status(200).json({
+      success: true,
       data: equipos,
       total_equipos: equipos.length
     })
   } catch (error) {
+    console.error('Error al obtener equipos:', error)
     res.status(500).json({
+      success: false,
       message: error.message
     })
   }
 }
 export const getEquipoByLaboratorio = async (req, res) => {
   try {
+    // El laboratorio_id ya está validado y transformado por el middleware de validación
     const { laboratorio_id } = req.params
     const { tipo_equipo_id, estado } = req.query
-    
+
     const filters = {}
     if (tipo_equipo_id) {
       filters.tipo_equipo_id = parseInt(tipo_equipo_id)
@@ -43,19 +49,23 @@ export const getEquipoByLaboratorio = async (req, res) => {
     if (estado) {
       filters.estado = estado
     }
-    
+
     const equipos = await Equipo.getByLaboratorio(laboratorio_id, filters)
     res.status(200).json({
+      success: true,
       data: equipos
     })
   } catch (error) {
+    console.error('Error al obtener equipos por laboratorio:', error)
     res.status(500).json({
+      success: false,
       message: error.message
     })
   }
 }
 export const createEquipo = async (req, res) => {
   try {
+    // Los datos ya están validados y transformados por el middleware de validación
     const {
       codigo,
       nombre,
@@ -70,25 +80,18 @@ export const createEquipo = async (req, res) => {
       condicion = 'Bueno',
       fecha_adquisicion,
       tipo_equipo_id,
-      laboratorio_id,
-      inventario_inicial = []
+      laboratorio_id
     } = req.body
-    // Validar fechas de mantenimiento
-    if (fecha_ultimo_mantenimiento && fecha_proximo_mantenimiento) {
-      const fechaUltimo = new Date(fecha_ultimo_mantenimiento)
-      const fechaProximo = new Date(fecha_proximo_mantenimiento)
-      if (fechaProximo < fechaUltimo) {
-        return res.status(400).json({
-          message: 'La fecha del próximo mantenimiento no puede ser anterior a la fecha del último mantenimiento'
-        })
-      }
-    }
+
+    // Validación de negocio: verificar que el código no exista
     const existingCodigo = await Equipo.existsByCodigo(codigo)
     if (existingCodigo) {
-      return res.status(400).json({
+      return res.status(409).json({
+        success: false,
         message: 'Ya existe otro equipo con ese código'
       })
     }
+
     // Crear el equipo
     const equipo_id = await Equipo.create({
       codigo,
@@ -106,15 +109,18 @@ export const createEquipo = async (req, res) => {
       tipo_equipo_id,
       laboratorio_id
     })
+
     // Registrar actividad de creación
     await Equipo.registrarActividadEquipo({
       accion: 'crear',
       equipo_id: equipo_id,
-      descripcion: `Equipo creado: ${nombre} (${codigo}) - Marca: ${marca || 'N/A'}, Modelo: ${modelo || 'N/A'}, Estado: ${estado}, Condición: ${condicion}. Inventario inicial en ${inventario_inicial.length} laboratorio(s).`,
+      descripcion: `Equipo creado: ${nombre} (${codigo}) - Marca: ${marca || 'N/A'}, Modelo: ${modelo || 'N/A'}, Estado: ${estado}, Condición: ${condicion}.`,
       usuario_id: req.user.userId,
       ip_address: req.ip || req.connection.remoteAddress
     })
+
     res.status(201).json({
+      success: true,
       message: 'Equipo creado exitosamente',
       data: {
         id: equipo_id,
@@ -122,98 +128,97 @@ export const createEquipo = async (req, res) => {
       }
     })
   } catch (error) {
+    console.error('Error al crear equipo:', error)
     res.status(500).json({
+      success: false,
       message: error.message
     })
   }
 }
 export const updateEquipo = async (req, res) => {
   try {
-    const { id } = req.params
-    const equipoId = parseInt(id, 10)
+    // El ID ya está validado y transformado por el middleware de validación
+    const { id: equipoId } = req.params
     const { codigo, nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios, condicion, fecha_adquisicion, tipo_equipo_id, laboratorio_id } = req.body
-    // Validar ID
-    if (isNaN(equipoId) || equipoId <= 0) {
-      return res.status(400).json({
-        message: 'ID de equipo inválido'
-      })
-    }
-    // Validar datos
-    if (!nombre?.trim()) {
-      return res.status(400).json({
-        message: 'Nombre es requerido'
-      })
-    }
-    if (!tipo_equipo_id) {
-      return res.status(400).json({
-        message: 'Tipo de equipo es requerido'
-      })
-    }
-    // Validar fechas de mantenimiento
-    if (fecha_ultimo_mantenimiento && fecha_proximo_mantenimiento) {
-      const fechaUltimo = new Date(fecha_ultimo_mantenimiento)
-      const fechaProximo = new Date(fecha_proximo_mantenimiento)
-      if (fechaProximo < fechaUltimo) {
-        return res.status(400).json({
-          message: 'La fecha del próximo mantenimiento no puede ser anterior a la fecha del último mantenimiento'
-        })
-      }
-    }
+
     // Verificar que el equipo existe
     const existingEquipo = await Equipo.existsById(equipoId)
     if (!existingEquipo) {
       return res.status(404).json({
+        success: false,
         message: 'Equipo no encontrado'
       })
     }
-    const existingCodigo = await Equipo.existsByCodigo(codigo, equipoId)
-    if (existingCodigo) {
-      return res.status(400).json({
-        message: 'Ya existe otro equipo con ese código'
-      })
-    }
+
+    // Obtener información actual del equipo para validaciones de negocio
     const equipoInfo = await Equipo.getById(equipoId)
-    const reservasActivasByLaboratorioId = await Equipo.reservasActivasByLaboratorioId(equipoInfo.id, equipoInfo.laboratorio_id)
-    if (reservasActivasByLaboratorioId && laboratorio_id !== equipoInfo.laboratorio_id) {
-      return res.status(400).json({
-        message: 'No se puede actualizar. El equipo tiene reservas programadas en el laboratorio actual.'
-      })
+
+    // Validación de negocio: verificar que el código no exista (si se está actualizando)
+    if (codigo && codigo !== equipoInfo.codigo) {
+      const existingCodigo = await Equipo.existsByCodigo(codigo, equipoId)
+      if (existingCodigo) {
+        return res.status(409).json({
+          success: false,
+          message: 'Ya existe otro equipo con ese código'
+        })
+      }
     }
-    const affectedRows = await Equipo.update(equipoId, {
-      codigo: codigo.trim(),
-      nombre: nombre.trim(),
-      descripcion: descripcion?.trim() || '',
-      marca: marca?.trim() || '',
-      modelo: modelo?.trim() || '',
-      numero_serie: numero_serie?.trim() || '',
-      estado: estado || 'Operativo',
-      fecha_ultimo_mantenimiento: fecha_ultimo_mantenimiento || null,
-      fecha_proximo_mantenimiento: fecha_proximo_mantenimiento || null,
-      comentarios: comentarios?.trim() || '',
-      condicion: condicion || 'Bueno',
-      fecha_adquisicion: fecha_adquisicion,
-      tipo_equipo_id: tipo_equipo_id,
-      laboratorio_id: laboratorio_id
-    })
+
+    // Validación de negocio: verificar reservas activas si se cambia el laboratorio
+    if (laboratorio_id && laboratorio_id !== equipoInfo.laboratorio_id) {
+      const reservasActivasByLaboratorioId = await Equipo.reservasActivasByLaboratorioId(equipoInfo.id, equipoInfo.laboratorio_id)
+      if (reservasActivasByLaboratorioId) {
+        return res.status(409).json({
+          success: false,
+          message: 'No se puede actualizar. El equipo tiene reservas programadas en el laboratorio actual.'
+        })
+      }
+    }
+
+    // Preparar datos para actualización (usar valores existentes si no se proporcionan)
+    const updateData = {
+      codigo: codigo || equipoInfo.codigo,
+      nombre: nombre || equipoInfo.nombre,
+      descripcion: descripcion !== undefined ? descripcion : equipoInfo.descripcion,
+      marca: marca !== undefined ? marca : equipoInfo.marca,
+      modelo: modelo !== undefined ? modelo : equipoInfo.modelo,
+      numero_serie: numero_serie !== undefined ? numero_serie : equipoInfo.numero_serie,
+      estado: estado || equipoInfo.estado || 'Operativo',
+      fecha_ultimo_mantenimiento: fecha_ultimo_mantenimiento !== undefined ? fecha_ultimo_mantenimiento : equipoInfo.fecha_ultimo_mantenimiento,
+      fecha_proximo_mantenimiento: fecha_proximo_mantenimiento !== undefined ? fecha_proximo_mantenimiento : equipoInfo.fecha_proximo_mantenimiento,
+      comentarios: comentarios !== undefined ? comentarios : equipoInfo.comentarios,
+      condicion: condicion || equipoInfo.condicion || 'Bueno',
+      fecha_adquisicion: fecha_adquisicion !== undefined ? fecha_adquisicion : equipoInfo.fecha_adquisicion,
+      tipo_equipo_id: tipo_equipo_id || equipoInfo.tipo_equipo_id,
+      laboratorio_id: laboratorio_id || equipoInfo.laboratorio_id
+    }
+
+    const affectedRows = await Equipo.update(equipoId, updateData)
     if (affectedRows === 0) {
       return res.status(404).json({
+        success: false,
         message: 'Equipo no encontrado'
       })
     }
+
     // Registrar actividad de actualización
     await Equipo.registrarActividadEquipo({
       accion: 'actualizar',
       equipo_id: equipoId,
-      descripcion: `Equipo actualizado: ${nombre.trim()} - Marca: ${marca?.trim() || 'N/A'}, Modelo: ${modelo?.trim() || 'N/A'}, Estado: ${estado || 'Operativo'}, Condición: ${condicion || 'Bueno'}. Último mant.: ${fecha_ultimo_mantenimiento || 'N/A'}, Próximo mant.: ${fecha_proximo_mantenimiento || 'N/A'}.`,
+      descripcion: `Equipo actualizado: ${updateData.nombre} - Marca: ${updateData.marca || 'N/A'}, Modelo: ${updateData.modelo || 'N/A'}, Estado: ${updateData.estado}, Condición: ${updateData.condicion}. Último mant.: ${updateData.fecha_ultimo_mantenimiento || 'N/A'}, Próximo mant.: ${updateData.fecha_proximo_mantenimiento || 'N/A'}.`,
       usuario_id: req.user.userId,
       ip_address: req.ip || req.connection.remoteAddress
     })
+
     res.status(200).json({
+      success: true,
       message: 'Equipo actualizado exitosamente',
-      data: { id: equipoId, nombre: nombre.trim(), descripcion, marca, modelo, numero_serie, estado }
+      data: { id: equipoId, nombre: updateData.nombre, descripcion: updateData.descripcion, marca: updateData.marca, modelo: updateData.modelo, numero_serie: updateData.numero_serie, estado: updateData.estado }
     })
   } catch (error) {
+    console.error('Error al actualizar equipo:', error)
     res.status(500).json({
+      success: false,
       message: error.message || 'Error interno del servidor'
     })
   }
@@ -222,31 +227,34 @@ export const deleteEquipo = async (req, res) => {
   const connection = await pool.getConnection()
   try {
     await connection.beginTransaction()
-    const { id } = req.params
-    const equipoId = parseInt(id, 10)
-    // Validar ID
-    if (isNaN(equipoId) || equipoId <= 0) {
-      return res.status(400).json({
-        message: 'ID de equipo inválido'
-      })
-    }
-    // Verificar que el equipo existe y capturar información completa
+    // El ID ya está validado y transformado por el middleware de validación
+    const { id: equipoId } = req.params
+
+    // Verificar que el equipo existe
     const existingEquipo = await Equipo.existsById(equipoId)
     if (!existingEquipo) {
+      await connection.rollback()
       return res.status(404).json({
+        success: false,
         message: 'Equipo no encontrado'
       })
     }
+
+    // Validación de negocio: verificar si el equipo está siendo usado en reservas activas
     const reservasActivas = await Equipo.reservasActivas(equipoId)
-    // Verificar si el equipo está siendo usado en reservas activas
     if (reservasActivas) {
-      return res.status(400).json({
+      await connection.rollback()
+      return res.status(409).json({
+        success: false,
         message: 'No se puede eliminar. El equipo está siendo usado en el sistema.'
       })
     }
+
     const equipoInfo = await Equipo.getById(equipoId)
+
     // Eliminar equipo
     await Equipo.delete(equipoId)
+
     // Registrar actividad de eliminación
     await Equipo.registrarActividadEquipo({
       accion: 'eliminar',
@@ -255,143 +263,53 @@ export const deleteEquipo = async (req, res) => {
       usuario_id: req.user.userId,
       ip_address: req.ip || req.connection.remoteAddress
     })
+
+    await connection.commit()
     res.status(200).json({
+      success: true,
       message: 'Equipo eliminado exitosamente'
     })
   } catch (error) {
+    await connection.rollback()
+    console.error('Error al eliminar equipo:', error)
     res.status(500).json({
+      success: false,
       message: 'Error interno al eliminar el equipo'
     })
+  } finally {
+    connection.release()
   }
 }
 // Obtener actividad de equipos (CRUD + movimientos)
 export const getActividadEquipos = async (req, res) => {
   try {
-    const { laboratorio_id, fecha_inicio, fecha_fin, tipo_actividad } = req.query
-    // Consulta para actividad de CRUD (crear, actualizar, eliminar)
-    let queryCRUD = `
-      SELECT 
-        'crud' as tipo_registro,
-        a.id,
-        a.accion as tipo_movimiento,
-        a.fecha_actividad as fecha_movimiento,
-        a.descripcion as observaciones,
-        a.equipo_codigo,
-        a.equipo_nombre,
-        a.equipo_marca,
-        a.equipo_modelo,
-        a.usuario_nombre,
-        a.usuario_rol,
-        NULL as laboratorio_nombre,
-        NULL as cantidad,
-        NULL as reserva_descripcion
-      FROM vista_actividad_equipos a
-      WHERE 1=1
-    `
-    // Consulta para movimientos de equipos (reservas, devoluciones)
-    let queryMovimientos = `
-      SELECT 
-        'movimiento' as tipo_registro,
-        m.id,
-        m.tipo_movimiento,
-        m.fecha_movimiento,
-        m.observaciones,
-        e.codigo as equipo_codigo,
-        e.nombre as equipo_nombre,
-        e.marca as equipo_marca,
-        e.modelo as equipo_modelo,
-        u.nombre_completo as usuario_nombre,
-        r.nombre as usuario_rol,
-        l.nombre as laboratorio_nombre,
-        m.cantidad,
-        res.descripcion as reserva_descripcion
-      FROM movimientos_equipos m
-      INNER JOIN equipos e ON m.equipo_id = e.id
-      INNER JOIN laboratorios l ON m.laboratorio_id = l.id
-      INNER JOIN usuarios u ON m.usuario_id = u.id
-      INNER JOIN roles r ON u.rol_id = r.id
-      LEFT JOIN reservas res ON m.reserva_id = res.id
-      WHERE 1=1
-    `
-    const params = []
-    // Filtros según permisos del usuario
-    if (req.user.rol === 'Jefe de Laboratorio') {
-      // Para movimientos, filtrar por laboratorios del usuario
-      queryMovimientos += ` AND m.laboratorio_id IN (${req.user.laboratorio_ids.join(',')})`
+    const { laboratorio_id, fecha_inicio, fecha_fin, tipo_movimiento } = req.query
+
+    const filters = {
+      laboratorio_id: laboratorio_id ? parseInt(laboratorio_id) : null,
+      fecha_inicio: fecha_inicio ? fecha_inicio : null,
+      fecha_fin: fecha_fin ? fecha_fin : null,
+      tipo_movimiento: tipo_movimiento ? tipo_movimiento : null
     }
-    // Filtros opcionales para ambas consultas
-    if (laboratorio_id) {
-      queryMovimientos += ` AND m.laboratorio_id = ?`
-      params.push(laboratorio_id)
-    }
-    if (fecha_inicio) {
-      queryCRUD += ` AND DATE(a.fecha_actividad) >= ?`
-      queryMovimientos += ` AND DATE(m.fecha_movimiento) >= ?`
-      params.push(fecha_inicio)
-    }
-    if (fecha_fin) {
-      queryCRUD += ` AND DATE(a.fecha_actividad) <= ?`
-      queryMovimientos += ` AND DATE(m.fecha_movimiento) <= ?`
-      params.push(fecha_fin)
-    }
-    if (tipo_actividad) {
-      if (tipo_actividad === 'crud') {
-        // Solo actividad CRUD
-        queryCRUD += ` ORDER BY a.fecha_actividad DESC LIMIT 100`
-        queryMovimientos = 'SELECT NULL LIMIT 0' // Query vacía
-      } else if (tipo_actividad === 'movimientos') {
-        // Solo movimientos
-        queryMovimientos += ` ORDER BY m.fecha_movimiento DESC LIMIT 100`
-        queryCRUD = 'SELECT NULL LIMIT 0' // Query vacía
-      } else {
-        queryCRUD += ` ORDER BY a.fecha_actividad DESC`
-        queryMovimientos += ` ORDER BY m.fecha_movimiento DESC`
-      }
-    } else {
-      queryCRUD += ` ORDER BY a.fecha_actividad DESC`
-      queryMovimientos += ` ORDER BY m.fecha_movimiento DESC`
-    }
-    // Ejecutar ambas consultas
-    const [rowsCRUD] = await pool.execute(queryCRUD, params)
-    const [rowsMovimientos] = await pool.execute(queryMovimientos, params)
-    // Combinar y ordenar resultados por fecha
-    let combinedResults = [...rowsCRUD, ...rowsMovimientos]
-      .filter(row => row.id !== null) // Filtrar resultados nulos de queries vacías
-      .sort((a, b) => new Date(b.fecha_movimiento) - new Date(a.fecha_movimiento))
-      .slice(0, 100) // Limitar a 100 registros totales
-    // Convertir fechas al formato ISO para el frontend
-    const actividadConFechasISO = combinedResults.map(row => ({
-      ...row,
-      fecha_movimiento: row.fecha_movimiento ? new Date(row.fecha_movimiento).toISOString() : null
-    }))
-    console.log('📊 Actividad de equipos encontrada:', {
-      crud: rowsCRUD.length,
-      movimientos: rowsMovimientos.length,
-      total: combinedResults.length
-    })
-    res.json({
-      data: actividadConFechasISO,
-      total_registros: combinedResults.length,
-      desglose: {
-        actividad_crud: rowsCRUD.length,
-        movimientos: rowsMovimientos.length
-      },
-      filtros_aplicados: {
-        laboratorio_id: laboratorio_id || null,
-        fecha_inicio: fecha_inicio || null,
-        fecha_fin: fecha_fin || null,
-        tipo_actividad: tipo_actividad || null
-      }
+
+    const rows = await Equipo.getActividadEquipos(req.user.rol, req.user.laboratorio_ids, filters)
+
+    res.status(200).json({
+      success: true,
+      data: rows,
+      filtros_aplicados: filters
     })
   } catch (error) {
     console.error('Error en getActividadEquipos:', error)
-    res.status(500).json({ message: error.message })
+    res.status(500).json({
+      success: false,
+      message: error.message
+    })
   }
 }
 // Generar plantilla Excel para importación masiva de equipos
 export const generarPlantillaImportacionEquipos = async (req, res) => {
   try {
-    console.log('📊 Generando plantilla Excel para importación masiva de equipos...')
     // Obtener laboratorios para referencia
     const laboratorios = await Laboratorio.getAll()
     // Obtener tipos de equipo para referencia
@@ -521,10 +439,10 @@ export const generarPlantillaImportacionEquipos = async (req, res) => {
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     res.setHeader('Content-Disposition', `attachment; filename=plantilla_equipos_${timestamp}.xlsx`)
     res.send(buffer)
-    console.log('✅ Plantilla Excel de equipos generada y enviada')
   } catch (error) {
     console.error('❌ Error al generar plantilla Excel de equipos:', error)
     res.status(500).json({
+      success: false,
       message: 'Error al generar la plantilla Excel de equipos'
     })
   }
@@ -534,19 +452,19 @@ export const previsualizarImportacionMasivaEquipos = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
+        success: false,
         message: 'No se ha proporcionado ningún archivo'
       })
     }
-    console.log('📊 Previsualizando importación masiva de equipos...')
-    console.log('📁 Archivo recibido:', req.file.originalname, 'Tamaño:', req.file.size)
     // Leer archivo Excel
     const workbook = XLSX.read(req.file.buffer, { type: 'buffer' })
     const sheetName = workbook.SheetNames[0]
     const worksheet = workbook.Sheets[sheetName]
     const data = XLSX.utils.sheet_to_json(worksheet)
-    console.log('📋 Registros encontrados en Excel:', data.length)
+
     if (data.length === 0) {
       return res.status(400).json({
+        success: false,
         message: 'El archivo Excel está vacío o no tiene el formato correcto'
       })
     }
@@ -654,8 +572,8 @@ export const previsualizarImportacionMasivaEquipos = async (req, res) => {
         errores: erroresFila
       })
     }
-    console.log(`📊 Previsualización de equipos completada: ${previewData.length} filas procesadas`)
-    res.json({
+    res.status(200).json({
+      success: true,
       data: previewData,
       total_filas: previewData.length,
       errores_generales: erroresGenerales
@@ -663,6 +581,7 @@ export const previsualizarImportacionMasivaEquipos = async (req, res) => {
   } catch (error) {
     console.error('❌ Error en previsualización de equipos:', error)
     res.status(500).json({
+      success: false,
       message: 'Error interno en la previsualización de equipos',
       error: error.message
     })
@@ -675,6 +594,7 @@ export const importacionMasivaEquipos = async (req, res) => {
     await connection.beginTransaction()
     if (!req.file) {
       return res.status(400).json({
+        success: false,
         message: 'No se ha proporcionado ningún archivo'
       })
     }
@@ -685,6 +605,7 @@ export const importacionMasivaEquipos = async (req, res) => {
     const data = XLSX.utils.sheet_to_json(worksheet)
     if (data.length === 0) {
       return res.status(400).json({
+        success: false,
         message: 'El archivo Excel está vacío o no tiene el formato correcto'
       })
     }
@@ -834,12 +755,14 @@ export const importacionMasivaEquipos = async (req, res) => {
     if (errores.length > 0 && procesados === 0) {
       await connection.rollback()
       return res.status(400).json({
+        success: false,
         message: 'No se pudo procesar ningún registro',
         errores: errores
       })
     }
     await connection.commit()
-    res.json({
+    res.status(200).json({
+      success: true,
       message: `Importación completada: ${procesados} equipos creados`,
       procesados: procesados,
       errores: errores.length,
@@ -848,7 +771,9 @@ export const importacionMasivaEquipos = async (req, res) => {
     })
   } catch (error) {
     await connection.rollback()
+    console.error('Error en importación masiva de equipos:', error)
     res.status(500).json({
+      success: false,
       message: 'Error interno en la importación masiva de equipos',
       error: error.message
     })

@@ -88,7 +88,7 @@ export const getConsumoResumen = async (req, res) => {
     query += ` ORDER BY periodo DESC, l.nombre, i.categoria, total_consumido DESC`
     const [rows] = await pool.execute(query, params)
     console.log('📈 Datos de consumo encontrados:', rows.length)
-    res.json({
+    res.status(200).json({
       data: rows,
       filtros: {
         tipo_periodo,
@@ -245,7 +245,7 @@ export const getDashboardEjecutivo = async (req, res) => {
       categorias: consumoPorCategoria.length,
       meses: tendenciaMensual.length
     })
-    res.json({
+    res.status(200).json({
       data: {
         metricas_generales: metricas[0],
         consumo_por_laboratorio: consumoPorLab,
@@ -326,7 +326,7 @@ export const getTopInsumosConsumidos = async (req, res) => {
     query += ` LIMIT ${parseInt(limite) || 20}`
     const [rows] = await pool.execute(query, params)
     console.log('🏆 Top insumos encontrados:', rows.length)
-    res.json({
+    res.status(200).json({
       data: rows,
       filtros: {
         fecha_inicio: fecha_inicio || null,
@@ -404,7 +404,7 @@ export const getAnalisisEficiencia = async (req, res) => {
     query += ` ORDER BY total_consumo DESC`
     const [rows] = await pool.execute(query, params)
     console.log('⚡ Análisis de eficiencia generado:', rows.length)
-    res.json({
+    res.status(200).json({
       data: rows,
       filtros: {
         fecha_inicio: fecha_inicio || null,
@@ -469,7 +469,7 @@ export const exportarReporte = async (req, res) => {
       res.send(csv)
     } else {
       // Retornar JSON
-      res.json({
+      res.status(200).json({
         data: datos,
         tipo_reporte,
         fecha_generacion: new Date().toISOString()

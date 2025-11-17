@@ -1,29 +1,38 @@
 import { pool } from '../config/database.js'
+import bcrypt from 'bcryptjs'
 
 export const User = {
   findByCredentials: async (usuario, contrasena) => {
-    // Primero obtener datos básicos del usuario
+    // Obtener usuario con su contraseña hasheada
     const userQuery = `
       SELECT 
         u.id,
         u.nombre_completo,
         u.usuario,
+        u.contrasena,
         u.laboratorio_ids,
         u.estado,
         r.id as rol_id,
         r.nombre as rol_nombre
       FROM usuarios u
       JOIN roles r ON u.rol_id = r.id
-      WHERE u.usuario = ? AND u.contrasena = ?
+      WHERE u.usuario = ?
     `;
 
-    const [userRows] = await pool.execute(userQuery, [usuario, contrasena])
+    const [userRows] = await pool.execute(userQuery, [usuario])
 
     if (userRows.length === 0) {
       return null
     }
 
     const user = userRows[0]
+
+    // Comparar contraseña con bcrypt
+    const isPasswordValid = await bcrypt.compare(contrasena, user.contrasena)
+
+    if (!isPasswordValid) {
+      return null
+    }
 
     return user
   },
@@ -148,11 +157,15 @@ export const User = {
         }
       }
 
-      // Insertar usuario
+      // Hashear la contraseña antes de guardarla
+      const saltRounds = 10
+      const hashedPassword = await bcrypt.hash(data.contrasena, saltRounds)
+
+      // Insertar usuario con contraseña hasheada
       const [result] = await connection.execute(
         `INSERT INTO usuarios (nombre_completo, usuario, contrasena, rol_id, laboratorio_ids) 
          VALUES (?, ?, ?, ?, ?)`,
-        [data.nombre_completo, data.usuario, data.contrasena, data.rol_id, laboratorioIdsJson]
+        [data.nombre_completo, data.usuario, hashedPassword, data.rol_id, laboratorioIdsJson]
       )
 
       await connection.commit()
@@ -196,8 +209,11 @@ export const User = {
         values.push(data.usuario)
       }
       if (data.contrasena) {
+        // Hashear la nueva contraseña antes de actualizar
+        const saltRounds = 10
+        const hashedPassword = await bcrypt.hash(data.contrasena, saltRounds)
         updates.push('contrasena = ?')
-        values.push(data.contrasena)
+        values.push(hashedPassword)
       }
       if (data.rol_id) {
         updates.push('rol_id = ?')

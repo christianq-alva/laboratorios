@@ -21,14 +21,8 @@ export const createInsumo = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Insumo creado exitosamente',
-      data: {
-        id: insumo_id,
-        codigo: codigo,
-        nombre,
-        unidad_medida,
-        categoria
-      }
+      message: 'Insumo creado exitosamente'
+
     })
   } catch (error) {
     console.error('Error al crear insumo:', error)
@@ -72,13 +66,7 @@ export const updateInsumo = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Insumo actualizado exitosamente',
-      data: {
-        id: insumoId,
-        nombre,
-        descripcion: descripcion || '',
-        unidad_medida
-      }
+      message: 'Insumo actualizado exitosamente'
     })
   } catch (error) {
     console.error('Error al actualizar insumo:', error)
@@ -270,7 +258,9 @@ export const generarPlantillaImportacion = async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename=plantilla_insumos_${timestamp}.xlsx`)
     res.send(buffer)
   } catch (error) {
+    console.error('Error al generar plantilla Excel de insumos:', error)
     res.status(500).json({
+      success: false,
       message: 'Error al generar la plantilla Excel'
     })
   }
@@ -280,6 +270,7 @@ export const previsualizarImportacionMasiva = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
+        success: false,
         message: 'No se ha proporcionado ningún archivo'
       })
     }
@@ -290,6 +281,7 @@ export const previsualizarImportacionMasiva = async (req, res) => {
     const data = XLSX.utils.sheet_to_json(worksheet)
     if (data.length === 0) {
       return res.status(400).json({
+        success: false,
         message: 'El archivo Excel está vacío o no tiene el formato correcto'
       })
     }
@@ -327,12 +319,15 @@ export const previsualizarImportacionMasiva = async (req, res) => {
       })
     }
     res.status(200).json({
+      success: true,
       data: previewData,
       total_filas: previewData.length,
       errores_generales: erroresGenerales
     })
   } catch (error) {
+    console.error('Error en previsualización de importación masiva de insumos:', error)
     res.status(500).json({
+      success: false,
       message: 'Error interno en la previsualización',
       error: error.message
     })
@@ -344,7 +339,9 @@ export const importacionMasiva = async (req, res) => {
   try {
     await connection.beginTransaction()
     if (!req.file) {
+      await connection.rollback()
       return res.status(400).json({
+        success: false,
         message: 'No se ha proporcionado ningún archivo'
       })
     }
@@ -354,7 +351,9 @@ export const importacionMasiva = async (req, res) => {
     const worksheet = workbook.Sheets[sheetName]
     const data = XLSX.utils.sheet_to_json(worksheet)
     if (data.length === 0) {
+      await connection.rollback()
       return res.status(400).json({
+        success: false,
         message: 'El archivo Excel está vacío o no tiene el formato correcto'
       })
     }
@@ -396,12 +395,14 @@ export const importacionMasiva = async (req, res) => {
     if (errores.length > 0 && procesados === 0) {
       await connection.rollback()
       return res.status(400).json({
+        success: false,
         message: 'No se pudo procesar ningún registro',
         errores: errores
       })
     }
     await connection.commit()
     res.status(200).json({
+      success: true,
       message: `Importación completada: ${procesados} insumos creados`,
       procesados: procesados,
       errores: errores.length,
@@ -410,7 +411,9 @@ export const importacionMasiva = async (req, res) => {
     })
   } catch (error) {
     await connection.rollback()
+    console.error('Error en importación masiva de insumos:', error)
     res.status(500).json({
+      success: false,
       message: 'Error interno en la importación masiva',
       error: error.message
     })

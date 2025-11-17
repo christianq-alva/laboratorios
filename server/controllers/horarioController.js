@@ -65,6 +65,7 @@ const verificarCruceHorarios = async (connection, laboratorio_id, docente_id, fe
 // Obtener actividad de horarios
 export const getActividadHorarios = async (req, res) => {
   try {
+    // Los parámetros ya están validados y transformados por el middleware de validación
     const { laboratorio_id, fecha_inicio, fecha_fin, accion, usuario_id } = req.query
     const rows = await Horario.getActividadHorarios(req.user.rol, req.user.laboratorio_ids, laboratorio_id, fecha_inicio, fecha_fin, accion, usuario_id)
     // Mantener las fechas como están (la conversión se hará en el frontend)
@@ -74,11 +75,14 @@ export const getActividadHorarios = async (req, res) => {
       fecha_actividad: new Date(row.fecha_actividad).toISOString()
     }))
     res.status(200).json({
+      success: true,
       data: rowsWithTimeZone,
       total: rows.length
     })
   } catch (error) {
+    console.error('Error al obtener actividad de horarios:', error)
     res.status(500).json({
+      success: false,
       message: error.message
     })
   }
@@ -87,10 +91,13 @@ export const getHorarios = async (req, res) => {
   try {
     const horarios = await Horario.getAllHorarios(req.user.rol, req.user.laboratorio_ids)
     res.status(200).json({
+      success: true,
       data: horarios
     })
   } catch (error) {
+    console.error('Error al obtener horarios:', error)
     res.status(500).json({
+      success: false,
       message: error.message
     })
   }
@@ -98,17 +105,19 @@ export const getHorarios = async (req, res) => {
 // Obtener un horario específico por ID
 export const getHorario = async (req, res) => {
   try {
-    const { id } = req.params
-    const horario = await Horario.getHorarioById(id)
+    // El ID ya está validado y transformado por el middleware de validación
+    const { id: horarioId } = req.params
+    const horario = await Horario.getHorarioById(horarioId)
     if (!horario) {
       return res.status(404).json({
+        success: false,
         message: 'Horario no encontrado o sin permisos para verlo'
       })
     }
     // 🔍 OBTENER INSUMOS DEL HORARIO
-    const insumos = await Horario.getInsumosRequeridosByHorario(id)
+    const insumos = await Horario.getInsumosRequeridosByHorario(horarioId)
     // Cargar equipos del horario
-    const equipos = await Horario.getEquiposRequeridosByHorario(id)
+    const equipos = await Horario.getEquiposRequeridosByHorario(horarioId)
     const horarioConInsumos = {
       ...horario,
       insumos: insumos,
@@ -116,11 +125,13 @@ export const getHorario = async (req, res) => {
     }
 
     res.status(200).json({
+      success: true,
       data: horarioConInsumos
     })
   } catch (error) {
-    console.log('error', error)
+    console.error('Error al obtener horario:', error)
     res.status(500).json({
+      success: false,
       message: error.message
     })
   }
@@ -128,6 +139,7 @@ export const getHorario = async (req, res) => {
 export const createHorario = async (req, res) => {
   const connection = await pool.getConnection()
   try {
+    // Los datos ya están validados y transformados por el middleware de validación
     const {
       laboratorio_id,
       docente_id,
@@ -140,29 +152,26 @@ export const createHorario = async (req, res) => {
       insumos = [],
       equipos = []
     } = req.body
-    // Validación: Verificar que no hay valores undefined o vacíos
-    if (!laboratorio_id || !docente_id || !grupo_id || !descripcion || !fecha_inicio || !fecha_fin || !cantidad_alumnos || !color) {
-      return res.status(400).json({
-        message: 'Todos los campos son requeridos: laboratorio_id, docente_id, grupo_id, descripcion, fecha_inicio, fecha_fin'
-      })
-    }
+
     // Convertir fechas a formato MySQL
     const fechaInicioMySQL = convertirFechaParaMySQL(fecha_inicio)
     const fechaFinMySQL = convertirFechaParaMySQL(fecha_fin)
 
-    // Validación: Verificar que el grupo existe y obtener su información
+    // Validación de negocio: Verificar que el grupo existe y obtener su información
     const grupoInfo = await Grupo.getGrupoById(grupo_id)
     if (!grupoInfo) {
       await connection.rollback()
-      return res.status(400).json({
+      return res.status(404).json({
+        success: false,
         message: 'El grupo seleccionado no existe'
       })
     }
-    // Validación: Verificar que el docente existe (sin restricción de escuela)
+    // Validación de negocio: Verificar que el docente existe (sin restricción de escuela)
     const docenteInfo = await Docente.getById(docente_id)
     if (!docenteInfo) {
       await connection.rollback()
-      return res.status(400).json({
+      return res.status(404).json({
+        success: false,
         message: 'Docente no encontrado'
       })
     }
@@ -204,6 +213,7 @@ export const createHorario = async (req, res) => {
       ip_address: req.ip || req.connection.remoteAddress
     })
     res.status(201).json({
+      success: true,
       message: 'Horario creado correctamente',
       data: {
         reserva_id: reserva_id,
@@ -213,8 +223,9 @@ export const createHorario = async (req, res) => {
     })
   } catch (error) {
     await connection.rollback()
-    console.log('error', error)
+    console.error('Error al crear horario:', error)
     res.status(500).json({
+      success: false,
       message: error.message
     })
   } finally {
@@ -224,8 +235,8 @@ export const createHorario = async (req, res) => {
 export const updateHorario = async (req, res) => {
   const connection = await pool.getConnection()
   try {
-    const { id } = req.params
-    const horarioId = parseInt(id, 10)
+    // El ID ya está validado y transformado por el middleware de validación
+    const { id: horarioId } = req.params
     const {
       laboratorio_id,
       docente_id,
@@ -238,28 +249,26 @@ export const updateHorario = async (req, res) => {
       insumos = [],
       equipos = []
     } = req.body
-    // Validación: Verificar que no hay valores undefined o vacíos
-    if (!laboratorio_id || !docente_id || !grupo_id || !descripcion || !fecha_inicio || !fecha_fin) {
-      return res.status(400).json({
-        message: 'Todos los campos son requeridos: laboratorio_id, docente_id, grupo_id, descripcion, fecha_inicio, fecha_fin'
-      })
-    }
+
     // Convertir fechas a formato MySQL
     const fechaInicioMySQL = convertirFechaParaMySQL(fecha_inicio)
     const fechaFinMySQL = convertirFechaParaMySQL(fecha_fin)
-    // Validación: Verificar que el grupo existe y obtener su información
+
+    // Validación de negocio: Verificar que el grupo existe y obtener su información
     const grupoInfo = await Grupo.getGrupoById(grupo_id)
     if (!grupoInfo) {
       await connection.rollback()
-      return res.status(400).json({
+      return res.status(404).json({
+        success: false,
         message: 'El grupo seleccionado no existe'
       })
     }
-    // Validación: Verificar que el docente existe (sin restricción de escuela)
+    // Validación de negocio: Verificar que el docente existe (sin restricción de escuela)
     const docenteInfo = await Docente.getById(docente_id)
     if (!docenteInfo) {
       await connection.rollback()
-      return res.status(400).json({
+      return res.status(404).json({
+        success: false,
         message: 'Docente no encontrado'
       })
     }
@@ -275,15 +284,18 @@ export const updateHorario = async (req, res) => {
     if (cruce) {
       await connection.rollback()
       return res.status(409).json({
+        success: false,
         message: `Conflicto de horario: ${cruce.mensaje}`,
         tipo_conflicto: cruce.tipo,
         conflicto_detalle: cruce.conflicto
       })
     }
-    // Obtener datos del horario
+    // Validación de negocio: Obtener datos del horario
     const horarioExists = await Horario.exitsById(horarioId)
     if (!horarioExists) {
+      await connection.rollback()
       return res.status(404).json({
+        success: false,
         message: 'Horario no encontrado'
       })
     }
@@ -304,6 +316,7 @@ export const updateHorario = async (req, res) => {
       ip_address: req.ip || req.connection.remoteAddress
     })
     res.status(200).json({
+      success: true,
       message: 'Horario actualizado correctamente',
       validaciones: {
         escuela: grupoInfo.escuela,
@@ -315,9 +328,10 @@ export const updateHorario = async (req, res) => {
       equipos_nuevos: equipos.length
     })
   } catch (error) {
-    console.log('error', error)
+    console.error('Error al actualizar horario:', error)
     await connection.rollback()
     res.status(500).json({
+      success: false,
       message: error.message
     })
   } finally {
@@ -328,12 +342,15 @@ export const deleteHorario = async (req, res) => {
   const connection = await pool.getConnection()
   try {
     await connection.beginTransaction()
-    const { id } = req.params
-    const horarioId = parseInt(id, 10) // ← Convertir a número
+    // El ID ya está validado y transformado por el middleware de validación
+    const { id: horarioId } = req.params
+
+    // Validación de negocio: Verificar que el horario existe
     const horarioExists = await Horario.exitsById(horarioId)
     if (!horarioExists) {
       await connection.rollback()
       return res.status(404).json({
+        success: false,
         message: 'Horario no encontrado'
       })
     }
@@ -341,7 +358,8 @@ export const deleteHorario = async (req, res) => {
     const horario = await Horario.getHorarioById(horarioId)
     if (horario.estado === 'C') {
       await connection.rollback()
-      return res.status(400).json({
+      return res.status(409).json({
+        success: false,
         message: 'Horario cerrado, no se puede eliminar'
       })
     }
@@ -360,6 +378,7 @@ export const deleteHorario = async (req, res) => {
       ip_address: req.ip || req.connection.remoteAddress
     })
     res.status(200).json({
+      success: true,
       message: 'Horario eliminado correctamente',
       data: {
         id: horario.id
@@ -367,7 +386,9 @@ export const deleteHorario = async (req, res) => {
     })
   } catch (error) {
     await connection.rollback()
+    console.error('Error al eliminar horario:', error)
     res.status(500).json({
+      success: false,
       message: error.message
     })
   } finally {
@@ -376,9 +397,11 @@ export const deleteHorario = async (req, res) => {
 }
 // 🔍 VERIFICAR DISPONIBILIDAD DE HORARIO
 export const verificarDisponibilidad = async (req, res) => {
+  const connection = await pool.getConnection()
   try {
+    // Los datos ya están validados y transformados por el middleware de validación
     const { laboratorio_id, docente_id, fecha_inicio, fecha_fin, horario_id } = req.body
-    const connection = await pool.getConnection()
+
     const cruce = await verificarCruceHorarios(
       connection,
       laboratorio_id,
@@ -387,73 +410,76 @@ export const verificarDisponibilidad = async (req, res) => {
       fecha_fin,
       horario_id // ← Pasar el horario_id para excluirlo
     )
-    connection.release()
+
     if (cruce) {
-      res.json({
+      res.status(200).json({
+        success: true,
         disponible: false,
         motivo: cruce.mensaje,
         tipo_conflicto: cruce.tipo,
         conflicto_detalle: cruce.conflicto
       })
     } else {
-      res.json({
+      res.status(200).json({
+        success: true,
         disponible: true,
         mensaje: 'Horario disponible - sin conflictos'
       })
     }
   } catch (error) {
+    console.error('Error al verificar disponibilidad:', error)
     res.status(500).json({
+      success: false,
       message: error.message
     })
+  } finally {
+    connection.release()
   }
 }
 // Cerrar horario y registrar consumo de insumos
 export const cerrarHorario = async (req, res) => {
   const connection = await pool.getConnection()
   try {
+    await connection.beginTransaction()
+    // Los datos ya están validados y transformados por el middleware de validación
     const { laboratorio_id, tipo_movimiento, fecha_movimiento, observaciones, reserva_id, detalles } = req.body
-    // Validaciones básicas
-    if (!laboratorio_id) {
-      return res.status(400).json({
-        message: 'El laboratorio_id es requerido'
-      })
-    }
-    if (!tipo_movimiento || !['entrada', 'salida'].includes(tipo_movimiento)) {
-      return res.status(400).json({
-        message: 'El tipo_movimiento debe ser "entrada" o "salida"'
-      })
-    }
-    if (!detalles || !Array.isArray(detalles) || detalles.length === 0) {
-      return res.status(400).json({
-        message: 'Los detalles del movimiento son requeridos'
-      })
-    }
-    // Obtener datos del horario
+
+    // Validación de negocio: Obtener datos del horario
     const horarioExists = await Horario.exitsById(reserva_id)
     if (!horarioExists) {
+      await connection.rollback()
       return res.status(404).json({
+        success: false,
         message: 'Horario no encontrado'
       })
     }
-    const estadoHorario = await Horario.estadoHorario(reserva_id);
+    const estadoHorario = await Horario.estadoHorario(reserva_id)
     if (estadoHorario) {
-      return res.status(404).json({
+      await connection.rollback()
+      return res.status(409).json({
+        success: false,
         message: 'El Horario está cerrado'
       })
     }
     //Cerrar horario
-    await Horario.cerrarHorario(reserva_id, connection);
-    //Registrar salida de inventario
-    const movimientoId = await Inventario.registrarMovimientoManual(connection, req.user.userId, fecha_movimiento, laboratorio_id, tipo_movimiento, observaciones, reserva_id, detalles);
-    //Respuesta
+    await Horario.cerrarHorario(reserva_id, connection)
+    //Registrar salida de inventario (esta función maneja su propia transacción, pero usamos la misma connection)
+    // Nota: registrarMovimientoManual inicia su propia transacción, así que necesitamos usar sus métodos internos
+    const movimientoId = await Inventario.insertarMovimiento(connection, req.user.userId, fecha_movimiento, laboratorio_id, tipo_movimiento, reserva_id, observaciones)
+    await Inventario.procesarDetallesMovimiento(connection, movimientoId, tipo_movimiento, detalles)
+    await connection.commit()
     res.status(200).json({
+      success: true,
       message: 'Horario cerrado correctamente',
       data: {
         movimiento_id: movimientoId
       }
     })
   } catch (error) {
+    await connection.rollback()
+    console.error('Error al cerrar horario:', error)
     res.status(500).json({
+      success: false,
       message: error.message || 'Error al cerrar el horario'
     })
   } finally {
@@ -464,13 +490,17 @@ export const cerrarHorario = async (req, res) => {
 // Obtener insumos requeridos por horario
 export const getInsumosRequeridosById = async (req, res) => {
   try {
-    const { id } = req.params
-    const insumos = await Horario.getInsumosRequeridosById(id)
+    // El ID ya está validado y transformado por el middleware de validación
+    const { id: horarioId } = req.params
+    const insumos = await Horario.getInsumosRequeridosById(horarioId)
     res.status(200).json({
+      success: true,
       data: insumos
     })
   } catch (error) {
+    console.error('Error al obtener insumos requeridos:', error)
     res.status(500).json({
+      success: false,
       message: error.message
     })
   }
