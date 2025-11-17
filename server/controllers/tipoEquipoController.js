@@ -1,31 +1,34 @@
 import { TipoEquipo } from '../models/TipoEquipo.js'
-import moment from 'moment-timezone'
 
-const TIMEZONE = 'America/Lima'
-
-export const getAll = async (req, res) => {
+export const getAll = async (res) => {
   // Obtener todos los tipos de equipo
   try {
     const tipos = await TipoEquipo.getAll()
     res.status(200).json({
+      success: true,
       data: tipos
     })
   } catch (error) {
+    console.error('Error al obtener tipos de equipo:', error)
     res.status(500).json({
+      success: false,
       message: 'Error al obtener tipos de equipo'
     })
   }
 }
 
 // Obtener solo tipos activos
-export const getActivos = async (req, res) => {
+export const getActivos = async (res) => {
   try {
     const tipos = await TipoEquipo.getActivos()
     res.status(200).json({
+      success: true,
       data: tipos
     })
   } catch (error) {
+    console.error('Error al obtener tipos activos:', error)
     res.status(500).json({
+      success: false,
       message: 'Error al obtener tipos activos'
     })
   }
@@ -34,29 +37,25 @@ export const getActivos = async (req, res) => {
 // Obtener un tipo por ID
 export const getById = async (req, res) => {
   try {
-    const { id } = req.params
-    const tipoId = parseInt(id, 10)
-
-    // Validar ID
-    if (isNaN(tipoId) || tipoId <= 0) {
-      return res.status(400).json({
-        message: 'ID de tipo de equipo inválido'
-      })
-    }
+    const { id: tipoId } = req.params
 
     const tipo = await TipoEquipo.getById(tipoId)
 
     if (!tipo) {
       return res.status(404).json({
+        success: false,
         message: 'Tipo de equipo no encontrado'
       })
     }
 
     res.status(200).json({
+      success: true,
       data: tipo
     })
   } catch (error) {
+    console.error('Error al obtener tipo de equipo:', error)
     res.status(500).json({
+      success: false,
       message: 'Error al obtener tipo de equipo'
     })
   }
@@ -65,46 +64,29 @@ export const getById = async (req, res) => {
 // Crear un nuevo tipo de equipo
 export const createTipoEquipo = async (req, res) => {
   try {
+    // Los datos ya están validados y transformados por el middleware de validación
     const { nombre, descripcion } = req.body
 
-    // Validaciones
-    if (!nombre || nombre.trim() === '') {
-      return res.status(400).json({
-        message: 'El nombre es obligatorio'
-      })
-    }
-
-    if (nombre.length > 100) {
-      return res.status(400).json({
-        message: 'El nombre no puede exceder 100 caracteres'
-      })
-    }
-
-    if (descripcion && descripcion.length > 255) {
-      return res.status(400).json({
-        message: 'La descripción no puede exceder 255 caracteres'
-      })
-    }
-
-    const tipoId = await TipoEquipo.create({
-      nombre: nombre.trim(),
-      descripcion: descripcion?.trim() || null
+    await TipoEquipo.create({
+      nombre,
+      descripcion
     })
 
-    const nuevoTipo = await TipoEquipo.getById(tipoId)
-
     res.status(201).json({
-      message: 'Tipo de equipo creado exitosamente',
-      data: nuevoTipo
+      success: true,
+      message: 'Tipo de equipo creado exitosamente'
     })
   } catch (error) {
     if (error.message.includes('Ya existe')) {
       return res.status(409).json({
+        success: false,
         message: error.message
       })
     }
 
+    console.error('Error al crear tipo de equipo:', error)
     res.status(500).json({
+      success: false,
       message: 'Error al crear tipo de equipo'
     })
   }
@@ -113,51 +95,27 @@ export const createTipoEquipo = async (req, res) => {
 // Actualizar un tipo de equipo
 export const updateTipoEquipo = async (req, res) => {
   try {
-    const { id } = req.params
-    const tipoId = parseInt(id, 10)
+    // El ID y los datos ya están validados y transformados por el middleware de validación
+    const { id: tipoId } = req.params
     const { nombre, descripcion } = req.body
-
-    // Validar ID
-    if (isNaN(tipoId) || tipoId <= 0) {
-      return res.status(400).json({
-        message: 'ID de tipo de equipo inválido'
-      })
-    }
 
     // Verificar que el tipo existe
     const tipoExistente = await TipoEquipo.getById(tipoId)
     if (!tipoExistente) {
       return res.status(404).json({
+        success: false,
         message: 'Tipo de equipo no encontrado'
       })
     }
 
-    // Validaciones
-    if (!nombre || nombre.trim() === '') {
-      return res.status(400).json({
-        message: 'El nombre es obligatorio'
-      })
-    }
-
-    if (nombre.length > 100) {
-      return res.status(400).json({
-        message: 'El nombre no puede exceder 100 caracteres'
-      })
-    }
-
-    if (descripcion && descripcion.length > 255) {
-      return res.status(400).json({
-        message: 'La descripción no puede exceder 255 caracteres'
-      })
-    }
-
     const actualizado = await TipoEquipo.update(tipoId, {
-      nombre: nombre.trim(),
-      descripcion: descripcion?.trim() || null
+      nombre,
+      descripcion
     })
 
     if (!actualizado) {
       return res.status(404).json({
+        success: false,
         message: 'No se pudo actualizar el tipo de equipo'
       })
     }
@@ -165,17 +123,21 @@ export const updateTipoEquipo = async (req, res) => {
     const tipoActualizado = await TipoEquipo.getById(tipoId)
 
     res.status(200).json({
+      success: true,
       message: 'Tipo de equipo actualizado exitosamente',
       data: tipoActualizado
     })
   } catch (error) {
     if (error.message.includes('Ya existe')) {
       return res.status(409).json({
+        success: false,
         message: error.message
       })
     }
 
+    console.error('Error al actualizar tipo de equipo:', error)
     res.status(500).json({
+      success: false,
       message: 'Error al actualizar tipo de equipo'
     })
   }
@@ -184,20 +146,14 @@ export const updateTipoEquipo = async (req, res) => {
 // Eliminar un tipo de equipo
 export const deleteTipoEquipo = async (req, res) => {
   try {
-    const { id } = req.params
-    const tipoId = parseInt(id, 10)
-
-    // Validar ID
-    if (isNaN(tipoId) || tipoId <= 0) {
-      return res.status(400).json({
-        message: 'ID de tipo de equipo inválido'
-      })
-    }
+    // El ID ya está validado y transformado por el middleware de validación
+    const { id: tipoId } = req.params
 
     // Verificar que el tipo existe
     const tipoExistente = await TipoEquipo.getById(tipoId)
     if (!tipoExistente) {
       return res.status(404).json({
+        success: false,
         message: 'Tipo de equipo no encontrado'
       })
     }
@@ -206,16 +162,19 @@ export const deleteTipoEquipo = async (req, res) => {
 
     if (!eliminado) {
       return res.status(404).json({
+        success: false,
         message: 'No se pudo eliminar el tipo de equipo'
       })
     }
 
     res.status(200).json({
+      success: true,
       message: 'Tipo de equipo eliminado exitosamente'
     })
   } catch (error) {
     if (error.message.includes('tiene') && error.message.includes('asociado')) {
       return res.status(409).json({
+        success: false,
         message: error.message
       })
     }
@@ -223,11 +182,14 @@ export const deleteTipoEquipo = async (req, res) => {
     // Manejar errores de restricción de clave foránea
     if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.code === 'ER_ROW_IS_REFERENCED') {
       return res.status(409).json({
+        success: false,
         message: 'No se puede eliminar el tipo porque tiene equipos asociados'
       })
     }
 
+    console.error('Error al eliminar tipo de equipo:', error)
     res.status(500).json({
+      success: false,
       message: 'Error al eliminar tipo de equipo'
     })
   }
@@ -235,14 +197,16 @@ export const deleteTipoEquipo = async (req, res) => {
 
 // Contar equipos por tipo
 export const getAllWithCountEquipos = async (req, res) => {
-
   try {
     const tiposWithCount = await TipoEquipo.getAllWithCountEquipos()
     res.status(200).json({
+      success: true,
       data: tiposWithCount
     })
   } catch (error) {
+    console.error('Error al contar equipos:', error)
     res.status(500).json({
+      success: false,
       message: 'Error al contar equipos'
     })
   }

@@ -10,6 +10,13 @@ import {
 } from '../controllers/tipoEquipoController.js'
 import { authenticateToken } from '../middleware/auth.js'
 import { authorize } from '../middleware/authorize.js'
+import {
+  validate,
+  createTipoEquipoSchema,
+  updateTipoEquipoSchema,
+  getTipoEquipoByIdSchema,
+  deleteTipoEquipoSchema
+} from '../validations/index.js'
 
 const router = express.Router()
 
@@ -38,24 +45,28 @@ router.get(
 router.get(
   '/:id',
   authorize('read', 'TipoEquipo'),
+  validate(getTipoEquipoByIdSchema),
   getById
 )
 
 router.post(
   '/',
   authorize('create', 'TipoEquipo'),
+  validate(createTipoEquipoSchema),
   createTipoEquipo
 )
 
 router.put(
   '/:id',
   authorize('update', 'TipoEquipo'),
+  validate(updateTipoEquipoSchema),
   updateTipoEquipo
 )
 
 router.delete(
   '/:id',
   authorize('delete', 'TipoEquipo'),
+  validate(deleteTipoEquipoSchema),
   deleteTipoEquipo
 )
 

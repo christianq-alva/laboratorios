@@ -327,7 +327,7 @@ export const Horarios: React.FC = () => {
       <HorarioDetalle
         open={detalleOpen}
         onClose={handleDetalleClose}
-        horarioId={selectedHorarioId}
+        horarioId={selectedHorarioId || 0}
       />
 
       {/* Modal de actividad */}

@@ -10,6 +10,15 @@ import {
   getInsumosLaboratorio,
   configurarInsumosLaboratorio
 } from '../controllers/laboratorioController.js'
+import {
+  validate,
+  createLaboratorioSchema,
+  updateLaboratorioSchema,
+  deleteLaboratorioSchema,
+  changeEstadoLaboratorioSchema,
+  getInsumosLaboratorioSchema,
+  configurarInsumosLaboratorioSchema
+} from '../validations/index.js'
 
 const router = express.Router()
 
@@ -24,6 +33,7 @@ router.get('/',
 router.post('/',
   authenticateToken,
   authorize('create', 'Laboratorio'),
+  validate(createLaboratorioSchema),
   createLaboratorio
 )
 
@@ -31,6 +41,7 @@ router.post('/',
 router.put('/:id',
   authenticateToken,
   authorize('update', 'Laboratorio'),
+  validate(updateLaboratorioSchema),
   updateLaboratorio
 )
 
@@ -38,6 +49,7 @@ router.put('/:id',
 router.delete('/:id',
   authenticateToken,
   authorize('update', 'Laboratorio'),
+  validate(deleteLaboratorioSchema),
   deleteLaboratorio
 )
 
@@ -45,6 +57,7 @@ router.delete('/:id',
 router.patch('/:id/estado',
   authenticateToken,
   authorize('update', 'Laboratorio'),
+  validate(changeEstadoLaboratorioSchema),
   changeEstadoLaboratorio
 )
 
@@ -52,6 +65,7 @@ router.patch('/:id/estado',
 router.get('/:id/insumos',
   authenticateToken,
   authorize('read', 'Laboratorio'),
+  validate(getInsumosLaboratorioSchema),
   getInsumosLaboratorio
 )
 
@@ -59,6 +73,7 @@ router.get('/:id/insumos',
 router.put('/:id/insumos',
   authenticateToken,
   authorize('update', 'Laboratorio'),
+  validate(configurarInsumosLaboratorioSchema),
   configurarInsumosLaboratorio
 )
 

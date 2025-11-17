@@ -1,72 +1,57 @@
 import { Laboratorio } from '../models/Laboratorio.js'
 import { Escuela } from '../models/Escuela.js'
-const estadosValidos = ['Activo', 'En Mantenimiento', 'Inhabilitado', 'Baja']
 // Obtener todos los laboratorios
 export const getLaboratorios = async (req, res) => {
   try {
     const laboratorios = await Laboratorio.getAllByUser(req.user.rol, req.user.laboratorio_ids)
     res.status(200).json({
-      data: laboratorios,
-      //user_role: req.user.rol,
-      //cantidad_laboratorios: laboratorios.length
+      success: true,
+      data: laboratorios
     })
   } catch (error) {
+    console.error('Error al obtener laboratorios:', error)
     res.status(500).json({
-      message: error.message
+      success: false,
+      message: 'Error al obtener laboratorios'
     })
   }
 }
 // Crear nuevo laboratorio
 export const createLaboratorio = async (req, res) => {
   try {
-    const { codigo, nombre, ubicacion, escuela_id, piso, estado = 'Activo' } = req.body
-    console.log('🔍 Creando laboratorio:', { codigo, nombre, ubicacion, escuela_id, piso, estado })
-    // Validaciones básicas
-    if (!codigo || !codigo.trim()) {
-      return res.status(400).json({
-        message: 'El código del laboratorio es requerido'
-      })
-    }
-    if (!nombre || !nombre.trim()) {
-      return res.status(400).json({
-        message: 'El nombre del laboratorio es requerido'
-      })
-    }
-    if (!ubicacion || !ubicacion.trim()) {
-      return res.status(400).json({
-        message: 'La ubicación del laboratorio es requerida'
-      })
-    }
-    if (!piso || !piso.toString().trim()) {
-      return res.status(400).json({
-        message: 'El piso del laboratorio es requerido'
-      })
-    }
-    // Validar que la escuela existe
+    // Los datos ya están validados y transformados por el middleware de validación
+    const { codigo, nombre, ubicacion, escuela_id, piso, estado } = req.body
+
+    // Validar que la escuela existe (validación de negocio)
     const escuelaCheck = await Escuela.exists(escuela_id)
     if (!escuelaCheck) {
       return res.status(400).json({
+        success: false,
         message: 'La escuela seleccionada no existe'
       })
     }
+
     // Insertar laboratorio
-    const insertId = await Laboratorio.create(codigo.trim(), nombre.trim(), ubicacion.trim(), escuela_id, piso.toString().trim(), estado)
-    // Respuesta exitosa
+    const insertId = await Laboratorio.create(codigo, nombre, ubicacion, escuela_id, piso, estado)
+
     res.status(201).json({
+      success: true,
       data: {
         id: insertId,
-        codigo: codigo.trim(),
-        nombre: nombre.trim(),
-        ubicacion: ubicacion.trim(),
+        codigo,
+        nombre,
+        ubicacion,
         escuela_id,
-        piso: piso.toString().trim(),
+        piso,
         estado,
         escuela: ''
       },
       message: 'Laboratorio creado correctamente'
     })
   } catch (error) {
+    console.error('Error al crear laboratorio:', error)
     res.status(500).json({
+      success: false,
       message: 'Error interno del servidor'
     })
   }
@@ -74,51 +59,74 @@ export const createLaboratorio = async (req, res) => {
 // Actualizar laboratorio
 export const updateLaboratorio = async (req, res) => {
   try {
-    const { id } = req.params
+    // El ID ya está validado y transformado por el middleware de validación
+    const { id: laboratorioId } = req.params
     const { codigo, nombre, ubicacion, escuela_id, piso, estado } = req.body
-    // Verificar que el laboratorio existe
-    const labCheck = await Laboratorio.exists(id)
-    if (!labCheck) {
+
+    // Obtener el laboratorio actual para usar sus valores si no se proporcionan nuevos
+    const laboratorioActual = await Laboratorio.getLaboratorioById(laboratorioId)
+    if (!laboratorioActual) {
       return res.status(404).json({
+        success: false,
         message: 'Laboratorio no encontrado'
-      })
-    }
-    // Validar que la escuela existe
-    const escuelaCheck = await Escuela.exists(escuela_id)
-    if (!escuelaCheck) {
-      return res.status(400).json({
-        message: 'La escuela seleccionada no existe'
       })
     }
 
-    // Validaciones básicas
-    if (!codigo || !codigo.trim()) {
-      return res.status(400).json({
-        message: 'El código del laboratorio es requerido'
-      })
+    // Usar valores proporcionados o mantener los actuales
+    const codigoFinal = codigo || laboratorioActual.codigo
+    const nombreFinal = nombre !== undefined ? nombre : laboratorioActual.nombre
+    const ubicacionFinal = ubicacion !== undefined ? ubicacion : laboratorioActual.ubicacion
+    const escuelaIdFinal = escuela_id !== undefined ? escuela_id : laboratorioActual.escuela_id
+    const pisoFinal = piso !== undefined ? piso : laboratorioActual.piso
+    const estadoFinal = estado || laboratorioActual.estado
+
+    // Validar que la escuela existe si se proporciona (validación de negocio)
+    if (escuela_id !== undefined) {
+      const escuelaCheck = await Escuela.exists(escuelaIdFinal)
+      if (!escuelaCheck) {
+        return res.status(400).json({
+          success: false,
+          message: 'La escuela seleccionada no existe'
+        })
+      }
     }
-    // Actualizar laboratorio incluyendo el código y estado
-    const affectedRows = await Laboratorio.update(id, codigo.trim(), nombre, ubicacion, escuela_id, piso, estado || 'Activo')
+
+    // Actualizar laboratorio
+    const affectedRows = await Laboratorio.update(
+      laboratorioId,
+      codigoFinal,
+      nombreFinal,
+      ubicacionFinal,
+      escuelaIdFinal,
+      pisoFinal,
+      estadoFinal
+    )
+
     if (affectedRows === 0) {
       return res.status(404).json({
+        success: false,
         message: 'Laboratorio no encontrado'
       })
     }
+
     res.status(200).json({
+      success: true,
       data: {
-        id: parseInt(id),
-        codigo: codigo.trim(),
-        nombre,
-        ubicacion,
-        escuela_id,
-        piso,
-        estado: estado || 'Activo',
+        id: laboratorioId,
+        codigo: codigoFinal,
+        nombre: nombreFinal,
+        ubicacion: ubicacionFinal,
+        escuela_id: escuelaIdFinal,
+        piso: pisoFinal,
+        estado: estadoFinal,
         escuela: ''
       },
       message: 'Laboratorio actualizado correctamente'
     })
   } catch (error) {
+    console.error('Error al actualizar laboratorio:', error)
     res.status(500).json({
+      success: false,
       message: 'Error interno del servidor'
     })
   }
@@ -126,33 +134,42 @@ export const updateLaboratorio = async (req, res) => {
 // Eliminar laboratorio
 export const deleteLaboratorio = async (req, res) => {
   try {
-    const { id } = req.params
+    // El ID ya está validado y transformado por el middleware de validación
+    const { id: laboratorioId } = req.params
+
     // Verificar que el laboratorio existe
-    const labCheck = await Laboratorio.exists(id)
+    const labCheck = await Laboratorio.exists(laboratorioId)
     if (!labCheck) {
       return res.status(404).json({
+        success: false,
         message: 'Laboratorio no encontrado'
       })
     }
 
     // Eliminar laboratorio
-    const affectedRows = await Laboratorio.delete(id)
+    const affectedRows = await Laboratorio.delete(laboratorioId)
     if (affectedRows === 0) {
       return res.status(404).json({
+        success: false,
         message: 'Laboratorio no encontrado'
       })
     }
+
     res.status(200).json({
+      success: true,
       message: 'Laboratorio eliminado correctamente'
     })
   } catch (error) {
     // Manejar errores de restricción de clave foránea
     if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.code === 'ER_ROW_IS_REFERENCED') {
       return res.status(400).json({
+        success: false,
         message: 'No se puede eliminar el laboratorio porque está relacionado con otras tablas del sistema y tiene datos asociados (equipos, insumos, horarios, incidencias u otros registros). Primero debes eliminar o reasignar estos registros para poder eliminar el laboratorio.'
       })
     }
+    console.error('Error al eliminar laboratorio:', error)
     res.status(500).json({
+      success: false,
       message: 'Error interno del servidor'
     })
   }
@@ -160,40 +177,42 @@ export const deleteLaboratorio = async (req, res) => {
 // Cambiar estado de un laboratorio
 export const changeEstadoLaboratorio = async (req, res) => {
   try {
-    const { id } = req.params
+    // El ID y estado ya están validados por el middleware de validación
+    const { id: laboratorioId } = req.params
     const { estado } = req.body
+
     // Validar que el laboratorio existe
-    const labCheck = await Laboratorio.exists(id)
+    const labCheck = await Laboratorio.exists(laboratorioId)
     if (!labCheck) {
       return res.status(404).json({
+        success: false,
         message: 'Laboratorio no encontrado'
-      })
-    }
-    // Validar estado
-    if (!estadosValidos.includes(estado)) {
-      return res.status(400).json({
-        message: `Estado inválido. Debe ser uno de: ${estadosValidos.join(', ')}`
       })
     }
 
     // Actualizar solo el estado
-    const affectedRows = await Laboratorio.updateEstado(id, estado)
+    const affectedRows = await Laboratorio.updateEstado(laboratorioId, estado)
     if (affectedRows === 0) {
       return res.status(404).json({
+        success: false,
         message: 'Laboratorio no encontrado'
       })
     }
+
     res.status(200).json({
+      success: true,
       data: {
-        id: parseInt(id),
+        id: laboratorioId,
         estado_anterior: '',
         estado_nuevo: estado
       },
       message: `Estado cambiado a "${estado}" correctamente`
     })
   } catch (error) {
+    console.error('Error al cambiar estado del laboratorio:', error)
     res.status(500).json({
-      message: error.message
+      success: false,
+      message: 'Error interno del servidor'
     })
   }
 }
@@ -201,20 +220,14 @@ export const changeEstadoLaboratorio = async (req, res) => {
 // Obtener insumos configurados para un laboratorio
 export const getInsumosLaboratorio = async (req, res) => {
   try {
-    const { id } = req.params
-    const laboratorioId = parseInt(id, 10)
-
-    // Validar ID
-    if (isNaN(laboratorioId) || laboratorioId <= 0) {
-      return res.status(400).json({
-        message: 'ID de laboratorio inválido'
-      })
-    }
+    // El ID ya está validado y transformado por el middleware de validación
+    const { id: laboratorioId } = req.params
 
     // Verificar que el laboratorio existe
     const labCheck = await Laboratorio.exists(laboratorioId)
     if (!labCheck) {
       return res.status(404).json({
+        success: false,
         message: 'Laboratorio no encontrado'
       })
     }
@@ -222,11 +235,13 @@ export const getInsumosLaboratorio = async (req, res) => {
     const insumos = await Laboratorio.getInsumosByLaboratorio(laboratorioId)
 
     res.status(200).json({
+      success: true,
       data: insumos
     })
   } catch (error) {
     console.error('Error al obtener insumos del laboratorio:', error)
     res.status(500).json({
+      success: false,
       message: 'Error al obtener insumos del laboratorio'
     })
   }
@@ -235,49 +250,33 @@ export const getInsumosLaboratorio = async (req, res) => {
 // Configurar insumos para un laboratorio
 export const configurarInsumosLaboratorio = async (req, res) => {
   try {
-    const { id } = req.params
+    // El ID y insumo_ids ya están validados por el middleware de validación
+    const { id: laboratorioId } = req.params
     const { insumo_ids } = req.body
-    const laboratorioId = parseInt(id, 10)
-
-    // Validar ID
-    if (isNaN(laboratorioId) || laboratorioId <= 0) {
-      return res.status(400).json({
-        message: 'ID de laboratorio inválido'
-      })
-    }
-
-    // Validar que insumo_ids sea un array
-    if (!Array.isArray(insumo_ids)) {
-      return res.status(400).json({
-        message: 'insumo_ids debe ser un array'
-      })
-    }
 
     // Verificar que el laboratorio existe
     const labCheck = await Laboratorio.exists(laboratorioId)
     if (!labCheck) {
       return res.status(404).json({
+        success: false,
         message: 'Laboratorio no encontrado'
       })
     }
 
-    // Validar que todos los insumo_ids sean números válidos
-    const insumoIdsValidos = insumo_ids
-      .map(id => parseInt(id, 10))
-      .filter(id => !isNaN(id) && id > 0)
-
-    await Laboratorio.configurarInsumos(laboratorioId, insumoIdsValidos)
+    await Laboratorio.configurarInsumos(laboratorioId, insumo_ids)
 
     res.status(200).json({
+      success: true,
       message: 'Insumos configurados correctamente',
       data: {
         laboratorio_id: laboratorioId,
-        insumos_configurados: insumoIdsValidos.length
+        insumos_configurados: insumo_ids.length
       }
     })
   } catch (error) {
     console.error('Error al configurar insumos del laboratorio:', error)
     res.status(500).json({
+      success: false,
       message: 'Error al configurar insumos del laboratorio'
     })
   }
