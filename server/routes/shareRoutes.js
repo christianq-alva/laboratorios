@@ -8,6 +8,7 @@ import {
   deleteShareLink
 } from '../controllers/shareController.js'
 import { authorize } from '../middleware/authorize.js'
+import { publicLimiter } from '../middleware/rateLimiter.js'
 import {
   validate,
   createShareLinkSchema,
@@ -39,8 +40,9 @@ router.delete('/delete/:id',
   validate(deleteShareLinkSchema),
   deleteShareLink)
 
-// Rutas públicas (sin autenticación)
+// Rutas públicas (sin autenticación) - con rate limiting
 router.get('/public/:laboratorio_id', 
+  publicLimiter,
   validate(getPublicHorariosSchema),
   getPublicHorarios)
 

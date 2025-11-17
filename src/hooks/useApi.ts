@@ -23,6 +23,17 @@ export const useApi = () => {
         } catch (error) {
             const apiError = error as ApiError
 
+            // Manejar errores 429 (Rate Limiting)
+            if (apiError.isRateLimited) {
+                const errorData = (apiError.response?.data as any)
+                const retryAfter = apiError.retryAfter || 900
+                const minutes = Math.ceil(retryAfter / 60)
+                
+                return {
+                    error: errorData?.message || `Demasiadas peticiones. Intenta de nuevo en ${minutes} minuto(s).`
+                }
+            }
+
             // Manejar errores 401 (logout + redirect)
             if (apiError.isUnauthorized) {
                 // Verificar si es un intento de login 

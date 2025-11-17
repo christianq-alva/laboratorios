@@ -3,6 +3,7 @@ import cors from 'cors'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { testConnection } from './config/database.js'
+import { generalLimiter } from './middleware/rateLimiter.js'
 import authRoutes from './routes/authRoutes.js'
 import laboratorioRoutes from './routes/laboratorioRoutes.js'
 import horarioRoutes from './routes/horarioRoutes.js'
@@ -29,6 +30,15 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 app.use(express.json())
+
+// Configurar Express para confiar en el proxy (necesario para obtener IP real en producción)
+app.set('trust proxy', 1)
+
+// ============================================
+// RATE LIMITING GLOBAL
+// ============================================
+// Aplicar rate limiting general a todas las rutas /api
+app.use('/api', generalLimiter)
 
 // CORS abierto solo para rutas /api (full-stack mismo dominio)
 app.use('/api', cors({ origin: true, credentials: true }))

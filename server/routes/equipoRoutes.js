@@ -1,6 +1,7 @@
 import express from 'express'
 import { authenticateToken } from '../middleware/auth.js'
 import { authorize } from '../middleware/authorize.js'
+import { heavyOperationLimiter } from '../middleware/rateLimiter.js'
 import { 
   getEquipos,
   getEquipoByLaboratorio,
@@ -83,6 +84,7 @@ router.delete('/:id',
 router.post('/previsualizar-importacion', 
   authenticateToken,
   authorize('create', 'Equipo'),
+  heavyOperationLimiter,
   upload.single('archivo_excel'),
   previsualizarImportacionMasivaEquipos
 )
@@ -90,6 +92,7 @@ router.post('/previsualizar-importacion',
 router.post('/importacion-masiva', 
   authenticateToken,
   authorize('create', 'Equipo'),
+  heavyOperationLimiter,
   upload.single('archivo_excel'),
   importacionMasivaEquipos
 )

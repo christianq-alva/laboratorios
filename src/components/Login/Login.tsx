@@ -28,17 +28,23 @@ export const Login: React.FC = () => {
   const [contrasena, setContrasena] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const { login, loading } = useAuth()
+  const { login } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setIsSubmitting(true)
 
-    const result = await login({ usuario, contrasena })
+    try {
+      const result = await login({ usuario, contrasena })
 
-    if (!result.success) {
-      setError(result.message || 'Error al iniciar sesión')
+      if (!result.success) {
+        setError(result.message || 'Error al iniciar sesión')
+      }
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -121,7 +127,7 @@ export const Login: React.FC = () => {
                   value={usuario}
                   onChange={(e) => setUsuario(e.target.value)}
                   required
-                  disabled={loading}
+                  disabled={isSubmitting}
                   placeholder="Ingresa tu usuario"
                   InputProps={{
                     startAdornment: (
@@ -178,7 +184,7 @@ export const Login: React.FC = () => {
                   value={contrasena}
                   onChange={(e) => setContrasena(e.target.value)}
                   required
-                  disabled={loading}
+                  disabled={isSubmitting}
                   placeholder="Ingresa tu contraseña"
                   InputProps={{
                     startAdornment: (
@@ -239,7 +245,7 @@ export const Login: React.FC = () => {
                 type="submit"
                 fullWidth
                 variant="contained"
-                disabled={loading}
+                disabled={isSubmitting}
                 sx={{
                   py: 1.5,
                   borderRadius: 2,
@@ -261,7 +267,7 @@ export const Login: React.FC = () => {
                   transition: 'all 0.2s ease',
                 }}
               >
-                {loading ? (
+                {isSubmitting ? (
                   <>
                     <CircularProgress size={16} sx={{ mr: 2, color: 'white' }} />
                     Iniciando sesión...

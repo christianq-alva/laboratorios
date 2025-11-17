@@ -15,6 +15,8 @@ export interface ApiError extends AxiosError {
   isNetworkError?: boolean
   isValidationError?: boolean
   isServerError?: boolean
+  isRateLimited?: boolean
+  retryAfter?: number
   validationErrors?: Record<string, string[]>
 }
 
@@ -57,6 +59,18 @@ api.interceptors.response.use(
       apiError.isNetworkError = false
       apiError.isValidationError = status === 400 || status === 422
       apiError.isServerError = status >= 500
+      apiError.isRateLimited = status === 429
+
+      // Extraer retryAfter si es rate limit
+      if (status === 429) {
+        const retryAfterHeader = error.response.headers['retry-after']
+        const retryAfterData = errorData?.retryAfter
+        apiError.retryAfter = retryAfterHeader 
+          ? parseInt(retryAfterHeader, 10) 
+          : retryAfterData || 900
+        
+        console.warn('🚫 Rate limit alcanzado. Reintentar después de:', apiError.retryAfter, 'segundos')
+      }
 
       // Extraer errores de validación si existen
       if (apiError.isValidationError && error.response.data) {

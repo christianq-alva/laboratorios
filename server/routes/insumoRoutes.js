@@ -1,6 +1,7 @@
 import express from 'express'
 import { authenticateToken } from '../middleware/auth.js'
 import { authorize } from '../middleware/authorize.js'
+import { heavyOperationLimiter } from '../middleware/rateLimiter.js'
 import {
   createInsumo,
   updateInsumo,
@@ -61,6 +62,7 @@ router.get('/plantilla-importacion',
 router.post('/previsualizar-importacion',
   authenticateToken,
   authorize('create', 'Insumo'),
+  heavyOperationLimiter,
   upload.single('archivo_excel'),
   previsualizarImportacionMasiva
 )
@@ -69,6 +71,7 @@ router.post('/previsualizar-importacion',
 router.post('/importacion-masiva',
   authenticateToken,
   authorize('create', 'Insumo'),
+  heavyOperationLimiter,
   upload.single('archivo_excel'),
   importacionMasiva
 )
