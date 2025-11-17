@@ -190,7 +190,7 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
             required
             disabled={loading}
             sx={{ mb: 2 }}
-            placeholder="Ej: LAB-001, COMP-01, BIO-A1"
+            placeholder="Ej.: LAB-001, COMP-01, BIO-A1"
             helperText="Puedes usar cualquier código que desees. No tiene que ser único."
           />
 
@@ -202,7 +202,7 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
             required
             disabled={loading}
             sx={{ mb: 2 }}
-            placeholder="Ej: Laboratorio de Cómputo 1"
+            placeholder="Ej.: Laboratorio de Cómputo 1"
           />
 
           <TextField
@@ -213,7 +213,7 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
             required
             disabled={loading}
             sx={{ mb: 2 }}
-            placeholder="Ej: Pabellón A, Pabellón B, Pabellón C, etc"
+            placeholder="Ej.: Pabellón A, Pabellón B, Pabellón C, etc"
           />
 
           <TextField
@@ -224,7 +224,7 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
             required
             disabled={loading}
             sx={{ mb: 2 }}
-            placeholder="Ej: 1, 2, 3, 4, etc"
+            placeholder="Ej.: 1, 2, 3, 4, etc"
           />
 
           <FormControl fullWidth sx={{ mb: 2 }}>

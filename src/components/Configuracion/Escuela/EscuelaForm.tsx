@@ -122,7 +122,7 @@ export const EscuelaForm: React.FC<EscuelaFormProps> = ({ open, onClose, onSucce
             required
             disabled={loading}
             autoFocus
-            placeholder="Ej: Escuela Profesional de Ingeniería de Sistemas"
+            placeholder="Ej.: Escuela Profesional de Ingeniería de Sistemas"
             helperText="Ingrese el nombre completo de la escuela profesional"
           />
         </DialogContent>

@@ -92,8 +92,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
   }
 
   // Enviar formulario
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault()
+  const handleSubmit = async () => {
     if (!validateForm()) return
 
     setLoading(true)
@@ -197,7 +196,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
                 label="Unidad de Medida"
                 value={formData.unidad_medida}
                 onChange={(e) => handleInputChange('unidad_medida', e.target.value)}
-                placeholder="ej: unidades, kg, litros, etc."
+                placeholder="Ej.: unidad, kg, litros, etc."
                 required
                 sx={{ minWidth: 200 }}
               />
@@ -250,7 +249,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
                 label="Presentación"
                 value={formData.presentacion}
                 onChange={(e) => handleInputChange('presentacion', e.target.value)}
-                placeholder="ej: Frasco 500ml, Caja x 100 unidades"
+                placeholder="Ej.: Frasco 500ml, Caja x 100 unidades"
                 sx={{ minWidth: 250, flex: 1 }}
               />
             </Box>

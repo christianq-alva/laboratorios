@@ -230,7 +230,7 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
                   label="Fecha (DD/MM/YYYY)"
                   value={filtroFecha}
                   onChange={(e) => setFiltroFecha(e.target.value)}
-                  placeholder="Ej: 15/12/2024"
+                  placeholder="Ej.: 15/12/2024"
                   sx={{ minWidth: 150 }}
                 />
 
@@ -373,7 +373,7 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
             fullWidth
             size="small"
             sx={{ mb: 2 }}
-            placeholder="Ej: Equipo de computación no funciona"
+            placeholder="Ej.: Equipo de computación no funciona"
             helperText={
               titulo.length === 0
                 ? "Describe brevemente el problema (mínimo 30 caracteres)"

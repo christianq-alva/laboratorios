@@ -251,7 +251,7 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
                   label="Código de Activo"
                   value={formData.codigo}
                   onChange={(e) => setFormData(prev => ({ ...prev, codigo: e.target.value }))}
-                  placeholder="Ej: EQP-0001"
+                  placeholder="Ej.: EQP-0001"
                   disabled={loading}
                   required
                 />
@@ -261,7 +261,7 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
                   label="Nombre del equipo"
                   value={formData.nombre}
                   onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
-                  placeholder="Ej: Microscopio Óptico, Balanza Analítica..."
+                  placeholder="Ej.: Microscopio Óptico, Balanza Analítica..."
                   disabled={loading}
                   required
                 />
@@ -283,7 +283,7 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
                     label="Marca"
                     value={formData.marca}
                     onChange={(e) => setFormData(prev => ({ ...prev, marca: e.target.value }))}
-                    placeholder="Ej: Olympus, Mettler Toledo..."
+                    placeholder="Ej.: Olympus, Mettler Toledo..."
                     disabled={loading}
                   />
 
@@ -292,7 +292,7 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
                     label="Modelo"
                     value={formData.modelo}
                     onChange={(e) => setFormData(prev => ({ ...prev, modelo: e.target.value }))}
-                    placeholder="Ej: CX23, ML204..."
+                    placeholder="Ej.: CX23, ML204..."
                     disabled={loading}
                   />
                 </Box>

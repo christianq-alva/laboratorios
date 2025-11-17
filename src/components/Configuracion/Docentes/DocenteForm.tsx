@@ -75,15 +75,6 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
           ? parseInt(docente.escuela_id)
           : docente.escuela_id || 0
 
-        console.log('📝 Cargando datos del docente para edición:', {
-          nombre: docente.nombre,
-          escuela_id_original: docente.escuela_id,
-          escuela_id_parseado: escuelaIdNumber,
-          tipo_original: typeof docente.escuela_id,
-          escuela: docente.escuela,
-          escuelas_disponibles: escuelas.length
-        })
-
         setFormData({
           nombre: docente.nombre,
           correo: docente.correo || '',
@@ -111,22 +102,11 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
   }
 
   const handleSelectChange = (event: any) => {
-    console.log('🔄 Cambiando escuela:', {
-      nuevo_valor: event.target.value,
-      tipo: typeof event.target.value
-    })
     setFormData(prev => ({
       ...prev,
       escuela_id: event.target.value
     }))
   }
-
-  // Log para monitorear cambios en formData
-  useEffect(() => {
-    if (open) {
-      console.log('📊 FormData actual:', formData)
-    }
-  }, [formData, open])
 
   // Validar formulario
   const validateForm = () => {
@@ -210,7 +190,7 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
             required
             disabled={loading}
             sx={{ mb: 2 }}
-            placeholder="Ej: Dr. Juan Pérez García"
+            placeholder="Ej.: Dr. Juan Pérez García"
           />
 
           <TextField
@@ -221,7 +201,7 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
             onChange={handleChange('correo')}
             disabled={loading}
             sx={{ mb: 2 }}
-            placeholder="Ej: juan.perez@universidad.edu"
+            placeholder="Ej.: juan.perez@universidad.edu"
             helperText="El correo es opcional. Déjalo vacío si no está disponible."
           />
 

@@ -260,7 +260,7 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
             onChange={(e) => handleChange('nombre_completo', e.target.value)}
             error={!!errors.nombre_completo}
             helperText={errors.nombre_completo}
-            placeholder="Ej: Juan Pérez García"
+            placeholder="Ej.: Juan Pérez García"
             required
           />
 
@@ -272,7 +272,7 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
             onChange={(e) => handleChange('usuario', e.target.value)}
             error={!!errors.usuario}
             helperText={errors.usuario || 'Será usado para iniciar sesión'}
-            placeholder="Ej: jperez"
+            placeholder="Ej.: jperez"
             required
             InputProps={{
               startAdornment: (

@@ -408,7 +408,7 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
                   label="Descripción del Curso"
                   value={formData.descripcion}
                   onChange={(e) => setFormData(prev => ({ ...prev, descripcion: e.target.value }))}
-                  placeholder="Ej: Algoritmos y Estructuras de Datos"
+                  placeholder="Ej.: Algoritmos y Estructuras de Datos"
                 />
 
                 <TextField

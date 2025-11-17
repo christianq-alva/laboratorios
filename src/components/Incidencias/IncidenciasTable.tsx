@@ -345,7 +345,7 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
                 label="Fecha específica (DD/MM/YYYY)"
                 value={filtroFecha}
                 onChange={(e) => setFiltroFecha(e.target.value)}
-                placeholder="Ej: 15/12/2024"
+                placeholder="Ej.: 15/12/2024"
                 sx={{ minWidth: 180 }}
               />
 
