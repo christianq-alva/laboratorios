@@ -22,7 +22,8 @@ import {
   ReportProblem,
   Assessment,
   Settings,
-  Logout
+  Logout,
+  CompareArrows
 } from '@mui/icons-material'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth' 
@@ -40,6 +41,7 @@ const menuItems = [
   { text: 'Equipos', icon: <Build />, path: '/equipos', roles: ['Administrador', 'Jefe de Laboratorio'] },
   { text: 'Incidencias', icon: <ReportProblem />, path: '/incidencias', roles: ['Administrador', 'Jefe de Laboratorio'] },
   { text: 'Reportes', icon: <Assessment />, path: '/reportes', roles: ['Administrador', 'Jefe de Laboratorio'] },
+  { text: 'Comparación Insumos', icon: <CompareArrows />, path: '/comparacion-insumos', roles: ['Administrador', 'Jefe de Laboratorio'] },
   { text: 'Configuración', icon: <Settings />, path: '/configuracion', roles: ['Administrador'] },
 ]
 

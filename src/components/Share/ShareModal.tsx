@@ -22,7 +22,6 @@ import {
   MenuItem,
   Tooltip,
   DialogContentText,
-  Switch,
 } from '@mui/material'
 import {
   Close,
@@ -149,12 +148,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     }
   }
 
-  const handleToggleLink = async (id: number, labName: string, currentState: boolean) => {
-    // Solo desactivar si está activo
-    if (!currentState) {
-      return // Ya está desactivado, no hacer nada
-    }
-
+  const handleDeactivateLink = async (id: number, labName: string) => {
     setLoadingLinks(true)
 
     const result = await execute(() => shareService.deactivateShareLink(id))
@@ -384,16 +378,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                       />
 
                       <ListItemSecondaryAction>
-                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                          <Tooltip title={link.activo && !link.expirado ? 'Desactivar enlace' : 'Enlace inactivo'}>
-                            <Switch
-                              checked={link.activo && !link.expirado}
-                              onChange={() => handleToggleLink(link.id, link.laboratorio_nombre, link.activo && !link.expirado)}
-                              disabled={loadingLinks || link.expirado}
-                              size="small"
-                            />
-                          </Tooltip>
-
+                        <Box sx={{ display: 'flex', gap: 1 }}>
                           <Tooltip title="Copiar enlace">
                             <IconButton
                               size="small"
