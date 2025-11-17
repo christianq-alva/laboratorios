@@ -77,6 +77,11 @@ export const shareService = {
     const response = await api.put(`/share/deactivate/${id}`)
     return response.data
   },
+  // Eliminar enlace
+  deleteShareLink: async (id: number) => {
+    const response = await api.delete(`/share/delete/${id}`)
+    return response.data
+  },
 
   // Obtener horarios públicos (sin autenticación)
   getPublicHorarios: async (laboratorioId: number, token: string): Promise<PublicData> => {

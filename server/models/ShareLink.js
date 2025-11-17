@@ -97,6 +97,26 @@ export const ShareLink = {
     return linkCheck[0]
   },
 
+  delete: async (id, userId) => {
+    const [linkCheck] = await pool.execute(`
+      SELECT es.*, l.nombre as laboratorio_nombre
+      FROM enlaces_compartidos es
+      JOIN laboratorios l ON es.laboratorio_id = l.id
+      WHERE es.id = ? AND es.creado_por = ?
+    `, [id, userId])
+
+    if (linkCheck.length === 0) {
+      return null
+    }
+
+    await pool.execute(`
+      DELETE FROM enlaces_compartidos 
+      WHERE id = ?
+    `, [id])
+
+    return linkCheck[0]
+  },
+
   getByUserId: async (userId, userRole, laboratorioIds = []) => {
     let query = `
       SELECT 

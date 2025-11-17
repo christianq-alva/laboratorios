@@ -4,7 +4,8 @@ import {
   createShareLink,
   getPublicHorarios,
   getUserShareLinks,
-  deactivateShareLink
+  deactivateShareLink,
+  deleteShareLink
 } from '../controllers/shareController.js'
 import { authorize } from '../middleware/authorize.js'
 
@@ -23,6 +24,10 @@ router.put('/deactivate/:id',
   authenticateToken, 
   authorize('update', 'ShareLink'),
   deactivateShareLink)
+router.delete('/delete/:id', 
+  authenticateToken, 
+  authorize('delete', 'ShareLink'),
+  deleteShareLink)
 
 // Rutas públicas (sin autenticación)
 router.get('/public/:laboratorio_id', 

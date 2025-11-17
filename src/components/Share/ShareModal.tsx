@@ -21,6 +21,7 @@ import {
   Select,
   MenuItem,
   Tooltip,
+  DialogContentText,
 } from '@mui/material'
 import {
   Close,
@@ -60,6 +61,10 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   // Estados del formulario
   const [selectedLabId, setSelectedLabId] = useState<number>(selectedLaboratorioId || 0)
   const [expirationDays, setExpirationDays] = useState<number>(30)
+
+  // Estados para el diálogo de confirmación de eliminación
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [linkToDelete, setLinkToDelete] = useState<{ id: number; name: string } | null>(null)
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -163,6 +168,41 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     setLoadingLinks(false)
   }
 
+  const handleOpenDeleteDialog = (id: number, labName: string) => {
+    setLinkToDelete({ id, name: labName })
+    setDeleteDialogOpen(true)
+  }
+
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialogOpen(false)
+    setLinkToDelete(null)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!linkToDelete) return
+
+    setLoadingLinks(true)
+    setError(null)
+
+    const result = await execute(() => shareService.deleteShareLink(linkToDelete.id))
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      setSuccess(`Enlace de ${linkToDelete.name} eliminado correctamente`)
+
+      // Recargar enlaces
+      const linksResult = await execute(() => shareService.getMyShareLinks())
+      if (linksResult.error) {
+        setError(linksResult.error)
+      } else if (linksResult.data) {
+        setShareLinks(linksResult.data.data)
+      }
+    }
+    
+    setLoadingLinks(false)
+    handleCloseDeleteDialog()
+  }
+
   const handleClose = () => {
     setError(null)
     setSuccess(null)
@@ -172,6 +212,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
 
 
   return (
+    <>
     <Dialog
       open={open}
       onClose={handleClose}
@@ -358,11 +399,10 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                             </IconButton>
                           </Tooltip>
 
-                          <Tooltip title="Desactivar enlace">
+                          <Tooltip title="Eliminar enlace">
                             <IconButton
                               size="small"
-                              onClick={() => handleDeactivateLink(link.id, link.laboratorio_nombre)}
-                              disabled={!link.activo}
+                              onClick={() => handleOpenDeleteDialog(link.id, link.laboratorio_nombre)}
                               color="error"
                             >
                               <Delete />
@@ -386,5 +426,51 @@ export const ShareModal: React.FC<ShareModalProps> = ({
         </Button>
       </DialogActions>
     </Dialog>
+
+    {/* Diálogo de confirmación de eliminación */}
+    <Dialog
+      open={deleteDialogOpen}
+      onClose={handleCloseDeleteDialog}
+      maxWidth="xs"
+      fullWidth
+    >
+      <DialogTitle>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Delete color="error" />
+          <Typography variant="h6">
+            Eliminar Enlace
+          </Typography>
+        </Box>
+      </DialogTitle>
+      
+      <DialogContent>
+        <DialogContentText>
+          ¿Estás seguro de que deseas eliminar el enlace de <strong>{linkToDelete?.name}</strong>?
+        </DialogContentText>
+        <Alert severity="warning" sx={{ mt: 2 }}>
+          Esta acción no se puede deshacer. El enlace será eliminado permanentemente.
+        </Alert>
+      </DialogContent>
+
+      <DialogActions>
+        <Button 
+          onClick={handleCloseDeleteDialog} 
+          variant="outlined"
+          disabled={loadingLinks}
+        >
+          Cancelar
+        </Button>
+        <Button
+          onClick={handleConfirmDelete}
+          variant="contained"
+          color="error"
+          startIcon={<Delete />}
+          disabled={loadingLinks}
+        >
+          {loadingLinks ? 'Eliminando...' : 'Eliminar'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+    </>
   )
 }

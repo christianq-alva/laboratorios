@@ -165,3 +165,29 @@ export const deactivateShareLink = async (req, res) => {
     })
   }
 }
+
+export const deleteShareLink = async (req, res) => {
+  try {
+    const { id } = req.params
+    const userId = req.user.userId
+
+    const link = await ShareLink.delete(id, userId)
+
+    if (!link) {
+      return res.status(404).json({
+        message: 'Enlace no encontrado'
+      })
+    }
+
+    console.log('🗑️ Enlace eliminado:', id)
+
+    res.status(200).json({
+      message: `Enlace para ${link.laboratorio_nombre} eliminado correctamente`
+    })
+  } catch (error) {
+    console.error('❌ Error al eliminar enlace:', error)
+    res.status(500).json({
+      message: 'Error interno del servidor'
+    })
+  }
+}
