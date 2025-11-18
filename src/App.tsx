@@ -30,6 +30,9 @@ const Incidencias = lazy(() =>
 const ReportesSimple = lazy(() => 
   import('./pages/ReportesSimple')
 )
+const ComparacionInsumos = lazy(() => 
+  import('./pages/ComparacionInsumos').then(module => ({ default: module.ComparacionInsumos }))
+)
 const Configuracion = lazy(() => 
   import('./pages/Configuracion').then(module => ({ default: module.Configuracion }))
 )
@@ -193,6 +196,15 @@ function App() {
             element={
               <ProtectedPage>
                 <ReportesSimple />
+              </ProtectedPage>
+            } 
+          />
+          
+          <Route 
+            path="/comparacion-insumos" 
+            element={
+              <ProtectedPage>
+                <ComparacionInsumos />
               </ProtectedPage>
             } 
           />

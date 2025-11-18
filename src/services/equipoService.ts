@@ -23,8 +23,8 @@ export interface Equipo {
 
 export interface ActividadEquipo {
   id: number
-  tipo_registro: 'crud'
-  tipo_movimiento: 'crear' | 'actualizar' | 'eliminar'
+  tipo_registro: 'crud' | 'movimiento'
+  tipo_movimiento: 'entrada' | 'reserva' | 'devolucion' | 'crear' | 'actualizar' | 'eliminar'
   fecha_movimiento: string
   observaciones: string
   equipo_codigo: string
@@ -34,17 +34,29 @@ export interface ActividadEquipo {
   usuario_nombre: string
   usuario_rol: string
   laboratorio_nombre: string
+  cantidad: number
+  reserva_descripcion?: string
+  reserva_fecha_inicio?: string
+  reserva_fecha_fin?: string
 }
 
 export interface ActividadEquipoResponse {
-  success: boolean
+  error: string | null
   data: ActividadEquipo[]
+  total_registros: number
+  total_movimientos: number
+  desglose: {
+    actividad_crud: number
+    movimientos: number
+  }
   filtros_aplicados: {
     laboratorio_id: number | null
     fecha_inicio: string | null
     fecha_fin: string | null
-    tipo_movimiento: 'crear' | 'actualizar' | 'eliminar' | null
-  } 
+    tipo_actividad: string | null
+    tipo_movimiento: string | null
+  }
+  message?: string
 }
 
 export const equipoService = {
