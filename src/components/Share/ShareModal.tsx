@@ -148,26 +148,6 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     }
   }
 
-  const handleDeactivateLink = async (id: number, labName: string) => {
-    setLoadingLinks(true)
-
-    const result = await execute(() => shareService.deactivateShareLink(id))
-    if (result.error) {
-      setError(result.error)
-    } else if (result.data) {
-      setSuccess(`Enlace de ${labName} desactivado`)
-
-      // Recargar enlaces
-      const linksResult = await execute(() => shareService.getMyShareLinks())
-      if (linksResult.error) {
-        setError(linksResult.error)
-      } else if (linksResult.data) {
-        setShareLinks(linksResult.data.data)
-      }
-    }
-    setLoadingLinks(false)
-  }
-
   const handleOpenDeleteDialog = (id: number, labName: string) => {
     setLinkToDelete({ id, name: labName })
     setDeleteDialogOpen(true)

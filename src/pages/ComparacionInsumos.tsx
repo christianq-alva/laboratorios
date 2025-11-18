@@ -8,7 +8,6 @@ import {
   Select,
   MenuItem,
   TextField,
-  Grid,
   Chip,
   Table,
   TableBody,
@@ -147,8 +146,8 @@ export const ComparacionInsumos: React.FC = () => {
             Filtros de Búsqueda
           </Typography>
         </Box>
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6} md={3}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+          <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(25% - 12px)' }, minWidth: 200 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Laboratorio</InputLabel>
               <Select
@@ -163,8 +162,8 @@ export const ComparacionInsumos: React.FC = () => {
                 ))}
               </Select>
             </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          </Box>
+          <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(25% - 12px)' }, minWidth: 200 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Escuela</InputLabel>
               <Select
@@ -179,8 +178,8 @@ export const ComparacionInsumos: React.FC = () => {
                 ))}
               </Select>
             </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={6} md={2}>
+          </Box>
+          <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(16.66% - 13px)' }, minWidth: 150 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Ciclo</InputLabel>
               <Select
@@ -195,8 +194,8 @@ export const ComparacionInsumos: React.FC = () => {
                 ))}
               </Select>
             </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={6} md={2}>
+          </Box>
+          <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(16.66% - 13px)' }, minWidth: 150 }}>
             <TextField
               fullWidth
               size="small"
@@ -208,8 +207,8 @@ export const ComparacionInsumos: React.FC = () => {
                 shrink: true
               }}
             />
-          </Grid>
-          <Grid item xs={12} sm={6} md={2}>
+          </Box>
+          <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(16.66% - 13px)' }, minWidth: 150 }}>
             <TextField
               fullWidth
               size="small"
@@ -221,8 +220,8 @@ export const ComparacionInsumos: React.FC = () => {
                 shrink: true
               }}
             />
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Paper>
 
       {/* Cuadro Comparativo - Dos Columnas */}
