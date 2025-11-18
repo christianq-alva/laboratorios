@@ -181,78 +181,67 @@ export const Horario = {
     },
     getActividadHorarios: async (user_rol, user_laboratorio_ids, laboratorio_id, fecha_inicio, fecha_fin, accion, usuario_id) => {
         let query = `
-      SELECT 
-        actividad_id,
-        accion,
-        reserva_id,
-        descripcion,
-        fecha_actividad,
-        ip_address,
-        usuario_id,
-        usuario_nombre,
-        usuario_nombre_completo,
-        usuario_rol,
-        horario_descripcion,
-        fecha_inicio,
-        fecha_fin,
-        cantidad_alumnos,
-        color,
-        horario_creado_en,
-        horario_actualizado_en,
-        laboratorio_nombre,
-        laboratorio_ubicacion,
-        docente_nombre,
-        docente_correo,
-        grupo_nombre,
-        escuela_nombre,
-        ciclo_nombre
-      FROM vista_actividad_horarios
-      WHERE 1=1
-    `
-
+            SELECT 
+                ah.id actividad_id,
+                ah.accion,
+                ah.descripcion,
+                ah.created_at as fecha_actividad,
+                ah.usuario_id,
+                u.nombre_completo as usuario_nombre_completo,
+                rl.nombre as usuario_rol,
+                r.fecha_inicio,
+                r.fecha_fin,
+                r.cantidad_alumnos,
+                l.nombre as laboratorio_nombre,
+                l.ubicacion as laboratorio_ubicacion,
+                'Docente: ' as docente_nombre,
+                e.nombre as escuela_nombre,
+                c.nombre as ciclo_nombre
+            FROM actividad_horarios ah
+            LEFT JOIN reservas r ON ah.reserva_id = r.id
+            LEFT JOIN usuarios u ON ah.usuario_id = u.id
+            INNER JOIN laboratorios l ON r.laboratorio_id = l.id
+            INNER JOIN roles rl ON u.rol_id = rl.id
+            INNER JOIN docentes d ON r.docente_id = d.id
+            INNER JOIN escuelas e ON r.escuela_id = e.id
+            INNER JOIN ciclos c ON r.ciclo_id = c.id
+            WHERE 1=1
+            `
         const params = []
 
         // Filtros según permisos del usuario
         if (user_rol === 'Jefe de Laboratorio' && user_laboratorio_ids && user_laboratorio_ids.length > 0) {
             // Necesitamos obtener los nombres de laboratorios para filtrar por nombre
             const labIds = user_laboratorio_ids.join(',')
-            query += ` AND reserva_id IN (
-        SELECT r.id FROM reservas r 
-        INNER JOIN laboratorios l ON r.laboratorio_id = l.id 
-        WHERE l.id IN (${labIds})
-      )`
+            query += ` AND l.id IN (${labIds})`
+        }
+        if (usuario_id && user_rol === 'Administrador') {
+            query += ` AND u.id = ?`
+            params.push(usuario_id)
         }
 
         // Filtros opcionales
         if (laboratorio_id) {
-            query += ` AND reserva_id IN (
-        SELECT r.id FROM reservas r 
-        WHERE r.laboratorio_id = ?
-      )`
+            query += ` AND r.laboratorio_id = ?`
             params.push(laboratorio_id)
         }
 
         if (fecha_inicio) {
-            query += ` AND DATE(fecha_actividad) >= ?`
+            query += ` AND DATE(ah.fecha_actividad) >= ?`
             params.push(fecha_inicio)
         }
 
         if (fecha_fin) {
-            query += ` AND DATE(fecha_actividad) <= ?`
+            query += ` AND DATE(ah.fecha_actividad) <= ?`
             params.push(fecha_fin)
         }
 
         if (accion) {
-            query += ` AND accion = ?`
+            query += ` AND ah.accion = ?`
             params.push(accion)
         }
 
-        if (usuario_id) {
-            query += ` AND usuario_id = ?`
-            params.push(usuario_id)
-        }
-
-        query += ` ORDER BY fecha_actividad DESC LIMIT 500`
+        query += ` ORDER BY ah.fecha_actividad DESC`
 
         const [rows] = await pool.execute(query, params)
 

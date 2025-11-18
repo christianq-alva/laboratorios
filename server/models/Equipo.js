@@ -33,7 +33,6 @@ export const Equipo = {
   update: async (id, equipoData, connection) => {
     const conn = connection || pool
     try {
-      console.log('🔄 Actualizando equipo:', { id, equipoData })
       const [result] = await conn.execute(`
         UPDATE equipos 
         SET codigo = ?, nombre = ?, descripcion = ?, marca = ?, modelo = ?, numero_serie = ?, estado = ?, fecha_ultimo_mantenimiento = ?, fecha_proximo_mantenimiento = ?, comentarios = ?, condicion = ?, fecha_adquisicion = ?, tipo_equipo_id = ?, laboratorio_id = ?
@@ -103,7 +102,7 @@ export const Equipo = {
       SELECT COUNT(*) as total 
       FROM detalle_reserva_equipos dre
       INNER JOIN reservas r ON dre.reserva_id = r.id
-      WHERE dre.equipo_id = ? AND r.laboratorio_id = ? AND r.estado = 'P' AND r.fecha_inicio > NOW()`, 
+      WHERE dre.equipo_id = ? AND r.laboratorio_id = ? AND r.estado = 'P' AND r.fecha_inicio > NOW()`,
       [equipo_id, laboratorio_id])
     return rows[0].total > 0
   },
@@ -162,7 +161,7 @@ export const Equipo = {
       WHERE 1=1
         `
     const params = []
-    
+
     // Filtros según permisos del usuario
     if (user_rol === 'Jefe de Laboratorio') {
       query += ` AND e.laboratorio_id IN (${user_laboratorio_ids.join(',')})`
@@ -241,4 +240,64 @@ export const Equipo = {
       throw error
     }
   },
+  getActividadEquipos: async (user_rol, user_laboratorio_ids, laboratorio_id, fecha_inicio, fecha_fin, tipo_actividad, usuario_id) => {
+    try {
+      let query = `
+      SELECT 
+        a.id,
+        a.accion as tipo_actividad,
+        a.fecha_actividad as fecha_actividad,
+        a.descripcion as observaciones,
+        e.codigo as equipo_codigo,
+        e.nombre as equipo_nombre,
+        e.marca as equipo_marca,
+        e.modelo as equipo_modelo,
+        l.nombre as laboratorio_nombre,
+        l.ubicacion as laboratorio_ubicacion,
+        u.nombre_completo as usuario_nombre,
+        r.nombre as usuario_rol
+      FROM actividad_equipos a
+      LEFT JOIN equipos e ON a.equipo_id = e.id
+      LEFT JOIN laboratorios l ON e.laboratorio_id = l.id
+      LEFT JOIN usuarios u ON a.usuario_id = u.id
+      LEFT JOIN roles r ON u.rol_id = r.id
+
+      WHERE 1=1
+    `
+      const params = []
+      // Filtros según permisos del usuario
+      if (user_rol === 'Jefe de Laboratorio') {
+        // Filtrar por laboratorios del usuario
+        query += ` AND e.laboratorio_id IN (${user_laboratorio_ids.join(',')})`
+      }
+      if (usuario_id && user_rol === 'Administrador') {
+        query += ` AND u.id = ?`
+        params.push(usuario_id)
+      }
+      // Filtros opcionales
+      if (laboratorio_id) {
+        query += ` AND e.laboratorio_id = ?`
+        params.push(laboratorio_id)
+      }
+      if (fecha_inicio) {
+        query += ` AND DATE(a.fecha_actividad) >= ?`
+        params.push(fecha_inicio)
+      }
+      if (fecha_fin) {
+        query += ` AND DATE(a.fecha_actividad) <= ?`
+        params.push(fecha_fin)
+      }
+      if (tipo_actividad) {
+        query += ` AND a.tipo_actividad = ?`
+        params.push(tipo_actividad)
+      }
+
+      query += ` ORDER BY a.fecha_actividad DESC`
+
+      const [actividad] = await pool.execute(query, params)
+      return actividad;
+    } catch (error) {
+      throw error
+    }
+  }
 }

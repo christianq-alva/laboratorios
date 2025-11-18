@@ -31,7 +31,6 @@ import {
   Add,
   Edit,
   Delete,
-  Visibility,
   FilterList,
   Refresh,
   Schedule,
@@ -40,8 +39,9 @@ import {
 } from '@mui/icons-material'
 import { horarioService, type ActividadHorario } from '../../services/horarioService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
-import { docenteService, type Docente } from '../../services/docenteService'
 import { useApi } from '../../hooks/useApi'
+import { usuarioService, type Usuario } from '../../services/usuarioService'
+import { useAuth } from '../../hooks/useAuth'
 
 interface ActividadHorariosProps {
   open: boolean
@@ -50,9 +50,10 @@ interface ActividadHorariosProps {
 
 export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onClose }) => {
   const { execute } = useApi()
+  const { user } = useAuth()
   const [actividad, setActividad] = useState<ActividadHorario[]>([])
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
-  const [_docentes] = useState<Docente[]>([])
+  const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -69,10 +70,12 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
   useEffect(() => {
     if (open) {
       loadLaboratorios()
-      loadDocentes()
+      if (user?.rol === 'Administrador') {
+        loadUsuarios()
+      }
       loadActividad()
     }
-  }, [open])
+  }, [open, user])
 
   const loadLaboratorios = async () => {
 
@@ -84,13 +87,14 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
     }
   }
 
-  const loadDocentes = async () => {
-    const response = await execute(() => docenteService.getAll())
+  const loadUsuarios = async () => {
+    const response = await execute(() => usuarioService.getAll())
     if (response.error) {
       setError(response.error)
+    } else if (response.data) {
+      setUsuarios(response.data.data)
     }
   }
-
   const loadActividad = async () => {
     setLoading(true)
     setError(null)
@@ -138,7 +142,6 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
       case 'crear': return 'success'
       case 'editar': return 'warning'
       case 'eliminar': return 'error'
-      case 'ver': return 'info'
       default: return 'default'
     }
   }
@@ -148,7 +151,6 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
       case 'crear': return <Add />
       case 'editar': return <Edit />
       case 'eliminar': return <Delete />
-      case 'ver': return <Visibility />
       default: return <History />
     }
   }
@@ -158,7 +160,6 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
       case 'crear': return 'Crear'
       case 'editar': return 'Editar'
       case 'eliminar': return 'Eliminar'
-      case 'ver': return 'Ver'
       default: return accion
     }
   }
@@ -209,63 +210,6 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
     }
   }
 
-  // Función para extraer información de la descripción enriquecida
-  const parseDescripcion = (descripcion: string) => {
-    const parts = descripcion.split(' | ')
-    if (parts.length === 1) {
-      // Descripción simple (sin información adicional)
-      return {
-        titulo: descripcion,
-        laboratorio: null,
-        docente: null,
-        fechas: null,
-        alumnos: null,
-        ciclo: null,
-        escuela: null
-      }
-    }
-
-    // Descripción enriquecida
-    const result = {
-      titulo: parts[0] || '',
-      laboratorio: null as string | null,
-      docente: null as string | null,
-      fechas: null as string | null,
-      alumnos: null as string | null,
-      ciclo: null as string | null,
-      escuela: null as string | null
-    }
-
-    parts.forEach(part => {
-      if (part.includes('Lab:')) {
-        result.laboratorio = part.replace('Lab:', '').trim()
-      } else if (part.includes('Docente:')) {
-        result.docente = part.replace('Docente:', '').trim()
-      } else if (part.includes('Ciclo:')) {
-        result.ciclo = part.replace('Ciclo:', '').trim()
-      } else if (part.includes('Escuela:')) {
-        result.escuela = part.replace('Escuela:', '').trim()
-      } else if (part.includes('alumnos')) {
-        result.alumnos = part.trim()
-      } else if (part.includes('/') && part.includes(':')) {
-        // Es una fecha
-        result.fechas = part.trim()
-      }
-    })
-
-    return result
-  }
-
-  // Obtener lista única de usuarios para el filtro
-  const usuarios = Array.from(
-    new Map(
-      actividad.map(item => [item.usuario_id, {
-        id: item.usuario_id,
-        nombre: item.usuario_nombre_completo,
-        rol: item.usuario_rol
-      }])
-    ).values()
-  )
 
   return (
     <Dialog
@@ -347,25 +291,25 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
                 <MenuItem value="crear">Crear</MenuItem>
                 <MenuItem value="editar">Editar</MenuItem>
                 <MenuItem value="eliminar">Eliminar</MenuItem>
-                <MenuItem value="ver">Ver</MenuItem>
               </Select>
             </FormControl>
-
-            <FormControl size="small">
-              <InputLabel>Usuario</InputLabel>
-              <Select
-                value={filters.usuario_id}
-                label="Usuario"
-                onChange={(e) => handleFilterChange('usuario_id', e.target.value)}
-              >
-                <MenuItem value="">Todos los usuarios</MenuItem>
-                {usuarios.map((usuario) => (
-                  <MenuItem key={usuario.id} value={usuario.id}>
-                    {usuario.nombre} ({usuario.rol})
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            {user?.rol === 'Administrador' && (
+              <FormControl size="small">
+                <InputLabel>Usuario</InputLabel>
+                <Select
+                  value={filters.usuario_id}
+                  label="Usuario"
+                  onChange={(e) => handleFilterChange('usuario_id', e.target.value)}
+                >
+                  <MenuItem value="">Todos los usuarios</MenuItem>
+                  {usuarios.map((usuario) => (
+                    <MenuItem key={usuario.id} value={usuario.id}>
+                      {usuario.nombre_completo} ({usuario.rol_nombre})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
           </Box>
 
           <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
@@ -462,19 +406,7 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
                       <TableCell>
                         <Box>
                           {(() => {
-                            const info = parseDescripcion(registro.descripcion)
-                            if (info.fechas && info.alumnos) {
-                              return (
-                                <>
-                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                    {info.fechas}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    {info.alumnos}
-                                  </Typography>
-                                </>
-                              )
-                            } else if (registro.fecha_inicio && registro.fecha_fin) {
+                            if (registro.fecha_inicio && registro.fecha_fin) {
                               return (
                                 <>
                                   <Typography variant="body2" sx={{ fontWeight: 500 }}>
@@ -501,10 +433,7 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
                           <LocationOn fontSize="small" color="action" />
                           <Box>
                             <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              {(() => {
-                                const info = parseDescripcion(registro.descripcion)
-                                return info.laboratorio || registro.laboratorio_nombre
-                              })()}
+                              {registro.laboratorio_nombre}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
                               {registro.laboratorio_ubicacion !== 'Ubicación N/A' ? registro.laboratorio_ubicacion : 'Ubicación no disponible'}
@@ -518,18 +447,10 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
                           <Person fontSize="small" color="action" />
                           <Box>
                             <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              {(() => {
-                                const info = parseDescripcion(registro.descripcion)
-                                return info.docente || registro.docente_nombre
-                              })()}
+                              {registro.docente_nombre}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              {(() => {
-                                const info = parseDescripcion(registro.descripcion)
-                                const ciclo = info.ciclo || registro.ciclo_nombre
-                                const escuela = info.escuela || registro.escuela_nombre
-                                return `${ciclo} - ${escuela}`
-                              })()}
+                              {`${registro.ciclo_nombre} - ${registro.escuela_nombre}`}
                             </Typography>
                           </Box>
                         </Box>

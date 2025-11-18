@@ -28,7 +28,6 @@ import {
 import {
   Close,
   History,
-  Build,
   Add,
   Edit,
   Delete,
@@ -38,12 +37,12 @@ import {
   Person,
   LocationOn,
   Memory,
-  SwapHoriz
 } from '@mui/icons-material'
 import { equipoService, type ActividadEquipo } from '../../services/equipoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
 import { useApi } from '../../hooks/useApi'
-
+import { useAuth } from '../../hooks/useAuth'
+import { usuarioService, type Usuario } from '../../services/usuarioService'
 interface ActividadEquiposProps {
   open: boolean
   onClose: () => void
@@ -51,8 +50,10 @@ interface ActividadEquiposProps {
 
 export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClose }) => {
   const { execute } = useApi()
+  const { user } = useAuth()
   const [actividad, setActividad] = useState<ActividadEquipo[]>([])
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
+  const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -61,16 +62,20 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
     laboratorio_id: '',
     fecha_inicio: '',
     fecha_fin: '',
-    tipo_movimiento: ''
+    tipo_movimiento: '',
+    usuario_id: ''
   })
 
   // Cargar datos iniciales
   useEffect(() => {
     if (open) {
       loadLaboratorios()
+      if (user?.rol === 'Administrador') {
+        loadUsuarios()
+      }
       loadActividad()
     }
-  }, [open])
+  }, [open, user])
 
   const loadLaboratorios = async () => {
     const response = await execute(() => laboratorioService.getAll())
@@ -78,6 +83,15 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
       setError(response.error)
     } else if (response.data) {
       setLaboratorios(response.data.data || [])
+    }
+  }
+
+  const loadUsuarios = async () => {
+    const response = await execute(() => usuarioService.getAll())
+    if (response.error) {
+      setError(response.error)
+    } else if (response.data) {
+      setUsuarios(response.data.data || [])
     }
   }
 
@@ -90,7 +104,7 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
     if (filters.fecha_inicio) filtersToSend.fecha_inicio = filters.fecha_inicio
     if (filters.fecha_fin) filtersToSend.fecha_fin = filters.fecha_fin
     if (filters.tipo_movimiento) filtersToSend.tipo_movimiento = filters.tipo_movimiento
-
+    if (filters.usuario_id) filtersToSend.usuario_id = parseInt(filters.usuario_id)
     const result = await execute(() => equipoService.getActividad(filtersToSend))
 
     if (result.error) {
@@ -117,7 +131,8 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
       laboratorio_id: '',
       fecha_inicio: '',
       fecha_fin: '',
-      tipo_movimiento: ''
+      tipo_movimiento: '',
+      usuario_id: ''
     })
   }
   const handleOnClose = () => {
@@ -129,39 +144,21 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
     onClose()
   }
 
-  const getTipoMovimientoColor = (tipo: string, tipoRegistro: string) => {
-    if (tipoRegistro === 'crud') {
-      switch (tipo) {
-        case 'crear': return 'success'
-        case 'actualizar': return 'info'
-        case 'eliminar': return 'error'
-        default: return 'default'
-      }
-    } else {
-      switch (tipo) {
-        case 'entrada': return 'success'
-        case 'reserva': return 'warning'
-        case 'devolucion': return 'info'
-        default: return 'default'
-      }
+  const getTipoActividadColor = (tipoActividad: string) => {
+    switch (tipoActividad) {
+      case 'crear': return 'success'
+      case 'actualizar': return 'info'
+      case 'eliminar': return 'error'
+      default: return 'default'
     }
   }
 
-  const getTipoMovimientoIcon = (tipo: string, tipoRegistro: string) => {
-    if (tipoRegistro === 'crud') {
-      switch (tipo) {
-        case 'crear': return <Add />
-        case 'actualizar': return <Edit />
-        case 'eliminar': return <Delete />
-        default: return <Build />
-      }
-    } else {
-      switch (tipo) {
-        case 'entrada': return <Add />
-        case 'reserva': return <SwapHoriz />
-        case 'devolucion': return <SwapHoriz />
-        default: return <Memory />
-      }
+  const getTipoActividadIcon = (tipoActividad: string) => {
+    switch (tipoActividad) {
+      case 'crear': return <Add />
+      case 'actualizar': return <Edit />
+      case 'eliminar': return <Delete />
+      default: return <History />
     }
   }
 
@@ -183,21 +180,12 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
     }
   }
 
-  const formatTipoMovimiento = (tipo: string, tipoRegistro: string) => {
-    if (tipoRegistro === 'crud') {
-      switch (tipo) {
-        case 'crear': return 'Creado'
-        case 'actualizar': return 'Actualizado'
-        case 'eliminar': return 'Eliminado'
-        default: return tipo
-      }
-    } else {
-      switch (tipo) {
-        case 'entrada': return 'Ingreso'
-        case 'reserva': return 'Reserva'
-        case 'devolucion': return 'Devolución'
-        default: return tipo
-      }
+  const formatTipoActividad = (tipoActividad: string) => {
+    switch (tipoActividad) {
+      case 'crear': return 'Creado'
+      case 'actualizar': return 'Actualizado'
+      case 'eliminar': return 'Eliminado'
+      default: return tipoActividad
     }
   }
 
@@ -283,6 +271,23 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
                 <MenuItem value="eliminar">Eliminación</MenuItem>
               </Select>
             </FormControl>
+            {user?.rol === 'Administrador' && (
+              <FormControl size="small">
+                <InputLabel>Usuario</InputLabel>
+                <Select
+                  value={filters.usuario_id}
+                  label="Usuario"
+                  onChange={(e) => handleFilterChange('usuario_id', e.target.value)}
+                >
+                  <MenuItem value="">Todos los usuarios</MenuItem>
+                  {usuarios.map((usuario) => (
+                    <MenuItem key={usuario.id} value={usuario.id}>
+                      {usuario.nombre_completo} ({usuario.rol_nombre})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
           </Box>
 
           <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
@@ -324,11 +329,12 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
                 <TableRow sx={{ backgroundColor: 'grey.50' }}>
                   <TableCell sx={{ fontWeight: 600 }}>Fecha</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Tipo</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Detalles</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Equipo</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Marca/Modelo</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Laboratorio</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Usuario</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Detalles</TableCell>
+
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -348,60 +354,80 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
                   </TableRow>
                 ) : (
                   actividad.map((registro) => (
-                    <TableRow key={`${registro.tipo_registro}-${registro.id}`} hover>
+                    <TableRow key={`${registro.tipo_actividad}-${registro.id}`} hover>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Schedule fontSize="small" color="action" />
                           <Typography variant="body2">
-                            {formatFecha(registro.fecha_movimiento)}
+                            {formatFecha(registro.fecha_actividad)}
                           </Typography>
                         </Box>
                       </TableCell>
 
                       <TableCell>
                         <Chip
-                          icon={getTipoMovimientoIcon(registro.tipo_movimiento, registro.tipo_registro)}
-                          label={formatTipoMovimiento(registro.tipo_movimiento, registro.tipo_registro)}
-                          color={getTipoMovimientoColor(registro.tipo_movimiento, registro.tipo_registro)}
+                          icon={getTipoActividadIcon(registro.tipo_actividad)}
+                          label={formatTipoActividad(registro.tipo_actividad)}
+                          color={getTipoActividadColor(registro.tipo_actividad)}
                           variant="filled"
                           size="small"
                         />
                       </TableCell>
-
+                      <TableCell>
+                        <Tooltip title={registro.observaciones} arrow>
+                          <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {registro.observaciones}
+                          </Typography>
+                        </Tooltip>
+                      </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Memory fontSize="small" color="action" />
                           <Box>
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              {registro.equipo_nombre}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {registro.equipo_codigo}
-                            </Typography>
+                            {registro.equipo_nombre ? (
+                              <>
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                  {registro.equipo_nombre}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {registro.equipo_codigo}
+                                </Typography>
+                              </>
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">
+                                Equipo eliminado
+                              </Typography>
+                            )}
                           </Box>
                         </Box>
                       </TableCell>
 
                       <TableCell>
-                        <Typography variant="body2">
-                          {registro.equipo_marca && registro.equipo_modelo
-                            ? `${registro.equipo_marca} ${registro.equipo_modelo}`
-                            : registro.equipo_marca || registro.equipo_modelo || 'N/A'
-                          }
-                        </Typography>
+                        {registro.equipo_nombre ? (
+                          <Typography variant="body2">
+                            {registro.equipo_marca && registro.equipo_modelo
+                              ? `${registro.equipo_marca} ${registro.equipo_modelo}`
+                              : registro.equipo_marca || registro.equipo_modelo || 'N/A'
+                            }
+                          </Typography>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">
+                            Equipo eliminado
+                          </Typography>
+                        )}
                       </TableCell>
 
                       <TableCell>
-                        {registro.laboratorio_nombre ? (
+                        {registro.equipo_nombre ? (
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <LocationOn fontSize="small" color="action" />
                             <Typography variant="body2">
-                              {registro.laboratorio_nombre}
+                              {registro.laboratorio_nombre || '-'}
                             </Typography>
                           </Box>
                         ) : (
                           <Typography variant="body2" color="text.secondary">
-                            -
+                            Equipo eliminado
                           </Typography>
                         )}
                       </TableCell>
@@ -418,14 +444,6 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
                             </Typography>
                           </Box>
                         </Box>
-                      </TableCell>
-
-                      <TableCell>
-                        <Tooltip title={registro.observaciones} arrow>
-                          <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {registro.observaciones}
-                          </Typography>
-                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   ))

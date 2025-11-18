@@ -229,7 +229,11 @@ export const getActividadEquiposSchema = z.object({
             .optional(),
         tipo_movimiento: z.enum(tipoMovimientosValidos, {
             errorMap: () => ({ message: `El tipo de movimiento debe ser uno de: ${tipoMovimientosValidos.join(', ')}` })
-        }).optional()
+        }).optional(),
+        usuario_id: z.coerce.number()
+            .int('El ID de usuario debe ser un número entero')
+            .positive('El ID de usuario debe ser mayor a 0')
+            .optional()
     }).optional().refine((data) => {
         if (data.fecha_inicio && data.fecha_fin) {
             const fechaInicio = new Date(data.fecha_inicio)
