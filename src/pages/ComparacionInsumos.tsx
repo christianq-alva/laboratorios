@@ -9,12 +9,20 @@ import {
   MenuItem,
   TextField,
   Grid,
-  Chip
+  Chip,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow
 } from '@mui/material'
 import { 
   Science,
   CheckCircle,
-  FilterList
+  FilterList,
+  CompareArrows,
+  Inventory
 } from '@mui/icons-material'
 
 // Mock data para la maqueta
@@ -48,6 +56,68 @@ const mockInsumosUtilizados = [
   { id: 2, nombre: 'Insumo B', tipo: 'Reactivo', cantidad: 80, unidad: 'ml', diferencia: 40 },
   { id: 3, nombre: 'Insumo C', tipo: 'Reactivo', cantidad: 60, unidad: 'ml', diferencia: 30 },
   { id: 4, nombre: 'Insumo D', tipo: 'Reactivo', cantidad: 100, unidad: 'ml', diferencia: 10 }
+]
+
+// Mock data para tabla de cantidad requerida vs consumida
+const mockTablaRequeridoVsConsumido = [
+  { 
+    laboratorio: 'Laboratorio Multifuncional I', 
+    escuela: 'Medicina', 
+    ciclo: 'I ciclo', 
+    insumo: 'Alcohol 70%', 
+    cantidadRequerida: 500, 
+    cantidadConsumida: 520,
+    unidad: 'ml'
+  },
+  { 
+    laboratorio: 'Laboratorio de Química', 
+    escuela: 'Enfermería', 
+    ciclo: 'II ciclo', 
+    insumo: 'Guantes de látex', 
+    cantidadRequerida: 100, 
+    cantidadConsumida: 95,
+    unidad: 'unidades'
+  },
+  { 
+    laboratorio: 'Laboratorio Multifuncional I', 
+    escuela: 'Medicina', 
+    ciclo: 'I ciclo', 
+    insumo: 'Jeringa 5ml', 
+    cantidadRequerida: 50, 
+    cantidadConsumida: 55,
+    unidad: 'unidades'
+  }
+]
+
+// Mock data para tabla de stock actual vs cantidad requerida
+const mockTablaStockVsRequerido = [
+  { 
+    laboratorio: 'Laboratorio Multifuncional I', 
+    escuela: 'Medicina', 
+    ciclo: 'I ciclo', 
+    insumo: 'Alcohol 70%', 
+    stockActual: 1500, 
+    cantidadRequerida: 500,
+    unidad: 'ml'
+  },
+  { 
+    laboratorio: 'Laboratorio de Química', 
+    escuela: 'Enfermería', 
+    ciclo: 'II ciclo', 
+    insumo: 'Guantes de látex', 
+    stockActual: 200, 
+    cantidadRequerida: 100,
+    unidad: 'unidades'
+  },
+  { 
+    laboratorio: 'Laboratorio Multifuncional I', 
+    escuela: 'Medicina', 
+    ciclo: 'I ciclo', 
+    insumo: 'Jeringa 5ml', 
+    stockActual: 80, 
+    cantidadRequerida: 50,
+    unidad: 'unidades'
+  }
 ]
 
 export const ComparacionInsumos: React.FC = () => {
@@ -348,6 +418,157 @@ export const ComparacionInsumos: React.FC = () => {
                 </Box>
               ))}
             </Box>
+          </Paper>
+        </Box>
+      </Box>
+
+      {/* Tablas en una fila */}
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          gap: 2, 
+          width: '100%',
+          flexDirection: { xs: 'column', lg: 'row' },
+          mt: 3
+        }}
+      >
+        {/* Tabla 1: Cantidad Requerida vs Cantidad Consumida */}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Paper elevation={1} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', height: '100%' }}>
+            <Box sx={{ p: 2.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <CompareArrows color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Cantidad Requerida vs Cantidad Consumida
+                </Typography>
+              </Box>
+            </Box>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: 'grey.50' }}>
+                    <TableCell sx={{ fontWeight: 600 }}>Laboratorio</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Escuela</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Ciclo</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Insumo</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>Cantidad Requerida</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>Cantidad Consumida</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600 }}>Diferencia</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {mockTablaRequeridoVsConsumido.map((row, index) => {
+                    const diferencia = row.cantidadConsumida - row.cantidadRequerida
+                    const esPositivo = diferencia > 0
+                    return (
+                      <TableRow 
+                        key={index}
+                        hover
+                        sx={{ '&:last-child td': { border: 0 } }}
+                      >
+                        <TableCell>{row.laboratorio}</TableCell>
+                        <TableCell>{row.escuela}</TableCell>
+                        <TableCell>{row.ciclo}</TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {row.insumo}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 500 }}>
+                            {row.cantidadRequerida} {row.unidad}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 500 }}>
+                            {row.cantidadConsumida} {row.unidad}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip
+                            label={`${esPositivo ? '+' : ''}${diferencia} ${row.unidad}`}
+                            size="small"
+                            color={esPositivo ? 'warning' : 'success'}
+                            variant="outlined"
+                            sx={{ fontWeight: 500, fontSize: '0.7rem' }}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </Box>
+
+        {/* Tabla 2: Stock Actual vs Cantidad Requerida */}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Paper elevation={1} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', height: '100%' }}>
+            <Box sx={{ p: 2.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Inventory color="success" />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Stock Actual vs Cantidad Requerida
+                </Typography>
+              </Box>
+            </Box>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: 'grey.50' }}>
+                    <TableCell sx={{ fontWeight: 600 }}>Laboratorio</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Escuela</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Ciclo</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Insumo</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>Stock Actual</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>Cantidad Requerida</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600 }}>Estado</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {mockTablaStockVsRequerido.map((row, index) => {
+                    const diferencia = row.stockActual - row.cantidadRequerida
+                    const esSuficiente = diferencia >= 0
+                    return (
+                      <TableRow 
+                        key={index}
+                        hover
+                        sx={{ '&:last-child td': { border: 0 } }}
+                      >
+                        <TableCell>{row.laboratorio}</TableCell>
+                        <TableCell>{row.escuela}</TableCell>
+                        <TableCell>{row.ciclo}</TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {row.insumo}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" sx={{ color: 'info.main', fontWeight: 500 }}>
+                            {row.stockActual} {row.unidad}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 500 }}>
+                            {row.cantidadRequerida} {row.unidad}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip
+                            label={esSuficiente ? 'Suficiente' : 'Insuficiente'}
+                            size="small"
+                            color={esSuficiente ? 'success' : 'error'}
+                            variant="outlined"
+                            sx={{ fontWeight: 500, fontSize: '0.7rem' }}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </Paper>
         </Box>
       </Box>
