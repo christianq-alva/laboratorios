@@ -14,12 +14,11 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow
+  TableRow,
+  Tabs,
+  Tab
 } from '@mui/material'
 import { 
-  Science,
-  CheckCircle,
-  FilterList,
   CompareArrows,
   Inventory
 } from '@mui/icons-material'
@@ -41,20 +40,6 @@ const mockCiclos = [
   { id: 1, nombre: 'I ciclo' },
   { id: 2, nombre: 'II ciclo' },
   { id: 3, nombre: 'III ciclo' }
-]
-
-const mockInsumosRequeridos = [
-  { id: 1, nombre: 'Insumo A', tipo: 'Reactivo', cantidad: 50, unidad: 'ml' },
-  { id: 2, nombre: 'Insumo B', tipo: 'Reactivo', cantidad: 40, unidad: 'ml' },
-  { id: 3, nombre: 'Insumo C', tipo: 'Reactivo', cantidad: 30, unidad: 'ml' },
-  { id: 4, nombre: 'Insumo D', tipo: 'Reactivo', cantidad: 90, unidad: 'ml' }
-]
-
-const mockInsumosUtilizados = [
-  { id: 1, nombre: 'Insumo A', tipo: 'Reactivo', cantidad: 60, unidad: 'ml', diferencia: 10 },
-  { id: 2, nombre: 'Insumo B', tipo: 'Reactivo', cantidad: 80, unidad: 'ml', diferencia: 40 },
-  { id: 3, nombre: 'Insumo C', tipo: 'Reactivo', cantidad: 60, unidad: 'ml', diferencia: 30 },
-  { id: 4, nombre: 'Insumo D', tipo: 'Reactivo', cantidad: 100, unidad: 'ml', diferencia: 10 }
 ]
 
 // Mock data para tabla de cantidad requerida vs consumida
@@ -119,12 +104,44 @@ const mockTablaStockVsRequerido = [
   }
 ]
 
+interface TabPanelProps {
+  children?: React.ReactNode
+  index: number
+  value: number
+}
+
+const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => {
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`reporte-tabpanel-${index}`}
+      aria-labelledby={`reporte-tab-${index}`}
+    >
+      {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
+    </div>
+  )
+}
+
 export const ComparacionInsumos: React.FC = () => {
-  const [laboratorio, setLaboratorio] = useState<number>(1)
-  const [escuela, setEscuela] = useState<number>(1)
-  const [ciclo, setCiclo] = useState<number>(1)
-  const [fechaInicio, setFechaInicio] = useState<string>('')
-  const [fechaFin, setFechaFin] = useState<string>('')
+  const [tabValue, setTabValue] = useState(0)
+  // Estados para el primer reporte: Cantidad Requerida vs Consumida
+  const [laboratorio1, setLaboratorio1] = useState<number>(1)
+  const [escuela1, setEscuela1] = useState<number>(1)
+  const [ciclo1, setCiclo1] = useState<number>(1)
+  const [fechaInicio1, setFechaInicio1] = useState<string>('')
+  const [fechaFin1, setFechaFin1] = useState<string>('')
+
+  // Estados para el segundo reporte: Stock Actual vs Cantidad Requerida
+  const [laboratorio2, setLaboratorio2] = useState<number>(1)
+  const [escuela2, setEscuela2] = useState<number>(1)
+  const [ciclo2, setCiclo2] = useState<number>(1)
+  const [fechaInicio2, setFechaInicio2] = useState<string>('')
+  const [fechaFin2, setFechaFin2] = useState<string>('')
+
+  const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue)
+  }
 
   return (
     <Box sx={{ width: '100%', maxWidth: '100%' }}>
@@ -134,443 +151,325 @@ export const ComparacionInsumos: React.FC = () => {
           Comparación de Insumos
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Análisis de insumos requeridos vs utilizados realmente
+          Análisis detallado de insumos: requeridos, consumidos y disponibilidad
         </Typography>
       </Box>
 
-      {/* Filtros */}
-      <Paper elevation={2} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-          <FilterList color="primary" />
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Filtros de Búsqueda
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-          <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(25% - 12px)' }, minWidth: 200 }}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Laboratorio</InputLabel>
-              <Select
-                value={laboratorio}
-                label="Laboratorio"
-                onChange={(e) => setLaboratorio(e.target.value as number)}
-              >
-                {mockLaboratorios.map((lab) => (
-                  <MenuItem key={lab.id} value={lab.id}>
-                    {lab.nombre}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+      {/* Tabs */}
+      <Paper elevation={1} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
+          aria-label="reportes tabs"
+          sx={{
+            borderBottom: 1,
+            borderColor: 'divider',
+            '& .MuiTab-root': {
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: '0.95rem',
+              minHeight: 56
+            }
+          }}
+        >
+          <Tab 
+            label="Cantidad Requerida vs Consumida" 
+            icon={<CompareArrows />}
+            iconPosition="start"
+            id="reporte-tab-0"
+            aria-controls="reporte-tabpanel-0"
+          />
+          <Tab 
+            label="Stock Actual vs Cantidad Requerida" 
+            icon={<Inventory />}
+            iconPosition="start"
+            id="reporte-tab-1"
+            aria-controls="reporte-tabpanel-1"
+          />
+        </Tabs>
+
+        {/* TabPanel 0: Cantidad Requerida vs Cantidad Consumida */}
+        <TabPanel value={tabValue} index={0}>
+          {/* Filtros del Reporte 1 */}
+          <Box sx={{ p: 2.5, bgcolor: 'grey.50' }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Laboratorio</InputLabel>
+                <Select
+                  value={laboratorio1}
+                  label="Laboratorio"
+                  onChange={(e) => setLaboratorio1(e.target.value as number)}
+                >
+                  {mockLaboratorios.map((lab) => (
+                    <MenuItem key={lab.id} value={lab.id}>
+                      {lab.nombre}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Escuela</InputLabel>
+                <Select
+                  value={escuela1}
+                  label="Escuela"
+                  onChange={(e) => setEscuela1(e.target.value as number)}
+                >
+                  {mockEscuelas.map((esc) => (
+                    <MenuItem key={esc.id} value={esc.id}>
+                      {esc.nombre}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Ciclo</InputLabel>
+                <Select
+                  value={ciclo1}
+                  label="Ciclo"
+                  onChange={(e) => setCiclo1(e.target.value as number)}
+                >
+                  {mockCiclos.map((cic) => (
+                    <MenuItem key={cic.id} value={cic.id}>
+                      {cic.nombre}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Fecha Inicio"
+                type="date"
+                value={fechaInicio1}
+                onChange={(e) => setFechaInicio1(e.target.value)}
+                InputLabelProps={{
+                  shrink: true
+                }}
+              />
+            </Box>
+            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Fecha Fin"
+                type="date"
+                value={fechaFin1}
+                onChange={(e) => setFechaFin1(e.target.value)}
+                InputLabelProps={{
+                  shrink: true
+                }}
+              />
+            </Box>
+            </Box>
           </Box>
-          <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(25% - 12px)' }, minWidth: 200 }}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Escuela</InputLabel>
-              <Select
-                value={escuela}
-                label="Escuela"
-                onChange={(e) => setEscuela(e.target.value as number)}
-              >
-                {mockEscuelas.map((esc) => (
-                  <MenuItem key={esc.id} value={esc.id}>
-                    {esc.nombre}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+
+          {/* Tabla del Reporte 1 */}
+          <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ bgcolor: 'grey.50' }}>
+                <TableCell sx={{ fontWeight: 600 }}>Laboratorio</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Escuela</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Ciclo</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Insumo</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Cantidad Requerida</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Cantidad Consumida</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}>Diferencia</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {mockTablaRequeridoVsConsumido.map((row, index) => {
+                const diferencia = row.cantidadConsumida - row.cantidadRequerida
+                const esPositivo = diferencia > 0
+                return (
+                  <TableRow 
+                    key={index}
+                    hover
+                    sx={{ '&:last-child td': { border: 0 } }}
+                  >
+                    <TableCell>{row.laboratorio}</TableCell>
+                    <TableCell>{row.escuela}</TableCell>
+                    <TableCell>{row.ciclo}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {row.insumo}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 500 }}>
+                        {row.cantidadRequerida} {row.unidad}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 500 }}>
+                        {row.cantidadConsumida} {row.unidad}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Chip
+                        label={`${esPositivo ? '+' : ''}${diferencia} ${row.unidad}`}
+                        size="small"
+                        color={esPositivo ? 'warning' : 'success'}
+                        variant="outlined"
+                        sx={{ fontWeight: 500, fontSize: '0.7rem' }}
+                      />
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+          </TableContainer>
+        </TabPanel>
+
+        {/* TabPanel 1: Stock Actual vs Cantidad Requerida */}
+        <TabPanel value={tabValue} index={1}>
+          {/* Filtros del Reporte 2 */}
+          <Box sx={{ p: 2.5, bgcolor: 'grey.50' }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Laboratorio</InputLabel>
+                <Select
+                  value={laboratorio2}
+                  label="Laboratorio"
+                  onChange={(e) => setLaboratorio2(e.target.value as number)}
+                >
+                  {mockLaboratorios.map((lab) => (
+                    <MenuItem key={lab.id} value={lab.id}>
+                      {lab.nombre}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Escuela</InputLabel>
+                <Select
+                  value={escuela2}
+                  label="Escuela"
+                  onChange={(e) => setEscuela2(e.target.value as number)}
+                >
+                  {mockEscuelas.map((esc) => (
+                    <MenuItem key={esc.id} value={esc.id}>
+                      {esc.nombre}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Ciclo</InputLabel>
+                <Select
+                  value={ciclo2}
+                  label="Ciclo"
+                  onChange={(e) => setCiclo2(e.target.value as number)}
+                >
+                  {mockCiclos.map((cic) => (
+                    <MenuItem key={cic.id} value={cic.id}>
+                      {cic.nombre}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Fecha Inicio"
+                type="date"
+                value={fechaInicio2}
+                onChange={(e) => setFechaInicio2(e.target.value)}
+                InputLabelProps={{
+                  shrink: true
+                }}
+              />
+            </Box>
+            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Fecha Fin"
+                type="date"
+                value={fechaFin2}
+                onChange={(e) => setFechaFin2(e.target.value)}
+                InputLabelProps={{
+                  shrink: true
+                }}
+              />
+            </Box>
+            </Box>
           </Box>
-          <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(16.66% - 13px)' }, minWidth: 150 }}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Ciclo</InputLabel>
-              <Select
-                value={ciclo}
-                label="Ciclo"
-                onChange={(e) => setCiclo(e.target.value as number)}
-              >
-                {mockCiclos.map((cic) => (
-                  <MenuItem key={cic.id} value={cic.id}>
-                    {cic.nombre}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
-          <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(16.66% - 13px)' }, minWidth: 150 }}>
-            <TextField
-              fullWidth
-              size="small"
-              label="Fecha Inicio"
-              type="date"
-              value={fechaInicio}
-              onChange={(e) => setFechaInicio(e.target.value)}
-              InputLabelProps={{
-                shrink: true
-              }}
-            />
-          </Box>
-          <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(16.66% - 13px)' }, minWidth: 150 }}>
-            <TextField
-              fullWidth
-              size="small"
-              label="Fecha Fin"
-              type="date"
-              value={fechaFin}
-              onChange={(e) => setFechaFin(e.target.value)}
-              InputLabelProps={{
-                shrink: true
-              }}
-            />
-          </Box>
-        </Box>
+
+          {/* Tabla del Reporte 2 */}
+          <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ bgcolor: 'grey.50' }}>
+                <TableCell sx={{ fontWeight: 600 }}>Laboratorio</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Escuela</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Ciclo</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Insumo</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Stock Actual</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Cantidad Requerida</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}>Estado</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {mockTablaStockVsRequerido.map((row, index) => {
+                const diferencia = row.stockActual - row.cantidadRequerida
+                const esSuficiente = diferencia >= 0
+                return (
+                  <TableRow 
+                    key={index}
+                    hover
+                    sx={{ '&:last-child td': { border: 0 } }}
+                  >
+                    <TableCell>{row.laboratorio}</TableCell>
+                    <TableCell>{row.escuela}</TableCell>
+                    <TableCell>{row.ciclo}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {row.insumo}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="body2" sx={{ color: 'info.main', fontWeight: 500 }}>
+                        {row.stockActual} {row.unidad}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 500 }}>
+                        {row.cantidadRequerida} {row.unidad}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Chip
+                        label={esSuficiente ? 'Suficiente' : 'Insuficiente'}
+                        size="small"
+                        color={esSuficiente ? 'success' : 'error'}
+                        variant="outlined"
+                        sx={{ fontWeight: 500, fontSize: '0.7rem' }}
+                      />
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+          </TableContainer>
+        </TabPanel>
       </Paper>
-
-      {/* Cuadro Comparativo - Dos Columnas */}
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          gap: 2, 
-          width: '100%',
-          flexDirection: { xs: 'column', md: 'row' }
-        }}
-      >
-        {/* Columna Izquierda: Insumos Requeridos */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Paper 
-            elevation={1} 
-            sx={{ 
-              borderRadius: 2, 
-              height: '100%',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              border: '1px solid',
-              borderColor: 'divider'
-            }}
-          >
-            {/* Header */}
-            <Box 
-              sx={{ 
-                p: 2.5, 
-                bgcolor: 'primary.main',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1.5
-              }}
-            >
-              <Science sx={{ fontSize: 22 }} />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Insumos Requeridos
-              </Typography>
-            </Box>
-
-            {/* Contenido */}
-            <Box sx={{ flex: 1, p: 0 }}>
-              {mockInsumosRequeridos.map((insumo, index) => (
-                <Box
-                  key={insumo.id}
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    px: 3,
-                    py: 2.5,
-                    borderBottom: index < mockInsumosRequeridos.length - 1 ? '1px solid' : 'none',
-                    borderColor: 'divider',
-                    transition: 'background-color 0.15s',
-                    '&:hover': {
-                      bgcolor: 'action.hover'
-                    }
-                  }}
-                >
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography 
-                      variant="body1" 
-                      sx={{ 
-                        fontWeight: 500, 
-                        mb: 0.5,
-                        color: 'text.primary'
-                      }}
-                    >
-                      {insumo.nombre}
-                    </Typography>
-                    <Typography 
-                      variant="caption" 
-                      color="text.secondary"
-                      sx={{ fontSize: '0.75rem' }}
-                    >
-                      {insumo.tipo}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ ml: 2, textAlign: 'right' }}>
-                    <Typography 
-                      variant="h6" 
-                      sx={{ 
-                        fontWeight: 600, 
-                        color: 'primary.main',
-                        lineHeight: 1.2
-                      }}
-                    >
-                      {insumo.cantidad} {insumo.unidad}
-                    </Typography>
-                  </Box>
-                </Box>
-              ))}
-            </Box>
-          </Paper>
-        </Box>
-
-        {/* Columna Derecha: Insumos Utilizados */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Paper 
-            elevation={1} 
-            sx={{ 
-              borderRadius: 2, 
-              height: '100%',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              border: '1px solid',
-              borderColor: 'divider'
-            }}
-          >
-            {/* Header */}
-            <Box 
-              sx={{ 
-                p: 2.5, 
-                bgcolor: 'success.main',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1.5
-              }}
-            >
-              <CheckCircle sx={{ fontSize: 22 }} />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Insumos Utilizados
-              </Typography>
-            </Box>
-
-            {/* Contenido */}
-            <Box sx={{ flex: 1, p: 0 }}>
-              {mockInsumosUtilizados.map((insumo, index) => (
-                <Box
-                  key={insumo.id}
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    px: 3,
-                    py: 2.5,
-                    borderBottom: index < mockInsumosUtilizados.length - 1 ? '1px solid' : 'none',
-                    borderColor: 'divider',
-                    transition: 'background-color 0.15s',
-                    '&:hover': {
-                      bgcolor: 'action.hover'
-                    }
-                  }}
-                >
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography 
-                      variant="body1" 
-                      sx={{ 
-                        fontWeight: 500, 
-                        mb: 0.5,
-                        color: 'text.primary'
-                      }}
-                    >
-                      {insumo.nombre}
-                    </Typography>
-                    <Typography 
-                      variant="caption" 
-                      color="text.secondary"
-                      sx={{ fontSize: '0.75rem' }}
-                    >
-                      {insumo.tipo}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
-                    <Typography 
-                      variant="h6" 
-                      sx={{ 
-                        fontWeight: 600, 
-                        color: 'success.main',
-                        lineHeight: 1.2
-                      }}
-                    >
-                      {insumo.cantidad} {insumo.unidad}
-                    </Typography>
-                    <Chip
-                      label={`+${insumo.diferencia}${insumo.unidad}`}
-                      size="small"
-                      color="warning"
-                      variant="outlined"
-                      sx={{ 
-                        fontWeight: 500, 
-                        fontSize: '0.7rem',
-                        height: 22,
-                        borderColor: 'warning.main',
-                        color: 'warning.dark'
-                      }}
-                    />
-                  </Box>
-                </Box>
-              ))}
-            </Box>
-          </Paper>
-        </Box>
-      </Box>
-
-      {/* Tablas en una fila */}
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          gap: 2, 
-          width: '100%',
-          flexDirection: { xs: 'column', lg: 'row' },
-          mt: 3
-        }}
-      >
-        {/* Tabla 1: Cantidad Requerida vs Cantidad Consumida */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Paper elevation={1} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', height: '100%' }}>
-            <Box sx={{ p: 2.5, borderBottom: '1px solid', borderColor: 'divider' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <CompareArrows color="primary" />
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  Cantidad Requerida vs Cantidad Consumida
-                </Typography>
-              </Box>
-            </Box>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow sx={{ bgcolor: 'grey.50' }}>
-                    <TableCell sx={{ fontWeight: 600 }}>Laboratorio</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Escuela</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Ciclo</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Insumo</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600 }}>Cantidad Requerida</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600 }}>Cantidad Consumida</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 600 }}>Diferencia</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {mockTablaRequeridoVsConsumido.map((row, index) => {
-                    const diferencia = row.cantidadConsumida - row.cantidadRequerida
-                    const esPositivo = diferencia > 0
-                    return (
-                      <TableRow 
-                        key={index}
-                        hover
-                        sx={{ '&:last-child td': { border: 0 } }}
-                      >
-                        <TableCell>{row.laboratorio}</TableCell>
-                        <TableCell>{row.escuela}</TableCell>
-                        <TableCell>{row.ciclo}</TableCell>
-                        <TableCell>
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                            {row.insumo}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 500 }}>
-                            {row.cantidadRequerida} {row.unidad}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 500 }}>
-                            {row.cantidadConsumida} {row.unidad}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="center">
-                          <Chip
-                            label={`${esPositivo ? '+' : ''}${diferencia} ${row.unidad}`}
-                            size="small"
-                            color={esPositivo ? 'warning' : 'success'}
-                            variant="outlined"
-                            sx={{ fontWeight: 500, fontSize: '0.7rem' }}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
-        </Box>
-
-        {/* Tabla 2: Stock Actual vs Cantidad Requerida */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Paper elevation={1} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', height: '100%' }}>
-            <Box sx={{ p: 2.5, borderBottom: '1px solid', borderColor: 'divider' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Inventory color="success" />
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  Stock Actual vs Cantidad Requerida
-                </Typography>
-              </Box>
-            </Box>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow sx={{ bgcolor: 'grey.50' }}>
-                    <TableCell sx={{ fontWeight: 600 }}>Laboratorio</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Escuela</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Ciclo</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Insumo</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600 }}>Stock Actual</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600 }}>Cantidad Requerida</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 600 }}>Estado</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {mockTablaStockVsRequerido.map((row, index) => {
-                    const diferencia = row.stockActual - row.cantidadRequerida
-                    const esSuficiente = diferencia >= 0
-                    return (
-                      <TableRow 
-                        key={index}
-                        hover
-                        sx={{ '&:last-child td': { border: 0 } }}
-                      >
-                        <TableCell>{row.laboratorio}</TableCell>
-                        <TableCell>{row.escuela}</TableCell>
-                        <TableCell>{row.ciclo}</TableCell>
-                        <TableCell>
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                            {row.insumo}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography variant="body2" sx={{ color: 'info.main', fontWeight: 500 }}>
-                            {row.stockActual} {row.unidad}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 500 }}>
-                            {row.cantidadRequerida} {row.unidad}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="center">
-                          <Chip
-                            label={esSuficiente ? 'Suficiente' : 'Insuficiente'}
-                            size="small"
-                            color={esSuficiente ? 'success' : 'error'}
-                            variant="outlined"
-                            sx={{ fontWeight: 500, fontSize: '0.7rem' }}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
-        </Box>
-      </Box>
     </Box>
   )
 }
