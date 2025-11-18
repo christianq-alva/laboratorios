@@ -3,7 +3,8 @@ import { convertirFechaParaMySQL } from '../utils/utils.js'
 import { Horario } from '../models/Horario.js'
 import { Inventario } from '../models/Inventario.js'
 import { Laboratorio } from '../models/Laboratorio.js'
-import { Grupo } from '../models/Grupo.js'
+import { Escuela } from '../models/Escuela.js'
+import { Ciclo } from '../models/Ciclo.js'
 import { Docente } from '../models/Docente.js'
 
 // Función para verificar cruces de horarios
@@ -25,7 +26,6 @@ const verificarCruceHorarios = async (connection, laboratorio_id, docente_id, fe
         laboratorio: cruce.laboratorio,
         ubicacion: cruce.laboratorio_ubicacion,
         docente: cruce.docente,
-        grupo: cruce.grupo,
         escuela: cruce.escuela,
         ciclo: cruce.ciclo,
         descripcion: cruce.descripcion,
@@ -49,7 +49,6 @@ const verificarCruceHorarios = async (connection, laboratorio_id, docente_id, fe
         laboratorio: cruce.laboratorio,
         ubicacion: cruce.laboratorio_ubicacion,
         docente: cruce.docente,
-        grupo: cruce.grupo,
         escuela: cruce.escuela,
         ciclo: cruce.ciclo,
         descripcion: cruce.descripcion,
@@ -143,7 +142,8 @@ export const createHorario = async (req, res) => {
     const {
       laboratorio_id,
       docente_id,
-      grupo_id,
+      escuela_id,
+      ciclo_id,
       descripcion,
       fecha_inicio,
       fecha_fin,
@@ -157,13 +157,23 @@ export const createHorario = async (req, res) => {
     const fechaInicioMySQL = convertirFechaParaMySQL(fecha_inicio)
     const fechaFinMySQL = convertirFechaParaMySQL(fecha_fin)
 
-    // Validación de negocio: Verificar que el grupo existe y obtener su información
-    const grupoInfo = await Grupo.getGrupoById(grupo_id)
-    if (!grupoInfo) {
+    // Validación de negocio: Verificar que la escuela existe
+    const escuelaInfo = await Escuela.getById(escuela_id)
+    if (!escuelaInfo) {
       await connection.rollback()
       return res.status(404).json({
         success: false,
-        message: 'El grupo seleccionado no existe'
+        message: 'La escuela seleccionada no existe'
+      })
+    }
+
+    // Validación de negocio: Verificar que el ciclo existe
+    const cicloInfo = await Ciclo.getById(ciclo_id)
+    if (!cicloInfo) {
+      await connection.rollback()
+      return res.status(404).json({
+        success: false,
+        message: 'El ciclo seleccionado no existe'
       })
     }
     // Validación de negocio: Verificar que el docente existe (sin restricción de escuela)
@@ -195,7 +205,8 @@ export const createHorario = async (req, res) => {
     const reserva_id = await Horario.registroCreateHorario({
       laboratorio_id,
       docente_id,
-      grupo_id,
+      escuela_id,
+      ciclo_id,
       descripcion,
       fechaInicioMySQL,
       fechaFinMySQL,
@@ -208,7 +219,7 @@ export const createHorario = async (req, res) => {
     await Horario.registrarActividadHorario({
       accion: 'crear',
       reserva_id: reserva_id,
-      descripcion: `Horario creado: "${descripcion}" | Lab: ${labInfo.nombre} | Docente: ${docenteInfo?.docente_nombre || 'N/A'} | Grupo: ${grupoInfo?.grupo_nombre || 'N/A'} | Escuela: ${grupoInfo?.escuela_nombre || 'N/A'} | ${new Date(fechaInicioMySQL).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })} ${new Date(fechaInicioMySQL).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} - ${new Date(fechaFinMySQL).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} | ${cantidad_alumnos} alumnos`,
+      descripcion: `Horario creado: "${descripcion}" | Lab: ${labInfo.nombre} | Docente: ${docenteInfo?.docente_nombre || 'N/A'} | Escuela: ${escuelaInfo?.nombre || 'N/A'} | Ciclo: ${cicloInfo?.nombre || 'N/A'} | ${new Date(fechaInicioMySQL).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })} ${new Date(fechaInicioMySQL).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} - ${new Date(fechaFinMySQL).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} | ${cantidad_alumnos} alumnos`,
       usuario_id: req.user.userId,
       ip_address: req.ip || req.connection.remoteAddress
     })
@@ -240,7 +251,8 @@ export const updateHorario = async (req, res) => {
     const {
       laboratorio_id,
       docente_id,
-      grupo_id,
+      escuela_id,
+      ciclo_id,
       descripcion,
       fecha_inicio,
       fecha_fin,
@@ -254,13 +266,23 @@ export const updateHorario = async (req, res) => {
     const fechaInicioMySQL = convertirFechaParaMySQL(fecha_inicio)
     const fechaFinMySQL = convertirFechaParaMySQL(fecha_fin)
 
-    // Validación de negocio: Verificar que el grupo existe y obtener su información
-    const grupoInfo = await Grupo.getGrupoById(grupo_id)
-    if (!grupoInfo) {
+    // Validación de negocio: Verificar que la escuela existe
+    const escuelaInfo = await Escuela.getById(escuela_id)
+    if (!escuelaInfo) {
       await connection.rollback()
       return res.status(404).json({
         success: false,
-        message: 'El grupo seleccionado no existe'
+        message: 'La escuela seleccionada no existe'
+      })
+    }
+
+    // Validación de negocio: Verificar que el ciclo existe
+    const cicloInfo = await Ciclo.getById(ciclo_id)
+    if (!cicloInfo) {
+      await connection.rollback()
+      return res.status(404).json({
+        success: false,
+        message: 'El ciclo seleccionado no existe'
       })
     }
     // Validación de negocio: Verificar que el docente existe (sin restricción de escuela)
@@ -304,14 +326,14 @@ export const updateHorario = async (req, res) => {
     await Horario.deleteHorarioEquipos(horarioId, connection)
 
     // Actualizar datos básicos del horario
-    await Horario.registroUpdateHorario({ reserva_id: horarioId, laboratorio_id, docente_id, grupo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color }, insumos, equipos, connection)
+    await Horario.registroUpdateHorario({ reserva_id: horarioId, laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color }, insumos, equipos, connection)
     await connection.commit()
     // Obtener información del laboratorio y registrar actividad
     const labInfo = await Laboratorio.getLaboratorioById(laboratorio_id)
     await Horario.registrarActividadHorario({
       accion: 'editar',
       reserva_id: horarioId,
-      descripcion: `Horario editado: "${descripcion}" | Lab: ${labInfo.nombre} | Docente: ${docenteInfo?.docente_nombre || 'N/A'} | Grupo: ${grupoInfo?.grupo_nombre || 'N/A'} | Escuela: ${grupoInfo?.escuela_nombre || 'N/A'} | ${new Date(fechaInicioMySQL).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })} ${new Date(fechaInicioMySQL).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} - ${new Date(fechaFinMySQL).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} | ${cantidad_alumnos} alumnos`,
+      descripcion: `Horario editado: "${descripcion}" | Lab: ${labInfo.nombre} | Docente: ${docenteInfo?.docente_nombre || 'N/A'} | Escuela: ${escuelaInfo?.nombre || 'N/A'} | Ciclo: ${cicloInfo?.nombre || 'N/A'} | ${new Date(fechaInicioMySQL).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })} ${new Date(fechaInicioMySQL).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} - ${new Date(fechaFinMySQL).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} | ${cantidad_alumnos} alumnos`,
       usuario_id: req.user.userId,
       ip_address: req.ip || req.connection.remoteAddress
     })
@@ -319,9 +341,8 @@ export const updateHorario = async (req, res) => {
       success: true,
       message: 'Horario actualizado correctamente',
       validaciones: {
-        escuela: grupoInfo.escuela,
-        ciclo: grupoInfo.ciclo,
-        grupo: grupoInfo.grupo,
+        escuela: escuelaInfo.nombre,
+        ciclo: cicloInfo.nombre,
         docente: docenteInfo.nombre
       },
       insumos_nuevos: insumos.length,
@@ -373,7 +394,7 @@ export const deleteHorario = async (req, res) => {
     await Horario.registrarActividadHorario({
       accion: 'eliminar',
       reserva_id: horarioId,
-      descripcion: `Horario eliminado: "${horario.descripcion}" | Lab: ${horario.laboratorio_nombre || 'N/A'} | Docente: ${horario.docente_nombre || 'N/A'} | Grupo: ${horario.grupo_nombre || 'N/A'} | Escuela: ${horario.escuela_nombre || 'N/A'} | ${new Date(horario.fecha_inicio).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })} ${new Date(horario.fecha_inicio).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} - ${new Date(horario.fecha_fin).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} | ${horario.cantidad_alumnos} alumnos`,
+      descripcion: `Horario eliminado: "${horario.descripcion}" | Lab: ${horario.laboratorio || 'N/A'} | Docente: ${horario.docente || 'N/A'} | Escuela: ${horario.escuela || 'N/A'} | Ciclo: ${horario.ciclo || 'N/A'} | ${new Date(horario.fecha_inicio).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })} ${new Date(horario.fecha_inicio).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} - ${new Date(horario.fecha_fin).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} | ${horario.cantidad_alumnos} alumnos`,
       usuario_id: req.user.userId,
       ip_address: req.ip || req.connection.remoteAddress
     })

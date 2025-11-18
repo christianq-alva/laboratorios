@@ -601,7 +601,7 @@ export const HorarioPublico: React.FC = () => {
                                 {evento.docente}
                               </Typography>
                               
-                              {/* Grupo y Ciclo en la misma línea */}
+                              {/* Ciclo */}
                               <Typography 
                                 variant="caption" 
                                 sx={{ 
@@ -611,7 +611,7 @@ export const HorarioPublico: React.FC = () => {
                                   lineHeight: 1.1
                                 }}
                               >
-                                {evento.grupo} • {evento.ciclo}
+                                {evento.ciclo}
                               </Typography>
                             </CardContent>
                             </Card>

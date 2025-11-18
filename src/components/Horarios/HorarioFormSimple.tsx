@@ -27,7 +27,6 @@ import {
   Person,
   LocationOn,
   School,
-  Group,
   Inventory,
   Build,
   Add,
@@ -43,7 +42,6 @@ import type {
   Horario,
   CreateHorarioData,
   Ciclo,
-  Grupo,
   ConflictoHorario,
   HorarioFull
 } from '../../services/horarioService'
@@ -94,7 +92,8 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
   const [formData, setFormData] = useState<CreateHorarioData>({
     laboratorio_id: 0,
     docente_id: 0,
-    grupo_id: 0,
+    escuela_id: 0,
+    ciclo_id: 0,
     descripcion: '',
     fecha_inicio: '',
     fecha_fin: '',
@@ -113,15 +112,10 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
   const [docentes, setDocentes] = useState<Docente[]>([])
   const [escuelas, setEscuelas] = useState<Escuela[]>([])
   const [ciclos, setCiclos] = useState<Ciclo[]>([])
-  const [grupos, setGrupos] = useState<Grupo[]>([])
   const [insumosDisponibles, setInsumosDisponibles] = useState<Insumo[]>([])
   const [insumosSeleccionados, setInsumosSeleccionados] = useState<InsumoSeleccionado[]>([])
   const [equiposDisponibles, setEquiposDisponibles] = useState<Equipo[]>([])
   const [equiposSeleccionados, setEquiposSeleccionados] = useState<EquipoSeleccionado[]>([])
-
-  // Estados de selección en cascada
-  const [selectedEscuela, setSelectedEscuela] = useState<number>(0)
-  const [selectedCiclo, setSelectedCiclo] = useState<number>(0)
 
   // Estados de carga y errores
   const [loading, setLoading] = useState(false)
@@ -150,19 +144,17 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     try {
       setLoadingData(true)
 
-      const [labsResult, docentesResult, escuelasResult, ciclosResult, gruposResult] = await Promise.all([
+      const [labsResult, docentesResult, escuelasResult, ciclosResult] = await Promise.all([
         laboratorioService.getAll(),
         docenteService.getAll(),
         escuelaService.getAll(),
-        horarioService.getCiclos(),
-        horarioService.getGrupos()
+        horarioService.getCiclos()
       ])
 
       if (labsResult.data) setLaboratorios(labsResult.data || [])
       if (docentesResult.data) setDocentes(docentesResult.data || [])
       if (escuelasResult.data) setEscuelas(escuelasResult.data || [])
       if (ciclosResult.data) setCiclos(ciclosResult.data || [])
-      if (gruposResult.data) setGrupos(gruposResult.data || [])
 
     } catch (err: any) {
       setError(err.message)
@@ -217,22 +209,14 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     setFormData({
       laboratorio_id: horarioData.laboratorio_id,
       docente_id: horarioData.docente_id,
-      grupo_id: horarioData.grupo_id,
+      escuela_id: horarioData.escuela_id,
+      ciclo_id: horarioData.ciclo_id,
       descripcion: horarioData.descripcion,
       fecha_inicio: formatDateTimeLocal(horarioData.fecha_inicio),
       fecha_fin: formatDateTimeLocal(horarioData.fecha_fin),
       cantidad_alumnos: horarioData.cantidad_alumnos || 1,
       color: horarioData.color || '#4ecdc4',
     })
-
-    // Si estamos editando, encontrar la escuela y ciclo del grupo seleccionado
-    if (horarioData.grupo_id && grupos.length > 0) {
-      const grupoSeleccionado = grupos.find((g: Grupo) => g.id === horarioData.grupo_id)
-      if (grupoSeleccionado) {
-        setSelectedEscuela(grupoSeleccionado.escuela_id)
-        setSelectedCiclo(grupoSeleccionado.ciclo_id)
-      }
-    }
 
     // Cargar insumos y equipos del laboratorio si ya está seleccionado
     if (horarioData.laboratorio_id) {
@@ -272,7 +256,8 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     setFormData({
       laboratorio_id: 0,
       docente_id: 0,
-      grupo_id: 0,
+      escuela_id: 0,
+      ciclo_id: 0,
       descripcion: '',
       fecha_inicio: '',
       fecha_fin: '',
@@ -283,41 +268,12 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     setSelectedDate('')
     setStartBlockId('')
     setEndBlockId('')
-    setSelectedEscuela(0)
-    setSelectedCiclo(0)
     setInsumosSeleccionados([])
     setEquiposSeleccionados([])
     setConflictos([])
     setError(null)
 
     setLaboratorioChangeMessage(null)
-  }
-
-  // Manejo de cambios en escuela/ciclo/grupo
-  const handleEscuelaChange = async (escuela_id: number) => {
-    setSelectedEscuela(escuela_id)
-    setSelectedCiclo(0)
-    setFormData(prev => ({ ...prev, grupo_id: 0 }))
-  }
-
-  const handleCicloChange = async (ciclo_id: number) => {
-    setSelectedCiclo(ciclo_id)
-    setFormData(prev => ({ ...prev, grupo_id: 0 }))
-  }
-
-  // Filtrar grupos según escuela y ciclo seleccionados
-  const getGruposFiltrados = () => {
-    let gruposFiltrados = grupos
-
-    if (selectedEscuela > 0) {
-      gruposFiltrados = gruposFiltrados.filter(g => g.escuela_id === selectedEscuela)
-    }
-
-    if (selectedCiclo > 0) {
-      gruposFiltrados = gruposFiltrados.filter(g => g.ciclo_id === selectedCiclo)
-    }
-
-    return gruposFiltrados
   }
 
   // Cargar insumos cuando se selecciona laboratorio
@@ -489,7 +445,8 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     const finalData: CreateHorarioData = {
       laboratorio_id: formData.laboratorio_id,
       docente_id: formData.docente_id,
-      grupo_id: formData.grupo_id,
+      escuela_id: formData.escuela_id,
+      ciclo_id: formData.ciclo_id,
       descripcion: formData.descripcion.trim(),
       fecha_inicio: fechaInicio,
       fecha_fin: fechaFin,
@@ -533,7 +490,8 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     const isValid = (
       formData.laboratorio_id > 0 &&
       formData.docente_id > 0 &&
-      formData.grupo_id > 0 &&
+      formData.escuela_id > 0 &&
+      formData.ciclo_id > 0 &&
       formData.descripcion.trim() &&
       formData.cantidad_alumnos && formData.cantidad_alumnos > 0 &&
       selectedDate &&
@@ -548,7 +506,8 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     console.log('🔍 Validación formulario:', {
       laboratorio_id: formData.laboratorio_id > 0,
       docente_id: formData.docente_id > 0,
-      grupo_id: formData.grupo_id > 0,
+      escuela_id: formData.escuela_id > 0,
+      ciclo_id: formData.ciclo_id > 0,
       descripcion: !!formData.descripcion.trim(),
       cantidad_alumnos: !!(formData.cantidad_alumnos && formData.cantidad_alumnos > 0),
       selectedDate: !!selectedDate,
@@ -679,17 +638,18 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                     </Select>
                   </FormControl>
 
-                  {/* Fila de Escuela, Ciclo, Grupo */}
+                  {/* Fila de Escuela, Ciclo */}
                   <Box sx={{ display: 'flex', gap: 2 }}>
-                    <FormControl sx={{ flex: 1 }}>
+                    <FormControl sx={{ flex: 1 }}> 
                       <InputLabel>Escuela</InputLabel>
                       <Select
-                        value={selectedEscuela}
+                        value={formData.escuela_id}
                         label="Escuela"
-                        onChange={(e) => handleEscuelaChange(e.target.value as number)}
+                        onChange={(e) => setFormData(prev => ({ ...prev, escuela_id: e.target.value as number}))}
                         disabled={loading}
+                        required
                       >
-                        <MenuItem value={0}>Todas las escuelas</MenuItem>
+                        <MenuItem value={0} disabled>Seleccionar escuela</MenuItem>
                         {escuelas.map((escuela) => (
                           <MenuItem key={escuela.id} value={escuela.id}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -704,12 +664,13 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                     <FormControl sx={{ flex: 1 }}>
                       <InputLabel>Ciclo</InputLabel>
                       <Select
-                        value={selectedCiclo}
+                        value={formData.ciclo_id}
                         label="Ciclo"
-                        onChange={(e) => handleCicloChange(e.target.value as number)}
-                        disabled={loading}
+                        onChange={(e) => setFormData(prev => ({ ...prev, ciclo_id: e.target.value as number}))}
+                        disabled={loading || formData.escuela_id === 0}
+                        required
                       >
-                        <MenuItem value={0}>Todos los ciclos</MenuItem>
+                        <MenuItem value={0} disabled>Seleccionar ciclo</MenuItem>
                         {[...ciclos]
                           .sort((a, b) => {
                             const numA = parseInt(a.nombre.replace(/[^\d]/g, '')) || 0;
@@ -721,26 +682,6 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                               {ciclo.nombre}
                             </MenuItem>
                           ))}
-                      </Select>
-                    </FormControl>
-
-                    <FormControl sx={{ flex: 1 }}>
-                      <InputLabel>Grupo</InputLabel>
-                      <Select
-                        value={formData.grupo_id}
-                        label="Grupo"
-                        onChange={(e) => setFormData(prev => ({ ...prev, grupo_id: e.target.value as number }))}
-                        disabled={loading}
-                      >
-                        <MenuItem value={0} disabled>Seleccionar grupo</MenuItem>
-                        {getGruposFiltrados().map((grupo) => (
-                          <MenuItem key={grupo.id} value={grupo.id}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Group fontSize="small" />
-                              {grupo.nombre}
-                            </Box>
-                          </MenuItem>
-                        ))}
                       </Select>
                     </FormControl>
                   </Box>
@@ -1081,15 +1022,9 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                                   </Box>
 
                                   <Box>
-                                    <Typography variant="caption" color="text.secondary">
-                                      Grupo:
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                      {conflicto.detalles.grupo}
-                                    </Typography>
                                     {conflicto.detalles.escuela && (
                                       <Typography variant="caption" color="text.secondary">
-                                        {conflicto.detalles.escuela} • {conflicto.detalles.ciclo}
+                                        Escuela: {conflicto.detalles.escuela} • Ciclo: {conflicto.detalles.ciclo}
                                       </Typography>
                                     )}
                                   </Box>

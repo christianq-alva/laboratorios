@@ -21,7 +21,7 @@ export const createLaboratorio = async (req, res) => {
   try {
     // Los datos ya están validados y transformados por el middleware de validación
     const { codigo, nombre, ubicacion, escuela_id, piso, estado } = req.body
-
+    
     // Validar que la escuela existe (validación de negocio)
     const escuelaCheck = await Escuela.exists(escuela_id)
     if (!escuelaCheck) {

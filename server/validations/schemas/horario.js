@@ -69,9 +69,12 @@ export const createHorarioSchema = z.object({
         docente_id: z.number()
             .int('El ID de docente debe ser un número entero')
             .positive('El ID de docente debe ser mayor a 0'),
-        grupo_id: z.number()
-            .int('El ID de grupo debe ser un número entero')
-            .positive('El ID de grupo debe ser mayor a 0'),
+        escuela_id: z.number()
+            .int('El ID de escuela debe ser un número entero')
+            .positive('El ID de escuela debe ser mayor a 0'),
+        ciclo_id: z.number()
+            .int('El ID de ciclo debe ser un número entero')
+            .positive('El ID de ciclo debe ser mayor a 0'),
         descripcion: z.string()
             .trim()
             .min(1, 'La descripción es obligatoria')
@@ -130,9 +133,12 @@ export const updateHorarioSchema = z.object({
         docente_id: z.number()
             .int('El ID de docente debe ser un número entero')
             .positive('El ID de docente debe ser mayor a 0'),
-        grupo_id: z.number()
-            .int('El ID de grupo debe ser un número entero')
-            .positive('El ID de grupo debe ser mayor a 0'),
+        escuela_id: z.number()
+            .int('El ID de escuela debe ser un número entero')
+            .positive('El ID de escuela debe ser mayor a 0'),
+        ciclo_id: z.number()
+            .int('El ID de ciclo debe ser un número entero')
+            .positive('El ID de ciclo debe ser mayor a 0'),
         descripcion: z.string()
             .trim()
             .min(1, 'La descripción es obligatoria')

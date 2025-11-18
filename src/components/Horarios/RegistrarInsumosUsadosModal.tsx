@@ -86,11 +86,13 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
   const [insumosUsados, setInsumosUsados] = useState<InsumoUsado[]>([])
   const [insumosDisponibles, setInsumosDisponibles] = useState<InsumoSaldo[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   // Estados para tab de insumos adicionales
   const [busquedaInsumo, setBusquedaInsumo] = useState<string>('')
 
   useEffect(() => {
     if (open) {
+      setError(null) // Limpiar error al abrir el modal
       loadInsumosRequeridos()
       if (laboratorioId) {
         loadInsumosDisponibles(laboratorioId)
@@ -101,7 +103,7 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
   const loadInsumosRequeridos = async () => {
     const response = await execute(() => horarioService.getInsumosRequeridosById(horarioId))
     if (response.error) {
-      //setError(response.error)
+      setError(response.error)
     } else if (response.data) {
       setInsumosRequeridos(response.data.data)
     }
@@ -110,7 +112,7 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
     try {
       const response = await execute(() => inventarioService.getLotesConSaldo(laboratorioId, insumoId))
       if (response.error) {
-        console.error('Error al cargar lotes:', response.error)
+        setError(`Error al cargar lotes: ${response.error}`)
         return []
       }
       // Validar que la respuesta tenga la estructura correcta
@@ -120,6 +122,8 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
         ? lotes.filter(lote => lote && typeof lote.detalle_id === 'number' && lote.detalle_id > 0)
         : []
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error inesperado al cargar lotes'
+      setError(errorMessage)
       console.error('Excepción al cargar lotes:', error)
       return []
     }
@@ -128,7 +132,7 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
   const loadInsumosDisponibles = async (laboratorioId: number) => {
     const response = await execute(() => inventarioService.getWithStock(laboratorioId))
     if (response.error) {
-      //setError(response.error)
+      setError(response.error)
     } else if (response.data) {
       setInsumosDisponibles(response.data.data)
     }
@@ -144,7 +148,7 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
 
     const insumoDisponible = insumosDisponibles.find(i => i.id === insumo.id)
     if (!insumoDisponible) {
-      //setError('Insumo no disponible')
+      setError('Insumo no disponible en el inventario')
       return
     }
 
@@ -200,7 +204,7 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
           )
           // Si no hay lotes disponibles, no agregues nada
           if (!loteDisponible) {
-            alert('No hay más lotes disponibles para este insumo')
+            setError('No hay más lotes disponibles para este insumo')
             return insumo
           }
           return {
@@ -320,6 +324,7 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
 
   const handleGuardar = async () => {
     setLoading(true)
+    setError(null) // Limpiar error antes de guardar
 
     const response = await execute(() => horarioService.cerrarHorario({
       laboratorio_id: laboratorioId,
@@ -336,7 +341,7 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
       })))
     }))
     if (response.error) {
-      //setError(response.error)
+      setError(response.error)
     } else if (response.data) {
       onSuccess?.()
       onClose?.()
@@ -392,6 +397,24 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
           <Close />
         </IconButton>
       </Box>
+
+      {/* Alert de Error */}
+      {error && (
+        <Box sx={{ px: 3, pt: 2 }}>
+          <Alert 
+            severity="error" 
+            onClose={() => setError(null)}
+            sx={{
+              borderRadius: 2,
+              '& .MuiAlert-message': {
+                fontWeight: 500
+              }
+            }}
+          >
+            {error}
+          </Alert>
+        </Box>
+      )}
 
       {/* Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>

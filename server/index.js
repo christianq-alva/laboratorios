@@ -18,7 +18,6 @@ import reporteRoutes from './routes/reporteRoutes.js'
 import tipoEquipoRoutes from './routes/tipoEquipoRoutes.js'
 import escuelaRoutes from './routes/escuelaRoutes.js'
 import cicloRoutes from './routes/cicloRoutes.js'
-import grupoRoutes from './routes/grupoRoutes.js'
 import usuarioRoutes from './routes/usuarioRoutes.js'
 import rolRoutes from './routes/rolRoutes.js'
 
@@ -34,17 +33,16 @@ app.use(express.json())
 // Configurar Express para confiar en el proxy (necesario para obtener IP real en producción)
 app.set('trust proxy', 1)
 
-// ============================================
-// RATE LIMITING GLOBAL
-// ============================================
-// Aplicar rate limiting general a todas las rutas /api
-app.use('/api', generalLimiter)
-
 // CORS abierto solo para rutas /api (full-stack mismo dominio)
 app.use('/api', cors({ origin: true, credentials: true }))
 // Preflight para cualquier ruta /api en Express 5
 app.options(/^\/api\/.*$/, cors({ origin: true, credentials: true }))
 
+// ============================================
+// RATE LIMITING GLOBAL
+// ============================================
+// Aplicar rate limiting general a todas las rutas /api
+app.use('/api', generalLimiter)
 // Healthcheck para Railway
 app.get('/health', (req, res) => {
   res.status(200).json({
@@ -76,7 +74,6 @@ app.use('/api/reportes', reporteRoutes)
 app.use('/api/tipos-equipo', tipoEquipoRoutes)
 app.use('/api/escuelas', escuelaRoutes)
 app.use('/api/ciclos', cicloRoutes)
-app.use('/api/grupos', grupoRoutes)
 app.use('/api/usuarios', usuarioRoutes)
 app.use('/api/roles', rolRoutes)
 

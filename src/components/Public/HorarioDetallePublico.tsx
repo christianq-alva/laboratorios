@@ -23,7 +23,6 @@ import {
   Person,
   LocationOn,
   School,
-  Group,
   Inventory,
   CalendarToday,
   People
@@ -153,20 +152,8 @@ export const HorarioDetallePublico: React.FC<HorarioDetallePublicoProps> = ({
                       {horario.docente}
                     </Typography>
                   </Box>
-                </Box>
-                
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Group color="action" />
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Grupo
-                    </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {horario.grupo}
-                    </Typography>
-                  </Box>
-                </Box>
-                
+                </Box> 
+               
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <School color="action" />
                   <Box>

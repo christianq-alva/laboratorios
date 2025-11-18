@@ -172,7 +172,7 @@ export const HorariosTable: React.FC<HorariosTableProps> = ({
               <TableCell sx={{ fontWeight: 600 }}>Laboratorio</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Docente</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Fecha & Hora</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Grupo</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Ciclo</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Descripción</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Insumos</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Estado</TableCell>
@@ -229,17 +229,17 @@ export const HorariosTable: React.FC<HorariosTableProps> = ({
                     </Box>
                   </TableCell>
 
-                  {/* Grupo */}
+                  {/* Ciclo */}
                   <TableCell>
                     <Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                         <Group fontSize="small" color="action" />
                         <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {horario.grupo}
+                          {horario.ciclo}
                         </Typography>
                       </Box>
                       <Typography variant="caption" color="text.secondary">
-                        {horario.escuela} • {horario.ciclo}
+                        {horario.escuela}
                       </Typography>
                     </Box>
                   </TableCell>

@@ -18,7 +18,7 @@ export const validate = (schema) => {
       })
 
       if (!validationResult.success) {
-        // En Zod v4, los errores están en la propiedad 'issues'
+        
         const issues = validationResult.error.issues
 
         if (!issues || !Array.isArray(issues)) {

@@ -26,7 +26,7 @@ export const createLaboratorioSchema = z.object({
         escuela_id: z.number()
             .int('El ID de escuela debe ser un número entero')
             .positive('El ID de escuela debe ser mayor a 0'),
-        piso: z.number()
+        piso: z.coerce.number()
             .int('El piso debe ser un número entero')
             .positive('El piso debe ser mayor a 0'),
         estado: z.enum(estadosValidos, {
@@ -58,7 +58,7 @@ export const updateLaboratorioSchema = z.object({
             .int('El ID de escuela debe ser un número entero')
             .positive('El ID de escuela debe ser mayor a 0')
             .optional(),
-        piso: z.number()
+        piso: z.coerce.number()
             .int('El piso debe ser un número entero')
             .positive('El piso debe ser mayor a 0')
             .optional(),

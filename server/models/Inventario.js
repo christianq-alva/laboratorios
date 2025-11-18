@@ -211,8 +211,8 @@ export const Inventario = {
       throw new Error(`No se encontró el lote con ID ${entrada_detalle_id}`);
     }
 
-    if (row.saldo < cantidad) {
-      throw new Error(`Saldo insuficiente en el lote ${entrada_detalle_id}. Disponible: ${row.saldo}, solicitado: ${cantidad}`);
+    if (row[0].saldo < cantidad) {
+      throw new Error(`Saldo insuficiente en el lote ${entrada_detalle_id}. Disponible: ${row[0].saldo}, solicitado: ${cantidad}`);
     }
   },
 

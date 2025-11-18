@@ -49,7 +49,7 @@ interface HorarioEvent {
   end: Dayjs
   laboratorio: string
   docente: string
-  grupo: string
+  ciclo: string
   escuela: string
   descripcion: string
   color?: string
@@ -87,8 +87,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onNavigateToLab }) =
         end: dayjs(horario.fecha_fin),
         laboratorio: horario.laboratorio || 'Laboratorio',
         docente: horario.docente || 'Docente',
-        grupo: horario.grupo || 'Grupo',
         escuela: horario.escuela || 'Escuela',
+        ciclo: horario.ciclo || 'Ciclo',
         descripcion: horario.descripcion,
         color: horario.color,
       }))
@@ -438,7 +438,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onNavigateToLab }) =
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Group fontSize="small" color="action" />
                             <Typography variant="body2">
-                              {horario.grupo} • {horario.escuela}
+                              {horario.ciclo} • {horario.escuela}
                             </Typography>
                           </Box>
                           {horario.descripcion && (
