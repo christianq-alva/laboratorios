@@ -40,6 +40,7 @@ import {
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
 import { inventarioService, type ActividadInsumo } from '../../services/inventarioService'
 import { useApi } from '../../hooks/useApi'
+import { useAuth } from '../../hooks/useAuth'
 import dayjs from 'dayjs'
 
 interface ActividadInsumosProps {
@@ -49,6 +50,7 @@ interface ActividadInsumosProps {
 
 export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClose }) => {
   const { execute } = useApi()
+  const { user } = useAuth()
   const [actividad, setActividad] = useState<ActividadInsumo[]>([])
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
   const [loading, setLoading] = useState(false)
@@ -271,13 +273,15 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
                   <TableCell sx={{ fontWeight: 600 }}>Observaciones</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Usuario</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Fecha de Sistema</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 600 }}>Acciones</TableCell>
+                  {user?.rol === 'Administrador' && (
+                    <TableCell align="center" sx={{ fontWeight: 600 }}>Acciones</TableCell>
+                  )}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {actividad.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                    <TableCell colSpan={user?.rol === 'Administrador' ? 7 : 6} align="center" sx={{ py: 4 }}>
                       <Box sx={{ textAlign: 'center' }}>
                         <History sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
                         <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -354,20 +358,22 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
                           </Typography>
                         </Box>
                       </TableCell>
-                      <TableCell align="center">
-                        <Tooltip title="Deshacer movimiento">
-                          <IconButton
-                            size="small"
-                            color="warning"
-                            onClick={() => {
-                              // TODO: Implementar funcionalidad de deshacer
-                              console.log('Deshacer movimiento:', movimiento.id)
-                            }}
-                          >
-                            <Undo fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
+                      {user?.rol === 'Administrador' && (
+                        <TableCell align="center">
+                          <Tooltip title="Deshacer movimiento">
+                            <IconButton
+                              size="small"
+                              color="warning"
+                              onClick={() => {
+                                // TODO: Implementar funcionalidad de deshacer
+                                console.log('Deshacer movimiento:', movimiento.id)
+                              }}
+                            >
+                              <Undo fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 )}
