@@ -93,10 +93,12 @@ export const Horario = {
               i.codigo,
               i.nombre,
               i.categoria,
-              i.unidad_nombre,
+              u.nombre as unidad_nombre,
+              u.simbolo as unidad_simbolo,
               dri.cantidad_usada
             FROM detalle_reserva_insumos dri
             JOIN insumos i ON dri.insumo_id = i.id
+            JOIN unidades u ON i.unidad_id = u.id
             WHERE dri.reserva_id = ?
             ORDER BY i.nombre
         `, [reserva_id])

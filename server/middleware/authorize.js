@@ -4,8 +4,6 @@ import { defineAbilitiesFor } from '../abilities/defineAbilities.js'
 export const authorize = (action, resource) => {
   return (req, res, next) => {
     try {
-      console.log('🔍 Verificando:', action, resource, '| Método:', req.method, '| URL:', req.originalUrl)
-
       // Verificar si el usuario tiene permisos para el recurso
       const ability = defineAbilitiesFor(req.user)
 
