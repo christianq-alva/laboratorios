@@ -36,7 +36,7 @@ interface InsumoUsado {
   nombre: string
   codigo: string
   categoria: string
-  unidad_medida: string
+  unidad_nombre: string
   cantidad_usada: number
   stock_disponible: number
   registrosLotes: RegistroLote[]
@@ -178,7 +178,7 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
       nombre: insumo.nombre,
       codigo: insumo.codigo,
       categoria: insumo.categoria,
-      unidad_medida: insumo.unidad_medida,
+      unidad_nombre: insumo.unidad_nombre,
       cantidad_usada: insumo.cantidad_usada,
       stock_disponible: insumoDisponible.stock_disponible,
       registrosLotes: [{
@@ -307,7 +307,7 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
       nombre: insumo.nombre,
       codigo: insumo.codigo,
       categoria: insumo.categoria,
-      unidad_medida: insumo.unidad_medida,
+      unidad_nombre: insumo.unidad_nombre,
       cantidad_usada: 0,
       stock_disponible: insumo.stock_disponible,
       registrosLotes: [
@@ -499,7 +499,7 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
                           </Typography>
                         </Box>
                         <Chip
-                          label={yaAgregado ? 'Agregado' : `${insumo.cantidad_usada} ${insumo.unidad_medida}`}
+                          label={yaAgregado ? 'Agregado' : `${insumo.cantidad_usada} ${insumo.unidad_nombre}`}
                           size="small"
                           variant={yaAgregado ? 'filled' : 'outlined'}
                           color={yaAgregado ? 'success' : 'primary'}
@@ -632,7 +632,7 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
                                       variant="outlined"
                                     />
                                     <Chip
-                                      label={`Stock: ${insumo.stock_disponible ? insumo.stock_disponible : 0} ${insumo.unidad_medida}`}
+                                      label={`Stock: ${insumo.stock_disponible ? insumo.stock_disponible : 0} ${insumo.unidad_nombre}`}
                                       size="small"
                                       color={insumo.stock_disponible ? 'success' : 'error'}
                                       variant="outlined"
@@ -750,19 +750,19 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
                           {insumoUsado.nombre}
                         </Typography>
                         <Chip
-                          label={`Requerido: ${insumoUsado.cantidad_usada} ${insumoUsado.unidad_medida}`}
+                          label={`Requerido: ${insumoUsado.cantidad_usada} ${insumoUsado.unidad_nombre}`}
                           size="small"
                           variant="outlined"
                           color="primary"
                         />
                         <Chip
-                          label={`Disponible: ${insumoUsado.stock_disponible} ${insumoUsado.unidad_medida}`}
+                          label={`Disponible: ${insumoUsado.stock_disponible} ${insumoUsado.unidad_nombre}`}
                           size="small"
                           variant="outlined"
                           color="primary"
                         />
                         <Chip
-                          label={`Total: ${totalUsado} ${insumoUsado.unidad_medida}`}
+                          label={`Total: ${totalUsado} ${insumoUsado.unidad_nombre}`}
                           size="small"
                           color={totalUsado === insumoUsado.cantidad_usada ? 'success' : 'warning'}
                         />
@@ -893,7 +893,7 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
                                   InputProps={{
                                     endAdornment: (
                                       <Typography variant="body2" color="text.secondary">
-                                        {insumoUsado.unidad_medida}
+                                        {insumoUsado.unidad_nombre}
                                       </Typography>
                                     )
                                   }}

@@ -49,7 +49,8 @@ export const getConsumoResumen = async (req, res) => {
         l.escuela_id,
         i.categoria,
         i.nombre as insumo_nombre,
-        i.unidad_medida,
+        u.simbolo as unidad_simbolo,
+        u.nombre as unidad_nombre,
         SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN mid.cantidad ELSE 0 END) as total_consumido,
         SUM(CASE WHEN m.tipo_movimiento = 'entrada' THEN mid.cantidad ELSE 0 END) as total_ingresado,
         COUNT(DISTINCT CASE WHEN m.tipo_movimiento = 'salida' THEN m.id END) as num_movimientos_salida,
@@ -57,6 +58,7 @@ export const getConsumoResumen = async (req, res) => {
       FROM movimientos_insumos m
       INNER JOIN movimiento_insumo_detalle mid ON m.id = mid.movimiento_id
       INNER JOIN insumos i ON mid.insumo_id = i.id
+      INNER JOIN unidades u on i.unidad_id = u.id
       INNER JOIN laboratorios l ON m.laboratorio_id = l.id
       WHERE 1=1
     `
@@ -289,7 +291,8 @@ export const getTopInsumosConsumidos = async (req, res) => {
         i.codigo as insumo_codigo,
         i.nombre as insumo_nombre,
         i.categoria,
-        i.unidad_medida,
+        u.simbolo as unidad_simbolo,
+        u.nombre as unidad_nombre,
         SUM(mid.cantidad) as total_consumido,
         COUNT(DISTINCT m.laboratorio_id) as laboratorios_usuarios,
         COUNT(DISTINCT DATE(m.fecha_movimiento)) as dias_consumo,
@@ -299,6 +302,7 @@ export const getTopInsumosConsumidos = async (req, res) => {
       INNER JOIN movimiento_insumo_detalle mid ON m.id = mid.movimiento_id
       INNER JOIN insumos i ON mid.insumo_id = i.id
       INNER JOIN laboratorios l ON m.laboratorio_id = l.id
+      INNER JOIN unidades u on i.unidad_id = u.id
       WHERE m.tipo_movimiento = 'salida'
     `
     const params = []

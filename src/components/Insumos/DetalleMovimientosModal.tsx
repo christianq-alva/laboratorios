@@ -139,7 +139,7 @@ export const DetalleMovimientosModal: React.FC<DetalleMovimientosModalProps> = (
                       }}
                     />
                     <Chip 
-                      label={`${insumo.unidad_medida}`} 
+                      label={`${insumo.unidad_nombre}`} 
                       size="small" 
                       variant="outlined"
                     />
@@ -241,7 +241,7 @@ export const DetalleMovimientosModal: React.FC<DetalleMovimientosModalProps> = (
                                 color: movimiento.tipo_movimiento === 'entrada' ? 'success.main' : 'error.main'
                               }}
                             >
-                              {movimiento.tipo_movimiento === 'entrada' ? '+' : '-'}{movimiento.cantidad} {insumo.unidad_medida}
+                              {movimiento.tipo_movimiento === 'entrada' ? '+' : '-'}{movimiento.cantidad} {insumo.unidad_nombre}
                             </Typography>
                           </TableCell>
                           <TableCell>

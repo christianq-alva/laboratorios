@@ -9,7 +9,9 @@ export const Inventario = {
             i.codigo, 
             i.nombre,
             i.descripcion,
-            i.unidad_medida,
+            i.unidad_id,
+            u.simbolo as unidad_simbolo,
+            u.nombre as unidad_nombre,
             i.categoria,
             i.presentacion,
             count(case when coalesce(mid.saldo,0) > 0 then 1 end) total_lotes,
@@ -18,6 +20,7 @@ export const Inventario = {
           INNER JOIN movimiento_insumo_detalle mid on mi.id  = mid.movimiento_id
           RIGHT JOIN inventario_insumos ii on mid.insumo_id = ii.insumo_id and mi.laboratorio_id = ii.laboratorio_id
           INNER JOIN insumos i on ii.insumo_id = i.id
+          INNER JOIN unidades u on i.unidad_id = u.id
         `
     // Filtros según permisos del usuario
     if (user_rol === 'Jefe de Laboratorio') {
@@ -41,7 +44,9 @@ export const Inventario = {
             i.codigo, 
             i.nombre,
             i.descripcion,
-            i.unidad_medida,
+            i.unidad_id,
+            u.simbolo as unidad_simbolo,
+            u.nombre as unidad_nombre,
             i.categoria,
             i.presentacion,
             count(case when coalesce(mid.saldo,0) > 0 then 1 end) total_lotes,
@@ -50,6 +55,7 @@ export const Inventario = {
           INNER JOIN movimiento_insumo_detalle mid on mi.id  = mid.movimiento_id 
           RIGHT JOIN inventario_insumos ii on mid.insumo_id = ii.insumo_id and mi.laboratorio_id = ii.laboratorio_id
           INNER JOIN insumos i on ii.insumo_id = i.id
+          INNER JOIN unidades u on i.unidad_id = u.id
           WHERE ii.laboratorio_id = ?
           GROUP BY i.id
           ORDER BY i.nombre;
@@ -65,7 +71,9 @@ export const Inventario = {
             i.codigo, 
             i.nombre,
             i.descripcion,
-            i.unidad_medida,
+            i.unidad_id,
+            u.simbolo as unidad_simbolo,
+            u.nombre as unidad_nombre,
             i.categoria,
             i.presentacion,
             count(case when coalesce(mid.saldo,0) > 0 then 1 end) total_lotes,
@@ -73,6 +81,7 @@ export const Inventario = {
           FROM movimientos_insumos mi
           INNER JOIN movimiento_insumo_detalle mid on mi.id  = mid.movimiento_id 
           INNER JOIN insumos i on mid.insumo_id = i.id
+          INNER JOIN unidades u on i.unidad_id = u.id
           WHERE mi.laboratorio_id = ?
           GROUP BY i.id
           ORDER BY i.nombre;
@@ -87,7 +96,9 @@ export const Inventario = {
             mid.insumo_id,
             i.nombre as insumo_nombre,
             i.codigo as insumo_codigo,
-            i.unidad_medida,
+            i.unidad_id,
+            u.simbolo as unidad_simbolo,
+            u.nombre as unidad_nombre,
             COALESCE(mid.lote, 'SIN-LOTE') as lote,
             mid.cantidad as cantidad_original,
             COALESCE(mid.saldo, 0) as saldo,
@@ -101,6 +112,7 @@ export const Inventario = {
           FROM movimiento_insumo_detalle mid
           INNER JOIN movimientos_insumos mi ON mid.movimiento_id = mi.id
           INNER JOIN insumos i ON mid.insumo_id = i.id
+          INNER JOIN unidades u on i.unidad_id = u.id
           WHERE mi.laboratorio_id = ?
             AND mi.tipo_movimiento = 'entrada'
             AND COALESCE(mid.saldo, 0) > 0
@@ -120,7 +132,9 @@ export const Inventario = {
         mid.insumo_id,
         i.nombre as insumo_nombre,
         i.codigo as insumo_codigo,
-        i.unidad_medida,
+        i.unidad_id,
+        u.simbolo as unidad_simbolo,
+        u.nombre as unidad_nombre,
         COALESCE(mid.lote, 'SIN-LOTE') as lote,
         mid.cantidad as cantidad_original,
         COALESCE(mid.saldo, 0) as saldo,
@@ -138,6 +152,7 @@ export const Inventario = {
       FROM movimiento_insumo_detalle mid
       INNER JOIN movimientos_insumos mi ON mid.movimiento_id = mi.id
       INNER JOIN insumos i ON mid.insumo_id = i.id
+      INNER JOIN unidades u on i.unidad_id = u.id
       INNER JOIN laboratorios l ON mi.laboratorio_id = l.id
       WHERE mid.insumo_id = ?
         AND mi.tipo_movimiento = 'entrada'
@@ -340,10 +355,13 @@ export const Inventario = {
           i.codigo AS ins_codigo,
           i.id AS ins_id,
           i.nombre AS ins_nombre,
-          i.unidad_medida AS ins_unidad_medida
+          i.unidad_id,
+          u.simbolo as unidad_simbolo,
+          u.nombre as unidad_nombre,
         FROM inventario_insumos ii
         INNER JOIN laboratorios l ON l.id = ii.laboratorio_id 
         INNER JOIN insumos i ON i.id = ii.insumo_id
+        INNER JOIN unidades u on i.unidad_id = u.id
         WHERE ii.laboratorio_id = ?
         `, [laboratorio_id])
     return insumos;

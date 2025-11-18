@@ -47,7 +47,8 @@ interface InsumoRequerido {
   id: number
   nombre: string
   cantidad_requerida: number
-  unidad_medida: string
+  unidad_simbolo: string
+  unidad_nombre: string
 }
 
 interface EquipoRequerido {
@@ -123,7 +124,8 @@ export const CerrarHorarioModal: React.FC<CerrarHorarioModalProps> = ({
         id: i.id,
         nombre: i.nombre,
         cantidad_requerida: i.cantidad_usada || 0,
-        unidad_medida: i.unidad_medida || 'unidades'
+        unidad_simbolo: i.unidad_simbolo || 'unidades',
+        unidad_nombre: i.unidad_nombre || 'unidades'
       })) || []
       setInsumosRequeridos(insumos)
 
@@ -338,7 +340,7 @@ export const CerrarHorarioModal: React.FC<CerrarHorarioModalProps> = ({
                         <TableCell>{insumo.nombre}</TableCell>
                         <TableCell align="center">
                           <Chip
-                            label={`${insumo.cantidad_requerida} ${insumo.unidad_medida}`}
+                            label={`${insumo.cantidad_requerida} ${insumo.unidad_nombre}`}
                             size="small"
                             color="primary"
                             variant="outlined"
@@ -346,7 +348,7 @@ export const CerrarHorarioModal: React.FC<CerrarHorarioModalProps> = ({
                         </TableCell>
                         <TableCell align="center">
                           <Chip
-                            label={`${consumido} ${insumo.unidad_medida}`}
+                            label={`${consumido} ${insumo.unidad_nombre}`}
                             size="small"
                             color={completo ? 'success' : 'warning'}
                           />

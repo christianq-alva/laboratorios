@@ -52,7 +52,8 @@ export const CatalogoInsumosTable: React.FC<CatalogoInsumosTableProps> = ({
       insumo.nombre.toLowerCase().includes(searchLower) ||
       (insumo.descripcion && insumo.descripcion.toLowerCase().includes(searchLower)) ||
       (insumo.categoria && insumo.categoria.toLowerCase().includes(searchLower)) ||
-      (insumo.unidad_medida && insumo.unidad_medida.toLowerCase().includes(searchLower)) ||
+      (insumo.unidad_simbolo && insumo.unidad_simbolo.toLowerCase().includes(searchLower)) ||
+      (insumo.unidad_nombre && insumo.unidad_nombre.toLowerCase().includes(searchLower)) ||
       (insumo.presentacion && insumo.presentacion.toLowerCase().includes(searchLower))
     ))
   }, [insumos, searchTerm])
@@ -206,7 +207,7 @@ export const CatalogoInsumosTable: React.FC<CatalogoInsumosTableProps> = ({
                   }}
                 />
               </TableCell>
-              <TableCell>{insumo.unidad_medida}</TableCell>
+              <TableCell>{`${insumo.unidad_nombre} (${insumo.unidad_simbolo})` || '-'}</TableCell>
               <TableCell>{insumo.presentacion || '-'}</TableCell>
               <TableCell align="center">
                 <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>

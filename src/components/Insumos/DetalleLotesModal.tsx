@@ -174,7 +174,7 @@ export const DetalleLotesModal: React.FC<DetalleLotesModalProps> = ({
                       }}
                     />
                     <Chip 
-                      label={`${insumo.unidad_medida}`} 
+                      label={`${insumo.unidad_nombre} (${insumo.unidad_simbolo})`} 
                       size="small" 
                       variant="outlined"
                     />
@@ -197,7 +197,7 @@ export const DetalleLotesModal: React.FC<DetalleLotesModalProps> = ({
                     Stock Total
                   </Typography>
                   <Typography variant="h6" sx={{ fontWeight: 600, color: 'success.main' }}>
-                    {totalStock} {insumo.unidad_medida}
+                    {totalStock} {insumo.unidad_nombre} ({insumo.unidad_simbolo})
                   </Typography>
                 </Box>
                 <Box sx={{ flex: 1, minWidth: 150 }}>
@@ -205,7 +205,7 @@ export const DetalleLotesModal: React.FC<DetalleLotesModalProps> = ({
                     Cantidad Original Total
                   </Typography>
                   <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    {totalCantidadOriginal} {insumo.unidad_medida}
+                    {totalCantidadOriginal} {insumo.unidad_nombre} ({insumo.unidad_simbolo})
                   </Typography>
                 </Box>
               </Box>
@@ -273,12 +273,12 @@ export const DetalleLotesModal: React.FC<DetalleLotesModalProps> = ({
                                 </TableCell>
                                 <TableCell align="right">
                                   <Typography variant="body2">
-                                    {lote.cantidad_original} {lote.unidad_medida}
+                                    {lote.cantidad_original} {lote.unidad_nombre} ({lote.unidad_simbolo})
                                   </Typography>
                                 </TableCell>
                                 <TableCell align="right">
                                   <Chip
-                                    label={`${lote.saldo} ${lote.unidad_medida}`}
+                                    label={`${lote.saldo} ${lote.unidad_simbolo}`}
                                     size="small"
                                     color={getSaldoColor(lote.saldo, lote.cantidad_original)}
                                     sx={{ fontWeight: 600 }}

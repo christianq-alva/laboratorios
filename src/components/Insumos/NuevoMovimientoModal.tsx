@@ -57,7 +57,8 @@ interface LoteDisponible {
   insumo_id: number
   insumo_nombre: string
   insumo_codigo: string
-  unidad_medida: string
+  unidad_simbolo: string
+  unidad_nombre: string
   lote: string
   cantidad_original: number
   saldo: number

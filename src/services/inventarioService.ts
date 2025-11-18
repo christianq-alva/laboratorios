@@ -18,7 +18,8 @@ export interface InsumoSaldo {
     codigo: string
     nombre: string
     description: string
-    unidad_medida: string
+    unidad_simbolo: string
+    unidad_nombre: string
     categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico'
     presentacion: string
     total_lotes: number
@@ -44,7 +45,8 @@ export interface LoteInsumo {
     insumo_id: number
     insumo_nombre: string
     insumo_codigo: string
-    unidad_medida: string
+    unidad_simbolo: string
+    unidad_nombre: string
     lote: string
     cantidad_original: number
     saldo: number
@@ -58,7 +60,8 @@ export interface Lote {
     insumo_id: number
     insumo_nombre: string
     insumo_codigo: string
-    unidad_medida: string
+    unidad_simbolo: string
+    unidad_nombre: string
     lote: string
     cantidad_original: number
     saldo: number

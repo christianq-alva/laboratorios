@@ -53,7 +53,8 @@ interface PreviewData {
   fila: number
   nombre: string
   descripcion: string
-  unidad_medida: string
+  unidad_simbolo: string
+  unidad_nombre: string
   categoria: string
   presentacion: string
   errores: string[]
@@ -439,7 +440,7 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                             )}
                           </Box>
                         </TableCell>
-                        <TableCell>{item.unidad_medida || 'N/A'}</TableCell>
+                        <TableCell>{item.unidad_nombre} ({item.unidad_simbolo})</TableCell>
                         <TableCell>
                           <Chip
                             icon={<Science />}

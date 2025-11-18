@@ -75,10 +75,11 @@ export const Laboratorio = {
     },
     getLaboratorioInsumos: async () => {
         const [laboratorioInsumos] = await pool.execute(`
-        SELECT l.codigo lab_codigo, l.nombre lab_nombre, i.codigo ins_codigo, i.nombre ins_nombre, i.unidad_medida ins_unidad_medida
+        SELECT l.codigo lab_codigo, l.nombre lab_nombre, i.codigo ins_codigo, i.nombre ins_nombre, u.simbolo ins_unidad_simbolo, u.nombre ins_unidad_nombre
         FROM inventario_insumos ii
         INNER JOIN laboratorios l on l.id = ii.laboratorio_id 
         INNER JOIN insumos i on i.id = ii.insumo_id 
+        INNER JOIN unidades u on i.unidad_id = u.id
         ORDER BY l.nombre, i.nombre;
         `)
         return laboratorioInsumos;
@@ -92,11 +93,13 @@ export const Laboratorio = {
                 i.codigo,
                 i.nombre,
                 i.descripcion,
-                i.unidad_medida,
+                u.simbolo as unidad_simbolo,
+                u.nombre as unidad_nombre,
                 i.categoria,
                 i.presentacion
             FROM inventario_insumos ii
             INNER JOIN insumos i ON i.id = ii.insumo_id
+            INNER JOIN unidades u on i.unidad_id = u.id
             WHERE ii.laboratorio_id = ?
             ORDER BY i.nombre
         `, [laboratorio_id])

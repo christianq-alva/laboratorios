@@ -2,13 +2,13 @@ import { pool } from '../config/database.js'
 
 export const Insumo = {
   // Crear nuevo insumo
-  create: async (nombre, descripcion, unidad_medida, categoria, presentacion, connection) => {
+  create: async (nombre, descripcion, unidad_id, categoria, presentacion, connection) => {
     const conn = connection || pool
 
     const [insumoResult] = await conn.execute(`
-      INSERT INTO insumos (codigo, nombre, descripcion, unidad_medida, categoria, presentacion) 
+      INSERT INTO insumos (codigo, nombre, descripcion, unidad_id, categoria, presentacion) 
       VALUES ('PENDIENTE', ?, ?, ?, ?, ?)
-    `, [nombre, descripcion || '', unidad_medida, categoria, presentacion || ''])
+    `, [nombre, descripcion || '', unidad_id, categoria, presentacion || ''])
 
     const insumo_id = insumoResult.insertId
     const codigo = `INS-${insumo_id.toString().padStart(4, '0')}`
@@ -24,9 +24,9 @@ export const Insumo = {
     
     const [result] = await conn.execute(`
       UPDATE insumos 
-      SET nombre = ?, descripcion = ?, unidad_medida = ?, categoria = ?, presentacion = ?
+      SET nombre = ?, descripcion = ?, unidad_id = ?, categoria = ?, presentacion = ?
       WHERE id = ?
-    `, [data.nombre, data.descripcion || '', data.unidad_medida, data.categoria, data.presentacion, id])
+    `, [data.nombre, data.descripcion || '', data.unidad_id, data.categoria, data.presentacion, id])
 
     return { affectedRows: result.affectedRows, changedRows: result.changedRows }
   },
@@ -51,7 +51,12 @@ export const Insumo = {
   getById: async (id, connection) => {
     const conn = connection || pool
     
-    const [rows] = await conn.execute('SELECT * FROM insumos WHERE id = ?', [id])
+    const [rows] = await conn.execute(`
+      SELECT i.id, i.codigo, i.nombre, i.descripcion, i.unidad_id, u.simbolo as unidad_simbolo, u.nombre as unidad_nombre
+      FROM insumos i
+      LEFT JOIN unidades u ON i.unidad_id = u.id
+      WHERE i.id = ?
+    `, [id])
     return rows[0] || null
   },
 
@@ -60,9 +65,10 @@ export const Insumo = {
     const conn = connection || pool
     
     const [rows] = await conn.execute(`
-      SELECT *
-      FROM insumos
-      ORDER BY nombre
+      SELECT i.id, i.codigo, i.nombre, i.descripcion, i.categoria, i.presentacion, i.unidad_id, u.simbolo as unidad_simbolo, u.nombre as unidad_nombre
+      FROM insumos i
+      LEFT JOIN unidades u ON i.unidad_id = u.id
+      ORDER BY i.nombre
     `)
     return rows
   },

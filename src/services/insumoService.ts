@@ -6,7 +6,9 @@ export interface Insumo {
   codigo: string
   nombre: string
   descripcion: string
-  unidad_medida: string
+  unidad_id: number
+  unidad_simbolo?: string
+  unidad_nombre?: string
   categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico'
   presentacion: string
 }
@@ -16,7 +18,7 @@ export const insumoService = {
   create: async (insumoData: {
     nombre: string
     descripcion: string
-    unidad_medida: string
+    unidad_id: number
     categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico'
     presentacion?: string
   }): Promise<ApiCreateUpdateResponse<{ id: number }>> => {
@@ -28,7 +30,7 @@ export const insumoService = {
   update: async (id: number, insumoData: {
     nombre: string
     descripcion: string
-    unidad_medida: string
+    unidad_id: number
     categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico'
     presentacion?: string
   }): Promise<ApiCreateUpdateResponse<Insumo>> => {
@@ -93,7 +95,8 @@ export const insumoService = {
       fila: number
       nombre: string
       descripcion: string
-      unidad_medida: string
+      unidad_simbolo: string
+      unidad_nombre: string
       categoria: string
       presentacion: string
       errores: string[]

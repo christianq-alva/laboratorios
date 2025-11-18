@@ -23,6 +23,7 @@ export const defineAbilitiesFor = (user) => {
     can('read', 'Insumo')
     can('read', 'Horario')
     can('read', 'TipoEquipo')
+    can('read', 'Unidad')
     can('read', 'Docente')
     can('read', 'Ciclo')
     can('read', 'Escuela')

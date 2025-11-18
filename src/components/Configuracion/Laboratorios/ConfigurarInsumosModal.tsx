@@ -377,7 +377,7 @@ export const ConfigurarInsumosModal: React.FC<ConfigurarInsumosModalProps> = ({
                       }
                       secondary={
                         <Typography variant="caption" color="text.secondary">
-                          Código: {insumo.codigo || 'N/A'} • Unidad: {insumo.unidad_medida || 'N/A'}
+                          Código: {insumo.codigo || 'N/A'} • Unidad: {insumo.unidad_nombre} ({insumo.unidad_simbolo})
                         </Typography>
                       }
                     />

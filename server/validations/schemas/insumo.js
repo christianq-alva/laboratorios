@@ -21,10 +21,9 @@ export const createInsumoSchema = z.object({
             .optional()
             .nullable()
             .transform((val) => val === '' ? null : val),
-        unidad_medida: z.string()
-            .trim()
-            .min(1, 'La unidad de medida es requerida')
-            .max(50, 'La unidad de medida no puede exceder 50 caracteres'),
+        unidad_id: z.number()
+            .int('El ID de unidad debe ser un número entero')
+            .positive('El ID de unidad debe ser mayor a 0'),
         categoria: z.enum(categoriasValidas, {
             errorMap: () => ({ message: `La categoría debe ser una de: ${categoriasValidas.join(', ')}` })
         }),
@@ -53,10 +52,9 @@ export const updateInsumoSchema = z.object({
             .optional()
             .nullable()
             .transform((val) => val === '' ? null : val),
-        unidad_medida: z.string()
-            .trim()
-            .min(1, 'La unidad de medida es requerida')
-            .max(50, 'La unidad de medida no puede exceder 50 caracteres'),
+        unidad_id: z.number()
+            .int('El ID de unidad debe ser un número entero')
+            .positive('El ID de unidad debe ser mayor a 0'),
         categoria: z.enum(categoriasValidas, {
             errorMap: () => ({ message: `La categoría debe ser una de: ${categoriasValidas.join(', ')}` })
         }),

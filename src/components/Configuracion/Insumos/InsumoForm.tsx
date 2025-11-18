@@ -17,6 +17,7 @@ import {
 } from '@mui/material'
 import { Close, Inventory, Info } from '@mui/icons-material'
 import { insumoService, type Insumo } from '../../../services/insumoService'
+import { unidadService, type Unidad } from '../../../services/unidadService'
 import { useApi } from '../../../hooks/useApi'
 
 
@@ -37,12 +38,29 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
   const [formData, setFormData] = useState({
     nombre: '',
     descripcion: '',
-    unidad_medida: '',
+    unidad_id: 0,
     categoria: 'Materiales' as 'Reactivos' | 'Materiales' | 'Material_Biologico',
     presentacion: ''
   })
+  const [unidades, setUnidades] = useState<Unidad[]>([])
+  const [loadingUnidades, setLoadingUnidades] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Cargar unidades al abrir el formulario
+  useEffect(() => {
+    if (open) {
+      const loadUnidades = async () => {
+        setLoadingUnidades(true)
+        const result = await execute(() => unidadService.getAll())
+        if (result.data) {
+          setUnidades(result.data.data)
+        }
+        setLoadingUnidades(false)
+      }
+      loadUnidades()
+    }
+  }, [open, execute])
 
   // Resetear formulario cuando se abre/cierra
   useEffect(() => {
@@ -51,7 +69,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
         setFormData({
           nombre: insumo.nombre,
           descripcion: insumo.descripcion || '',
-          unidad_medida: insumo.unidad_medida,
+          unidad_id: insumo.unidad_id || 0,
           categoria: insumo.categoria || 'Materiales',
           presentacion: insumo.presentacion || ''
         })
@@ -59,7 +77,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
         setFormData({
           nombre: '',
           descripcion: '',
-          unidad_medida: '',
+          unidad_id: 0,
           categoria: 'Materiales',
           presentacion: ''
         })
@@ -69,7 +87,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
   }, [open, insumo])
 
   // Manejar cambios en el formulario
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -82,7 +100,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
       setError('El nombre del insumo es requerido')
       return false
     }
-    if (!formData.unidad_medida.trim()) {
+    if (!formData.unidad_id || formData.unidad_id === 0) {
       setError('La unidad de medida es requerida')
       return false
     }
@@ -99,7 +117,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
     const insumoData = {
       nombre: formData.nombre.trim(),
       descripcion: formData.descripcion.trim(),
-      unidad_medida: formData.unidad_medida.trim(),
+      unidad_id: formData.unidad_id,
       categoria: formData.categoria,
       presentacion: formData.presentacion.trim()
     }
@@ -192,14 +210,21 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
                 sx={{ minWidth: 250, flex: 1 }}
               />
 
-              <TextField
-                label="Unidad de Medida"
-                value={formData.unidad_medida}
-                onChange={(e) => handleInputChange('unidad_medida', e.target.value)}
-                placeholder="Ej.: unidad, kg, litros, etc."
-                required
-                sx={{ minWidth: 200 }}
-              />
+              <FormControl sx={{ minWidth: 200 }} required>
+                <InputLabel>Unidad de Medida</InputLabel>
+                <Select
+                  value={formData.unidad_id}
+                  label="Unidad de Medida"
+                  onChange={(e) => handleInputChange('unidad_id', Number(e.target.value))}
+                  disabled={loadingUnidades}
+                >
+                  {unidades.map((unidad) => (
+                    <MenuItem key={unidad.id} value={unidad.id}>
+                      {unidad.simbolo} - {unidad.nombre}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Box>
 
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>

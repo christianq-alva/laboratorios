@@ -51,7 +51,7 @@ export interface InsumoHorario {
   codigo: string
   nombre: string
   categoria: string
-  unidad_medida: string
+  unidad_nombre: string
   cantidad_usada: number
 }
 

@@ -63,7 +63,8 @@ interface HorarioEventoPublico {
     nombre: string
     descripcion?: string
     cantidad_usada: number
-    unidad_medida?: string
+    unidad_simbolo?: string
+    unidad_nombre?: string
   }>
 }
 

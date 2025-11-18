@@ -261,7 +261,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                                 {insumo.nombre}
                               </Typography>
                               <Chip
-                                label={`${insumo.cantidad_usada} ${insumo.unidad_medida || 'unidades'}`}
+                                label={`${insumo.cantidad_usada} ${insumo.unidad_nombre || 'unidades'}`}
                                 size="small"
                                 color="primary"
                                 variant="outlined"

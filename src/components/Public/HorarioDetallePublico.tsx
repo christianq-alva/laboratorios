@@ -34,7 +34,8 @@ interface InsumoPublico {
   nombre: string
   descripcion?: string
   cantidad_usada: number
-  unidad_medida?: string
+  unidad_simbolo?: string
+  unidad_nombre?: string
 }
 
 interface HorarioPublicoDetalle {
@@ -230,7 +231,7 @@ export const HorarioDetallePublico: React.FC<HorarioDetallePublicoProps> = ({
                                 {insumo.nombre}
                               </Typography>
                               <Chip 
-                                label={`${insumo.cantidad_usada} ${insumo.unidad_medida || 'unidades'}`}
+                                label={`${insumo.cantidad_usada} ${insumo.unidad_simbolo || 'unidades'}`}
                                 size="small"
                                 color="primary"
                                 variant="outlined"

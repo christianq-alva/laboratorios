@@ -9,12 +9,12 @@ const categoriasValidas = ['Reactivos', 'Materiales', 'Material_Biologico']
 export const createInsumo = async (req, res) => {
   try {
     // Los datos ya están validados y transformados por el middleware de validación
-    const { nombre, descripcion, unidad_medida, categoria, presentacion } = req.body
+    const { nombre, descripcion, unidad_id, categoria, presentacion } = req.body
 
     const { insumo_id, codigo } = await Insumo.create(
       nombre,
       descripcion || '',
-      unidad_medida,
+      unidad_id,
       categoria,
       presentacion || ''
     )
@@ -37,7 +37,7 @@ export const updateInsumo = async (req, res) => {
   try {
     // El ID ya está validado y transformado por el middleware de validación
     const { id: insumoId } = req.params
-    const { nombre, descripcion, unidad_medida, categoria, presentacion } = req.body
+    const { nombre, descripcion, unidad_id, categoria, presentacion } = req.body
 
     // Verificar que el insumo existe
     const exists = await Insumo.existsById(insumoId)
@@ -52,7 +52,7 @@ export const updateInsumo = async (req, res) => {
     const { affectedRows } = await Insumo.updateById(insumoId, {
       nombre,
       descripcion: descripcion || '',
-      unidad_medida,
+      unidad_id,
       categoria,
       presentacion: presentacion || ''
     })

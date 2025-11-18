@@ -15,4 +15,5 @@ export * from './schemas/equipo.js'
 export * from './schemas/inventario.js'
 export * from './schemas/horario.js'
 export * from './schemas/share.js'
+export * from './schemas/unidad.js'
 

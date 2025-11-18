@@ -380,7 +380,7 @@ export const InventarioTable: React.FC<InventarioTableProps> = ({
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={insumo.unidad_medida}
+                      label={`${insumo.unidad_nombre} (${insumo.unidad_simbolo})`}
                       size="small"
                       variant="outlined"
                     />
@@ -400,7 +400,7 @@ export const InventarioTable: React.FC<InventarioTableProps> = ({
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={`${insumo.stock_disponible || 0} ${insumo.unidad_medida}`}
+                      label={`${insumo.stock_disponible || 0} ${insumo.unidad_simbolo}`}
                       size="small"
                       color={insumo.stock_disponible > 0 ? "success" : 'default'}
                       variant="filled"

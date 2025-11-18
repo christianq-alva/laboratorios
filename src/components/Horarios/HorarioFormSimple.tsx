@@ -63,7 +63,7 @@ interface InsumoSeleccionado {
   insumo_id: number
   nombre: string
   codigo: string
-  unidad_medida: string
+  unidad_nombre: string
   cantidad: number
 }
 
@@ -235,7 +235,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
         nombre: i.nombre,
         cantidad: i.cantidad_usada,
         codigo: i.codigo || '',
-        unidad_medida: i.unidad_medida || ''
+        unidad_nombre: i.unidad_nombre || ''
       })
       )
       setInsumosSeleccionados(insumosSeleccionados)
@@ -386,7 +386,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
         nombre: insumo.nombre,
         cantidad: 1,
         codigo: insumo.codigo,
-        unidad_medida: insumo.unidad_medida
+        unidad_nombre: insumo.unidad_nombre || ''
       }
       setInsumosSeleccionados(prev => [...prev, nuevoInsumo])
     }
@@ -1160,7 +1160,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                                     {insumo.nombre}
                                   </Typography>
                                   <Typography variant="caption" color="text.secondary">
-                                    Código: {insumo.codigo} • Unidad: {insumo.unidad_medida}
+                                    Código: {insumo.codigo} • Unidad: {insumo.unidad_nombre}
                                   </Typography>
 
                                 </Box>
@@ -1214,7 +1214,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                           return (
                             <ListItem key={insumo.insumo_id}>
                               <ListItemText
-                                primary={insumo.nombre + ' (' + insumo.unidad_medida + ')'}
+                                primary={insumo.nombre + ' (' + insumo.unidad_nombre + ')'}
                                 secondary={
                                   <Typography variant="caption" color="text.secondary">
                                     Código: {insumo.codigo}

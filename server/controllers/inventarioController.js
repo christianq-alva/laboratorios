@@ -130,8 +130,8 @@ export const generarPlantillaReabastecimiento = async (req, res) => {
     XLSX.utils.book_append_sheet(wb, wsPlantilla, 'Plantilla Reabastecimiento')
     // Hoja 2: Lista de insumos disponibles
     const insumosData = [
-      ['LAB_CODIGO', 'LAB_NOMBRE', 'INS_CODIGO', 'INS_NOMBRE', 'INS_UNIDAD_MEDIDA'],
-      ...insumos_laboratorios.map(i => [i.lab_codigo, i.lab_nombre, i.ins_codigo, i.ins_nombre, i.ins_unidad_medida])
+      ['LAB_CODIGO', 'LAB_NOMBRE', 'INS_CODIGO', 'INS_NOMBRE', 'INS_UNIDAD_SIMBOLO', 'INS_UNIDAD_NOMBRE'],
+      ...insumos_laboratorios.map(i => [i.lab_codigo, i.lab_nombre, i.ins_codigo, i.ins_nombre, i.ins_unidad_simbolo, i.ins_unidad_nombre])
     ]
     const wsInsumos = XLSX.utils.aoa_to_sheet(insumosData)
     wsInsumos['!cols'] = [
@@ -139,6 +139,7 @@ export const generarPlantillaReabastecimiento = async (req, res) => {
       { width: 40 },
       { width: 12 },
       { width: 30 },
+      { width: 15 },
       { width: 15 }
     ]
     XLSX.utils.book_append_sheet(wb, wsInsumos, 'Insumos Configurados')
@@ -256,7 +257,8 @@ export const procesarArchivoExcel = async (req, res) => {
         insumo_id: item.ins_id,
         insumo_codigo: item.ins_codigo,
         insumo_nombre: item.ins_nombre,
-        insumo_unidad: item.ins_unidad_medida,
+        insumo_unidad_simbolo: item.ins_unidad_simbolo,
+        insumo_unidad_nombre: item.ins_unidad_nombre,
         cantidad: dato.cantidad,
         insumo_lote: dato.lote,
         insumo_fecha_venc: dato.fecha_venc

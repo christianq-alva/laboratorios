@@ -10,7 +10,7 @@ import {
   Alert,
   Snackbar
 } from '@mui/material'
-import { Add, Category, Person, LibraryBooks, School, AccountBalance, FileUpload, Group } from '@mui/icons-material'
+import { Add, Category, Person, LibraryBooks, School, AccountBalance, FileUpload, Group, Straighten } from '@mui/icons-material'
 import { TiposEquipoTable } from '../components/Configuracion/TipoEquipo/TiposEquipoTable'
 import { TipoEquipoForm } from '../components/Configuracion/TipoEquipo/TipoEquipoForm'
 import { EscuelasTable } from '../components/Configuracion/Escuela/EscuelasTable'
@@ -24,7 +24,10 @@ import { LaboratoriosTable } from '../components/Configuracion/Laboratorios/Labo
 import { LaboratorioForm } from '../components/Configuracion/Laboratorios/LaboratorioForm'
 import { UsuariosTable } from '../components/Configuracion/Usuarios/UsuariosTable'
 import { UsuarioForm } from '../components/Configuracion/Usuarios/UsuarioForm'
+import { UnidadesTable } from '../components/Configuracion/Unidades/UnidadesTable'
+import { UnidadForm } from '../components/Configuracion/Unidades/UnidadForm'
 import { tipoEquipoService, type TipoEquipo } from '../services/tipoEquipoService'
+import { unidadService, type Unidad } from '../services/unidadService'
 import { escuelaService, type Escuela } from '../services/escuelaService'
 import { docenteService, type Docente } from '../services/docenteService'
 import { insumoService, type Insumo } from '../services/insumoService'
@@ -65,6 +68,14 @@ export const Configuracion: React.FC = () => {
   const [editingTipo, setEditingTipo] = useState<TipoEquipo | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [tipoToDelete, setTipoToDelete] = useState<TipoEquipo | null>(null)
+
+  // Estado para Unidades
+  const [unidades, setUnidades] = useState<Unidad[]>([])
+  const [loadingUnidades, setLoadingUnidades] = useState(false)
+  const [unidadFormOpen, setUnidadFormOpen] = useState(false)
+  const [editingUnidad, setEditingUnidad] = useState<Unidad | null>(null)
+  const [unidadDeleteDialogOpen, setUnidadDeleteDialogOpen] = useState(false)
+  const [unidadToDelete, setUnidadToDelete] = useState<Unidad | null>(null)
 
   // Estado para Docentes
   const [docentes, setDocentes] = useState<Docente[]>([])
@@ -153,6 +164,22 @@ export const Configuracion: React.FC = () => {
     setLoadingInsumos(false)
   }
 
+  // Cargar unidades
+  const loadUnidades = async () => {
+    setLoadingUnidades(true)
+    const result = await execute(() => unidadService.getAll())
+    if (result.error) {
+      setSnackbar({
+        open: true,
+        message: result.error,
+        severity: 'error'
+      })
+    } else if (result.data) {
+      setUnidades(result.data.data)
+    }
+    setLoadingUnidades(false)
+  }
+
   // Cargar docentes
   const loadDocentes = async () => {
     setLoadingDocentes(true)
@@ -226,14 +253,16 @@ export const Configuracion: React.FC = () => {
     if (tabValue === 0) {
       loadTiposEquipo()
     } else if (tabValue === 1) {
-      loadDocentes()
+      loadUnidades()
     } else if (tabValue === 2) {
-      loadCatalogoInsumos()
+      loadDocentes()
     } else if (tabValue === 3) {
-      loadLaboratorios()
+      loadCatalogoInsumos()
     } else if (tabValue === 4) {
-      loadEscuelas()
+      loadLaboratorios()
     } else if (tabValue === 5) {
+      loadEscuelas()
+    } else if (tabValue === 6) {
       loadUsuarios()
     }
   }, [tabValue])
@@ -290,6 +319,60 @@ export const Configuracion: React.FC = () => {
 
     setDeleteDialogOpen(false)
     setTipoToDelete(null)
+  }
+
+  // Handlers para Unidades
+  const handleOpenUnidadForm = () => {
+    setEditingUnidad(null)
+    setUnidadFormOpen(true)
+  }
+
+  const handleEditUnidad = (unidad: Unidad) => {
+    setEditingUnidad(unidad)
+    setUnidadFormOpen(true)
+  }
+
+  const handleCloseUnidadForm = () => {
+    setUnidadFormOpen(false)
+    setEditingUnidad(null)
+  }
+
+  const handleUnidadFormSuccess = (message?: string) => {
+    loadUnidades()
+    setSnackbar({
+      open: true,
+      message: message || (editingUnidad ? 'Unidad actualizada exitosamente' : 'Unidad creada exitosamente'),
+      severity: 'success'
+    })
+  }
+
+  const handleDeleteUnidadClick = (unidad: Unidad) => {
+    setUnidadToDelete(unidad)
+    setUnidadDeleteDialogOpen(true)
+  }
+
+  const handleDeleteUnidadConfirm = async () => {
+    if (!unidadToDelete) return
+
+    const result = await execute(() => unidadService.delete(unidadToDelete.id))
+
+    if (result.error) {
+      setSnackbar({
+        open: true,
+        message: result.error,
+        severity: 'error'
+      })
+    } else if (result.data) {
+      setSnackbar({
+        open: true,
+        message: result.data.message || 'Unidad eliminada exitosamente',
+        severity: 'success'
+      })
+      loadUnidades()
+    }
+
+    setUnidadDeleteDialogOpen(false)
+    setUnidadToDelete(null)
   }
 
   // Handlers para Docentes
@@ -653,39 +736,46 @@ export const Configuracion: React.FC = () => {
               aria-controls="config-tabpanel-0"
             />
             <Tab
+              icon={<Straighten />}
+              iconPosition="start"
+              label="Unidades"
+              id="config-tab-1"
+              aria-controls="config-tabpanel-1"
+            />
+            <Tab
               icon={<Person />}
               iconPosition="start"
               label="Docentes"
-              id="config-tab-1"
-              aria-controls="config-tabpanel-1"
+              id="config-tab-2"
+              aria-controls="config-tabpanel-2"
             />
             <Tab
               icon={<LibraryBooks />}
               iconPosition="start"
               label="Catálogo de Insumos"
-              id="config-tab-2"
-              aria-controls="config-tabpanel-2"
+              id="config-tab-3"
+              aria-controls="config-tabpanel-3"
             />
             <Tab
               icon={<School />}
               iconPosition="start"
               label="Laboratorios"
-              id="config-tab-3"
-              aria-controls="config-tabpanel-3"
+              id="config-tab-4"
+              aria-controls="config-tabpanel-4"
             />
             <Tab
               icon={<AccountBalance />}
               iconPosition="start"
               label="Escuelas"
-              id="config-tab-4"
-              aria-controls="config-tabpanel-4"
+              id="config-tab-5"
+              aria-controls="config-tabpanel-5"
             />
             <Tab
               icon={<Group />}
               iconPosition="start"
               label="Usuarios"
-              id="config-tab-5"
-              aria-controls="config-tabpanel-5"
+              id="config-tab-6"
+              aria-controls="config-tabpanel-6"
             />
           </Tabs>
         </Box>
@@ -727,8 +817,45 @@ export const Configuracion: React.FC = () => {
           </Box>
         </TabPanel>
 
-        {/* Tab Panel: Docentes */}
+        {/* Tab Panel: Unidades */}
         <TabPanel value={tabValue} index={1}>
+          <Box sx={{ px: 3 }}>
+            {/* Header con botón */}
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mb: 3
+            }}>
+              <Typography variant="h6" fontWeight={600}>
+                Gestión de Unidades
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={handleOpenUnidadForm}
+              >
+                Nueva Unidad
+              </Button>
+            </Box>
+
+            {/* Tabla */}
+            {loadingUnidades ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <UnidadesTable
+                unidades={unidades}
+                onEdit={handleEditUnidad}
+                onDelete={handleDeleteUnidadClick}
+              />
+            )}
+          </Box>
+        </TabPanel>
+
+        {/* Tab Panel: Docentes */}
+        <TabPanel value={tabValue} index={2}>
           <Box sx={{ px: 3 }}>
             {/* Header con botón */}
             <Box sx={{
@@ -765,7 +892,7 @@ export const Configuracion: React.FC = () => {
         </TabPanel>
 
         {/* Tab Panel: Catálogo de Insumos */}
-        <TabPanel value={tabValue} index={2}>
+        <TabPanel value={tabValue} index={3}>
           <Box sx={{ px: 3 }}>
             {/* Header con botón */}
             <Box
@@ -816,7 +943,7 @@ export const Configuracion: React.FC = () => {
         </TabPanel>
 
         {/* Tab Panel: Laboratorios */}
-        <TabPanel value={tabValue} index={3}>
+        <TabPanel value={tabValue} index={4}>
           <Box sx={{ px: 3 }}>
             {/* Header con botón */}
             <Box sx={{
@@ -854,7 +981,7 @@ export const Configuracion: React.FC = () => {
         </TabPanel>
 
         {/* Tab Panel: Escuelas */}
-        <TabPanel value={tabValue} index={4}>
+        <TabPanel value={tabValue} index={5}>
           <Box sx={{ px: 3 }}>
             {/* Header con botón */}
             <Box sx={{
@@ -891,7 +1018,7 @@ export const Configuracion: React.FC = () => {
         </TabPanel>
 
         {/* Tab Panel: Usuarios */}
-        <TabPanel value={tabValue} index={5}>
+        <TabPanel value={tabValue} index={6}>
           <Box sx={{ px: 3 }}>
             {/* Header con botón */}
             <Box sx={{
@@ -940,6 +1067,14 @@ export const Configuracion: React.FC = () => {
         onClose={handleCloseForm}
         onSuccess={handleFormSuccess}
         tipoEquipo={editingTipo}
+      />
+
+      {/* Formulario de Unidad */}
+      <UnidadForm
+        open={unidadFormOpen}
+        onClose={handleCloseUnidadForm}
+        onSuccess={handleUnidadFormSuccess}
+        unidad={editingUnidad}
       />
 
       {/* Formulario de Docente */}
@@ -1001,6 +1136,16 @@ export const Configuracion: React.FC = () => {
             ? `Este tipo tiene ${tipoToDelete?.count_equipos} equipo(s) asociado(s) y no podrá ser eliminado.`
             : undefined
         }
+      />
+
+      {/* Diálogo de confirmación de eliminación - Unidad */}
+      <DeleteDialog
+        open={unidadDeleteDialogOpen}
+        onClose={() => setUnidadDeleteDialogOpen(false)}
+        onConfirm={handleDeleteUnidadConfirm}
+        itemName={unidadToDelete?.nombre || ''}
+        itemType="la unidad"
+        warningMessage="Si esta unidad tiene insumos asociados, no podrá ser eliminada."
       />
 
       {/* Diálogo de confirmación de eliminación - Docente */}
