@@ -71,8 +71,8 @@ export const Horario = {
         FROM reservas r
         JOIN laboratorios l ON r.laboratorio_id = l.id
         JOIN docentes d ON r.docente_id = d.id
-        JOIN escuelas e ON r.escuela_id = e.id
-        JOIN ciclos c ON r.ciclo_id = c.id
+        LEFT JOIN escuelas e ON r.escuela_id = e.id
+        LEFT JOIN ciclos c ON r.ciclo_id = c.id
         WHERE r.id = ?
       `, [reserva_id])
 
@@ -205,8 +205,8 @@ export const Horario = {
             INNER JOIN laboratorios l ON r.laboratorio_id = l.id
             INNER JOIN roles rl ON u.rol_id = rl.id
             INNER JOIN docentes d ON r.docente_id = d.id
-            INNER JOIN escuelas e ON r.escuela_id = e.id
-            INNER JOIN ciclos c ON r.ciclo_id = c.id
+            LEFT JOIN escuelas e ON r.escuela_id = e.id
+            LEFT JOIN ciclos c ON r.ciclo_id = c.id
             WHERE 1=1
             `
         const params = []
