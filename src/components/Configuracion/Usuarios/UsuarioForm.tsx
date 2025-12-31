@@ -251,7 +251,7 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
             {errors.submit}
           </Alert>
         )}
-        <Box display="flex" flexDirection="column" gap={2.5}>
+        <Box display="flex" flexDirection="column" gap={2.5} paddingTop={2}>
           {/* Nombre Completo */}
           <TextField
             fullWidth
