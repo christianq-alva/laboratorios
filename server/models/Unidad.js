@@ -46,7 +46,7 @@ export const Unidad = {
   getById: async (id, connection) => {
     const conn = connection || pool
     
-    const [rows] = await conn.execute('SELECT * FROM unidades WHERE id = ?', [id])
+    const [rows] = await conn.execute('SELECT id, simbolo, nombre, descripcion FROM unidades WHERE id = ?', [id])
     return rows[0] || null
   },
 

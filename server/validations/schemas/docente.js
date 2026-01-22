@@ -14,6 +14,7 @@ export const createDocenteSchema = z.object({
             .trim()
             .email('El correo debe tener un formato válido')
             .max(100, 'El correo no puede exceder 100 caracteres')
+            .or(z.literal(''))
             .optional()
             .nullable()
             .transform((val) => val === '' ? null : val),
@@ -41,6 +42,7 @@ export const updateDocenteSchema = z.object({
             .trim()
             .email('El correo debe tener un formato válido')
             .max(100, 'El correo no puede exceder 100 caracteres')
+            .or(z.literal(''))
             .optional()
             .nullable()
             .transform((val) => val === '' ? null : val),

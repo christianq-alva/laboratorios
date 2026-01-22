@@ -2,6 +2,7 @@ import { pool } from '../config/database.js'
 import { Insumo } from '../models/Insumo.js'
 import multer from 'multer'
 import XLSX from 'xlsx'
+import { Unidad } from '../models/Unidad.js'
 
 const categoriasValidas = ['Reactivos', 'Materiales', 'Material_Biologico']
 
@@ -181,6 +182,7 @@ export const generarPlantillaImportacion = async (req, res) => {
   try {
     // Crear workbook
     const wb = XLSX.utils.book_new()
+    const unidades = await Unidad.getAll()
     // Hoja 1: Plantilla de insumos
     const plantillaData = [
       [
@@ -193,21 +195,21 @@ export const generarPlantillaImportacion = async (req, res) => {
       [
         'Alcohol etílico 70%',
         'Alcohol para desinfección y limpieza',
-        'Litros',
+        '1',
         'Reactivos',
         'Frasco 1L',
       ],
       [
         'Jeringas desechables 10ml',
         'Jeringas estériles para procedimientos',
-        'Unidades',
+        '2',
         'Materiales',
         'Caja x 100 unidades',
       ],
       [
         'Cultivo bacteriano E.coli',
         'Cultivo para prácticas de microbiología',
-        'Placas',
+        '3',
         'Material_Biologico',
         'Placa Petri',
       ]
@@ -228,21 +230,28 @@ export const generarPlantillaImportacion = async (req, res) => {
       [''],
       ['COLUMNAS OBLIGATORIAS:'],
       ['• NOMBRE: Nombre del insumo (texto, máximo 255 caracteres)'],
-      ['• UNIDAD_MEDIDA: Unidad de medida (Ej.: Litros, Unidades, Gramos, ml)'],
+      ['• UNIDAD_MEDIDA: ID de la unidad de medida'],
+      ['• CATEGORIA: Reactivos | Materiales | Material_Biologico'],
       [''],
       ['COLUMNAS OPCIONALES:'],
       ['• DESCRIPCION: Descripción detallada del insumo'],
-      ['• CATEGORIA: Reactivos | Materiales | Material_Biologico'],
       ['• PRESENTACION: Formato de presentación (Ej.: Frasco 500ml, Caja x 100)'],
       [''],
       [''],
       ['NOTAS IMPORTANTES:'],
       ['• Los códigos de insumos se generan automáticamente'],
-      ['• Las fechas deben estar en formato YYYY-MM-DD'],
-      ['• El stock por laboratorio es opcional (0 por defecto)'],
+      ['• Las unidades deben ser válidas'],
       ['• Las categorías deben ser exactamente: Reactivos, Materiales o Material_Biologico'],
+      ['• Las fechas deben estar en formato YYYY-MM-DD'],
       ['• Elimine esta hoja antes de importar el archivo']
     ]
+    const unidadesData = [
+      ['ID', 'NOMBRE', 'SIMBOLO'],
+      ...unidades.map(u => [u.id, u.nombre, u.simbolo]),
+      [''],
+    ]
+    const wsUnidades = XLSX.utils.aoa_to_sheet(unidadesData)
+    wsUnidades['!cols'] = [{ width: 10 }, { width: 30 }, { width: 10 }]
     const wsInstrucciones = XLSX.utils.aoa_to_sheet(instruccionesData)
     wsInstrucciones['!cols'] = [{ width: 80 }, { width: 15 }, { width: 30 }]
     // Hacer la primera fila más grande y en negrita
@@ -251,6 +260,7 @@ export const generarPlantillaImportacion = async (req, res) => {
       alignment: { horizontal: 'center' }
     }
     XLSX.utils.book_append_sheet(wb, wsInstrucciones, 'INSTRUCCIONES')
+    XLSX.utils.book_append_sheet(wb, wsUnidades, 'UNIDADES DISPONIBLES')
     // Configurar respuesta para descarga
     const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' })
     const timestamp = new Date().toISOString().slice(0, 10)
@@ -285,6 +295,8 @@ export const previsualizarImportacionMasiva = async (req, res) => {
         message: 'El archivo Excel está vacío o no tiene el formato correcto'
       })
     }
+
+    console.log('data', data)
     const previewData = []
     const erroresGenerales = []
     for (let i = 0; i < data.length; i++) {
@@ -294,25 +306,44 @@ export const previsualizarImportacionMasiva = async (req, res) => {
       // Validar y limpiar datos
       const nombre = row.NOMBRE ? row.NOMBRE.toString().trim() : ''
       const descripcion = row.DESCRIPCION ? row.DESCRIPCION.toString().trim() : ''
-      const unidad_medida = row.UNIDAD_MEDIDA ? row.UNIDAD_MEDIDA.toString().trim() : ''
+      const unidad_id = row.UNIDAD_MEDIDA ? parseInt(row.UNIDAD_MEDIDA) : null
       const categoria = row.CATEGORIA ? row.CATEGORIA.toString().trim() : ''
       const presentacion = row.PRESENTACION ? row.PRESENTACION.toString().trim() : ''
+
+
+
       // Validar campos obligatorios
       if (!nombre) {
         erroresFila.push('NOMBRE es obligatorio')
       }
-      if (!unidad_medida) {
+
+      if (!unidad_id) {
         erroresFila.push('UNIDAD_MEDIDA es obligatorio')
       }
+      const unidad_medida = ''
+      if (unidad_id) {
+        unidad_medida = await Unidad.getById(unidad_id)
+        if (!unidad_medida) {
+          erroresFila.push(`UNIDAD_MEDIDA inválida: ${unidad_id}`)
+        }
+      }
+
+      const unidad_nombre = unidad_medida ? unidad_medida.nombre : 'N/A'
+      const unidad_simbolo = unidad_medida ? unidad_medida.simbolo : 'N/A'
+
       // Validar categoría
       if (!categoriasValidas.includes(categoria)) {
         erroresFila.push(`Categoría inválida. Debe ser: ${categoriasValidas.join(', ')}`)
       }
+
+
+
       previewData.push({
         fila: rowNum,
         nombre,
         descripcion,
-        unidad_medida,
+        unidad_nombre,
+        unidad_simbolo,
         categoria,
         presentacion,
         errores: erroresFila
@@ -365,26 +396,38 @@ export const importacionMasiva = async (req, res) => {
       const rowNum = i + 2 // +2 porque Excel empieza en 1 y tenemos header
       try {
         // Validar campos obligatorios
-        if (!row.NOMBRE || !row.UNIDAD_MEDIDA) {
-          errores.push(`Fila ${rowNum}: NOMBRE y UNIDAD_MEDIDA son obligatorios`)
+        if (!row.NOMBRE) {
+          errores.push(`Fila ${rowNum}: NOMBRE es obligatorio`)
           continue
+        }
+        if (!row.UNIDAD_MEDIDA) {
+          errores.push(`Fila ${rowNum}: UNIDAD_MEDIDA es obligatorio`)
+          continue
+        }
+        else {
+          if (!await Unidad.existsById(row.UNIDAD_MEDIDA)) {
+            errores.push(`Fila ${rowNum}: UNIDAD_MEDIDA inválida: ${row.UNIDAD_MEDIDA}`)
+            continue
+          }
         }
         // Limpiar y validar datos
         const nombre = row.NOMBRE.toString().trim()
         const descripcion = row.DESCRIPCION ? row.DESCRIPCION.toString().trim() : ''
-        const unidad_medida = row.UNIDAD_MEDIDA.toString().trim()
         const categoria = row.CATEGORIA ? row.CATEGORIA.toString().trim() : ''
         const presentacion = row.PRESENTACION ? row.PRESENTACION.toString().trim() : ''
+        const unidad_medida = await Unidad.getById(row.UNIDAD_MEDIDA)
+
         // Validar categoría
         if (!categoriasValidas.includes(categoria)) {
           errores.push(`Fila ${rowNum}: Categoría inválida. Debe ser: ${categoriasValidas.join(', ')}`)
           continue
         }
-        const { insumo_id, codigo } = await Insumo.create(nombre, descripcion || '', unidad_medida, categoria, presentacion || '', connection)
+        const { insumo_id, codigo } = await Insumo.create(nombre, descripcion || '', unidad_medida.id, categoria, presentacion || '', connection)
         resultados.push({
           fila: rowNum,
           codigo: codigo,
           nombre: nombre,
+          unidad_medida: unidad_medida.nombre,
           categoria: categoria,
         })
         procesados++

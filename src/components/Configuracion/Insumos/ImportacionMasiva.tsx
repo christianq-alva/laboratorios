@@ -281,7 +281,35 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                 </label>
               </Paper>
             </Box>
+            {/* Información y requisitos */}
+            {!selectedFile && (
+              <Box sx={{ display: 'flex', gap: 3 }}>
+                <Paper sx={{ flex: 1, p: 2, bgcolor: 'info.50' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 500, mb: 1, color: 'info.main' }}>
+                    📋 La plantilla incluye:
+                  </Typography>
+                  <Typography variant="body2" component="div">
+                    • Todas las columnas del módulo de insumos<br />
+                    • Ejemplos de reactivos y materiales<br />
+                    • Instrucciones detalladas de validaciones<br />
+                    • Formatos requeridos para fechas y categorías
+                  </Typography>
+                </Paper>
 
+                <Paper sx={{ flex: 1, p: 2, bgcolor: 'warning.50' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 500, mb: 1, color: 'warning.main' }}>
+                    ⚠️ Requisitos del archivo:
+                  </Typography>
+                  <Typography variant="body2" component="div">
+                    • Formato: .xlsx o .xls<br />
+                    • Tamaño máximo: 5MB<br />
+                    • Usar la plantilla descargada<br />
+                    • No modificar los nombres de las columnas<br />
+                    • Eliminar la hoja "INSTRUCCIONES" antes de cargar
+                  </Typography>
+                </Paper>
+              </Box>
+            )}
             {/* Archivo seleccionado */}
             {selectedFile && (
               <Paper sx={{ p: 3, mb: 3, bgcolor: 'success.50', border: '1px solid', borderColor: 'success.main' }}>
@@ -329,35 +357,6 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                 )}
               </Paper>
             )}
-
-            {/* Información y requisitos */}
-            <Box sx={{ display: 'flex', gap: 3 }}>
-              <Paper sx={{ flex: 1, p: 2, bgcolor: 'info.50' }}>
-                <Typography variant="body2" sx={{ fontWeight: 500, mb: 1, color: 'info.main' }}>
-                  📋 La plantilla incluye:
-                </Typography>
-                <Typography variant="body2" component="div">
-                  • Todas las columnas del módulo de insumos<br />
-                  • Ejemplos de reactivos y materiales<br />
-                  • Instrucciones detalladas de validaciones<br />
-                  • Lista de laboratorios disponibles<br />
-                  • Formatos requeridos para fechas y categorías
-                </Typography>
-              </Paper>
-
-              <Paper sx={{ flex: 1, p: 2, bgcolor: 'warning.50' }}>
-                <Typography variant="body2" sx={{ fontWeight: 500, mb: 1, color: 'warning.main' }}>
-                  ⚠️ Requisitos del archivo:
-                </Typography>
-                <Typography variant="body2" component="div">
-                  • Formato: .xlsx o .xls<br />
-                  • Tamaño máximo: 5MB<br />
-                  • Usar la plantilla descargada<br />
-                  • No modificar los nombres de las columnas<br />
-                  • Eliminar la hoja "INSTRUCCIONES" antes de cargar
-                </Typography>
-              </Paper>
-            </Box>
           </Box>
         )}
 

@@ -163,6 +163,14 @@ export const updateEstado = async (req, res) => {
     const { id: usuarioId } = req.params
     const { estado } = req.body
 
+    // Prevenir que un usuario cambie su propio estado
+    if (req.user.userId === parseInt(usuarioId)) {
+      return res.status(403).json({
+        success: false,
+        message: 'No puedes cambiar tu propio estado'
+      })
+    }
+
     // Verificar que el usuario existe
     const usuarioExistente = await User.getById(usuarioId)
     if (!usuarioExistente) {
