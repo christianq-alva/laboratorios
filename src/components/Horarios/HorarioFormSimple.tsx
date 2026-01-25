@@ -20,6 +20,7 @@ import {
   ListItem,
   ListItemText,
   Tooltip,
+  Popover,
 } from '@mui/material'
 import {
   Close,
@@ -72,40 +73,38 @@ interface EquipoSeleccionado {
   nombre: string
 }
 
-// Paleta de colores disponibles
+// Paleta de colores disponibles - Colores vibrantes con buen contraste con texto blanco
 const COLOR_PALETTE = [
   { color: '#ff6b6b', name: 'Rojo' },
-  { color: '#ff8c8c', name: 'Rojo Claro' },
-  { color: '#ee5a52', name: 'Rojo Oscuro' },
+  { color: '#ff5252', name: 'Rojo Intenso' },
+  { color: '#ff7043', name: 'Rojo Naranja' },
   { color: '#4ecdc4', name: 'Turquesa' },
-  { color: '#45b7b0', name: 'Turquesa Oscuro' },
-  { color: '#7ee8d8', name: 'Turquesa Claro' },
+  { color: '#00bcd4', name: 'Cian' },
+  { color: '#00acc1', name: 'Turquesa Intenso' },
   { color: '#ffa726', name: 'Naranja' },
-  { color: '#ffb74d', name: 'Naranja Claro' },
-  { color: '#ff8a65', name: 'Naranja Oscuro' },
+  { color: '#ff9800', name: 'Naranja Oscuro' },
+  { color: '#ff7043', name: 'Naranja Rojo' },
   { color: '#ab47bc', name: 'Púrpura' },
+  { color: '#9c27b0', name: 'Púrpura Intenso' },
   { color: '#ba68c8', name: 'Púrpura Claro' },
-  { color: '#7b1fa2', name: 'Púrpura Oscuro' },
   { color: '#26a69a', name: 'Verde Oscuro' },
   { color: '#4db8a8', name: 'Verde Teal' },
   { color: '#66bb6a', name: 'Verde' },
-  { color: '#81c784', name: 'Verde Claro' },
+  { color: '#43a047', name: 'Verde Intenso' },
   { color: '#42a5f5', name: 'Azul' },
-  { color: '#64b5f6', name: 'Azul Claro' },
-  { color: '#1976d2', name: 'Azul Oscuro' },
-  { color: '#29b6f6', name: 'Azul Cielo' },
+  { color: '#2196f3', name: 'Azul Intenso' },
+  { color: '#1e88e5', name: 'Azul Marino' },
+  { color: '#1565c0', name: 'Azul Oscuro' },
   { color: '#ffeb3b', name: 'Amarillo' },
-  { color: '#fff176', name: 'Amarillo Claro' },
   { color: '#fdd835', name: 'Amarillo Dorado' },
-  { color: '#95a5a6', name: 'Gris' },
-  { color: '#bdbdbd', name: 'Gris Claro' },
-  { color: '#455a64', name: 'Gris Oscuro' },
-  { color: '#ff6f00', name: 'Naranja Intenso' },
+  { color: '#f9a825', name: 'Amarillo Naranja' },
+  { color: '#ef5350', name: 'Rojo Claro' },
   { color: '#e91e63', name: 'Rosa' },
-  { color: '#f06292', name: 'Rosa Claro' },
   { color: '#c2185b', name: 'Rosa Oscuro' },
-  { color: '#00bcd4', name: 'Cian' },
-  { color: '#03a9f4', name: 'Azul Intenso' }
+  { color: '#3f51b5', name: 'Índigo' },
+  { color: '#5e35b1', name: 'Púrpura Profundo' },
+  { color: '#ff5722', name: 'Naranja Profundo' },
+  { color: '#95a5a6', name: 'Gris' }
 ]
 
 export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, onSuccess, horario }) => {
@@ -144,6 +143,10 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
   const [loadingData, setLoadingData] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [conflictos, setConflictos] = useState<ConflictoHorario[]>([])
+
+  // Estado para el popover de colores
+  const [colorAnchorEl, setColorAnchorEl] = useState<HTMLButtonElement | null>(null)
+  const colorPopoverOpen = Boolean(colorAnchorEl)
 
   const [laboratorioChangeMessage, setLaboratorioChangeMessage] = useState<string | null>(null)
 
@@ -733,79 +736,106 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                       sx={{ flex: 1 }}
                     />
 
-                    {/* Selector de color */}
-                    <Box sx={{ flex: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    {/* Selector de color - Botón circular */}
+                    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Typography variant="body2">
                           Color del horario
                         </Typography>
-                        <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
-                          ({formData.color})
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
-                        {COLOR_PALETTE.map((colorOption) => (
-                          <Box
-                            key={colorOption.color}
-                            onClick={() => {
-                              console.log('🎨 Color seleccionado:', colorOption.color)
-                              console.log('🎨 FormData antes:', formData.color)
-                              setFormData(prev => {
-                                const newData = { ...prev, color: colorOption.color }
-                                console.log('🎨 FormData después:', newData.color)
-                                return newData
-                              })
-                            }}
-                            sx={{
-                              width: 36,
-                              height: 36,
-                              backgroundColor: colorOption.color,
-                              borderRadius: 1,
-                              cursor: 'pointer',
-                              border: formData.color === colorOption.color ? '3px solid #000' : '2px solid #ddd',
-                              transition: 'all 0.2s',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              '&:hover': {
-                                transform: 'scale(1.1)',
-                                boxShadow: 3
-                              }
-                            }}
-                            title={colorOption.name}
-                          >
-                            {formData.color === colorOption.color && (
-                              <Box
-                                sx={{
-                                  width: 8,
-                                  height: 8,
-                                  backgroundColor: 'white',
-                                  borderRadius: '50%',
-                                  boxShadow: 1
-                                }}
-                              />
-                            )}
-                          </Box>
-                        ))}
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-                        <Typography variant="caption" color="text.secondary">
-                          Color seleccionado:
-                        </Typography>
-                        <Box
+                        <Button
+                          onClick={(e) => setColorAnchorEl(e.currentTarget)}
                           sx={{
-                            width: 20,
-                            height: 20,
+                            minWidth: 'unset',
+                            width: 48,
+                            height: 48,
+                            borderRadius: '50%',
                             backgroundColor: formData.color,
-                            borderRadius: 1,
-                            border: '1px solid #ddd'
+                            border: '3px solid #333',
+                            cursor: 'pointer',
+                            '&:hover': {
+                              transform: 'scale(1.1)',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+                            },
+                            transition: 'all 0.2s',
+                            p: 0
                           }}
+                          title="Click para seleccionar color"
                         />
-                        <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="caption" color="text.secondary">
                           {COLOR_PALETTE.find(c => c.color === formData.color)?.name || 'Personalizado'}
                         </Typography>
                       </Box>
                     </Box>
+
+                    {/* Popover con paleta de colores */}
+                    <Popover
+                      open={colorPopoverOpen}
+                      anchorEl={colorAnchorEl}
+                      onClose={() => setColorAnchorEl(null)}
+                      anchorOrigin={{
+                        vertical: 'bottom',
+                        horizontal: 'left',
+                      }}
+                      transformOrigin={{
+                        vertical: 'top',
+                        horizontal: 'left',
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          p: 1.5,
+                          backgroundColor: '#fff',
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(7, 1fr)',
+                          gap: 1,
+                          width: 'fit-content'
+                        }}
+                      >
+                        {COLOR_PALETTE.map((colorOption) => (
+                          <Tooltip key={colorOption.color} title={colorOption.name} arrow>
+                            <Box
+                              onClick={() => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  color: colorOption.color
+                                }))
+                                setColorAnchorEl(null)
+                              }}
+                              sx={{
+                                width: 40,
+                                height: 40,
+                                backgroundColor: colorOption.color,
+                                borderRadius: '50%',
+                                cursor: 'pointer',
+                                border: formData.color === colorOption.color ? '4px solid #000' : '2px solid #ddd',
+                                transition: 'all 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                '&:hover': {
+                                  transform: 'scale(1.15)',
+                                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                                }
+                              }}
+                            >
+                              {formData.color === colorOption.color && (
+                                <Box
+                                  sx={{
+                                    width: 10,
+                                    height: 10,
+                                    backgroundColor: 'white',
+                                    borderRadius: '50%',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                  }}
+                                />
+                              )}
+                            </Box>
+                          </Tooltip>
+                        ))}
+                      </Box>
+                    </Popover>
                   </Box>
                 </Box>
               </Paper>
