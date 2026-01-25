@@ -75,15 +75,37 @@ interface EquipoSeleccionado {
 // Paleta de colores disponibles
 const COLOR_PALETTE = [
   { color: '#ff6b6b', name: 'Rojo' },
+  { color: '#ff8c8c', name: 'Rojo Claro' },
+  { color: '#ee5a52', name: 'Rojo Oscuro' },
   { color: '#4ecdc4', name: 'Turquesa' },
+  { color: '#45b7b0', name: 'Turquesa Oscuro' },
+  { color: '#7ee8d8', name: 'Turquesa Claro' },
   { color: '#ffa726', name: 'Naranja' },
+  { color: '#ffb74d', name: 'Naranja Claro' },
+  { color: '#ff8a65', name: 'Naranja Oscuro' },
   { color: '#ab47bc', name: 'Púrpura' },
-  { color: '#26a69a', name: 'Verde' },
-  { color: '#66bb6a', name: 'Verde Claro' },
+  { color: '#ba68c8', name: 'Púrpura Claro' },
+  { color: '#7b1fa2', name: 'Púrpura Oscuro' },
+  { color: '#26a69a', name: 'Verde Oscuro' },
+  { color: '#4db8a8', name: 'Verde Teal' },
+  { color: '#66bb6a', name: 'Verde' },
+  { color: '#81c784', name: 'Verde Claro' },
   { color: '#42a5f5', name: 'Azul' },
-  { color: '#ef5350', name: 'Rojo Claro' },
+  { color: '#64b5f6', name: 'Azul Claro' },
+  { color: '#1976d2', name: 'Azul Oscuro' },
+  { color: '#29b6f6', name: 'Azul Cielo' },
   { color: '#ffeb3b', name: 'Amarillo' },
-  { color: '#95a5a6', name: 'Gris' }
+  { color: '#fff176', name: 'Amarillo Claro' },
+  { color: '#fdd835', name: 'Amarillo Dorado' },
+  { color: '#95a5a6', name: 'Gris' },
+  { color: '#bdbdbd', name: 'Gris Claro' },
+  { color: '#455a64', name: 'Gris Oscuro' },
+  { color: '#ff6f00', name: 'Naranja Intenso' },
+  { color: '#e91e63', name: 'Rosa' },
+  { color: '#f06292', name: 'Rosa Claro' },
+  { color: '#c2185b', name: 'Rosa Oscuro' },
+  { color: '#00bcd4', name: 'Cian' },
+  { color: '#03a9f4', name: 'Azul Intenso' }
 ]
 
 export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, onSuccess, horario }) => {
@@ -640,12 +662,12 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
 
                   {/* Fila de Escuela, Ciclo */}
                   <Box sx={{ display: 'flex', gap: 2 }}>
-                    <FormControl sx={{ flex: 1 }}> 
+                    <FormControl sx={{ flex: 1 }}>
                       <InputLabel>Escuela</InputLabel>
                       <Select
                         value={formData.escuela_id}
                         label="Escuela"
-                        onChange={(e) => setFormData(prev => ({ ...prev, escuela_id: e.target.value as number}))}
+                        onChange={(e) => setFormData(prev => ({ ...prev, escuela_id: e.target.value as number }))}
                         disabled={loading}
                         required
                       >
@@ -666,7 +688,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                       <Select
                         value={formData.ciclo_id}
                         label="Ciclo"
-                        onChange={(e) => setFormData(prev => ({ ...prev, ciclo_id: e.target.value as number}))}
+                        onChange={(e) => setFormData(prev => ({ ...prev, ciclo_id: e.target.value as number }))}
                         disabled={loading || formData.escuela_id === 0}
                         required
                       >
