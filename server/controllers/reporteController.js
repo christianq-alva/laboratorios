@@ -10,482 +10,234 @@ const getFiltroLaboratorios = (user) => {
   }
   return ''
 }
-// Obtener resumen de consumo por laboratorio (mensual/anual)
-export const getConsumoResumen = async (req, res) => {
+// Obtener comparación de cantidad requerida vs consumida
+export const getRequeridoVsConsumido = async (req, res) => {
   try {
     const {
-      tipo_periodo = 'mensual', // 'mensual' | 'anual'
-      fecha_inicio,
-      fecha_fin,
       laboratorio_id,
       escuela_id,
-      categoria_insumo
+      fecha_inicio,
+      fecha_fin
     } = req.query
-    console.log('📊 getConsumoResumen - Parámetros:', {
-      tipo_periodo,
-      fecha_inicio,
-      fecha_fin,
+
+    console.log('📊 getRequeridoVsConsumido - Parámetros:', {
       laboratorio_id,
       escuela_id,
-      categoria_insumo,
+      fecha_inicio,
+      fecha_fin,
       user_role: req.user.rol,
       user_laboratorio_ids: req.user.laboratorio_ids || []
     })
-    // Construir query base según el tipo de período
-    let dateGroupBy = ''
-    let dateFormat = ''
-    if (tipo_periodo === 'mensual') {
-      dateGroupBy = 'YEAR(m.fecha_movimiento), MONTH(m.fecha_movimiento)'
-      dateFormat = 'DATE_FORMAT(m.fecha_movimiento, "%Y-%m") as periodo'
-    } else {
-      dateGroupBy = 'YEAR(m.fecha_movimiento)'
-      dateFormat = 'YEAR(m.fecha_movimiento) as periodo'
-    }
-    let query = `
-      SELECT 
-        ${dateFormat},
-        l.id as laboratorio_id,
-        l.nombre as laboratorio_nombre,
-        l.escuela_id,
-        i.categoria,
-        i.nombre as insumo_nombre,
-        u.simbolo as unidad_simbolo,
-        u.nombre as unidad_nombre,
-        SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN mid.cantidad ELSE 0 END) as total_consumido,
-        SUM(CASE WHEN m.tipo_movimiento = 'entrada' THEN mid.cantidad ELSE 0 END) as total_ingresado,
-        COUNT(DISTINCT CASE WHEN m.tipo_movimiento = 'salida' THEN m.id END) as num_movimientos_salida,
-        COUNT(DISTINCT CASE WHEN m.tipo_movimiento = 'entrada' THEN m.id END) as num_movimientos_entrada
-      FROM movimientos_insumos m
-      INNER JOIN movimiento_insumo_detalle mid ON m.id = mid.movimiento_id
-      INNER JOIN insumos i ON mid.insumo_id = i.id
-      INNER JOIN unidades u on i.unidad_id = u.id
-      INNER JOIN laboratorios l ON m.laboratorio_id = l.id
-      WHERE 1=1
-    `
-    const params = []
-    // Filtros según permisos del usuario
-    query += getFiltroLaboratorios(req.user)
-    // Filtros opcionales
-    if (fecha_inicio) {
-      query += ` AND DATE(m.fecha_movimiento) >= ?`
-      params.push(fecha_inicio)
-    }
-    if (fecha_fin) {
-      query += ` AND DATE(m.fecha_movimiento) <= ?`
-      params.push(fecha_fin)
-    }
-    if (laboratorio_id) {
-      query += ` AND m.laboratorio_id = ?`
-      params.push(laboratorio_id)
-    }
-    if (escuela_id) {
-      query += ` AND l.escuela_id = ?`
-      params.push(escuela_id)
-    }
-    if (categoria_insumo) {
-      query += ` AND i.categoria = ?`
-      params.push(categoria_insumo)
-    }
-    query += ` GROUP BY ${dateGroupBy}, l.id, i.categoria, i.id`
-    query += ` ORDER BY periodo DESC, l.nombre, i.categoria, total_consumido DESC`
-    const [rows] = await pool.execute(query, params)
-    console.log('📈 Datos de consumo encontrados:', rows.length)
-    res.status(200).json({
-      data: rows,
-      filtros: {
-        tipo_periodo,
-        fecha_inicio: fecha_inicio || null,
-        fecha_fin: fecha_fin || null,
-        laboratorio_id: laboratorio_id || null,
-        escuela_id: escuela_id || null,
-        categoria_insumo: categoria_insumo || null
-      },
-      total_registros: rows.length
-    })
-  } catch (error) {
-    console.error('Error en getConsumoResumen:', error)
-    res.status(500).json({
-      message: error.message
-    })
-  }
-}
-// Obtener datos agregados para dashboard ejecutivo
-export const getDashboardEjecutivo = async (req, res) => {
-  try {
-    const {
-      fecha_inicio,
-      fecha_fin,
-      laboratorio_id,
-      escuela_id
-    } = req.query
-    console.log('📊 getDashboardEjecutivo - Parámetros:', {
-      fecha_inicio,
-      fecha_fin,
-      laboratorio_id,
-      escuela_id,
-      user_role: req.user.rol
-    })
-    // Query para obtener métricas principales
-    let metricsQuery = `
-      SELECT 
-        COUNT(DISTINCT m.laboratorio_id) as total_laboratorios_activos,
-        COUNT(DISTINCT i.categoria) as total_categorias,
-        COUNT(DISTINCT i.id) as total_insumos_utilizados,
-        SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN mid.cantidad ELSE 0 END) as total_consumo,
-        SUM(CASE WHEN m.tipo_movimiento = 'entrada' THEN mid.cantidad ELSE 0 END) as total_ingresos,
-        COUNT(DISTINCT DATE(m.fecha_movimiento)) as dias_actividad
-      FROM movimientos_insumos m
-      INNER JOIN movimiento_insumo_detalle mid ON m.id = mid.movimiento_id
-      INNER JOIN insumos i ON mid.insumo_id = i.id
-      INNER JOIN laboratorios l ON m.laboratorio_id = l.id
-      WHERE 1=1
-    `
-    // Query para consumo por laboratorio
-    let consumoPorLabQuery = `
+
+    // Query para obtener cantidad requerida (desde reservas/horarios)
+    let queryRequerido = `
+        SELECT 
+          l.id as laboratorio_id,
+          l.nombre as laboratorio_nombre,
+          e.id as escuela_id,
+          e.nombre as escuela_nombre,
+          i.id as insumo_id,
+          i.nombre as insumo_nombre,
+          u.simbolo as unidad_simbolo,
+          u.nombre as unidad_nombre,
+          SUM(dri.cantidad_usada) as cantidad_requerida
+        FROM reservas r
+        INNER JOIN detalle_reserva_insumos dri ON r.id = dri.reserva_id
+        INNER JOIN insumos i ON dri.insumo_id = i.id
+        INNER JOIN unidades u ON i.unidad_id = u.id
+        INNER JOIN laboratorios l ON r.laboratorio_id = l.id
+        INNER JOIN escuelas e ON r.escuela_id = e.id
+        WHERE 1=1 AND r.estado = 'C' 
+        AND DATE(r.fecha_inicio) >= ? AND DATE(r.fecha_inicio) <= ? AND r.laboratorio_id = ? AND r.escuela_id = ?
+      `
+
+    // Query para obtener cantidad consumida (desde movimientos)
+    let queryConsumido = `
       SELECT 
         l.id as laboratorio_id,
-        l.nombre as laboratorio_nombre,
-        l.escuela_id,
-        SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN mid.cantidad ELSE 0 END) as total_consumido,
-        COUNT(DISTINCT i.id) as insumos_diferentes,
-        COUNT(DISTINCT DATE(m.fecha_movimiento)) as dias_activo
-      FROM movimientos_insumos m
-      INNER JOIN movimiento_insumo_detalle mid ON m.id = mid.movimiento_id
-      INNER JOIN insumos i ON mid.insumo_id = i.id
-      INNER JOIN laboratorios l ON m.laboratorio_id = l.id
-      WHERE 1=1
-    `
-    // Query para consumo por categoría
-    let consumoPorCategoriaQuery = `
-      SELECT 
-        i.categoria,
-        SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN mid.cantidad ELSE 0 END) as total_consumido,
-        COUNT(DISTINCT i.id) as insumos_diferentes,
-        COUNT(DISTINCT m.laboratorio_id) as laboratorios_usuarios
-      FROM movimientos_insumos m
-      INNER JOIN movimiento_insumo_detalle mid ON m.id = mid.movimiento_id
-      INNER JOIN insumos i ON mid.insumo_id = i.id
-      INNER JOIN laboratorios l ON m.laboratorio_id = l.id
-      WHERE 1=1
-    `
-    // Query para tendencia mensual
-    let tendenciaMensualQuery = `
-      SELECT 
-        DATE_FORMAT(m.fecha_movimiento, '%Y-%m') as periodo,
-        SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN mid.cantidad ELSE 0 END) as consumo_mes,
-        SUM(CASE WHEN m.tipo_movimiento = 'entrada' THEN mid.cantidad ELSE 0 END) as ingreso_mes,
-        COUNT(DISTINCT m.laboratorio_id) as laboratorios_activos
-      FROM movimientos_insumos m
-      INNER JOIN movimiento_insumo_detalle mid ON m.id = mid.movimiento_id
-      INNER JOIN insumos i ON mid.insumo_id = i.id
-      INNER JOIN laboratorios l ON m.laboratorio_id = l.id
-      WHERE 1=1
-    `
-    const params = []
-    // Aplicar filtros de permisos
-    if (tieneRestriccionLaboratorio(req.user)) {
-      const labFilter = ` AND m.laboratorio_id IN (${req.user.laboratorio_ids.join(',')})`
-      metricsQuery += labFilter
-      consumoPorLabQuery += labFilter
-      consumoPorCategoriaQuery += labFilter
-      tendenciaMensualQuery += labFilter
-    }
-    // Aplicar filtros de fecha
-    if (fecha_inicio) {
-      const dateFilter = ` AND DATE(m.fecha_movimiento) >= ?`
-      metricsQuery += dateFilter
-      consumoPorLabQuery += dateFilter
-      consumoPorCategoriaQuery += dateFilter
-      tendenciaMensualQuery += dateFilter
-    }
-    if (fecha_fin) {
-      const dateFilter = ` AND DATE(m.fecha_movimiento) <= ?`
-      metricsQuery += dateFilter
-      consumoPorLabQuery += dateFilter
-      consumoPorCategoriaQuery += dateFilter
-      tendenciaMensualQuery += dateFilter
-    }
-    if (laboratorio_id) {
-      const labFilter = ` AND m.laboratorio_id = ?`
-      metricsQuery += labFilter
-      consumoPorLabQuery += labFilter
-      consumoPorCategoriaQuery += labFilter
-      tendenciaMensualQuery += labFilter
-    }
-    if (escuela_id) {
-      const escuelaFilter = ` AND l.escuela_id = ?`
-      metricsQuery += escuelaFilter
-      consumoPorLabQuery += escuelaFilter
-      consumoPorCategoriaQuery += escuelaFilter
-      tendenciaMensualQuery += escuelaFilter
-    }
-    // Completar queries con GROUP BY y ORDER BY
-    consumoPorLabQuery += ` GROUP BY l.id ORDER BY total_consumido DESC LIMIT 10`
-    consumoPorCategoriaQuery += ` GROUP BY i.categoria ORDER BY total_consumido DESC`
-    tendenciaMensualQuery += ` GROUP BY DATE_FORMAT(m.fecha_movimiento, '%Y-%m') ORDER BY periodo DESC LIMIT 12`
-    // Construir array de parámetros según filtros aplicados
-    const queryParams = []
-    if (fecha_inicio) queryParams.push(fecha_inicio)
-    if (fecha_fin) queryParams.push(fecha_fin)
-    if (laboratorio_id) queryParams.push(laboratorio_id)
-    if (escuela_id) queryParams.push(escuela_id)
-    // Ejecutar todas las consultas en paralelo
-    const [
-      [metricas],
-      [consumoPorLab],
-      [consumoPorCategoria],
-      [tendenciaMensual]
-    ] = await Promise.all([
-      pool.execute(metricsQuery, queryParams),
-      pool.execute(consumoPorLabQuery, queryParams),
-      pool.execute(consumoPorCategoriaQuery, queryParams),
-      pool.execute(tendenciaMensualQuery, queryParams)
-    ])
-    console.log('📊 Dashboard ejecutivo generado:', {
-      metricas: metricas[0],
-      laboratorios: consumoPorLab.length,
-      categorias: consumoPorCategoria.length,
-      meses: tendenciaMensual.length
-    })
-    res.status(200).json({
-      data: {
-        metricas_generales: metricas[0],
-        consumo_por_laboratorio: consumoPorLab,
-        consumo_por_categoria: consumoPorCategoria,
-        tendencia_mensual: tendenciaMensual
-      },
-      filtros: {
-        fecha_inicio: fecha_inicio || null,
-        fecha_fin: fecha_fin || null,
-        laboratorio_id: laboratorio_id || null,
-        escuela_id: escuela_id || null
-      }
-    })
-  } catch (error) {
-    console.error('Error en getDashboardEjecutivo:', error)
-    res.status(500).json({
-      message: error.message
-    })
-  }
-}
-// Obtener top insumos más consumidos
-export const getTopInsumosConsumidos = async (req, res) => {
-  try {
-    const {
-      fecha_inicio,
-      fecha_fin,
-      laboratorio_id,
-      escuela_id,
-      limite = 20
-    } = req.query
-    console.log('🏆 getTopInsumosConsumidos - Parámetros:', {
-      fecha_inicio,
-      fecha_fin,
-      laboratorio_id,
-      escuela_id,
-      limite
-    })
-    let query = `
-      SELECT 
+        e.id as escuela_id,
         i.id as insumo_id,
-        i.codigo as insumo_codigo,
-        i.nombre as insumo_nombre,
-        i.categoria,
-        u.simbolo as unidad_simbolo,
-        u.nombre as unidad_nombre,
-        SUM(mid.cantidad) as total_consumido,
-        COUNT(DISTINCT m.laboratorio_id) as laboratorios_usuarios,
-        COUNT(DISTINCT DATE(m.fecha_movimiento)) as dias_consumo,
-        AVG(mid.cantidad) as promedio_por_movimiento,
-        MAX(m.fecha_movimiento) as ultimo_consumo
+        SUM(mid.cantidad) as cantidad_consumida
       FROM movimientos_insumos m
       INNER JOIN movimiento_insumo_detalle mid ON m.id = mid.movimiento_id
       INNER JOIN insumos i ON mid.insumo_id = i.id
       INNER JOIN laboratorios l ON m.laboratorio_id = l.id
-      INNER JOIN unidades u on i.unidad_id = u.id
+      INNER JOIN escuelas e ON l.escuela_id = e.id
+      INNER JOIN reservas r ON m.reserva_id = r.id and r.estado = 'C'
       WHERE m.tipo_movimiento = 'salida'
+      AND DATE(r.fecha_inicio) >= ? AND DATE(r.fecha_inicio) <= ? AND r.laboratorio_id = ? AND r.escuela_id = ?
     `
-    const params = []
+
+    const paramsRequerido = [fecha_inicio, fecha_fin, laboratorio_id, escuela_id]
+    const paramsConsumido = [fecha_inicio, fecha_fin, laboratorio_id, escuela_id]
+
     // Filtros según permisos del usuario
-    query += getFiltroLaboratorios(req.user)
-    // Filtros opcionales
-    if (fecha_inicio) {
-      query += ` AND DATE(m.fecha_movimiento) >= ?`
-      params.push(fecha_inicio)
+    if (tieneRestriccionLaboratorio(req.user)) {
+      const labFilter = ` AND r.laboratorio_id IN (${req.user.laboratorio_ids.join(',')})`
+      queryRequerido += labFilter
+      queryConsumido += labFilter
     }
-    if (fecha_fin) {
-      query += ` AND DATE(m.fecha_movimiento) <= ?`
-      params.push(fecha_fin)
-    }
-    if (laboratorio_id) {
-      query += ` AND m.laboratorio_id = ?`
-      params.push(laboratorio_id)
-    }
-    if (escuela_id) {
-      query += ` AND l.escuela_id = ?`
-      params.push(escuela_id)
-    }
-    query += ` GROUP BY i.id`
-    query += ` ORDER BY total_consumido DESC`
-    query += ` LIMIT ${parseInt(limite) || 20}`
-    const [rows] = await pool.execute(query, params)
-    console.log('🏆 Top insumos encontrados:', rows.length)
-    res.status(200).json({
-      data: rows,
-      filtros: {
-        fecha_inicio: fecha_inicio || null,
-        fecha_fin: fecha_fin || null,
-        laboratorio_id: laboratorio_id || null,
-        escuela_id: escuela_id || null,
-        limite: parseInt(limite)
+
+    // Agrupación de querys
+    queryRequerido += ` GROUP BY l.id, e.id, i.id`
+    queryConsumido += ` GROUP BY l.id, e.id, i.id`
+
+    // Ejecutar ambas consultas
+    const [requeridos] = await pool.execute(queryRequerido, paramsRequerido)
+    const [consumidos] = await pool.execute(queryConsumido, paramsConsumido)
+
+    // Crear mapa de consumidos para facilitar la búsqueda
+    const consumidosMap = new Map()
+    consumidos.forEach(cons => {
+      const key = `${cons.laboratorio_id}_${cons.escuela_id}_${cons.insumo_id}`
+      consumidosMap.set(key, cons.cantidad_consumida)
+    })
+
+    // Combinar datos
+    const resultado = requeridos.map(req => {
+      const key = `${req.laboratorio_id}_${req.escuela_id}_${req.insumo_id}`
+      const cantidadConsumida = consumidosMap.get(key) || 0
+      return {
+        laboratorio_id: req.laboratorio_id,
+        laboratorio_nombre: req.laboratorio_nombre,
+        escuela_id: req.escuela_id,
+        escuela_nombre: req.escuela_nombre,
+        insumo_id: req.insumo_id,
+        insumo_nombre: req.insumo_nombre,
+        unidad_simbolo: req.unidad_simbolo,
+        unidad_nombre: req.unidad_nombre,
+        cantidad_requerida: parseFloat(req.cantidad_requerida) || 0,
+        cantidad_consumida: parseFloat(cantidadConsumida) || 0
       }
     })
+
+    res.status(200).json({
+      data: resultado,
+      filtros: {
+        laboratorio_id: laboratorio_id || null,
+        escuela_id: escuela_id || null,
+        fecha_inicio: fecha_inicio || null,
+        fecha_fin: fecha_fin || null
+      },
+      total_registros: resultado.length
+    })
   } catch (error) {
-    console.error('Error en getTopInsumosConsumidos:', error)
+    console.error('Error en getRequeridoVsConsumido:', error)
     res.status(500).json({
       message: error.message
     })
   }
 }
-// Obtener análisis de eficiencia por laboratorio
-export const getAnalisisEficiencia = async (req, res) => {
+
+// Obtener comparación de stock actual vs cantidad requerida
+export const getStockVsRequerido = async (req, res) => {
   try {
     const {
+      laboratorio_id,
       fecha_inicio,
-      fecha_fin,
-      escuela_id
+      fecha_fin
     } = req.query
-    console.log('⚡ getAnalisisEficiencia - Parámetros:', {
+
+    console.log('📊 getStockVsRequerido - Parámetros:', {
+      laboratorio_id,
       fecha_inicio,
       fecha_fin,
-      escuela_id
+      user_role: req.user.rol,
+      user_laboratorio_ids: req.user.laboratorio_ids || []
     })
-    let query = `
+
+    // Query para obtener cantidad requerida (desde reservas/horarios)
+    let queryRequerido = `
       SELECT 
         l.id as laboratorio_id,
         l.nombre as laboratorio_nombre,
-        l.escuela_id,
-        COUNT(DISTINCT i.id) as variedad_insumos,
-        SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN mid.cantidad ELSE 0 END) as total_consumo,
-        SUM(CASE WHEN m.tipo_movimiento = 'entrada' THEN mid.cantidad ELSE 0 END) as total_reabastecimiento,
-        COUNT(DISTINCT DATE(m.fecha_movimiento)) as dias_actividad,
-        COUNT(DISTINCT CASE WHEN m.tipo_movimiento = 'salida' THEN DATE(m.fecha_movimiento) END) as dias_consumo,
-        ROUND(
-          SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN mid.cantidad ELSE 0 END) / 
-          NULLIF(COUNT(DISTINCT CASE WHEN m.tipo_movimiento = 'salida' THEN DATE(m.fecha_movimiento) END), 0),
-          2
-        ) as consumo_promedio_diario,
-        ROUND(
-          SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN mid.cantidad ELSE 0 END) / 
-          NULLIF(SUM(CASE WHEN m.tipo_movimiento = 'entrada' THEN mid.cantidad ELSE 0 END), 0) * 100,
-          2
-        ) as porcentaje_utilizacion
-      FROM laboratorios l
-      LEFT JOIN movimientos_insumos m ON l.id = m.laboratorio_id
-      LEFT JOIN movimiento_insumo_detalle mid ON m.id = mid.movimiento_id
-      LEFT JOIN insumos i ON mid.insumo_id = i.id
-      WHERE 1=1
+        i.id as insumo_id,
+        i.nombre as insumo_nombre,
+        u.simbolo as unidad_simbolo,
+        u.nombre as unidad_nombre,
+        SUM(dri.cantidad_usada) as cantidad_requerida
+      FROM reservas r
+      INNER JOIN detalle_reserva_insumos dri ON r.id = dri.reserva_id
+      INNER JOIN insumos i ON dri.insumo_id = i.id
+      INNER JOIN unidades u ON i.unidad_id = u.id
+      INNER JOIN laboratorios l ON r.laboratorio_id = l.id
+      WHERE 1=1 AND r.estado = 'P'
+      AND DATE(r.fecha_inicio) >= ? AND DATE(r.fecha_inicio) <= ? AND r.laboratorio_id = ?
     `
-    const params = []
+
+    // Query para obtener stock actual
+    let queryStock = `
+      SELECT 
+        l.id as laboratorio_id,
+        i.id as insumo_id,
+        SUM(CASE WHEN m.tipo_movimiento = 'salida' THEN mid.cantidad * -1 ELSE mid.cantidad END) as stock_actual
+      FROM movimientos_insumos m
+      INNER JOIN movimiento_insumo_detalle mid ON m.id = mid.movimiento_id
+      INNER JOIN insumos i ON mid.insumo_id = i.id
+      INNER JOIN laboratorios l ON m.laboratorio_id = l.id
+      WHERE 1=1
+      AND m.laboratorio_id = ?
+    `
+
+    const paramsRequerido = [fecha_inicio, fecha_fin, laboratorio_id]
+    const paramsStock = [laboratorio_id]
+
     // Filtros según permisos del usuario
     if (tieneRestriccionLaboratorio(req.user)) {
-      query += ` AND l.id IN (${req.user.laboratorio_ids.join(',')})`
+      const labFilter = ` AND r.laboratorio_id IN (${req.user.laboratorio_ids.join(',')})`
+      queryRequerido += labFilter
+      queryStock += labFilter
     }
-    // Filtros opcionales
-    if (fecha_inicio) {
-      query += ` AND (m.fecha_movimiento IS NULL OR DATE(m.fecha_movimiento) >= ?)`
-      params.push(fecha_inicio)
-    }
-    if (fecha_fin) {
-      query += ` AND (m.fecha_movimiento IS NULL OR DATE(m.fecha_movimiento) <= ?)`
-      params.push(fecha_fin)
-    }
-    if (escuela_id) {
-      query += ` AND l.escuela_id = ?`
-      params.push(escuela_id)
-    }
-    query += ` GROUP BY l.id`
-    query += ` ORDER BY total_consumo DESC`
-    const [rows] = await pool.execute(query, params)
-    console.log('⚡ Análisis de eficiencia generado:', rows.length)
-    res.status(200).json({
-      data: rows,
-      filtros: {
-        fecha_inicio: fecha_inicio || null,
-        fecha_fin: fecha_fin || null,
-        escuela_id: escuela_id || null
+
+    queryRequerido += ` GROUP BY l.id, i.id`
+    queryStock += ` GROUP BY l.id, i.id`
+
+    // Ejecutar ambas consultas
+    const [requeridos] = await pool.execute(queryRequerido, paramsRequerido)
+    const [stocks] = await pool.execute(queryStock, paramsStock)
+
+    // Crear mapa de stocks para facilitar la búsqueda
+    const stocksMap = new Map()
+    stocks.forEach(stock => {
+      const key = `${stock.laboratorio_id}_${stock.insumo_id}`
+      stocksMap.set(key, stock.stock_actual)
+    })
+
+    // Combinar datos
+    const resultado = requeridos.map(req => {
+      const key = `${req.laboratorio_id}_${req.insumo_id}`
+      const stockActual = stocksMap.get(key) || 0
+      return {
+        laboratorio_id: req.laboratorio_id,
+        laboratorio_nombre: req.laboratorio_nombre,
+        insumo_id: req.insumo_id,
+        insumo_nombre: req.insumo_nombre,
+        unidad_simbolo: req.unidad_simbolo,
+        unidad_nombre: req.unidad_nombre,
+        stock_actual: parseFloat(stockActual) || 0,
+        cantidad_requerida: parseFloat(req.cantidad_requerida) || 0
       }
     })
+
+    console.log('📈 Datos de stock vs requerido encontrados:', resultado.length)
+
+    res.status(200).json({
+      data: resultado,
+      filtros: {
+        laboratorio_id: laboratorio_id || null,
+        fecha_inicio: fecha_inicio || null,
+        fecha_fin: fecha_fin || null
+      },
+      total_registros: resultado.length
+    })
   } catch (error) {
-    console.error('Error en getAnalisisEficiencia:', error)
+    console.error('Error en getStockVsRequerido:', error)
     res.status(500).json({
       message: error.message
     })
   }
 }
-// Obtener datos para exportar reportes
-export const exportarReporte = async (req, res) => {
-  try {
-    const {
-      tipo_reporte = 'consumo_detallado', // 'consumo_detallado' | 'dashboard_ejecutivo' | 'top_insumos' | 'eficiencia'
-      formato = 'json', // 'json' | 'csv'
-      ...filtros
-    } = req.query
-    console.log('📤 exportarReporte - Parámetros:', {
-      tipo_reporte,
-      formato,
-      filtros
-    })
-    let datos = []
-    let nombreArchivo = ''
-    // Seleccionar el tipo de reporte a exportar
-    switch (tipo_reporte) {
-      case 'consumo_detallado':
-        const consumoRes = await getConsumoResumen({ ...req, query: filtros }, { json: (data) => data })
-        datos = consumoRes.data
-        nombreArchivo = 'reporte_consumo_detallado'
-        break
-      case 'dashboard_ejecutivo':
-        const dashboardRes = await getDashboardEjecutivo({ ...req, query: filtros }, { json: (data) => data })
-        datos = dashboardRes.data
-        nombreArchivo = 'dashboard_ejecutivo'
-        break
-      case 'top_insumos':
-        const topRes = await getTopInsumosConsumidos({ ...req, query: filtros }, { json: (data) => data })
-        datos = topRes.data
-        nombreArchivo = 'top_insumos_consumidos'
-        break
-      case 'eficiencia':
-        const eficienciaRes = await getAnalisisEficiencia({ ...req, query: filtros }, { json: (data) => data })
-        datos = eficienciaRes.data
-        nombreArchivo = 'analisis_eficiencia'
-        break
-      default:
-        return res.status(400).json({
-          message: 'Tipo de reporte no válido'
-        })
-    }
-    if (formato === 'csv') {
-      // Convertir a CSV
-      const csv = convertirACSV(datos, tipo_reporte)
-      res.setHeader('Content-Type', 'text/csv')
-      res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo}_${new Date().toISOString().split('T')[0]}.csv"`)
-      res.send(csv)
-    } else {
-      // Retornar JSON
-      res.status(200).json({
-        data: datos,
-        tipo_reporte,
-        fecha_generacion: new Date().toISOString()
-      })
-    }
-  } catch (error) {
-    console.error('Error en exportarReporte:', error)
-    res.status(500).json({
-      message: error.message
-    })
-  }
-}
+
 // Función auxiliar para convertir datos a CSV
 function convertirACSV(datos, tipoReporte) {
   if (!datos || datos.length === 0) {

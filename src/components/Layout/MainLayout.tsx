@@ -20,7 +20,6 @@ import {
   Inventory,
   Build,
   ReportProblem,
-  Assessment,
   Settings,
   Logout,
   CompareArrows
@@ -40,7 +39,6 @@ const menuItems = [
   { text: 'Insumos', icon: <Inventory />, path: '/insumos', roles: ['Administrador', 'Jefe de Laboratorio'] },
   { text: 'Equipos', icon: <Build />, path: '/equipos', roles: ['Administrador', 'Jefe de Laboratorio'] },
   { text: 'Incidencias', icon: <ReportProblem />, path: '/incidencias', roles: ['Administrador', 'Jefe de Laboratorio'] },
-  { text: 'Reportes', icon: <Assessment />, path: '/reportes', roles: ['Administrador', 'Jefe de Laboratorio'] },
   { text: 'Comparación Insumos', icon: <CompareArrows />, path: '/comparacion-insumos', roles: ['Administrador', 'Jefe de Laboratorio'] },
   { text: 'Configuración', icon: <Settings />, path: '/configuracion', roles: ['Administrador'] },
 ]

@@ -12,7 +12,8 @@ import {
     ejecutarReabastecimientoMasivo, 
     getLotesConSaldo, 
     getLotesPorInsumo,
-    registrarMovimientoManual, 
+    registrarMovimientoManual,
+    eliminarMovimientoInventario, 
 } from '../controllers/inventarioController.js'
 import {
     validate,
@@ -114,5 +115,12 @@ router.post('/movimiento-manual',
     authorize('create', 'Inventario'),
     validate(registrarMovimientoManualSchema),
     registrarMovimientoManual
+)
+
+// Eliminar movimiento
+router.post('/movimiento-manual/eliminar',
+    authenticateToken,
+    authorize('delete', 'Inventario'),
+    eliminarMovimientoInventario
 )
 export default router

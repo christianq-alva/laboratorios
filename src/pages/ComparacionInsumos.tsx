@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Box,
   Typography,
@@ -16,93 +16,18 @@ import {
   TableHead,
   TableRow,
   Tabs,
-  Tab
+  Tab,
+  CircularProgress,
+  Alert
 } from '@mui/material'
-import { 
+import {
   CompareArrows,
   Inventory
 } from '@mui/icons-material'
-
-// Mock data para la maqueta
-const mockLaboratorios = [
-  { id: 1, nombre: 'Laboratorio Multifuncional I' },
-  { id: 2, nombre: 'Laboratorio de Química' },
-  { id: 3, nombre: 'Laboratorio de Biología' }
-]
-
-const mockEscuelas = [
-  { id: 1, nombre: 'Medicina' },
-  { id: 2, nombre: 'Enfermería' },
-  { id: 3, nombre: 'Ingeniería de Sistemas' }
-]
-
-const mockCiclos = [
-  { id: 1, nombre: 'I ciclo' },
-  { id: 2, nombre: 'II ciclo' },
-  { id: 3, nombre: 'III ciclo' }
-]
-
-// Mock data para tabla de cantidad requerida vs consumida
-const mockTablaRequeridoVsConsumido = [
-  { 
-    laboratorio: 'Laboratorio Multifuncional I', 
-    escuela: 'Medicina', 
-    ciclo: 'I ciclo', 
-    insumo: 'Alcohol 70%', 
-    cantidadRequerida: 500, 
-    cantidadConsumida: 520,
-    unidad: 'ml'
-  },
-  { 
-    laboratorio: 'Laboratorio de Química', 
-    escuela: 'Enfermería', 
-    ciclo: 'II ciclo', 
-    insumo: 'Guantes de látex', 
-    cantidadRequerida: 100, 
-    cantidadConsumida: 95,
-    unidad: 'unidades'
-  },
-  { 
-    laboratorio: 'Laboratorio Multifuncional I', 
-    escuela: 'Medicina', 
-    ciclo: 'I ciclo', 
-    insumo: 'Jeringa 5ml', 
-    cantidadRequerida: 50, 
-    cantidadConsumida: 55,
-    unidad: 'unidades'
-  }
-]
-
-// Mock data para tabla de stock actual vs cantidad requerida
-const mockTablaStockVsRequerido = [
-  { 
-    laboratorio: 'Laboratorio Multifuncional I', 
-    escuela: 'Medicina', 
-    ciclo: 'I ciclo', 
-    insumo: 'Alcohol 70%', 
-    stockActual: 1500, 
-    cantidadRequerida: 500,
-    unidad: 'ml'
-  },
-  { 
-    laboratorio: 'Laboratorio de Química', 
-    escuela: 'Enfermería', 
-    ciclo: 'II ciclo', 
-    insumo: 'Guantes de látex', 
-    stockActual: 200, 
-    cantidadRequerida: 100,
-    unidad: 'unidades'
-  },
-  { 
-    laboratorio: 'Laboratorio Multifuncional I', 
-    escuela: 'Medicina', 
-    ciclo: 'I ciclo', 
-    insumo: 'Jeringa 5ml', 
-    stockActual: 80, 
-    cantidadRequerida: 50,
-    unidad: 'unidades'
-  }
-]
+import { reporteService, type RequeridoVsConsumido, type StockVsRequerido, type FiltrosComparacion } from '../services/reporteService'
+import { laboratorioService, type Laboratorio } from '../services/laboratorioService'
+import { escuelaService, type Escuela } from '../services/escuelaService'
+import { useApi } from '../hooks/useApi'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -125,19 +50,130 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => {
 
 export const ComparacionInsumos: React.FC = () => {
   const [tabValue, setTabValue] = useState(0)
+
+  // Estados para datos de filtros
+  const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
+  const [escuelas, setEscuelas] = useState<Escuela[]>([])
+
   // Estados para el primer reporte: Cantidad Requerida vs Consumida
-  const [laboratorio1, setLaboratorio1] = useState<number>(1)
-  const [escuela1, setEscuela1] = useState<number>(1)
-  const [ciclo1, setCiclo1] = useState<number>(1)
+  const [laboratorio1, setLaboratorio1] = useState<number | ''>('')
+  const [escuela1, setEscuela1] = useState<number | ''>('')
   const [fechaInicio1, setFechaInicio1] = useState<string>('')
   const [fechaFin1, setFechaFin1] = useState<string>('')
+  const [datosRequeridoVsConsumido, setDatosRequeridoVsConsumido] = useState<RequeridoVsConsumido[]>([])
 
   // Estados para el segundo reporte: Stock Actual vs Cantidad Requerida
-  const [laboratorio2, setLaboratorio2] = useState<number>(1)
-  const [escuela2, setEscuela2] = useState<number>(1)
-  const [ciclo2, setCiclo2] = useState<number>(1)
+  const [laboratorio2, setLaboratorio2] = useState<number | ''>('')
   const [fechaInicio2, setFechaInicio2] = useState<string>('')
   const [fechaFin2, setFechaFin2] = useState<string>('')
+  const [datosStockVsRequerido, setDatosStockVsRequerido] = useState<StockVsRequerido[]>([])
+
+  const { execute } = useApi()
+  const [loadingLabs, setLoadingLabs] = useState(false)
+  const [loadingEscuelas, setLoadingEscuelas] = useState(false)
+
+  // Funciones para cargar datos
+  const loadLaboratorios = async () => {
+    setLoadingLabs(true)
+    const response = await execute(() => laboratorioService.getAll())
+    if (response.data && response.data.data && response.data.data.length > 0) {
+      setLaboratorios(response.data.data)
+      if (!laboratorio1 && !laboratorio2) {
+        setLaboratorio1(response.data.data[0].id)
+        setLaboratorio2(response.data.data[0].id)
+      }
+    }
+    setLoadingLabs(false)
+  }
+
+  const loadEscuelas = async () => {
+    setLoadingEscuelas(true)
+    const response = await execute(() => escuelaService.getAll())
+    if (response.data && response.data.data && response.data.data.length > 0) {
+      setEscuelas(response.data.data)
+      if (!escuela1) {
+        setEscuela1(response.data.data[0].id)
+      }
+    }
+    setLoadingEscuelas(false)
+  }
+
+  // Función para establecer fechas por defecto (30 días atrás hasta hoy)
+  const establecerFechasPorDefecto = () => {
+    const hoy = new Date()
+    const hace30Dias = new Date()
+    hace30Dias.setDate(hace30Dias.getDate() - 30)
+
+    const fechaFin = hoy.toISOString().split('T')[0]
+    const fechaInicio = hace30Dias.toISOString().split('T')[0]
+
+    if (!fechaInicio1 && !fechaFin1) {
+      setFechaInicio1(fechaInicio)
+      setFechaFin1(fechaFin)
+    }
+    if (!fechaInicio2 && !fechaFin2) {
+      setFechaInicio2(fechaInicio)
+      setFechaFin2(fechaFin)
+    }
+  }
+
+  const [loadingReporte1, setLoadingReporte1] = useState(false)
+  const [loadingReporte2, setLoadingReporte2] = useState(false)
+
+  // Cargar datos del reporte 1
+  const loadRequeridoVsConsumido = async () => {
+    setLoadingReporte1(true)
+    const filtros: FiltrosComparacion = {}
+    if (laboratorio1) filtros.laboratorio_id = Number(laboratorio1)
+    if (escuela1) filtros.escuela_id = Number(escuela1)
+    if (fechaInicio1) filtros.fecha_inicio = fechaInicio1
+    if (fechaFin1) filtros.fecha_fin = fechaFin1
+
+    const response = await execute(() => reporteService.getRequeridoVsConsumido(filtros))
+    if (response.data && response.data.data) {
+      setDatosRequeridoVsConsumido(response.data.data)
+    }
+    setLoadingReporte1(false)
+  }
+
+  // Cargar datos del reporte 2
+  const loadStockVsRequerido = async () => {
+    setLoadingReporte2(true)
+    const filtros: FiltrosComparacion = {}
+    if (laboratorio2) filtros.laboratorio_id = Number(laboratorio2)
+    if (fechaInicio2) filtros.fecha_inicio = fechaInicio2
+    if (fechaFin2) filtros.fecha_fin = fechaFin2
+
+    const response = await execute(() => reporteService.getStockVsRequerido(filtros))
+    if (response.data && response.data.data) {
+      setDatosStockVsRequerido(response.data.data)
+    }
+    setLoadingReporte2(false)
+  }
+
+  // Cargar datos iniciales
+  useEffect(() => {
+    loadLaboratorios()
+    loadEscuelas()
+    establecerFechasPorDefecto()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Cargar reporte 1 cuando cambien los filtros
+  useEffect(() => {
+    if (laboratorio1 && escuela1 && fechaInicio1 && fechaFin1) {
+      loadRequeridoVsConsumido()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [laboratorio1, escuela1, fechaInicio1, fechaFin1])
+
+  // Cargar reporte 2 cuando cambien los filtros
+  useEffect(() => {
+    if (laboratorio2 && fechaInicio2 && fechaFin2) {
+      loadStockVsRequerido()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [laboratorio2, fechaInicio2, fechaFin2])
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
@@ -172,15 +208,15 @@ export const ComparacionInsumos: React.FC = () => {
             }
           }}
         >
-          <Tab 
-            label="Cantidad Requerida vs Consumida" 
+          <Tab
+            label="Cantidad Requerida vs Consumida"
             icon={<CompareArrows />}
             iconPosition="start"
             id="reporte-tab-0"
             aria-controls="reporte-tabpanel-0"
           />
-          <Tab 
-            label="Stock Actual vs Cantidad Requerida" 
+          <Tab
+            label="Stock Actual vs Cantidad Requerida"
             icon={<Inventory />}
             iconPosition="start"
             id="reporte-tab-1"
@@ -193,140 +229,135 @@ export const ComparacionInsumos: React.FC = () => {
           {/* Filtros del Reporte 1 */}
           <Box sx={{ p: 2.5, bgcolor: 'grey.50' }}>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Laboratorio</InputLabel>
-                <Select
-                  value={laboratorio1}
-                  label="Laboratorio"
-                  onChange={(e) => setLaboratorio1(e.target.value as number)}
-                >
-                  {mockLaboratorios.map((lab) => (
-                    <MenuItem key={lab.id} value={lab.id}>
-                      {lab.nombre}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Escuela</InputLabel>
-                <Select
-                  value={escuela1}
-                  label="Escuela"
-                  onChange={(e) => setEscuela1(e.target.value as number)}
-                >
-                  {mockEscuelas.map((esc) => (
-                    <MenuItem key={esc.id} value={esc.id}>
-                      {esc.nombre}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Ciclo</InputLabel>
-                <Select
-                  value={ciclo1}
-                  label="Ciclo"
-                  onChange={(e) => setCiclo1(e.target.value as number)}
-                >
-                  {mockCiclos.map((cic) => (
-                    <MenuItem key={cic.id} value={cic.id}>
-                      {cic.nombre}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
-              <TextField
-                fullWidth
-                size="small"
-                label="Fecha Inicio"
-                type="date"
-                value={fechaInicio1}
-                onChange={(e) => setFechaInicio1(e.target.value)}
-                InputLabelProps={{
-                  shrink: true
-                }}
-              />
-            </Box>
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
-              <TextField
-                fullWidth
-                size="small"
-                label="Fecha Fin"
-                type="date"
-                value={fechaFin1}
-                onChange={(e) => setFechaFin1(e.target.value)}
-                InputLabelProps={{
-                  shrink: true
-                }}
-              />
-            </Box>
+              <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Laboratorio</InputLabel>
+                  <Select
+                    value={laboratorio1}
+                    label="Laboratorio"
+                    onChange={(e) => setLaboratorio1(e.target.value as number)}
+                    disabled={loadingLabs}
+                  >
+                    {laboratorios.map((lab) => (
+                      <MenuItem key={lab.id} value={lab.id}>
+                        {lab.nombre}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+              <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Escuela</InputLabel>
+                  <Select
+                    value={escuela1}
+                    label="Escuela"
+                    onChange={(e) => setEscuela1(e.target.value as number)}
+                    disabled={loadingEscuelas}
+                  >
+                    {escuelas.map((esc) => (
+                      <MenuItem key={esc.id} value={esc.id}>
+                        {esc.nombre}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+              <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Fecha Inicio"
+                  type="date"
+                  value={fechaInicio1}
+                  onChange={(e) => setFechaInicio1(e.target.value)}
+                  InputLabelProps={{
+                    shrink: true
+                  }}
+                />
+              </Box>
+              <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Fecha Fin"
+                  type="date"
+                  value={fechaFin1}
+                  onChange={(e) => setFechaFin1(e.target.value)}
+                  InputLabelProps={{
+                    shrink: true
+                  }}
+                />
+              </Box>
             </Box>
           </Box>
 
           {/* Tabla del Reporte 1 */}
-          <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow sx={{ bgcolor: 'grey.50' }}>
-                <TableCell sx={{ fontWeight: 600 }}>Laboratorio</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Escuela</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Ciclo</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Insumo</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>Cantidad Requerida</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>Cantidad Consumida</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 600 }}>Diferencia</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {mockTablaRequeridoVsConsumido.map((row, index) => {
-                const diferencia = row.cantidadConsumida - row.cantidadRequerida
-                const esPositivo = diferencia > 0
-                return (
-                  <TableRow 
-                    key={index}
-                    hover
-                    sx={{ '&:last-child td': { border: 0 } }}
-                  >
-                    <TableCell>{row.laboratorio}</TableCell>
-                    <TableCell>{row.escuela}</TableCell>
-                    <TableCell>{row.ciclo}</TableCell>
-                    <TableCell>
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {row.insumo}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 500 }}>
-                        {row.cantidadRequerida} {row.unidad}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 500 }}>
-                        {row.cantidadConsumida} {row.unidad}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="center">
-                      <Chip
-                        label={`${esPositivo ? '+' : ''}${diferencia} ${row.unidad}`}
-                        size="small"
-                        color={esPositivo ? 'warning' : 'success'}
-                        variant="outlined"
-                        sx={{ fontWeight: 500, fontSize: '0.7rem' }}
-                      />
-                    </TableCell>
+          {loadingReporte1 ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : datosRequeridoVsConsumido.length === 0 ? (
+            <Box sx={{ p: 3 }}>
+              <Alert severity="info">No hay datos disponibles para los filtros seleccionados</Alert>
+            </Box>
+          ) : (
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: 'grey.50' }}>
+                    <TableCell sx={{ fontWeight: 600 }}>Laboratorio</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Escuela</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Insumo</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>Cantidad Requerida</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>Cantidad Consumida</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600 }}>Diferencia</TableCell>
                   </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {datosRequeridoVsConsumido.map((row, index) => {
+                    const diferencia = row.cantidad_consumida - row.cantidad_requerida
+                    const esPositivo = diferencia > 0
+                    const unidad = row.unidad_simbolo || row.unidad_nombre || 'unidades'
+                    return (
+                      <TableRow
+                        key={`${row.laboratorio_id}-${row.insumo_id}-${index}`}
+                        hover
+                        sx={{ '&:last-child td': { border: 0 } }}
+                      >
+                        <TableCell>{row.laboratorio_nombre}</TableCell>
+                        <TableCell>{row.escuela_nombre}</TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {row.insumo_nombre}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 500 }}>
+                            {row.cantidad_requerida.toFixed(2)} {unidad}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 500 }}>
+                            {row.cantidad_consumida.toFixed(2)} {unidad}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip
+                            label={`${esPositivo ? '+' : ''}${diferencia.toFixed(2)} ${unidad}`}
+                            size="small"
+                            color={esPositivo ? 'warning' : 'success'}
+                            variant="outlined"
+                            sx={{ fontWeight: 500, fontSize: '0.7rem' }}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
         </TabPanel>
 
         {/* TabPanel 1: Stock Actual vs Cantidad Requerida */}
@@ -334,140 +365,116 @@ export const ComparacionInsumos: React.FC = () => {
           {/* Filtros del Reporte 2 */}
           <Box sx={{ p: 2.5, bgcolor: 'grey.50' }}>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Laboratorio</InputLabel>
-                <Select
-                  value={laboratorio2}
-                  label="Laboratorio"
-                  onChange={(e) => setLaboratorio2(e.target.value as number)}
-                >
-                  {mockLaboratorios.map((lab) => (
-                    <MenuItem key={lab.id} value={lab.id}>
-                      {lab.nombre}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Escuela</InputLabel>
-                <Select
-                  value={escuela2}
-                  label="Escuela"
-                  onChange={(e) => setEscuela2(e.target.value as number)}
-                >
-                  {mockEscuelas.map((esc) => (
-                    <MenuItem key={esc.id} value={esc.id}>
-                      {esc.nombre}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Ciclo</InputLabel>
-                <Select
-                  value={ciclo2}
-                  label="Ciclo"
-                  onChange={(e) => setCiclo2(e.target.value as number)}
-                >
-                  {mockCiclos.map((cic) => (
-                    <MenuItem key={cic.id} value={cic.id}>
-                      {cic.nombre}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
-              <TextField
-                fullWidth
-                size="small"
-                label="Fecha Inicio"
-                type="date"
-                value={fechaInicio2}
-                onChange={(e) => setFechaInicio2(e.target.value)}
-                InputLabelProps={{
-                  shrink: true
-                }}
-              />
-            </Box>
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
-              <TextField
-                fullWidth
-                size="small"
-                label="Fecha Fin"
-                type="date"
-                value={fechaFin2}
-                onChange={(e) => setFechaFin2(e.target.value)}
-                InputLabelProps={{
-                  shrink: true
-                }}
-              />
-            </Box>
+              <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Laboratorio</InputLabel>
+                  <Select
+                    value={laboratorio2}
+                    label="Laboratorio"
+                    onChange={(e) => setLaboratorio2(e.target.value as number)}
+                    disabled={loadingLabs}
+                  >
+                    {laboratorios.map((lab) => (
+                      <MenuItem key={lab.id} value={lab.id}>
+                        {lab.nombre}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+              <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Fecha Inicio"
+                  type="date"
+                  value={fechaInicio2}
+                  onChange={(e) => setFechaInicio2(e.target.value)}
+                  InputLabelProps={{
+                    shrink: true
+                  }}
+                />
+              </Box>
+              <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(20% - 13px)' }, minWidth: 150 }}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Fecha Fin"
+                  type="date"
+                  value={fechaFin2}
+                  onChange={(e) => setFechaFin2(e.target.value)}
+                  InputLabelProps={{
+                    shrink: true
+                  }}
+                />
+              </Box>
             </Box>
           </Box>
 
           {/* Tabla del Reporte 2 */}
-          <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow sx={{ bgcolor: 'grey.50' }}>
-                <TableCell sx={{ fontWeight: 600 }}>Laboratorio</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Escuela</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Ciclo</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Insumo</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>Stock Actual</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>Cantidad Requerida</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 600 }}>Estado</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {mockTablaStockVsRequerido.map((row, index) => {
-                const diferencia = row.stockActual - row.cantidadRequerida
-                const esSuficiente = diferencia >= 0
-                return (
-                  <TableRow 
-                    key={index}
-                    hover
-                    sx={{ '&:last-child td': { border: 0 } }}
-                  >
-                    <TableCell>{row.laboratorio}</TableCell>
-                    <TableCell>{row.escuela}</TableCell>
-                    <TableCell>{row.ciclo}</TableCell>
-                    <TableCell>
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {row.insumo}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography variant="body2" sx={{ color: 'info.main', fontWeight: 500 }}>
-                        {row.stockActual} {row.unidad}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 500 }}>
-                        {row.cantidadRequerida} {row.unidad}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="center">
-                      <Chip
-                        label={esSuficiente ? 'Suficiente' : 'Insuficiente'}
-                        size="small"
-                        color={esSuficiente ? 'success' : 'error'}
-                        variant="outlined"
-                        sx={{ fontWeight: 500, fontSize: '0.7rem' }}
-                      />
-                    </TableCell>
+          {loadingReporte2 ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : datosStockVsRequerido.length === 0 ? (
+            <Box sx={{ p: 3 }}>
+              <Alert severity="info">No hay datos disponibles para los filtros seleccionados</Alert>
+            </Box>
+          ) : (
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: 'grey.50' }}>
+                    <TableCell sx={{ fontWeight: 600 }}>Laboratorio</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Insumo</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>Cantidad Requerida</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>Stock Actual</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600 }}>Estado</TableCell>
                   </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {datosStockVsRequerido.map((row, index) => {
+                    const diferencia = row.stock_actual - row.cantidad_requerida
+                    const esSuficiente = diferencia >= 0
+                    const unidad = row.unidad_simbolo || row.unidad_nombre || 'unidades'
+                    return (
+                      <TableRow
+                        key={`${row.laboratorio_id}-${row.insumo_id}-${index}`}
+                        hover
+                        sx={{ '&:last-child td': { border: 0 } }}
+                      >
+                        <TableCell>{row.laboratorio_nombre}</TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {row.insumo_nombre}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 500 }}>
+                            {row.cantidad_requerida.toFixed(2)} {unidad}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" sx={{ color: 'info.main', fontWeight: 500 }}>
+                            {row.stock_actual.toFixed(2)} {unidad}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip
+                            label={esSuficiente ? 'Suficiente' : 'Insuficiente'}
+                            size="small"
+                            color={esSuficiente ? 'success' : 'error'}
+                            variant="outlined"
+                            sx={{ fontWeight: 500, fontSize: '0.7rem' }}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
         </TabPanel>
       </Paper>
     </Box>
