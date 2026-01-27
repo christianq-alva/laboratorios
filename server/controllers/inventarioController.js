@@ -431,3 +431,28 @@ export const registrarMovimientoManual = async (req, res) => {
     connection.release()
   }
 }
+
+export const eliminarMovimientoInventario = async (req, res) => {
+  const connection = await pool.getConnection()
+  try {
+    // El ID del movimiento ya está validado y transformado por el middleware de validación
+    const { movimiento_id } = req.body
+
+    console.log('Eliminando movimiento de inventario ID:', movimiento_id);
+    
+    await Inventario.eliminarMovimientoInventario(connection, movimiento_id)
+
+    res.status(200).json({
+      success: true,
+      message: 'Movimiento de inventario eliminado correctamente'
+    })
+  } catch (error) {
+    console.error('Error al eliminar movimiento de inventario:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Error al eliminar el movimiento de inventario'
+    })
+  } finally {
+    connection.release()
+  }
+}

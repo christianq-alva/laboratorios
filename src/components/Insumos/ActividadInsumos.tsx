@@ -120,6 +120,25 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
       tipo_movimiento: ''
     })
   }
+  
+  const handleEliminarMovimiento = async (movimientoId: number) => {
+    if (!window.confirm('¿Está seguro de que desea eliminar este movimiento de inventario? Esta acción no se puede deshacer.')) {
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    const result = await execute(() => inventarioService.eliminarMovimiento(movimientoId))
+
+    if (result.error) {
+      setError(result.error)
+    } else {
+      // Refrescar la actividad después de eliminar el movimiento
+      loadActividad()
+    }
+    setLoading(false)
+  } 
 
   const getTipoMovimientoColor = (tipo: string) => {
     return tipo === 'entrada' ? 'success' : 'error'
@@ -365,8 +384,7 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
                               size="small"
                               color="warning"
                               onClick={() => {
-                                // TODO: Implementar funcionalidad de deshacer
-                                console.log('Deshacer movimiento:', movimiento.id)
+                                  handleEliminarMovimiento(movimiento.id)
                               }}
                             >
                               <Undo fontSize="small" />

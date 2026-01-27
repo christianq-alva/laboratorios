@@ -1,4 +1,5 @@
 import { pool } from "../config/database.js"
+import { eliminarMovimientoInventario } from "../controllers/inventarioController.js"
 
 export const Inventario = {
   getAllInsumosConSaldo: async (user_rol, user_laboratorio_ids) => {
@@ -172,6 +173,63 @@ export const Inventario = {
 
     const [lotes] = await pool.execute(query, params)
     return lotes
+  },
+
+  eliminarMovimientoInventario: async (connection, movimiento_id) => {
+
+    await connection.beginTransaction();
+    try {
+
+    // Obtener información de movimiento
+    const movimientoInfo = await connection.execute(`
+      SELECT tipo_movimiento, reserva_id
+      FROM movimientos_insumos
+      WHERE id = ?
+    `, [movimiento_id]);
+
+    console.log(movimientoInfo);
+
+    // actualizar saldos de entradas afectadas por la salida
+    const detalleMovimiento = await connection.execute(`
+      SELECT id, mov_det_ref, cantidad
+      FROM movimiento_insumo_detalle
+      WHERE movimiento_id = ?
+    `, [movimiento_id]);
+
+    console.log(detalleMovimiento);
+
+    for (const detalle of detalleMovimiento[0]) {
+      const { mov_det_ref, cantidad } = detalle;
+      if (mov_det_ref) {
+        // Es una salida, actualizar el saldo de la entrada referenciada
+        await connection.execute(`
+          UPDATE movimiento_insumo_detalle
+          SET saldo = saldo + ?
+          WHERE id = ?
+        `, [cantidad, mov_det_ref]);
+      }
+    }    
+
+    if  (movimientoInfo[0][0].reserva_id) {
+      // Si el movimiento está asociado a una reserva, actualizar el estado de la reserva
+      await connection.execute(`
+        UPDATE reservas
+        SET estado = 'P'
+        WHERE id = ?
+      `, [movimientoInfo[0][0].reserva_id]);
+    }
+
+    // Eliminar movimiento
+    await connection.execute(`
+      DELETE FROM movimientos_insumos
+      WHERE id = ?
+    `, [movimiento_id]);
+
+    await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw new Error(error.message || 'Error al eliminar el movimiento');
+    } 
   },
 
   registrarMovimientoManual: async (connection, usuario_id, fecha_movimiento, laboratorio_id, tipo_movimiento, observaciones, reserva_id, detalles) => {
