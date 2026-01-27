@@ -1,9 +1,17 @@
 import rateLimit from 'express-rate-limit'
 
+// Configuración base para red interna IPv4
+const baseConfig = {
+  validate: {
+    keyGeneratorIpFallback: false // Deshabilita validación IPv6 para red interna
+  }
+}
+
 // ============================================
 // RATE LIMITER GENERAL PARA TODA LA API
 // ============================================
 export const generalLimiter = rateLimit({
+  ...baseConfig,
   windowMs: 15 * 60 * 1000, // 15 minutos
   max: 1000, // Máximo 1000 peticiones por IP cada 15 minutos
   message: {
@@ -39,6 +47,7 @@ export const generalLimiter = rateLimit({
 // ============================================
 // Más restrictivo para prevenir fuerza bruta
 export const loginLimiter = rateLimit({
+  ...baseConfig,
   windowMs: 15 * 60 * 1000, // 15 minutos
   max: 5, // Solo 5 intentos de login cada 15 minutos por IP
   message: {
@@ -72,6 +81,7 @@ export const loginLimiter = rateLimit({
 // ============================================
 // Para endpoints que consumen muchos recursos (importaciones, reportes, etc.)
 export const heavyOperationLimiter = rateLimit({
+  ...baseConfig,
   windowMs: 60 * 60 * 1000, // 1 hora
   max: 10, // Solo 10 operaciones pesadas por hora
   message: {
@@ -103,6 +113,7 @@ export const heavyOperationLimiter = rateLimit({
 // ============================================
 // Limitar creación de recursos (POST) para prevenir spam
 export const createLimiter = rateLimit({
+  ...baseConfig,
   windowMs: 60 * 60 * 1000, // 1 hora
   max: 50, // Máximo 50 creaciones por hora
   standardHeaders: true,
@@ -130,6 +141,7 @@ export const createLimiter = rateLimit({
 // ============================================
 // Para endpoints públicos como horarios compartidos
 export const publicLimiter = rateLimit({
+  ...baseConfig,
   windowMs: 15 * 60 * 1000, // 15 minutos
   max: 30, // 30 peticiones cada 15 minutos
   standardHeaders: true,
@@ -148,4 +160,3 @@ export const publicLimiter = rateLimit({
     })
   }
 })
-
