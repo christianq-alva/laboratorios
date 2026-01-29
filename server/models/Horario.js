@@ -1,7 +1,9 @@
 import { pool } from '../config/database.js'
 
 export const Horario = {
-    getAllHorarios: async (user_rol, user_laboratorio_ids) => {
+    getAllHorarios: async (user_rol, user_laboratorio_ids, filters) => {
+
+        const { laboratorio_id, escuela_id, docente_id, ciclo_id, fecha_inicio, fecha_fin, estado } = filters;
 
         let query = `
         SELECT 
@@ -27,22 +29,57 @@ export const Horario = {
         LEFT JOIN escuelas e ON r.escuela_id = e.id
         LEFT JOIN ciclos c ON r.ciclo_id = c.id
         LEFT JOIN detalle_reserva_insumos dri ON r.id = dri.reserva_id
+        WHERE 1=1
       `
         let params = []
 
-        // 🟡 JEFE DE LAB: Solo horarios de SUS laboratorios
         if (user_rol === 'Jefe de Laboratorio') {
             const labIds = user_laboratorio_ids
 
             if (labIds && labIds.length > 0) {
                 const placeholders = labIds.map(() => '?').join(',')
-                query += ` WHERE r.laboratorio_id IN (${placeholders})`
+                query += ` AND r.laboratorio_id IN (${placeholders})`
                 params = labIds
             } else {
                 // No tiene laboratorios asignados
-                query += ' WHERE 1 = 0' // No mostrar nada
+                query += ' AND 1 = 0' // No mostrar nada
             }
         } else {
+        }
+
+        if (laboratorio_id) {
+            query += ' AND r.laboratorio_id = ?'
+            params.push(laboratorio_id)
+        }
+
+        if (escuela_id) {
+            query += ' AND r.escuela_id = ?'
+            params.push(escuela_id)
+        }
+
+        if (docente_id) {
+            query += ' AND r.docente_id = ?'
+            params.push(docente_id)
+        }
+
+        if (ciclo_id) {
+            query += ' AND r.ciclo_id = ?'
+            params.push(ciclo_id)
+        }
+
+        if (fecha_inicio) {
+            query += ' AND DATE(r.fecha_inicio) >= ?'
+            params.push(fecha_inicio)
+        }
+
+        if (fecha_fin) {
+            query += ' AND DATE(r.fecha_fin) <= ?'
+            params.push(fecha_fin)
+        }
+
+        if (estado) {
+            query += ' AND r.estado = ?'
+            params.push(estado)
         }
 
         query += ' GROUP BY r.id ORDER BY r.fecha_inicio DESC'

@@ -51,6 +51,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [registrarInsumosOpen, setRegistrarInsumosOpen] = useState(false)
+  const [confirmacionDialogOpen, setConfirmacionDialogOpen] = useState(false)
 
   // Cargar detalles del horario
   const loadHorario = async () => {
@@ -84,9 +85,27 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
 
   // Función para abrir modal de registrar insumos
   const handleOpenRegistrarInsumos = () => {
-    setRegistrarInsumosOpen(true)
+    if (horario && horario.insumos && horario.insumos.length > 0) {
+      // Si tiene insumos, abrir el modal directamente
+      setRegistrarInsumosOpen(true)
+    } else {
+      // Si no tiene insumos, mostrar diálogo de confirmación
+      setConfirmacionDialogOpen(true)
+    }
   }
 
+  const handleCerrarHorario = async () => {
+
+    console.log('Cerrando horario sin insumos: ', horarioId)
+
+    setConfirmacionDialogOpen(false)
+    const response = await execute(() => horarioService.cerrarHorario(horarioId))
+    if (response.error) {
+      setError(response.error)
+    } else {
+      loadHorario() // Recargar datos
+    }
+  }
   // Función para cerrar modal y recargar (maqueta)
   const handleRegistrarInsumosSuccess = () => {
     setRegistrarInsumosOpen(false)
@@ -363,14 +382,14 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
         <Button onClick={handleClose} variant="outlined">
           Cerrar
         </Button>
-        {horario && horario.insumos && horario.insumos.length > 0 && (
+        {horario && (
           <Button
             variant="contained"
             color="success"
-            startIcon={horario.estado === 'A' ? <CheckCircle /> : <LockOpen />}
+            startIcon={horario.estado === 'P' ? <CheckCircle /> : <LockOpen />}
             onClick={handleOpenRegistrarInsumos}
             disabled={horario.estado === 'C'}
-          >{horario.estado === 'A' ? 'Cerrar Horario' : 'Horario Cerrado'}
+          >{horario.estado === 'P' ? 'Cerrar Horario' : 'Horario Cerrado'}
           </Button>
         )}
       </DialogActions>
@@ -384,6 +403,53 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
         laboratorioId={horario?.laboratorio_id || 0}
         fecha={dayjs(horario?.fecha_inicio).format('YYYY-MM-DD')}
       />
+
+      {/* Diálogo de confirmación para horarios sin insumos */}
+      <Dialog
+        open={confirmacionDialogOpen}
+        onClose={() => setConfirmacionDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Inventory color="warning" />
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Sin Insumos Registrados
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Este horario no tiene insumos requeridos asignados.
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+            ¿Deseas registrar los insumos consumidos durante la clase antes de cerrar el horario? 
+            Esto te permitirá documentar adecuadamente el consumo de inventario.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ gap: 1 }}>
+          <Button
+            onClick={() => {
+              setConfirmacionDialogOpen(false)
+              handleCerrarHorario()
+            }}
+            variant="outlined"
+          >
+            Cerrar sin registrar
+          </Button>
+          <Button
+            onClick={() => {
+              setConfirmacionDialogOpen(false)
+              setRegistrarInsumosOpen(true)
+            }}
+            variant="contained"
+            color="warning"
+          >
+            Registrar insumos
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   )
 } 

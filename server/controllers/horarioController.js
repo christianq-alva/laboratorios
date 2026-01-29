@@ -88,7 +88,42 @@ export const getActividadHorarios = async (req, res) => {
 }
 export const getHorarios = async (req, res) => {
   try {
-    const horarios = await Horario.getAllHorarios(req.user.rol, req.user.laboratorio_ids)
+    const { laboratorio_id, escuela_id, docente_id, ciclo_id, fecha_inicio, fecha_fin, estado } = req.query
+
+    // Convertir los parámetros al tipo correcto si existen
+    const filters = {
+      laboratorio_id: laboratorio_id ? parseInt(laboratorio_id) : undefined,
+      escuela_id: escuela_id ? parseInt(escuela_id) : undefined,
+      docente_id: docente_id ? parseInt(docente_id) : undefined,
+      ciclo_id: ciclo_id ? parseInt(ciclo_id) : undefined,
+      fecha_inicio,
+      fecha_fin,
+      estado
+    }
+
+    // Validación: Verificar rango máximo de 30 días
+    if (fecha_inicio && fecha_fin) {
+      const start = new Date(fecha_inicio)
+      const end = new Date(fecha_fin)
+      const diffDays = Math.floor((end.getTime() - start.getTime()) / (1000 * 3600 * 24))
+
+      if (diffDays > 60) {
+        return res.status(400).json({
+          success: false,
+          message: 'El rango máximo permitido es de 60 días'
+        })
+      }
+
+      if (diffDays < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'La fecha de inicio debe ser anterior a la fecha de fin'
+        })
+      }
+    }
+
+    const horarios = await Horario.getAllHorarios(req.user.rol, req.user.laboratorio_ids, filters)
+    
     res.status(200).json({
       success: true,
       data: horarios
@@ -458,7 +493,7 @@ export const verificarDisponibilidad = async (req, res) => {
   }
 }
 // Cerrar horario y registrar consumo de insumos
-export const cerrarHorario = async (req, res) => {
+export const cerrarHorarioConInsumos = async (req, res) => {
   const connection = await pool.getConnection()
   try {
     await connection.beginTransaction()
@@ -495,6 +530,49 @@ export const cerrarHorario = async (req, res) => {
       data: {
         movimiento_id: movimientoId
       }
+    })
+  } catch (error) {
+    await connection.rollback()
+    console.error('Error al cerrar horario:', error)
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error al cerrar el horario'
+    })
+  } finally {
+    connection.release()
+  }
+}
+
+export const cerrarHorario = async (req, res) => {
+  const connection = await pool.getConnection()
+  try {
+    await connection.beginTransaction()
+    // El ID ya está validado y transformado por el middleware de validación
+    const { id: reserva_id } = req.params
+
+    // Validación de negocio: Obtener datos del horario
+    const horarioExists = await Horario.exitsById(reserva_id)
+    if (!horarioExists) {
+      await connection.rollback()
+      return res.status(404).json({
+        success: false,
+        message: 'Horario no encontrado'
+      })
+    }
+    const estadoHorario = await Horario.estadoHorario(reserva_id)
+    if (estadoHorario) {
+      await connection.rollback()
+      return res.status(409).json({
+        success: false,
+        message: 'El Horario ya se encuentra cerrado'
+      })
+    }
+    //Cerrar horario
+    await Horario.cerrarHorario(reserva_id, connection)
+    await connection.commit()
+    res.status(200).json({
+      success: true,
+      message:  'Horario cerrado correctamente'
     })
   } catch (error) {
     await connection.rollback()

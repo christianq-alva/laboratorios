@@ -326,7 +326,7 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
     setLoading(true)
     setError(null) // Limpiar error antes de guardar
 
-    const response = await execute(() => horarioService.cerrarHorario({
+    const response = await execute(() => horarioService.cerrarHorarioConInsumos({
       laboratorio_id: laboratorioId,
       tipo_movimiento: 'salida',
       observaciones: `Consumo de inventario en horarioId: ${horarioId!}`,

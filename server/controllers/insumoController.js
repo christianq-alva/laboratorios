@@ -320,7 +320,7 @@ export const previsualizarImportacionMasiva = async (req, res) => {
       if (!unidad_id) {
         erroresFila.push('UNIDAD_MEDIDA es obligatorio')
       }
-      const unidad_medida = ''
+      let unidad_medida = ''
       if (unidad_id) {
         unidad_medida = await Unidad.getById(unidad_id)
         if (!unidad_medida) {

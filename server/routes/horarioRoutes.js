@@ -11,6 +11,7 @@ import {
   getActividadHorarios,
   cerrarHorario,
   getInsumosRequeridosById,
+  cerrarHorarioConInsumos,
 } from '../controllers/horarioController.js'
 import {
   validate,
@@ -27,10 +28,16 @@ import {
 const router = express.Router()
 
 // Cerrar horario y registrar consumo de insumos
-router.post('/cerrar',
+router.post('/cerrar-con-insumos',
   authenticateToken,
   authorize('update', 'Horario'),
   validate(cerrarHorarioSchema),
+  cerrarHorarioConInsumos
+)
+
+router.post('/:id/cerrar',
+  authenticateToken,
+  authorize('update', 'Horario'),
   cerrarHorario
 )
 

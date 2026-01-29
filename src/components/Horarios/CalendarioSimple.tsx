@@ -778,7 +778,7 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
             <DialogTitle sx={{ backgroundColor: getColorByTipo(selectedEvent.descripcion), color: 'white' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6">
-                  Detalles del Horario
+                  Resumen del Horario
                 </Typography>
                 <Box>
                   {onView && (
@@ -821,7 +821,21 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
               </Box>
             </DialogTitle>
             <DialogContent sx={{ pt: 3 }}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                {/* Estado */}
+                <Box sx={{ width: '100%' }}>                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                    Estado
+                  </Typography>                  <Chip
+                    label={selectedEvent.estado === 'C' ? 'Cerrado' : 'Programado'}
+                    color={selectedEvent.estado === 'C' ? 'default' : 'success'}
+                    sx={{
+                      fontWeight: 600,
+                      backgroundColor: selectedEvent.estado === 'C' ? '#e0e0e0' : '#4caf50',
+                      color: selectedEvent.estado === 'C' ? '#333' : 'white'
+                    }}
+                  />
+                </Box>
+
                 <Box>
                   <Typography variant="body2" color="text.secondary">
                     Laboratorio

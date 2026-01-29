@@ -142,9 +142,27 @@ export interface VerificarDisponibilidadData {
 }
 
 export const horarioService = {
-  // Obtener todos los horarios
-  getAll: async () => {
-    const response = await api.get('/horarios')
+  // Obtener todos los horarios con filtros opcionales
+  getAll: async (filters?: {
+    laboratorio_id?: number
+    escuela_id?: number
+    docente_id?: number
+    ciclo_id?: number
+    fecha_inicio?: string
+    fecha_fin?: string
+    estado?: string
+  }) => {
+    const params = new URLSearchParams()
+
+    if (filters?.laboratorio_id) params.append('laboratorio_id', filters.laboratorio_id.toString())
+    if (filters?.escuela_id) params.append('escuela_id', filters.escuela_id.toString())
+    if (filters?.docente_id) params.append('docente_id', filters.docente_id.toString())
+    if (filters?.ciclo_id) params.append('ciclo_id', filters.ciclo_id.toString())
+    if (filters?.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio)
+    if (filters?.fecha_fin) params.append('fecha_fin', filters.fecha_fin)
+    if (filters?.estado) params.append('estado', filters.estado)
+
+    const response = await api.get(`/horarios?${params.toString()}`)
     return response.data
   },
 
@@ -211,7 +229,7 @@ export const horarioService = {
   },
 
   // Cerrar horario y registrar consumo de insumos
-  cerrarHorario: async (data: {
+  cerrarHorarioConInsumos: async (data: {
     laboratorio_id: number
     tipo_movimiento: 'entrada' | 'salida'
     observaciones?: string | null
@@ -225,7 +243,13 @@ export const horarioService = {
       entrada_detalle_id?: number | null
     }>
   }) => {
-    const response = await api.post(`/horarios/cerrar`, data)
+    const response = await api.post(`/horarios/cerrar-con-insumos`, data)
+    return response.data
+  },
+
+  // Cerrar horario sin registrar insumos
+  cerrarHorario: async (id: number) => {
+    const response = await api.post(`/horarios/${id}/cerrar`)
     return response.data
   }
 } 
