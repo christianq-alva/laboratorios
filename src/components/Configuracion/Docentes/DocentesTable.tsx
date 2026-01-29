@@ -8,26 +8,19 @@ import {
   TableHead,
   TableRow,
   Paper,
-  IconButton,
   Typography,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
-  Tooltip,
   Avatar,
   TablePagination,
 } from '@mui/material'
 import {
-  MoreVert,
   Edit,
-  Delete,
-  Person,
   Email,
   School,
   Visibility,
+  Person,
 } from '@mui/icons-material'
 import type { Docente } from '../../../services/docenteService'
+import { ActionMenu } from '../Common/ActionMenu'
 
 interface DocentesTableProps {
   docentes: Docente[]
@@ -42,8 +35,6 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
   onDelete,
   onViewHorarios,
 }) => {
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
-  const [selectedDocente, setSelectedDocente] = useState<Docente | null>(null)
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
 
@@ -62,37 +53,6 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   )
-
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, docente: Docente) => {
-    setAnchorEl(event.currentTarget)
-    setSelectedDocente(docente)
-  }
-
-  const handleMenuClose = () => {
-    setAnchorEl(null)
-    setSelectedDocente(null)
-  }
-
-  const handleEdit = () => {
-    if (selectedDocente) {
-      onEdit(selectedDocente)
-    }
-    handleMenuClose()
-  }
-
-  const handleDelete = () => {
-    if (selectedDocente) {
-      onDelete(selectedDocente)
-    }
-    handleMenuClose()
-  }
-
-  const handleViewHorarios = () => {
-    if (selectedDocente && onViewHorarios) {
-      onViewHorarios(selectedDocente)
-    }
-    handleMenuClose()
-  }
 
   if (docentes.length === 0) {
     return (
@@ -161,14 +121,24 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
 
               {/* Acciones */}
               <TableCell align="center">
-                <Tooltip title="Más opciones">
-                  <IconButton
-                    onClick={(e) => handleMenuClick(e, docente)}
-                    size="small"
-                  >
-                    <MoreVert />
-                  </IconButton>
-                </Tooltip>
+                <ActionMenu
+                  onEdit={() => onEdit(docente)}
+                  onDelete={() => onDelete(docente)}
+                  sections={
+                    onViewHorarios ? [
+                      {
+                        label: 'Información',
+                        items: [
+                          {
+                            label: 'Ver Horarios',
+                            icon: <Visibility fontSize="small" />,
+                            onClick: () => onViewHorarios(docente),
+                          }
+                        ]
+                      }
+                    ] : []
+                  }
+                />
               </TableCell>
             </TableRow>
           ))}
@@ -187,36 +157,6 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
           `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
         }
       />
-
-      {/* Menu contextual */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-      >
-        {onViewHorarios && (
-          <MenuItem onClick={handleViewHorarios}>
-            <ListItemIcon>
-              <Visibility fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Ver Horarios</ListItemText>
-          </MenuItem>
-        )}
-        <MenuItem onClick={handleEdit}>
-          <ListItemIcon>
-            <Edit fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Editar</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleDelete}>
-          <ListItemIcon>
-            <Delete fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Eliminar</ListItemText>
-        </MenuItem>
-      </Menu>
     </TableContainer>
   )
 } 

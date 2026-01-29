@@ -7,15 +7,14 @@ import {
   TableHead,
   TableRow,
   Paper,
-  IconButton,
   Chip,
-  Tooltip,
   Box,
   Typography,
   TablePagination
 } from '@mui/material'
-import { Edit, Delete, School } from '@mui/icons-material'
+import { School } from '@mui/icons-material'
 import type { Escuela } from '../../../services/escuelaService'
+import { ActionMenu } from '../Common/ActionMenu'
 
 interface EscuelasTableProps {
   escuelas: Escuela[]
@@ -106,24 +105,10 @@ export const EscuelasTable: React.FC<EscuelasTableProps> = ({
                 </Box>
               </TableCell>
               <TableCell align="center">
-                <Tooltip title="Editar">
-                  <IconButton
-                    size="small"
-                    color="primary"
-                    onClick={() => onEdit(escuela)}
-                  >
-                    <Edit fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Eliminar">
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={() => onDelete(escuela)}
-                  >
-                    <Delete fontSize="small" />
-                  </IconButton>
-                </Tooltip>
+                <ActionMenu
+                  onEdit={() => onEdit(escuela)}
+                  onDelete={() => onDelete(escuela)}
+                />
               </TableCell>
             </TableRow>
           ))}

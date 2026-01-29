@@ -11,18 +11,10 @@ import {
   IconButton,
   Typography,
   Chip,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
-  Tooltip,
   TextField,
   TablePagination,
 } from '@mui/material'
 import {
-  MoreVert,
-  Edit,
-  Delete,
   School,
   LocationOn,
   AccountBalance,
@@ -35,6 +27,7 @@ import {
   Inventory,
 } from '@mui/icons-material'
 import type { Laboratorio } from '../../../services/laboratorioService'
+import { ActionMenu } from '../Common/ActionMenu'
 import { ConfigurarInsumosModal } from './ConfigurarInsumosModal'
 
 interface LaboratoriosTableProps {
@@ -50,54 +43,11 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
   onDelete,
   onChangeStatus,
 }) => {
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [selectedLab, setSelectedLab] = useState<Laboratorio | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [configurarInsumosOpen, setConfigurarInsumosOpen] = useState(false)
-
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, laboratorio: Laboratorio) => {
-    setAnchorEl(event.currentTarget)
-    setSelectedLab(laboratorio)
-  }
-
-  const handleMenuClose = () => {
-    setAnchorEl(null)
-    setSelectedLab(null)
-  }
-
-  const handleEdit = () => {
-    if (selectedLab) {
-      onEdit(selectedLab)
-    }
-    handleMenuClose()
-  }
-
-  const handleConfigurarInsumos = () => {
-    if (selectedLab) {
-      console.log("selectedLab para configurar insumos", selectedLab)
-      setConfigurarInsumosOpen(true)
-    }
-  }
-  const handleCloseConfigurarInsumos = () => {
-    setConfigurarInsumosOpen(false)
-    handleMenuClose()
-  } 
-
-  const handleDelete = () => {
-    if (selectedLab) {
-      onDelete(selectedLab)
-    }
-    handleMenuClose()
-  }
-
-  const handleChangeStatus = (estado: 'Activo' | 'En Mantenimiento' | 'Inhabilitado' | 'Baja') => {
-    if (selectedLab) {
-      onChangeStatus(selectedLab, estado)
-    }
-    handleMenuClose()
-  }
 
   // Función para obtener el color del estado
   const getEstadoColor = (estado: string) => {
@@ -291,15 +241,57 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
 
                   {/* Acciones */}
                   <TableCell align="center">
-                    <Tooltip title="Más opciones">
-                      <IconButton
-                        size="small"
-                        onClick={(e) => handleMenuClick(e, lab)}
-                        sx={{ color: 'grey.600' }}
-                      >
-                        <MoreVert />
-                      </IconButton>
-                    </Tooltip>
+                    <ActionMenu
+                      onEdit={() => onEdit(lab)}
+                      onDelete={() => onDelete(lab)}
+                      sections={[
+                        {
+                          label: 'Configuración',
+                          items: [
+                            {
+                              label: 'Configurar Insumos',
+                              icon: <Inventory fontSize="small" />,
+                              onClick: () => {
+                                setSelectedLab(lab)
+                                setConfigurarInsumosOpen(true)
+                              },
+                            }
+                          ]
+                        },
+                        {
+                          label: 'Cambiar Estado',
+                          items: [
+                            {
+                              label: 'Activo',
+                              icon: <CheckCircle fontSize="small" />,
+                              color: 'success',
+                              disabled: lab.estado === 'Activo',
+                              onClick: () => onChangeStatus(lab, 'Activo'),
+                            },
+                            {
+                              label: 'En Mantenimiento',
+                              icon: <Build fontSize="small" />,
+                              color: 'warning',
+                              disabled: lab.estado === 'En Mantenimiento',
+                              onClick: () => onChangeStatus(lab, 'En Mantenimiento'),
+                            },
+                            {
+                              label: 'Inhabilitado',
+                              icon: <Block fontSize="small" />,
+                              color: 'error',
+                              disabled: lab.estado === 'Inhabilitado',
+                              onClick: () => onChangeStatus(lab, 'Inhabilitado'),
+                            },
+                            {
+                              label: 'Baja',
+                              icon: <RemoveCircle fontSize="small" />,
+                              disabled: lab.estado === 'Baja',
+                              onClick: () => onChangeStatus(lab, 'Baja'),
+                            },
+                          ]
+                        }
+                      ]}
+                    />
                   </TableCell>
                 </TableRow>
               ))
@@ -327,89 +319,13 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
         }}
       />
 
-      {/* Menu contextual */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-      >
-        <MenuItem onClick={handleEdit}>
-          <ListItemIcon>
-            <Edit fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Editar</ListItemText>
-        </MenuItem>
-
-        <MenuItem onClick={handleConfigurarInsumos}>
-          <ListItemIcon>
-            <Inventory fontSize="small" color="primary" />
-          </ListItemIcon>
-          <ListItemText>Configurar Insumos</ListItemText>
-        </MenuItem>
-
-        {/* Separador visual */}
-        <MenuItem disabled sx={{ borderTop: 1, borderColor: 'divider', mt: 1, pt: 1 }}>
-          <ListItemText primary="Cambiar Estado:" sx={{ fontSize: '0.875rem', color: 'text.secondary' }} />
-        </MenuItem>
-
-        <MenuItem
-          onClick={() => handleChangeStatus('Activo')}
-          disabled={selectedLab?.estado === 'Activo'}
-        >
-          <ListItemIcon>
-            <CheckCircle fontSize="small" color="success" />
-          </ListItemIcon>
-          <ListItemText>Activo</ListItemText>
-        </MenuItem>
-
-        <MenuItem
-          onClick={() => handleChangeStatus('En Mantenimiento')}
-          disabled={selectedLab?.estado === 'En Mantenimiento'}
-        >
-          <ListItemIcon>
-            <Build fontSize="small" color="warning" />
-          </ListItemIcon>
-          <ListItemText>En Mantenimiento</ListItemText>
-        </MenuItem>
-
-        <MenuItem
-          onClick={() => handleChangeStatus('Inhabilitado')}
-          disabled={selectedLab?.estado === 'Inhabilitado'}
-        >
-          <ListItemIcon>
-            <Block fontSize="small" color="error" />
-          </ListItemIcon>
-          <ListItemText>Inhabilitado</ListItemText>
-        </MenuItem>
-
-        <MenuItem
-          onClick={() => handleChangeStatus('Baja')}
-          disabled={selectedLab?.estado === 'Baja'}
-        >
-          <ListItemIcon>
-            <RemoveCircle fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Baja</ListItemText>
-        </MenuItem>
-
-        {/* Separador para eliminar */}
-        <MenuItem disabled sx={{ borderTop: 1, borderColor: 'divider', mt: 1 }}>
-        </MenuItem>
-
-        <MenuItem onClick={handleDelete}>
-          <ListItemIcon>
-            <Delete fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Eliminar</ListItemText>
-        </MenuItem>
-      </Menu>
-
       {/* Modal de configuración de insumos */}
       <ConfigurarInsumosModal
         open={configurarInsumosOpen}
-        onClose={handleCloseConfigurarInsumos}
+        onClose={() => {
+          setConfigurarInsumosOpen(false)
+          setSelectedLab(null)
+        }}
         laboratorio={selectedLab ? {
           id: selectedLab.id,
           nombre: selectedLab.nombre,

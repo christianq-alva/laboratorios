@@ -7,15 +7,14 @@ import {
   TableHead,
   TableRow,
   Paper,
-  IconButton,
   Chip,
-  Tooltip,
   Box,
   Typography,
   TablePagination
 } from '@mui/material'
-import { Edit, Delete, Category } from '@mui/icons-material'
+import { Category } from '@mui/icons-material'
 import type { TipoEquipo } from '../../../services/tipoEquipoService'
+import { ActionMenu } from '../Common/ActionMenu'
 
 interface TiposEquipoTableProps {
   tipos: TipoEquipo[]
@@ -133,24 +132,10 @@ export const TiposEquipoTable: React.FC<TiposEquipoTableProps> = ({
               </TableCell>
               <TableCell>{formatDate(tipo.created_at)}</TableCell>
               <TableCell align="center">
-                <Tooltip title="Editar">
-                  <IconButton
-                    size="small"
-                    color="primary"
-                    onClick={() => onEdit(tipo)}
-                  >
-                    <Edit fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Eliminar">
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={() => onDelete(tipo)}
-                  >
-                    <Delete fontSize="small" />
-                  </IconButton>
-                </Tooltip>
+                <ActionMenu
+                  onEdit={() => onEdit(tipo)}
+                  onDelete={() => onDelete(tipo)}
+                />
               </TableCell>
             </TableRow>
           ))}

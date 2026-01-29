@@ -7,16 +7,15 @@ import {
   TableHead,
   TableRow,
   Paper,
-  IconButton,
   Chip,
-  Tooltip,
   Box,
   Typography,
   TablePagination,
   TextField
 } from '@mui/material'
-import { Edit, Delete, LibraryBooks, Search, Clear } from '@mui/icons-material'
+import { LibraryBooks, Search, Clear } from '@mui/icons-material'
 import type { Insumo } from '../../../services/insumoService'
+import { ActionMenu } from '../Common/ActionMenu'
 
 interface CatalogoInsumosTableProps {
   insumos: Insumo[]
@@ -210,26 +209,10 @@ export const CatalogoInsumosTable: React.FC<CatalogoInsumosTableProps> = ({
               <TableCell>{`${insumo.unidad_nombre} (${insumo.unidad_simbolo})` || '-'}</TableCell>
               <TableCell>{insumo.presentacion || '-'}</TableCell>
               <TableCell align="center">
-                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                  <Tooltip title="Editar">
-                    <IconButton
-                      size="small"
-                      color="primary"
-                      onClick={() => onEdit(insumo)}
-                    >
-                      <Edit fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Eliminar">
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => onDelete(insumo)}
-                    >
-                      <Delete fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
+                <ActionMenu
+                  onEdit={() => onEdit(insumo)}
+                  onDelete={() => onDelete(insumo)}
+                />
               </TableCell>
             </TableRow>
             ))

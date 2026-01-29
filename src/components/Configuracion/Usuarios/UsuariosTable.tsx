@@ -7,21 +7,16 @@ import {
   TableHead,
   TableRow,
   Paper,
-  IconButton,
   Chip,
-  Tooltip,
   Box,
   Typography,
   TablePagination,
   Avatar,
   Switch,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
 } from '@mui/material'
-import { Edit, Delete, Person, AdminPanelSettings, SupervisorAccount, School, MoreVert } from '@mui/icons-material'
+import { Person, AdminPanelSettings, SupervisorAccount, School } from '@mui/icons-material'
 import type { Usuario } from '../../../services/usuarioService'
+import { ActionMenu } from '../Common/ActionMenu'
 
 interface UsuariosTableProps {
   usuarios: Usuario[]
@@ -38,8 +33,6 @@ export const UsuariosTable: React.FC<UsuariosTableProps> = ({
 }) => {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
-  const [selectedUsuario, setSelectedUsuario] = useState<Usuario | null>(null)
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return '-'
@@ -79,30 +72,6 @@ export const UsuariosTable: React.FC<UsuariosTableProps> = ({
 
   const getEstadoColor = (estado: string) => {
     return estado === 'activo' ? 'success' : 'default'
-  }
-
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, usuario: Usuario) => {
-    setAnchorEl(event.currentTarget)
-    setSelectedUsuario(usuario)
-  }
-
-  const handleMenuClose = () => {
-    setAnchorEl(null)
-    setSelectedUsuario(null)
-  }
-
-  const handleEdit = () => {
-    if (selectedUsuario) {
-      onEdit(selectedUsuario)
-    }
-    handleMenuClose()
-  }
-
-  const handleDelete = () => {
-    if (selectedUsuario) {
-      onDelete(selectedUsuario)
-    }
-    handleMenuClose()
   }
 
   if (usuarios.length === 0) {
@@ -227,14 +196,10 @@ export const UsuariosTable: React.FC<UsuariosTableProps> = ({
               </TableCell>
               <TableCell>{formatDate(usuario.created_at)}</TableCell>
               <TableCell align="center">
-                <Tooltip title="Más opciones">
-                  <IconButton
-                    size="small"
-                    onClick={(e) => handleMenuClick(e, usuario)}
-                  >
-                    <MoreVert />
-                  </IconButton>
-                </Tooltip>
+                <ActionMenu
+                  onEdit={() => onEdit(usuario)}
+                  onDelete={() => onDelete(usuario)}
+                />
               </TableCell>
             </TableRow>
           ))}
@@ -253,29 +218,6 @@ export const UsuariosTable: React.FC<UsuariosTableProps> = ({
           `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
         }
       />
-
-      {/* Menú contextual */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-      >
-        <MenuItem onClick={handleEdit}>
-          <ListItemIcon>
-            <Edit fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Editar</ListItemText>
-        </MenuItem>
-        
-        <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
-          <ListItemIcon>
-            <Delete fontSize="small" color="error" />
-          </ListItemIcon>
-          <ListItemText>Eliminar</ListItemText>
-        </MenuItem>
-      </Menu>
     </TableContainer>
   )
 }

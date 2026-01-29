@@ -7,14 +7,13 @@ import {
   TableHead,
   TableRow,
   Paper,
-  IconButton,
-  Tooltip,
   Box,
   Typography,
   TablePagination
 } from '@mui/material'
-import { Edit, Delete, Straighten } from '@mui/icons-material'
+import { Straighten } from '@mui/icons-material'
 import type { Unidad } from '../../../services/unidadService'
+import { ActionMenu } from '../Common/ActionMenu'
 
 interface UnidadesTableProps {
   unidades: Unidad[]
@@ -118,24 +117,10 @@ export const UnidadesTable: React.FC<UnidadesTableProps> = ({
                 </Typography>
               </TableCell>
               <TableCell align="center">
-                <Tooltip title="Editar">
-                  <IconButton
-                    size="small"
-                    color="primary"
-                    onClick={() => onEdit(unidad)}
-                  >
-                    <Edit fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Eliminar">
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={() => onDelete(unidad)}
-                  >
-                    <Delete fontSize="small" />
-                  </IconButton>
-                </Tooltip>
+                <ActionMenu
+                  onEdit={() => onEdit(unidad)}
+                  onDelete={() => onDelete(unidad)}
+                />
               </TableCell>
             </TableRow>
           ))}
