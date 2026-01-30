@@ -5,6 +5,7 @@ export { validate, validateBody, validateParams, validateQuery } from './middlew
 export * from './schemas/common.js'
 
 // Exportar schemas por entidad
+export * from './schemas/auth.js'
 export * from './schemas/tipoEquipo.js'
 export * from './schemas/laboratorio.js'
 export * from './schemas/docente.js'

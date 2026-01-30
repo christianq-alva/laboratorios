@@ -9,3 +9,14 @@ export const idParamSchema = z.object({
     .refine((val) => val > 0, 'ID debe ser mayor a 0')
 })
 
+/** Contraseña obligatoria (crear usuario): mínimo 6 caracteres, máximo 255 */
+export const passwordSchema = z.string()
+  .min(6, 'La contraseña debe tener al menos 6 caracteres')
+  .max(255, 'La contraseña no puede exceder 255 caracteres')
+
+/** Contraseña opcional (actualizar usuario): si se envía, mismo rango que passwordSchema */
+export const passwordOptionalSchema = z.string()
+  .min(6, 'La contraseña debe tener al menos 6 caracteres')
+  .max(255, 'La contraseña no puede exceder 255 caracteres')
+  .optional()
+

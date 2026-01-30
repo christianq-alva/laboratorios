@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { idParamSchema } from './common.js'
+import { idParamSchema, passwordSchema, passwordOptionalSchema } from './common.js'
 
 /**
  * Schema para crear un usuario
@@ -14,9 +14,7 @@ export const createUsuarioSchema = z.object({
             .trim()
             .min(1, 'El nombre de usuario es obligatorio')
             .max(50, 'El nombre de usuario no puede exceder 50 caracteres'),
-        contrasena: z.string()
-            .min(6, 'La contraseña debe tener al menos 6 caracteres')
-            .max(255, 'La contraseña no puede exceder 255 caracteres'),
+        contrasena: passwordSchema,
         rol_id: z.number()
             .int('El ID de rol debe ser un número entero')
             .positive('El ID de rol debe ser mayor a 0'),
@@ -52,10 +50,7 @@ export const updateUsuarioSchema = z.object({
             .min(1, 'El nombre de usuario no puede estar vacío')
             .max(50, 'El nombre de usuario no puede exceder 50 caracteres')
             .optional(),
-        contrasena: z.string()
-            .min(6, 'La contraseña debe tener al menos 6 caracteres')
-            .max(255, 'La contraseña no puede exceder 255 caracteres')
-            .optional(),
+        contrasena: passwordOptionalSchema,
         rol_id: z.number()
             .int('El ID de rol debe ser un número entero')
             .positive('El ID de rol debe ser mayor a 0')
