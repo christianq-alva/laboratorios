@@ -1,4 +1,5 @@
 import { pool } from '../config/database.js'
+import { handleDBError } from '../utils/handleDBError.js'
 
 export const Equipo = {
 
@@ -26,8 +27,7 @@ export const Equipo = {
       const equipo_id = result.insertId
       return equipo_id
     } catch (error) {
-      console.error('❌ Error al crear equipo:', error)
-      throw error
+      handleDBError(error, 'Equipo')
     }
   },
   update: async (id, equipoData, connection) => {
@@ -56,8 +56,7 @@ export const Equipo = {
       return result.affectedRows
 
     } catch (error) {
-      console.error('❌ Error al actualizar equipo:', error)
-      throw error
+      handleDBError(error, 'Equipo')
     }
   },
   delete: async (id, connection) => {
@@ -66,45 +65,64 @@ export const Equipo = {
       const [result] = await conn.execute('DELETE FROM equipos WHERE id = ?', [id])
       return result.affectedRows
     } catch (error) {
-      console.error('❌ Error al eliminar equipo:', error)
-      throw error
+      handleDBError(error, 'Equipo')
     }
   },
 
   existsById: async (id) => {
-    const [rows] = await pool.execute('SELECT id FROM equipos WHERE id = ?', [id])
-    return rows.length > 0
+    try {
+      const [rows] = await pool.execute('SELECT id FROM equipos WHERE id = ?', [id])
+      return rows.length > 0
+    } catch (error) {
+      handleDBError(error, 'Equipo')
+    }
   },
 
   getById: async (id) => {
-    const [rows] = await pool.execute('SELECT * FROM equipos WHERE id = ?', [id])
-    return rows[0]
+    try {
+      const [rows] = await pool.execute('SELECT * FROM equipos WHERE id = ?', [id])
+      return rows[0]
+    } catch (error) {
+      handleDBError(error, 'Equipo')
+    }
   },
 
   existsByCodigo: async (codigo, excludeId) => {
-
-    let query = 'SELECT id FROM equipos WHERE codigo = ?'
-    let params = [codigo]
-
-    if (excludeId) {
-      query += ' AND id <> ?'
-      params = [codigo, excludeId]
+    try {
+      let query = 'SELECT id FROM equipos WHERE codigo = ?'
+      let params = [codigo]
+      if (excludeId) {
+        query += ' AND id <> ?'
+        params = [codigo, excludeId]
+      }
+      const [rows] = await pool.execute(query, params)
+      return rows.length > 0
+    } catch (error) {
+      handleDBError(error, 'Equipo')
     }
-    const [rows] = await pool.execute(query, params)
-    return rows.length > 0
   },
+
   reservasActivas: async (id) => {
-    const [rows] = await pool.execute('SELECT COUNT(*) as total FROM detalle_reserva_equipos WHERE equipo_id = ?', [id])
-    return rows[0].total > 0
+    try {
+      const [rows] = await pool.execute('SELECT COUNT(*) as total FROM detalle_reserva_equipos WHERE equipo_id = ?', [id])
+      return rows[0].total > 0
+    } catch (error) {
+      handleDBError(error, 'Equipo')
+    }
   },
+
   reservasActivasByLaboratorioId: async (equipo_id, laboratorio_id) => {
-    const [rows] = await pool.execute(`
-      SELECT COUNT(*) as total 
-      FROM detalle_reserva_equipos dre
-      INNER JOIN reservas r ON dre.reserva_id = r.id
-      WHERE dre.equipo_id = ? AND r.laboratorio_id = ? AND r.estado = 'P' AND r.fecha_inicio > NOW()`,
-      [equipo_id, laboratorio_id])
-    return rows[0].total > 0
+    try {
+      const [rows] = await pool.execute(`
+        SELECT COUNT(*) as total 
+        FROM detalle_reserva_equipos dre
+        INNER JOIN reservas r ON dre.reserva_id = r.id
+        WHERE dre.equipo_id = ? AND r.laboratorio_id = ? AND r.estado = 'P' AND r.fecha_inicio > NOW()`,
+        [equipo_id, laboratorio_id])
+      return rows[0].total > 0
+    } catch (error) {
+      handleDBError(error, 'Equipo')
+    }
   },
   registrarActividadEquipo: async ({ accion, equipo_id, descripcion, usuario_id, ip_address }) => {
     try {
@@ -129,8 +147,7 @@ export const Equipo = {
       await pool.execute(query, [accion, equipo_id, descripcion, usuario_id, ip_address, fechaPeru])
       console.log(`📋 Actividad de equipo registrada: ${accion} - ${descripcion} (${fechaPeru})`)
     } catch (error) {
-      console.error('❌ Error al registrar actividad de equipo:', error)
-      // No lanzamos el error para no interrumpir la operación principal
+      handleDBError(error, 'Equipo')
     }
   },
 
@@ -185,9 +202,12 @@ export const Equipo = {
       params.push(filters.laboratorio_id)
     }
 
-    const [equipos] = await pool.execute(query, params)
-
-    return equipos;
+    try {
+      const [equipos] = await pool.execute(query, params)
+      return equipos
+    } catch (error) {
+      handleDBError(error, 'Equipo')
+    }
   },
 
   getByLaboratorio: async (laboratorio_id, filters = {}) => {
@@ -237,7 +257,7 @@ export const Equipo = {
       return equipos;
 
     } catch (error) {
-      throw error
+      handleDBError(error, 'Equipo')
     }
   },
   getActividadEquipos: async (user_rol, user_laboratorio_ids, laboratorio_id, fecha_inicio, fecha_fin, tipo_actividad, usuario_id) => {
@@ -295,9 +315,9 @@ export const Equipo = {
       query += ` ORDER BY a.fecha_actividad DESC`
 
       const [actividad] = await pool.execute(query, params)
-      return actividad;
+      return actividad
     } catch (error) {
-      throw error
+      handleDBError(error, 'Equipo')
     }
   }
 }

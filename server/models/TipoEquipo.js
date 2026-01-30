@@ -1,7 +1,8 @@
 import { pool } from '../config/database.js'
+import { AppError } from '../utils/errors.js'
+import { handleDBError } from '../utils/handleDBError.js'
 
 export const TipoEquipo = {
-  // Obtener todos los tipos de equipo
   getAll: async () => {
     try {
       const [rows] = await pool.execute(`
@@ -18,11 +19,10 @@ export const TipoEquipo = {
 
       return rows
     } catch (error) {
-      throw error
+      handleDBError(error, 'Tipo de equipo')
     }
   },
 
-  // Obtener solo tipos activos (sin filtro de estado)
   getActivos: async () => {
     try {
       const [rows] = await pool.execute(`
@@ -39,11 +39,10 @@ export const TipoEquipo = {
 
       return rows
     } catch (error) {
-      throw error
+      handleDBError(error, 'Tipo de equipo')
     }
   },
 
-  // Obtener un tipo por ID
   getById: async (id) => {
     try {
       const [rows] = await pool.execute(`
@@ -58,107 +57,94 @@ export const TipoEquipo = {
 
       return rows[0]
     } catch (error) {
-      throw error
+      handleDBError(error, 'Tipo de equipo')
     }
   },
 
-  // Crear un nuevo tipo de equipo
   create: async (data) => {
-    const connection = await pool.getConnection()
     try {
-      await connection.beginTransaction()
-
       // Verificar si ya existe un tipo con ese nombre
-      const [existing] = await connection.execute(
+      const [existing] = await pool.execute(
         'SELECT id FROM tipos_equipo WHERE nombre = ?',
         [data.nombre]
       )
 
       if (existing.length > 0) {
-        throw new Error('Ya existe un tipo de equipo con ese nombre')
+        throw new AppError('Ya existe un tipo de equipo con ese nombre', 409)
       }
 
-      const [result] = await connection.execute(
+      const [result] = await pool.execute(
         `INSERT INTO tipos_equipo (nombre, descripcion) 
          VALUES (?, ?)`,
         [data.nombre, data.descripcion || null]
       )
 
-      await connection.commit()
       return result.insertId
     } catch (error) {
-      await connection.rollback()
-      throw error
+      handleDBError(error, 'Tipo de equipo')
     } finally {
-      connection.release()
     }
   },
 
-  // Actualizar un tipo de equipo
   update: async (id, data) => {
-    const connection = await pool.getConnection()
+
+    const tipo = await TipoEquipo.getById(id)
+    if (!tipo) {
+      throw new AppError('Tipo de equipo no encontrado', 404)
+    }
+
+    // Verificar si existe otro tipo con el mismo nombre
+    const [existing] = await pool.execute(
+      'SELECT id FROM tipos_equipo WHERE nombre = ? AND id != ?',
+      [data.nombre, id]
+    )
+
+    if (existing.length > 0) {
+      throw new AppError('Ya existe otro tipo de equipo con ese nombre', 409)
+    }
+
     try {
-      await connection.beginTransaction()
-
-      // Verificar si existe otro tipo con el mismo nombre
-      const [existing] = await connection.execute(
-        'SELECT id FROM tipos_equipo WHERE nombre = ? AND id != ?',
-        [data.nombre, id]
-      )
-
-      if (existing.length > 0) {
-        throw new Error('Ya existe otro tipo de equipo con ese nombre')
-      }
-
-      const [result] = await connection.execute(
+      const [result] = await pool.execute(
         `UPDATE tipos_equipo 
          SET nombre = ?, descripcion = ?
          WHERE id = ?`,
         [data.nombre, data.descripcion || null, id]
       )
 
-      await connection.commit()
       return result.affectedRows > 0
     } catch (error) {
-      await connection.rollback()
-      throw error
-    } finally {
-      connection.release()
+      handleDBError(error, 'Tipo de equipo')
     }
   },
 
-  // Eliminar un tipo de equipo (solo si no tiene equipos asociados)
   delete: async (id) => {
-    const connection = await pool.getConnection()
+    const tipo = await TipoEquipo.getById(id)
+    if (!tipo) {
+      throw new AppError('Tipo de equipo no encontrado', 404)
+    }
+
+    // Verificar si hay equipos asociados
+    const [equipos] = await pool.execute(
+      'SELECT COUNT(*) as count FROM equipos WHERE tipo_equipo_id = ?',
+      [id]
+    )
+
+    if (equipos[0].count > 0) {
+      throw new AppError(`No se puede eliminar el tipo porque tiene ${equipos[0].count} equipo(s) asociado(s)`, 409)
+    }
+
     try {
-      await connection.beginTransaction()
-
-      // Verificar si hay equipos asociados
-      const [equipos] = await connection.execute(
-        'SELECT COUNT(*) as count FROM equipos WHERE tipo_equipo_id = ?',
-        [id]
-      )
-
-      if (equipos[0].count > 0) {
-        throw new Error(`No se puede eliminar el tipo porque tiene ${equipos[0].count} equipo(s) asociado(s)`)
-      }
-
-      const [result] = await connection.execute(
+      const [result] = await pool.execute(
         'DELETE FROM tipos_equipo WHERE id = ?',
         [id]
       )
 
-      await connection.commit()
       return result.affectedRows > 0
     } catch (error) {
-      await connection.rollback()
-      throw error
-    } finally {
-      connection.release()
+      handleDBError(error, 'Tipo de equipo')
     }
   },
 
-  // Listar tipos de equipo con conteo de equipos
   getAllWithCountEquipos: async () => {
     try {
       const [rows] = await pool.execute(`	
@@ -171,7 +157,7 @@ export const TipoEquipo = {
 
       return rows
     } catch (error) {
-      throw error
+      handleDBError(error, 'Tipo de equipo')
     }
   }
 }

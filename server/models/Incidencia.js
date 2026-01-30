@@ -1,7 +1,7 @@
 import { pool } from '../config/database.js'
+import { handleDBError } from '../utils/handleDBError.js'
 
 export const Incidencia = {
-  // Obtener incidencias según el rol del usuario
   getByUser: async (user) => {
     let query = `
       SELECT 
@@ -38,11 +38,14 @@ export const Incidencia = {
 
     query += ' ORDER BY i.fecha_reporte DESC'
 
-    const [rows] = await pool.execute(query, params)
-    return rows
+    try {
+      const [rows] = await pool.execute(query, params)
+      return rows
+    } catch (error) {
+      handleDBError(error, 'Incidencia')
+    }
   },
 
-  // Obtener incidencia por ID con validación de permisos
   getById: async (id, user) => {
     let query = `
       SELECT 
@@ -79,71 +82,63 @@ export const Incidencia = {
       }
     }
 
-    const [rows] = await pool.execute(query, params)
-    return rows[0] || null
+    try {
+      const [rows] = await pool.execute(query, params)
+      return rows[0] || null
+    } catch (error) {
+      handleDBError(error, 'Incidencia')
+    }
   },
 
-  // Crear nueva incidencia
   create: async (data, user_id) => {
-    const [result] = await pool.execute(`
-      INSERT INTO incidencias (reserva_id, titulo, descripcion, reportado_por)
-      VALUES (?, ?, ?, ?)
-    `, [data.reserva_id, data.titulo, data.descripcion, user_id])
-    
-    return result.insertId
+    try {
+      const [result] = await pool.execute(`
+        INSERT INTO incidencias (reserva_id, titulo, descripcion, reportado_por)
+        VALUES (?, ?, ?, ?)
+      `, [data.reserva_id, data.titulo, data.descripcion, user_id])
+
+      return result.insertId
+    } catch (error) {
+      handleDBError(error, 'Incidencia')
+    }
   },
 
-  // Verificar si el usuario puede crear incidencia para esta reserva
   canCreateForReserva: async (reserva_id, user) => {
-    if (user.rol === 'Administrador') {
-      return true // Admin puede crear incidencias para cualquier reserva
-    }
-
-    if (user.rol === 'Jefe de Laboratorio') {
-      const [rows] = await pool.execute(`
-        SELECT r.laboratorio_id 
-        FROM reservas r 
-        WHERE r.id = ?
-      `, [reserva_id])
-
-      if (rows.length === 0) {
-        return false // Reserva no existe
-      }
-
-      const labIds = user.laboratorio_ids || []
-      return labIds.includes(rows[0].laboratorio_id)
-    }
-
-    return false // Otros roles no pueden crear incidencias
-  },
-
-  // Verificar si el usuario puede eliminar una incidencia
-  canDelete: async (id, user) => {
-    // Obtener la incidencia para verificar permisos
-    const incidencia = await Incidencia.getById(id, user)
-    if (!incidencia) {
-      return false // No existe o no tiene permisos para verla
-    }
-
-    // Admin puede eliminar cualquier incidencia
     if (user.rol === 'Administrador') {
       return true
     }
 
-    // Jefe de Laboratorio puede eliminar incidencias de sus laboratorios
     if (user.rol === 'Jefe de Laboratorio') {
-      return true // Ya validado en getById
+      try {
+        const [rows] = await pool.execute(`
+          SELECT r.laboratorio_id 
+          FROM reservas r 
+          WHERE r.id = ?
+        `, [reserva_id])
+
+        if (rows.length === 0) {
+          return false
+        }
+
+        const labIds = user.laboratorio_ids || []
+        return labIds.includes(rows[0].laboratorio_id)
+      } catch (error) {
+        handleDBError(error, 'Incidencia')
+      }
     }
 
     return false
   },
 
-  // Eliminar incidencia
   delete: async (id) => {
-    const [result] = await pool.execute(`
-      DELETE FROM incidencias WHERE id = ?
-    `, [id])
-    
-    return result.affectedRows > 0
+    try {
+      const [result] = await pool.execute(`
+        DELETE FROM incidencias WHERE id = ?
+      `, [id])
+
+      return result.affectedRows > 0
+    } catch (error) {
+      handleDBError(error, 'Incidencia')
+    }
   }
 }

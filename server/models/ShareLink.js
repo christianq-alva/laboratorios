@@ -1,5 +1,6 @@
 import { pool } from '../config/database.js'
 import jwt from 'jsonwebtoken'
+import { handleDBError } from '../utils/handleDBError.js'
 
 const generateShareToken = (laboratorioId, userId) => {
   const payload = {
@@ -70,128 +71,140 @@ export const ShareLink = {
       return shareLink
     } catch (error) {
       await connection.rollback()
-      throw error
+      handleDBError(error, 'Enlace compartido')
     } finally {
       connection.release()
     }
   },
 
   deactivate: async (id, userId) => {
-    const [linkCheck] = await pool.execute(`
-      SELECT es.*, l.nombre as laboratorio_nombre
-      FROM enlaces_compartidos es
-      JOIN laboratorios l ON es.laboratorio_id = l.id
-      WHERE es.id = ? AND es.creado_por = ?
-    `, [id, userId])
+    try {
+      const [linkCheck] = await pool.execute(`
+        SELECT es.*, l.nombre as laboratorio_nombre
+        FROM enlaces_compartidos es
+        JOIN laboratorios l ON es.laboratorio_id = l.id
+        WHERE es.id = ? AND es.creado_por = ?
+      `, [id, userId])
 
-    if (linkCheck.length === 0) {
-      return null
+      if (linkCheck.length === 0) return null
+
+      await pool.execute(`
+        UPDATE enlaces_compartidos 
+        SET activo = FALSE, updated_at = NOW()
+        WHERE id = ?
+      `, [id])
+
+      return linkCheck[0]
+    } catch (error) {
+      handleDBError(error, 'Enlace compartido')
     }
-
-    await pool.execute(`
-      UPDATE enlaces_compartidos 
-      SET activo = FALSE, updated_at = NOW()
-      WHERE id = ?
-    `, [id])
-
-    return linkCheck[0]
   },
 
   delete: async (id, userId) => {
-    const [linkCheck] = await pool.execute(`
-      SELECT es.*, l.nombre as laboratorio_nombre
-      FROM enlaces_compartidos es
-      JOIN laboratorios l ON es.laboratorio_id = l.id
-      WHERE es.id = ? AND es.creado_por = ?
-    `, [id, userId])
+    try {
+      const [linkCheck] = await pool.execute(`
+        SELECT es.*, l.nombre as laboratorio_nombre
+        FROM enlaces_compartidos es
+        JOIN laboratorios l ON es.laboratorio_id = l.id
+        WHERE es.id = ? AND es.creado_por = ?
+      `, [id, userId])
 
-    if (linkCheck.length === 0) {
-      return null
+      if (linkCheck.length === 0) return null
+
+      await pool.execute(`
+        DELETE FROM enlaces_compartidos 
+        WHERE id = ?
+      `, [id])
+
+      return linkCheck[0]
+    } catch (error) {
+      handleDBError(error, 'Enlace compartido')
     }
-
-    await pool.execute(`
-      DELETE FROM enlaces_compartidos 
-      WHERE id = ?
-    `, [id])
-
-    return linkCheck[0]
   },
 
   getByUserId: async (userId, userRole, laboratorioIds = []) => {
-    let query = `
-      SELECT 
-        es.id,
-        es.laboratorio_id,
-        es.token,
-        es.fecha_expiracion,
-        es.activo,
-        es.created_at,
-        l.nombre as laboratorio_nombre,
-        l.ubicacion as laboratorio_ubicacion,
-        e.nombre as escuela
-      FROM enlaces_compartidos es
-      JOIN laboratorios l ON es.laboratorio_id = l.id
-      LEFT JOIN escuelas e ON l.escuela_id = e.id
-      WHERE es.creado_por = ?
-    `
-    let params = [userId]
+    try {
+      let query = `
+        SELECT 
+          es.id,
+          es.laboratorio_id,
+          es.token,
+          es.fecha_expiracion,
+          es.activo,
+          es.created_at,
+          l.nombre as laboratorio_nombre,
+          l.ubicacion as laboratorio_ubicacion,
+          e.nombre as escuela
+        FROM enlaces_compartidos es
+        JOIN laboratorios l ON es.laboratorio_id = l.id
+        LEFT JOIN escuelas e ON l.escuela_id = e.id
+        WHERE es.creado_por = ?
+      `
+      let params = [userId]
 
-    if (userRole === 'Jefe de Laboratorio' && laboratorioIds.length > 0) {
-      const placeholders = laboratorioIds.map(() => '?').join(',')
-      query += ` AND es.laboratorio_id IN (${placeholders})`
-      params = [...params, ...laboratorioIds]
-    } else if (userRole === 'Jefe de Laboratorio' && laboratorioIds.length === 0) {
-      query += ' AND 1 = 0'
+      if (userRole === 'Jefe de Laboratorio' && laboratorioIds.length > 0) {
+        const placeholders = laboratorioIds.map(() => '?').join(',')
+        query += ` AND es.laboratorio_id IN (${placeholders})`
+        params = [...params, ...laboratorioIds]
+      } else if (userRole === 'Jefe de Laboratorio' && laboratorioIds.length === 0) {
+        query += ' AND 1 = 0'
+      }
+
+      query += ' ORDER BY es.created_at DESC'
+
+      const [enlaces] = await pool.execute(query, params)
+
+      return enlaces.map((enlace) => ({
+        ...enlace,
+        url: buildPublicUrl(enlace.laboratorio_id, enlace.token),
+        expirado: new Date() > new Date(enlace.fecha_expiracion)
+      }))
+    } catch (error) {
+      handleDBError(error, 'Enlace compartido')
     }
-
-    query += ' ORDER BY es.created_at DESC'
-
-    const [enlaces] = await pool.execute(query, params)
-
-    return enlaces.map(enlace => ({
-      ...enlace,
-      url: buildPublicUrl(enlace.laboratorio_id, enlace.token),
-      expirado: new Date() > new Date(enlace.fecha_expiracion)
-    }))
   },
 
   getById: async (id) => {
-    const [rows] = await pool.execute(`
-      SELECT 
-        es.*,
-        l.nombre as laboratorio_nombre,
-        l.ubicacion as laboratorio_ubicacion,
-        e.nombre as escuela
-      FROM enlaces_compartidos es
-      JOIN laboratorios l ON es.laboratorio_id = l.id
-      LEFT JOIN escuelas e ON l.escuela_id = e.id
-      WHERE es.id = ?
-    `, [id])
+    try {
+      const [rows] = await pool.execute(`
+        SELECT 
+          es.*,
+          l.nombre as laboratorio_nombre,
+          l.ubicacion as laboratorio_ubicacion,
+          e.nombre as escuela
+        FROM enlaces_compartidos es
+        JOIN laboratorios l ON es.laboratorio_id = l.id
+        LEFT JOIN escuelas e ON l.escuela_id = e.id
+        WHERE es.id = ?
+      `, [id])
 
-    if (rows.length === 0) {
-      return null
-    }
+      if (rows.length === 0) return null
 
-    const enlace = rows[0]
-    return {
-      ...enlace,
-      url: buildPublicUrl(enlace.laboratorio_id, enlace.token),
-      expirado: new Date() > new Date(enlace.fecha_expiracion)
+      const enlace = rows[0]
+      return {
+        ...enlace,
+        url: buildPublicUrl(enlace.laboratorio_id, enlace.token),
+        expirado: new Date() > new Date(enlace.fecha_expiracion)
+      }
+    } catch (error) {
+      handleDBError(error, 'Enlace compartido')
     }
   },
 
   getByTokenAndLaboratorio: async (token, laboratorioId) => {
-    const [rows] = await pool.execute(`
-      SELECT id, activo, fecha_expiracion, creado_por
-      FROM enlaces_compartidos 
-      WHERE token = ? AND laboratorio_id = ?
-    `, [token, laboratorioId])
+    try {
+      const [rows] = await pool.execute(`
+        SELECT id, activo, fecha_expiracion, creado_por
+        FROM enlaces_compartidos 
+        WHERE token = ? AND laboratorio_id = ?
+      `, [token, laboratorioId])
 
-    if (rows.length === 0) {
-      return null
+      if (rows.length === 0) return null
+
+      return rows[0]
+    } catch (error) {
+      handleDBError(error, 'Enlace compartido')
     }
-
-    return rows[0]
   },
 
   verifyToken: async (token, laboratorioId) => {

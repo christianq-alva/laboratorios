@@ -1,16 +1,26 @@
-import { pool } from "../config/database.js"
+import { pool } from '../config/database.js'
+import { handleDBError } from '../utils/handleDBError.js'
 
 export const Rol = {
-    getAll: async () => {
-        const [roles] = await pool.execute(`
-            SELECT id, nombre FROM roles
-        `)
-        return roles
-    },
-    getById: async (id) => {
-        const [roles] = await pool.execute(`
-            SELECT id, nombre FROM roles WHERE id = ?
-        `, [id])
-        return roles[0]
+  getAll: async () => {
+    try {
+      const [roles] = await pool.execute(`
+        SELECT id, nombre FROM roles
+      `)
+      return roles
+    } catch (error) {
+      handleDBError(error, 'Rol')
     }
+  },
+
+  getById: async (id) => {
+    try {
+      const [rows] = await pool.execute(`
+        SELECT id, nombre FROM roles WHERE id = ?
+      `, [id])
+      return rows[0] || null
+    } catch (error) {
+      handleDBError(error, 'Rol')
+    }
+  }
 }

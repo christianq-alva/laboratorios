@@ -1,4 +1,6 @@
 import { defineAbilitiesFor } from '../abilities/defineAbilities.js'
+import { AppError } from '../utils/errors.js'
+import logger from '../utils/logger.js'
 
 // Middleware de autorización
 export const authorize = (action, resource) => {
@@ -10,11 +12,11 @@ export const authorize = (action, resource) => {
       const canDo = ability.can(action, resource)
 
       if (!canDo) {
-        return res.status(403).json({
-          success: false,
-          message: `No tienes permisos para ${action} ${resource}`
-        })
+        return next(new AppError(`No tienes permisos para ${action} ${resource}`, 403))
       }
+
+      //Login temporal para peticiones
+      logger.info({ user: req.user.usuario, api: req.originalUrl, action: action, resource: resource, canDo: canDo }, 'authorize')
 
       // Verificar si el usuario es Jefe de Laboratorio y tiene permisos para el laboratorio
       if (req.user.rol === 'Jefe de Laboratorio') {
@@ -26,21 +28,13 @@ export const authorize = (action, resource) => {
         const laboratorio_ids = req.user.laboratorio_ids
 
         if (laboratorioId && !laboratorio_ids.includes(laboratorioId)) {
-          return res.status(403).json({
-            success: false,
-            message: `No tienes permisos para ${action} ${resource} ${laboratorioId}`
-          })
+          return next(new AppError(`No tienes permisos para ${action} ${resource} ${laboratorioId}`, 403))
         }
       }
 
       next()
     } catch (error) {
-      console.error('💥 Error en authorize:', error)
-      console.error('💥 Stack trace:', error.stack) // ← AGREGAR STACK TRACE
-      res.status(500).json({
-        success: false,
-        message: 'Error de autorización'
-      })
+      next(error)
     }
   }
 }

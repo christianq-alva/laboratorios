@@ -1,5 +1,5 @@
-import { pool } from '../config/database.js'
 import { Insumo } from '../models/Insumo.js'
+import { insumoService } from '../services/insumoService.js'
 import multer from 'multer'
 import XLSX from 'xlsx'
 import { Unidad } from '../models/Unidad.js'
@@ -7,7 +7,7 @@ import { Unidad } from '../models/Unidad.js'
 const categoriasValidas = ['Reactivos', 'Materiales', 'Material_Biologico']
 
 // Crear insumo
-export const createInsumo = async (req, res) => {
+export const createInsumo = async (req, res, next) => {
   try {
     // Los datos ya están validados y transformados por el middleware de validación
     const { nombre, descripcion, unidad_id, categoria, presentacion } = req.body
@@ -26,127 +26,38 @@ export const createInsumo = async (req, res) => {
 
     })
   } catch (error) {
-    console.error('Error al crear insumo:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Error interno del servidor'
-    })
+    next(error)
   }
 }
 // Actualizar insumo
-export const updateInsumo = async (req, res) => {
+export const updateInsumo = async (req, res, next) => {
   try {
-    // El ID ya está validado y transformado por el middleware de validación
     const { id: insumoId } = req.params
     const { nombre, descripcion, unidad_id, categoria, presentacion } = req.body
-
-    // Verificar que el insumo existe
-    const exists = await Insumo.existsById(insumoId)
-    if (!exists) {
-      return res.status(404).json({
-        success: false,
-        message: 'Insumo no encontrado'
-      })
-    }
-
-    // Actualizar insumo
-    const { affectedRows } = await Insumo.updateById(insumoId, {
-      nombre,
-      descripcion: descripcion || '',
-      unidad_id,
-      categoria,
-      presentacion: presentacion || ''
-    })
-
-    if (affectedRows === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Insumo no encontrado'
-      })
-    }
-
+    await insumoService.actualizarInsumo(insumoId, { nombre, descripcion, unidad_id, categoria, presentacion })
     res.status(200).json({
       success: true,
       message: 'Insumo actualizado exitosamente'
     })
   } catch (error) {
-    console.error('Error al actualizar insumo:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Error interno del servidor'
-    })
+    next(error)
   }
 }
 // Eliminar insumo
-export const deleteInsumo = async (req, res) => {
-  const connection = await pool.getConnection()
+export const deleteInsumo = async (req, res, next) => {
   try {
-    await connection.beginTransaction()
-    // El ID ya está validado y transformado por el middleware de validación
     const { id: insumoId } = req.params
-
-    // Verificar que el insumo existe
-    const insumo = await Insumo.getById(insumoId, connection)
-    if (!insumo) {
-      await connection.rollback()
-      return res.status(404).json({
-        success: false,
-        message: 'Insumo no encontrado'
-      })
-    }
-
-    // Verificar relaciones antes de eliminar (validación de negocio)
-    const relations = await Insumo.checkRelations(insumoId, connection)
-    if (relations.total > 0) {
-      const relaciones = []
-      if (relations.detalleMovimientos > 0) {
-        relaciones.push(`Tiene ${relations.detalleMovimientos} registro(s) de lotes`)
-      }
-      if (relations.inventario > 0) {
-        relaciones.push(`Configurado en ${relations.inventario} laboratorio(s)`)
-      }
-      await connection.rollback()
-      return res.status(409).json({
-        success: false,
-        message: `No se puede eliminar. El insumo "${insumo.nombre}" está siendo usado en el sistema: ${relaciones.join(', ')}.`
-      })
-    }
-
-    // Eliminar insumo
-    const { affectedRows } = await Insumo.deleteById(insumoId, connection)
-    if (affectedRows === 0) {
-      await connection.rollback()
-      return res.status(404).json({
-        success: false,
-        message: 'Insumo no encontrado'
-      })
-    }
-
-    await connection.commit()
+    await insumoService.eliminarInsumo(insumoId)
     res.status(200).json({
       success: true,
       message: 'Insumo eliminado exitosamente'
     })
   } catch (error) {
-    await connection.rollback()
-    // Manejar errores de restricción de clave foránea
-    if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.code === 'ER_ROW_IS_REFERENCED') {
-      return res.status(409).json({
-        success: false,
-        message: 'No se puede eliminar. El insumo está siendo usado en el sistema.'
-      })
-    }
-    console.error('Error al eliminar insumo:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Error interno del servidor'
-    })
-  } finally {
-    connection.release()
+    next(error)
   }
 }
 // Obtener todos los insumos
-export const getAllInsumos = async (req, res) => {
+export const getAllInsumos = async (req, res, next) => {
   try {
     const insumos = await Insumo.getAll()
     res.status(200).json({
@@ -154,11 +65,7 @@ export const getAllInsumos = async (req, res) => {
       data: insumos
     })
   } catch (error) {
-    console.error('Error al obtener insumos:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Error interno del servidor'
-    })
+    next(error)
   }
 }
 // Configuración de multer para subida de archivos
@@ -178,7 +85,7 @@ export const upload = multer({
   }
 })
 //Generar plantilla Excel para importación masiva de insumos
-export const generarPlantillaImportacion = async (req, res) => {
+export const generarPlantillaImportacion = async (req, res, next) => {
   try {
     // Crear workbook
     const wb = XLSX.utils.book_new()
@@ -268,15 +175,11 @@ export const generarPlantillaImportacion = async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename=plantilla_insumos_${timestamp}.xlsx`)
     res.send(buffer)
   } catch (error) {
-    console.error('Error al generar plantilla Excel de insumos:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Error al generar la plantilla Excel'
-    })
+    next(error)
   }
 }
 //Procesar archivo Excel para importación masiva de insumos
-export const previsualizarImportacionMasiva = async (req, res) => {
+export const previsualizarImportacionMasiva = async (req, res, next) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -296,7 +199,6 @@ export const previsualizarImportacionMasiva = async (req, res) => {
       })
     }
 
-    console.log('data', data)
     const previewData = []
     const erroresGenerales = []
     for (let i = 0; i < data.length; i++) {
@@ -356,111 +258,28 @@ export const previsualizarImportacionMasiva = async (req, res) => {
       errores_generales: erroresGenerales
     })
   } catch (error) {
-    console.error('Error en previsualización de importación masiva de insumos:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Error interno en la previsualización',
-      error: error.message
-    })
+    next(error)
   }
 }
 //Ejecutar importación masiva de insumos
-export const importacionMasiva = async (req, res) => {
-  const connection = await pool.getConnection()
+export const importacionMasiva = async (req, res, next) => {
   try {
-    await connection.beginTransaction()
     if (!req.file) {
-      await connection.rollback()
       return res.status(400).json({
         success: false,
         message: 'No se ha proporcionado ningún archivo'
       })
     }
-    // Leer archivo Excel
-    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' })
-    const sheetName = workbook.SheetNames[0]
-    const worksheet = workbook.Sheets[sheetName]
-    const data = XLSX.utils.sheet_to_json(worksheet)
-    if (data.length === 0) {
-      await connection.rollback()
-      return res.status(400).json({
-        success: false,
-        message: 'El archivo Excel está vacío o no tiene el formato correcto'
-      })
-    }
-    let procesados = 0
-    let errores = []
-    const resultados = []
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i]
-      const rowNum = i + 2 // +2 porque Excel empieza en 1 y tenemos header
-      try {
-        // Validar campos obligatorios
-        if (!row.NOMBRE) {
-          errores.push(`Fila ${rowNum}: NOMBRE es obligatorio`)
-          continue
-        }
-        if (!row.UNIDAD_MEDIDA) {
-          errores.push(`Fila ${rowNum}: UNIDAD_MEDIDA es obligatorio`)
-          continue
-        }
-        else {
-          if (!await Unidad.existsById(row.UNIDAD_MEDIDA)) {
-            errores.push(`Fila ${rowNum}: UNIDAD_MEDIDA inválida: ${row.UNIDAD_MEDIDA}`)
-            continue
-          }
-        }
-        // Limpiar y validar datos
-        const nombre = row.NOMBRE.toString().trim()
-        const descripcion = row.DESCRIPCION ? row.DESCRIPCION.toString().trim() : ''
-        const categoria = row.CATEGORIA ? row.CATEGORIA.toString().trim() : ''
-        const presentacion = row.PRESENTACION ? row.PRESENTACION.toString().trim() : ''
-        const unidad_medida = await Unidad.getById(row.UNIDAD_MEDIDA)
-
-        // Validar categoría
-        if (!categoriasValidas.includes(categoria)) {
-          errores.push(`Fila ${rowNum}: Categoría inválida. Debe ser: ${categoriasValidas.join(', ')}`)
-          continue
-        }
-        const { insumo_id, codigo } = await Insumo.create(nombre, descripcion || '', unidad_medida.id, categoria, presentacion || '', connection)
-        resultados.push({
-          fila: rowNum,
-          codigo: codigo,
-          nombre: nombre,
-          unidad_medida: unidad_medida.nombre,
-          categoria: categoria,
-        })
-        procesados++
-      } catch (error) {
-        errores.push(`Fila ${rowNum}: ${error.message}`)
-      }
-    }
-    if (errores.length > 0 && procesados === 0) {
-      await connection.rollback()
-      return res.status(400).json({
-        success: false,
-        message: 'No se pudo procesar ningún registro',
-        errores: errores
-      })
-    }
-    await connection.commit()
+    const result = await insumoService.importacionMasiva(req.file.buffer, req.user)
     res.status(200).json({
       success: true,
-      message: `Importación completada: ${procesados} insumos creados`,
-      procesados: procesados,
-      errores: errores.length,
-      detalles_errores: errores,
-      resultados: resultados
+      message: `Importación completada: ${result.procesados} insumos creados`,
+      procesados: result.procesados,
+      errores: result.errores.length,
+      detalles_errores: result.errores,
+      resultados: result.resultados
     })
   } catch (error) {
-    await connection.rollback()
-    console.error('Error en importación masiva de insumos:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Error interno en la importación masiva',
-      error: error.message
-    })
-  } finally {
-    connection.release()
+    next(error)
   }
 }

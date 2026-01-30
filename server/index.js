@@ -1,8 +1,10 @@
+import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { testConnection } from './config/database.js'
+import logger from './utils/logger.js'
 import { generalLimiter } from './middleware/rateLimiter.js'
 import authRoutes from './routes/authRoutes.js'
 import laboratorioRoutes from './routes/laboratorioRoutes.js'
@@ -12,7 +14,6 @@ import inventarioRoutes from './routes/inventarioRoutes.js'
 import equipoRoutes from './routes/equipoRoutes.js'
 import incidenciaRoutes from './routes/incidenciaRoutes.js'
 import docenteRoutes from './routes/docenteRoutes.js'
-import dashboardRoutes from './routes/dashboardRoutes.js'
 import shareRoutes from './routes/shareRoutes.js'
 import reporteRoutes from './routes/reporteRoutes.js'
 import tipoEquipoRoutes from './routes/tipoEquipoRoutes.js'
@@ -62,7 +63,6 @@ app.get('/api/health', (req, res) => {
 })
 
 app.use('/api/auth', authRoutes)
-app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/laboratorios', laboratorioRoutes)
 app.use('/api/horarios', horarioRoutes)
 app.use('/api/insumos', insumoRoutes)
@@ -91,19 +91,48 @@ if (process.env.NODE_ENV === 'production') {
   // Las rutas públicas del frontend son manejadas por Vite
 }
 
+// ============================================
+// MIDDLEWARE DE ERRORES (debe ir DESPUÉS de todas las rutas)
+// Los controladores que usen next(error) enviarán aquí el error.
+// ============================================
+app.use((error, req, res, next) => {
+  const statusCode = error.statusCode || 500
+
+  const context = {
+    message: error.message,
+    statusCode,
+    method: req.method,
+    url: req.originalUrl,
+    ip: req.ip
+  }
+
+  if (statusCode >= 500) {
+    logger.fatal(context, '🚨 Error del servidor')
+  } else if (statusCode === 401 || statusCode === 403) {
+    logger.warn(context, '🔒 Acceso denegado')
+  } else if (statusCode >= 400) {
+    logger.info(context, 'Error del cliente')
+  }
+
+  res.status(statusCode).json({
+    success: false,
+    message: error.message,
+    ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+  })
+})
+
 app.listen(port, () => {
-  console.log(`🚀 Server running on port ${port}`)
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
-  console.log(`🔗 Health check: http://localhost:${port}/health`)
+  logger.info(`🚀 Servidor corriendo en puerto ${port}`)
+  logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
+  logger.info(`🔗 Health check: http://localhost:${port}/health`)
   testConnection()
 })
 
-// Manejo de errores no capturados
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason)
+  logger.fatal({ reason, promise }, '❌ Unhandled Rejection')
 })
 
 process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error)
+  logger.fatal({ err: error }, '❌ Uncaught Exception')
   process.exit(1)
 })

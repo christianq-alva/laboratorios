@@ -1,4 +1,6 @@
 import { z } from 'zod'
+import logger from '../utils/logger.js'
+import { AppError } from '../utils/errors.js'
 
 /**
  * Middleware de validación genérico para Express
@@ -22,11 +24,8 @@ export const validate = (schema) => {
         const issues = validationResult.error.issues
 
         if (!issues || !Array.isArray(issues)) {
-          console.error('[Validation] Error: No se pudo extraer array de errores de ZodError')
-          return res.status(500).json({
-            success: false,
-            message: 'Error en el formato de validación'
-          })
+          logger.error({ error: validationResult.error }, 'Validation: no se pudo extraer array de errores de ZodError')
+          return next(new AppError('Error en el formato de validación', 500))
         }
 
         // Formatear errores de Zod de manera legible
@@ -63,14 +62,8 @@ export const validate = (schema) => {
 
       next()
     } catch (error) {
-      console.error('[Validation] Excepción inesperada:', {
-        message: error.message,
-        name: error.name
-      })
-      return res.status(500).json({
-        success: false,
-        message: 'Error interno en la validación'
-      })
+      logger.error({ err: error.message, name: error.name }, 'Validation: excepción inesperada')
+      return next(new AppError('Error interno en la validación', 500))
     }
   }
 }
