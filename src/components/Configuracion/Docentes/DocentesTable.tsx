@@ -72,11 +72,11 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
     <TableContainer component={Paper} sx={{ mt: 2 }}>
       <Table>
         <TableHead>
-          <TableRow sx={{ backgroundColor: 'grey.50' }}>
-            <TableCell sx={{ fontWeight: 600 }}>Docente</TableCell>
-            <TableCell sx={{ fontWeight: 600 }}>Contacto</TableCell>
-            <TableCell sx={{ fontWeight: 600 }}>Escuela</TableCell>
-            <TableCell align="center" sx={{ fontWeight: 600 }}>Acciones</TableCell>
+          <TableRow sx={{ backgroundColor: 'primary.main' }}>
+            <TableCell sx={{ fontWeight: 600, color: 'white' }}>Docente</TableCell>
+            <TableCell sx={{ fontWeight: 600, color: 'white' }}>Contacto</TableCell>
+            <TableCell sx={{ fontWeight: 600, color: 'white' }}>Escuela</TableCell>
+            <TableCell align="center" sx={{ fontWeight: 600, color: 'white' }}>Acciones</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
