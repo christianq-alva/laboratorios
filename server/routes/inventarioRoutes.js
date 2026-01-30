@@ -32,14 +32,14 @@ import { upload } from '../controllers/insumoController.js'
 
 const router = express.Router()
 
-//Obtener los insumos y su stock de todos los laboratorios
+// Obtener los insumos y su stock de todos los laboratorios
 router.get('/all-con-saldo',
     authenticateToken,
     authorize('read', 'Inventario'),
     getAllInsumosWithStock
 )
-
-//Obtener los insumos y su stock de un laboratorio
+    
+// Obtener los insumos y su stock de un laboratorio
 router.get('/insumos-con-saldo',
     authenticateToken,
     authorize('read', 'Inventario'),
@@ -47,7 +47,7 @@ router.get('/insumos-con-saldo',
     getInsumosWithStock
 )
 
-//Obtener solo los insumos con stock de un laboratorio
+// Obtener solo los insumos con stock de un laboratorio
 router.get('/insumos-con-saldo-positivo',
     authenticateToken,
     authorize('read', 'Inventario'),
@@ -55,7 +55,7 @@ router.get('/insumos-con-saldo-positivo',
     getInsumosWithPositiveStock
 )
 
-//Obtener listado de movimiento con filtro de laboratorio, rango de fechas y tipo de movimiento
+// Obtener listado de movimiento con filtro de laboratorio, rango de fechas y tipo de movimiento
 router.get('/actividad',
     authenticateToken,
     authorize('read', 'Inventario'),
@@ -63,7 +63,7 @@ router.get('/actividad',
     getActividadInsumos
 )
 
-//Obtener detalle de movimientos de un insumo específico
+// Obtener detalle de movimientos de un insumo específico
 router.get('/actividad-detalle',
     authenticateToken,
     authorize('read', 'Inventario'),
@@ -71,14 +71,14 @@ router.get('/actividad-detalle',
     getActividadDetalleInsumos
 )
 
-//Generar plantilla excel para reabastecimiento masivo
+// Generar plantilla excel para reabastecimiento masivo
 router.get('/plantilla-excel',
     authenticateToken,
     authorize('create', 'Inventario'),
     generarPlantillaReabastecimiento
 )
 
-//Procesar archivo excel para reabastecimiento masivo
+// Procesar archivo excel para reabastecimiento masivo
 router.post('/procesar-excel',
     authenticateToken,
     authorize('create', 'Inventario'),
@@ -86,14 +86,14 @@ router.post('/procesar-excel',
     validate(procesarArchivoExcelSchema),
     procesarArchivoExcel
 )
-//Ejecutar reabastecimiento masivo 
+// Ejecutar reabastecimiento masivo 
 router.post('/reabastecimiento-masivo',
     authenticateToken,
     authorize('create', 'Inventario'),
     validate(ejecutarReabastecimientoMasivoSchema),
     ejecutarReabastecimientoMasivo
 )
-//Obtener lotes con saldo disponible por insumo y laboratorio
+// Obtener lotes con saldo disponible por insumo y laboratorio
 router.get('/lotes-con-saldo',
     authenticateToken,
     authorize('read', 'Inventario'),

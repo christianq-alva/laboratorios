@@ -52,9 +52,7 @@ export const insumoService = {
       await connection.rollback()
       if (error.statusCode) throw error
       if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.code === 'ER_ROW_IS_REFERENCED') {
-        const err = new Error('No se puede eliminar. El insumo está siendo usado en el sistema.')
-        err.statusCode = 409
-        throw err
+        throw new AppError('No se puede eliminar. El insumo está siendo usado en el sistema.', 409)
       }
       throw error
     } finally {
@@ -117,8 +115,7 @@ export const insumoService = {
       }
       if (errores.length > 0 && procesados === 0) {
         await connection.rollback()
-        const err = new Error('No se pudo procesar ningún registro')
-        err.statusCode = 400
+        const err = new AppError('No se pudo procesar ningún registro', 400)
         err.errores = errores
         throw err
       }

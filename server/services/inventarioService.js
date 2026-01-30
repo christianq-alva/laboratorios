@@ -28,9 +28,7 @@ export const inventarioService = {
       const movimientoId = await Inventario.registrarMovimientoManual(connection, userId, fecha_movimiento, laboratorio_id, tipo_movimiento, observaciones, reserva_id, detalles)
       return movimientoId
     } catch (error) {
-      const err = new Error(error.message || 'Error al registrar el movimiento')
-      err.statusCode = 400
-      throw err
+      throw new AppError(error.message || 'Error al registrar el movimiento', error.statusCode || 400)
     } finally {
       connection.release()
     }
@@ -41,9 +39,7 @@ export const inventarioService = {
     try {
       await Inventario.eliminarMovimientoInventario(connection, movimiento_id)
     } catch (error) {
-      const err = new Error(error.message || 'Error al eliminar el movimiento de inventario')
-      err.statusCode = error.statusCode || 500
-      throw err
+      throw new AppError(error.message || 'Error al eliminar el movimiento de inventario', error.statusCode || 500)
     } finally {
       connection.release()
     }

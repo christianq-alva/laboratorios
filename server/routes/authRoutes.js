@@ -4,10 +4,13 @@ import { authenticateToken } from '../middleware/auth.js'
 import { loginLimiter } from '../middleware/rateLimiter.js'
 
 const router = express.Router()
-// Aplicar rate limiting estricto al login para prevenir fuerza bruta
+
+// Login con rate limiting estricto para prevenir fuerza bruta
 router.post('/login', 
     loginLimiter,
     login)
+
+// Obtener perfil del usuario
 router.get('/profile', 
     authenticateToken, 
     getProfile)

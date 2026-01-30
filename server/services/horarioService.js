@@ -74,8 +74,7 @@ export const horarioService = {
     if (!docenteInfo) throw new AppError('Docente no encontrado', 404)
     const cruce = await verificarCruceHorarios(laboratorio_id, docente_id, fecha_inicio, fecha_fin, null)
     if (cruce) {
-      const err = new Error(`Conflicto de horario: ${cruce.mensaje}`)
-      err.statusCode = 409
+      const err = new AppError(`Conflicto de horario: ${cruce.mensaje}`, 409)
       err.tipo_conflicto = cruce.tipo
       err.conflicto_detalle = cruce.conflicto
       throw err
@@ -124,8 +123,7 @@ export const horarioService = {
     if (!docenteInfo) throw new AppError('Docente no encontrado', 404)
     const cruce = await verificarCruceHorarios(laboratorio_id, docente_id, fecha_inicio, fecha_fin, horarioId)
     if (cruce) {
-      const err = new Error(`Conflicto de horario: ${cruce.mensaje}`)
-      err.statusCode = 409
+      const err = new AppError(`Conflicto de horario: ${cruce.mensaje}`, 409)
       err.tipo_conflicto = cruce.tipo
       err.conflicto_detalle = cruce.conflicto
       throw err

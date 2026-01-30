@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken'
 import { AppError } from '../utils/errors.js'
 
 if (!process.env.JWT_SECRET) {
-  throw new Error('❌ JWT_SECRET no está definido en las variables de entorno')
+  throw new AppError('JWT_SECRET no está definido en las variables de entorno', 500)
 }
 
 const JWT_SECRET = process.env.JWT_SECRET

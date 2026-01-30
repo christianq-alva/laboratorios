@@ -3,6 +3,7 @@ import { insumoService } from '../services/insumoService.js'
 import multer from 'multer'
 import XLSX from 'xlsx'
 import { Unidad } from '../models/Unidad.js'
+import { AppError } from '../utils/errors.js'
 
 const categoriasValidas = ['Reactivos', 'Materiales', 'Material_Biologico']
 
@@ -77,7 +78,7 @@ export const upload = multer({
       file.mimetype === 'application/vnd.ms-excel') {
       cb(null, true)
     } else {
-      cb(new Error('Solo se permiten archivos Excel (.xlsx, .xls)'), false)
+      cb(new AppError('Solo se permiten archivos Excel (.xlsx, .xls)', 400), false)
     }
   },
   limits: {

@@ -1,5 +1,6 @@
 import { pool } from '../config/database.js'
 import { handleDBError } from '../utils/handleDBError.js'
+import { AppError } from '../utils/errors.js'
 
 export const Inventario = {
   getAllInsumosConSaldo: async (user_rol, user_laboratorio_ids) => {
@@ -298,12 +299,12 @@ export const Inventario = {
           WHERE id = ?
         `, [entrada_detalle_id]);
 
-    if (!row) {
-      throw new Error(`No se encontró el lote con ID ${entrada_detalle_id}`);
+    if (!row || row.length === 0) {
+      throw new AppError(`No se encontró el lote con ID ${entrada_detalle_id}`, 404)
     }
 
     if (row[0].saldo < cantidad) {
-      throw new Error(`Saldo insuficiente en el lote ${entrada_detalle_id}. Disponible: ${row[0].saldo}, solicitado: ${cantidad}`);
+      throw new AppError(`Saldo insuficiente en el lote ${entrada_detalle_id}. Disponible: ${row[0].saldo}, solicitado: ${cantidad}`, 400)
     }
   },
 

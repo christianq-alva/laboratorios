@@ -235,8 +235,7 @@ export const equipoService = {
       }
       if (errores.length > 0 && procesados === 0) {
         await connection.rollback()
-        const err = new Error('No se pudo procesar ningún registro')
-        err.statusCode = 400
+        const err = new AppError('No se pudo procesar ningún registro', 400)
         err.errores = errores
         throw err
       }
