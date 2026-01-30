@@ -152,14 +152,14 @@ export const LaboratoriosTable: React.FC<LaboratoriosTableProps> = ({
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
-            <TableRow sx={{ backgroundColor: 'grey.50' }}>
-              <TableCell sx={{ fontWeight: 600, width: '12%' }}>Código</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '25%' }}>Laboratorio</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '20%' }}>Ubicación</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '8%' }}>Piso</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '20%' }}>Escuela</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '10%' }}>Estado</TableCell>
-              <TableCell align="center" sx={{ fontWeight: 600, width: '5%' }}>Acciones</TableCell>
+            <TableRow sx={{ backgroundColor: 'primary.main' }}>
+              <TableCell sx={{ fontWeight: 600, width: '12%', color: 'white' }}>Código</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '25%', color: 'white' }}>Laboratorio</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '20%', color: 'white' }}>Ubicación</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '8%', color: 'white' }}>Piso</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '20%', color: 'white' }}>Escuela</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '10%', color: 'white' }}>Estado</TableCell>
+              <TableCell align="center" sx={{ fontWeight: 600, width: '5%', color: 'white' }}>Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
