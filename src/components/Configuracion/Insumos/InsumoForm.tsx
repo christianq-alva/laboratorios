@@ -13,7 +13,8 @@ import {
   Select,
   MenuItem,
   IconButton,
-  Alert
+  Alert,
+  CircularProgress
 } from '@mui/material'
 import { Close, Inventory, Info } from '@mui/icons-material'
 import { insumoService, type Insumo } from '../../../services/insumoService'
@@ -141,159 +142,144 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
   }
 
 
+  const handleClose = () => {
+    if (!loading) {
+      onClose()
+    }
+  }
+
   return (
     <Dialog
       open={open}
-      onClose={onClose}
-      maxWidth="md"
+      onClose={handleClose}
+      maxWidth="sm"
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: 1.5
+          borderRadius: 2
         }
       }}
     >
-      <DialogTitle sx={{ pb: 2, backgroundColor: '#f8f9fa' }}>
+      <DialogTitle sx={{ pb: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Inventory color="primary" />
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              {insumo ? 'Editar Insumo' : 'Nuevo Insumo'}
-            </Typography>
-          </Box>
-          <IconButton onClick={onClose} size="small">
+          {insumo ? 'Editar Insumo' : 'Nuevo Insumo'}
+          <IconButton onClick={handleClose} disabled={loading}>
             <Close />
           </IconButton>
         </Box>
       </DialogTitle>
 
-      <DialogContent sx={{ p: 3 }}>
-        {error && (
-          <Alert severity="error" sx={{ mb: 3, borderRadius: 1.5 }}>
-            {error}
-          </Alert>
-        )}
-
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {/* Información básica del insumo */}
-          <Box sx={{
-            p: 3,
-            backgroundColor: '#f0f7ff',
-            borderRadius: 1.5,
-            border: '1px solid #e3f2fd',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-          }}>
-            <Typography variant="h6" gutterBottom sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              color: 'primary.main',
-              mb: 2,
-              fontWeight: 600
-            }}>
-              <Info />
-              Información del Insumo
-            </Typography>
-
-            <Alert severity="info" sx={{ mb: 2, borderRadius: 1.5 }}>
-              <Typography variant="body2">
-                Crea el insumo maestro. Los datos de stock, lote y fecha de vencimiento se registrarán al agregar un movimiento de entrada en el inventario.
-              </Typography>
+      <form onSubmit={(e) => {
+        e.preventDefault()
+        handleSubmit()
+      }}>
+        <DialogContent>
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
             </Alert>
+          )}
 
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
-              <TextField
-                label="Nombre del Insumo"
-                value={formData.nombre}
-                onChange={(e) => handleInputChange('nombre', e.target.value)}
-                required
-                sx={{ minWidth: 250, flex: 1 }}
-              />
+          <TextField
+            fullWidth
+            label="Nombre del Insumo"
+            value={formData.nombre}
+            onChange={(e) => handleInputChange('nombre', e.target.value)}
+            required
+            disabled={loading}
+            sx={{ mb: 2 }}
+            placeholder="Ej.: Ácido Sulfúrico"
+          />
 
-              <FormControl sx={{ minWidth: 200 }} required>
-                <InputLabel>Unidad de Medida</InputLabel>
-                <Select
-                  value={formData.unidad_id}
-                  label="Unidad de Medida"
-                  onChange={(e) => handleInputChange('unidad_id', Number(e.target.value))}
-                  disabled={loadingUnidades}
-                >
-                  {unidades.map((unidad) => (
-                    <MenuItem key={unidad.id} value={unidad.id}>
-                      {unidad.simbolo} - {unidad.nombre}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
+          <FormControl fullWidth sx={{ mb: 2 }} required>
+            <InputLabel>Unidad de Medida</InputLabel>
+            <Select
+              value={formData.unidad_id}
+              label="Unidad de Medida"
+              onChange={(e) => handleInputChange('unidad_id', Number(e.target.value))}
+              disabled={loadingUnidades || loading}
+            >
+              {unidades.map((unidad) => (
+                <MenuItem key={unidad.id} value={unidad.id}>
+                  {unidad.simbolo} - {unidad.nombre}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
-              <FormControl sx={{ minWidth: 250 }}>
-                <InputLabel>Categoría del Insumo</InputLabel>
-                <Select
-                  value={formData.categoria}
-                  label="Categoría del Insumo"
-                  onChange={(e) => handleInputChange('categoria', e.target.value)}
-                  required
-                >
-                  <MenuItem value="Reactivos">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#ff9800' }} />
-                      <Typography>Reactivos</Typography>
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value="Materiales">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#2196f3' }} />
-                      <Typography>Materiales</Typography>
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value="Material_Biologico">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#4caf50' }} />
-                      <Typography>Material Biológico</Typography>
-                    </Box>
-                  </MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
+          <FormControl fullWidth sx={{ mb: 2 }} required>
+            <InputLabel>Categoría del Insumo</InputLabel>
+            <Select
+              value={formData.categoria}
+              label="Categoría del Insumo"
+              onChange={(e) => handleInputChange('categoria', e.target.value)}
+              disabled={loading}
+            >
+              <MenuItem value="Reactivos">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#ff9800' }} />
+                  <Typography>Reactivos</Typography>
+                </Box>
+              </MenuItem>
+              <MenuItem value="Materiales">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#2196f3' }} />
+                  <Typography>Materiales</Typography>
+                </Box>
+              </MenuItem>
+              <MenuItem value="Material_Biologico">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#4caf50' }} />
+                  <Typography>Material Biológico</Typography>
+                </Box>
+              </MenuItem>
+            </Select>
+          </FormControl>
 
-            <TextField
-              fullWidth
-              label="Descripción"
-              value={formData.descripcion}
-              onChange={(e) => handleInputChange('descripcion', e.target.value)}
-              multiline
-              rows={3}
-              placeholder="Descripción opcional del insumo"
-              sx={{ mb: 2 }}
-            />
+          <TextField
+            fullWidth
+            label="Presentación"
+            value={formData.presentacion}
+            onChange={(e) => handleInputChange('presentacion', e.target.value)}
+            disabled={loading}
+            sx={{ mb: 2 }}
+            placeholder="Ej.: Frasco 500ml"
+          />
 
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
-              <TextField
-                label="Presentación"
-                value={formData.presentacion}
-                onChange={(e) => handleInputChange('presentacion', e.target.value)}
-                placeholder="Ej.: Frasco 500ml, Caja x 100 unidades"
-                sx={{ minWidth: 250, flex: 1 }}
-              />
-            </Box>
-          </Box>
-        </Box>
-      </DialogContent>
+          <TextField
+            fullWidth
+            label="Descripción"
+            value={formData.descripcion}
+            onChange={(e) => handleInputChange('descripcion', e.target.value)}
+            multiline
+            rows={3}
+            disabled={loading}
+            placeholder="Descripción opcional del insumo"
+          />
+        </DialogContent>
 
-      <DialogActions sx={{ px: 3, py: 3, gap: 2 }}>
-        <Button onClick={onClose} variant="outlined">
-          Cancelar
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          variant="contained"
-          disabled={loading}
-        >
-          {loading ? 'Guardando...' : (insumo ? 'Actualizar' : 'Crear Insumo')}
-        </Button>
-      </DialogActions>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={handleClose}
+            disabled={loading}
+            color="inherit"
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={loading}
+            sx={{ minWidth: 120 }}
+          >
+            {loading ? (
+              <CircularProgress size={20} />
+            ) : (
+              insumo ? 'Actualizar' : 'Crear'
+            )}
+          </Button>
+        </DialogActions>
+      </form>
     </Dialog>
   )
 }

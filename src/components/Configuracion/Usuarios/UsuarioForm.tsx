@@ -226,212 +226,171 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
         sx: { borderRadius: 2 }
       }}
     >
-      <DialogTitle sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        borderBottom: '1px solid',
-        borderColor: 'divider',
-        pb: 2,
-      }}>
-        <Box display="flex" alignItems="center" gap={1}>
-          <Person color="primary" />
-          <Typography variant="h6" component="span">
-            {usuario ? 'Editar Usuario' : 'Nuevo Usuario'}
-          </Typography>
+      <DialogTitle sx={{ pb: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          {usuario ? 'Editar Usuario' : 'Nuevo Usuario'}
+          <IconButton onClick={handleClose} disabled={loading}>
+            <Close />
+          </IconButton>
         </Box>
-        <IconButton onClick={handleClose} size="small">
-          <Close />
-        </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ pt: 3 }}>
+      <DialogContent>
         {errors.submit && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {errors.submit}
           </Alert>
         )}
-        <Box display="flex" flexDirection="column" gap={2.5}>
-          {/* Nombre Completo */}
-          <TextField
-            fullWidth
-            label="Nombre Completo"
-            value={formData.nombre_completo}
-            onChange={(e) => handleChange('nombre_completo', e.target.value)}
-            error={!!errors.nombre_completo}
-            helperText={errors.nombre_completo}
-            placeholder="Ej.: Juan Pérez García"
-            required
-          />
+        
+        <TextField
+          fullWidth
+          label="Nombre Completo"
+          value={formData.nombre_completo}
+          onChange={(e) => handleChange('nombre_completo', e.target.value)}
+          error={!!errors.nombre_completo}
+          required
+          disabled={loading}
+          sx={{ mb: 2 }}
+          placeholder="Ej.: Juan Pérez García"
+        />
 
-          {/* Nombre de Usuario */}
-          <TextField
-            fullWidth
-            label="Nombre de Usuario"
-            value={formData.usuario}
-            onChange={(e) => handleChange('usuario', e.target.value)}
-            error={!!errors.usuario}
-            helperText={errors.usuario || 'Será usado para iniciar sesión'}
-            placeholder="Ej.: jperez"
-            required
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Person fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
-          />
+        <TextField
+          fullWidth
+          label="Nombre de Usuario"
+          value={formData.usuario}
+          onChange={(e) => handleChange('usuario', e.target.value)}
+          error={!!errors.usuario}
+          required
+          disabled={loading}
+          sx={{ mb: 2 }}
+          placeholder="Ej.: jperez"
+        />
 
-          {/* Contraseña */}
-          <TextField
-            fullWidth
-            type={showPassword ? 'text' : 'password'}
-            label={usuario ? 'Nueva Contraseña (opcional)' : 'Contraseña'}
-            value={formData.contrasena}
-            onChange={(e) => handleChange('contrasena', e.target.value)}
-            error={!!errors.contrasena}
-            helperText={errors.contrasena || (usuario ? 'Dejar en blanco para mantener la actual' : 'Mínimo 6 caracteres')}
-            required={!usuario}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Lock fontSize="small" />
-                </InputAdornment>
-              ),
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    onClick={() => setShowPassword(!showPassword)}
-                    edge="end"
-                    size="small"
-                  >
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-          />
+        <TextField
+          fullWidth
+          type={showPassword ? 'text' : 'password'}
+          label={usuario ? 'Nueva Contraseña (opcional)' : 'Contraseña'}
+          value={formData.contrasena}
+          onChange={(e) => handleChange('contrasena', e.target.value)}
+          error={!!errors.contrasena}
+          required={!usuario}
+          disabled={loading}
+          sx={{ mb: 2 }}
+          placeholder="Mínimo 6 caracteres"
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  onClick={() => setShowPassword(!showPassword)}
+                  edge="end"
+                  size="small"
+                  disabled={loading}
+                >
+                  {showPassword ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
+        />
 
-          {/* Rol */}
-          <FormControl fullWidth error={!!errors.rol_id} required>
-            <InputLabel>Rol</InputLabel>
-            <Select
-              value={formData.rol_id}
-              label="Rol"
-              onChange={(e) => handleChange('rol_id', Number(e.target.value))}
-              disabled={loadingRoles}
-            >
-              <MenuItem value={0}>
-                <em>Seleccionar rol</em>
+        <FormControl fullWidth sx={{ mb: 2 }} error={!!errors.rol_id} required>
+          <InputLabel>Rol</InputLabel>
+          <Select
+            value={formData.rol_id}
+            label="Rol"
+            onChange={(e) => handleChange('rol_id', Number(e.target.value))}
+            disabled={loadingRoles || loading}
+          >
+            <MenuItem value={0}>
+              <em>Seleccionar rol</em>
+            </MenuItem>
+            {roles.map((rol: Rol) => (
+              <MenuItem key={rol.id} value={rol.id}>
+                {rol.nombre}
               </MenuItem>
-              {roles.map((rol: Rol) => (
-                <MenuItem key={rol.id} value={rol.id}>
-                  {rol.nombre}
-                </MenuItem>
-              ))}
-            </Select>
-            {errors.rol_id && (
-              <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 2 }}>
-                {errors.rol_id}
-              </Typography>
+            ))}
+          </Select>
+        </FormControl>
+
+        {selectedRol?.nombre === 'Jefe de Laboratorio' && (
+          <FormControl fullWidth sx={{ mb: 2 }} error={!!errors.laboratorio_ids}>
+            <InputLabel>Laboratorios Asignados</InputLabel>
+            {loadingLaboratorios ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : (
+              <Select
+                multiple
+                value={formData.laboratorio_ids}
+                onChange={handleLaboratoriosChange}
+                input={<OutlinedInput label="Laboratorios Asignados" />}
+                disabled={loading}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((value) => {
+                      const lab = laboratorios.find(l => l.id === value)
+                      return (
+                        <Chip
+                          key={value}
+                          label={lab?.codigo || value}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                        />
+                      )
+                    })}
+                  </Box>
+                )}
+              >
+                {laboratorios.map((lab) => (
+                  <MenuItem key={lab.id} value={lab.id}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                      {formData.laboratorio_ids.includes(lab.id) && (
+                        <CheckCircle 
+                          color="primary" 
+                          fontSize="small" 
+                          sx={{ flexShrink: 0 }}
+                        />
+                      )}
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="body2">
+                          {lab.nombre}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {lab.codigo}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
             )}
           </FormControl>
+        )}
 
-          {/* Laboratorios Asignados - Solo para Jefe de Laboratorio */}
-          {selectedRol?.nombre === 'Jefe de Laboratorio' && (
-            <FormControl fullWidth error={!!errors.laboratorio_ids}>
-              <InputLabel>Laboratorios Asignados</InputLabel>
-              {loadingLaboratorios ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                  <CircularProgress size={24} />
-                </Box>
-              ) : (
-                <Select
-                  multiple
-                  value={formData.laboratorio_ids}
-                  onChange={handleLaboratoriosChange}
-                  input={<OutlinedInput label="Laboratorios Asignados" />}
-                  renderValue={(selected) => (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {selected.map((value) => {
-                        const lab = laboratorios.find(l => l.id === value)
-                        return (
-                          <Chip
-                            key={value}
-                            label={lab?.codigo || value}
-                            size="small"
-                            color="primary"
-                            variant="outlined"
-                          />
-                        )
-                      })}
-                    </Box>
-                  )}
-                  startAdornment={
-                    <InputAdornment position="start">
-                      <School fontSize="small" />
-                    </InputAdornment>
-                  }
-                >
-                  {laboratorios.map((lab) => {
-                    const isSelected = formData.laboratorio_ids.includes(lab.id)
-                    return (
-                      <MenuItem key={lab.id} value={lab.id}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                          {isSelected && (
-                            <CheckCircle 
-                              color="primary" 
-                              fontSize="small" 
-                              sx={{ flexShrink: 0 }}
-                            />
-                          )}
-                          <Box sx={{ flex: 1 }}>
-                            <Typography variant="body2">
-                              {lab.nombre}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {lab.codigo}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </MenuItem>
-                    )
-                  })}
-                </Select>
-              )}
-              {errors.laboratorio_ids && (
-                <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 2 }}>
-                  {errors.laboratorio_ids}
-                </Typography>
-              )}
-            </FormControl>
-          )}
-
-          {/* Información adicional */}
-          <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
-            {selectedRol?.nombre === 'Administrador' && 'Los administradores tienen acceso completo al sistema.'}
-            {selectedRol?.nombre === 'Jefe de Laboratorio' && 'Los jefes de laboratorio solo pueden gestionar los laboratorios asignados.'}
-            {!selectedRol && 'Selecciona un rol para ver más información.'}
-          </Alert>
-        </Box>
+        <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
+          {selectedRol?.nombre === 'Administrador' && 'Los administradores tienen acceso completo al sistema.'}
+          {selectedRol?.nombre === 'Jefe de Laboratorio' && 'Los jefes de laboratorio solo pueden gestionar los laboratorios asignados.'}
+          {!selectedRol && 'Selecciona un rol para ver más información.'}
+        </Alert>
       </DialogContent>
 
-      <DialogActions sx={{
-        px: 3,
-        py: 2,
-        borderTop: '1px solid',
-        borderColor: 'divider',
-      }}>
-        <Button onClick={handleClose} variant="outlined" disabled={loading}>
+      <DialogActions sx={{ px: 3, pb: 3 }}>
+        <Button onClick={handleClose} disabled={loading} color="inherit">
           Cancelar
         </Button>
         <Button
           onClick={handleSubmit}
           variant="contained"
           disabled={loading}
+          sx={{ minWidth: 120 }}
         >
-          {loading ? 'Guardando...' : usuario ? 'Actualizar' : 'Crear'} Usuario
+          {loading ? (
+            <CircularProgress size={20} />
+          ) : (
+            usuario ? 'Actualizar' : 'Crear'
+          )}
         </Button>
       </DialogActions>
     </Dialog>

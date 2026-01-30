@@ -96,11 +96,9 @@ export const EscuelaForm: React.FC<EscuelaFormProps> = ({ open, onClose, onSucce
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 2 } }}>
       <DialogTitle sx={{ pb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>
-            {isEditing ? 'Editar Escuela' : 'Nueva Escuela'}
-          </Typography>
-          <IconButton onClick={handleClose} disabled={loading} sx={{ color: 'grey.500' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          {isEditing ? 'Editar Escuela' : 'Nueva Escuela'}
+          <IconButton onClick={handleClose} disabled={loading}>
             <Close />
           </IconButton>
         </Box>
@@ -121,9 +119,8 @@ export const EscuelaForm: React.FC<EscuelaFormProps> = ({ open, onClose, onSucce
             onChange={handleChange('nombre')}
             required
             disabled={loading}
-            autoFocus
+            sx={{ mb: 2 }}
             placeholder="Ej.: Escuela Profesional de Ingeniería de Sistemas"
-            helperText="Ingrese el nombre completo de la escuela profesional"
           />
         </DialogContent>
 
@@ -131,21 +128,20 @@ export const EscuelaForm: React.FC<EscuelaFormProps> = ({ open, onClose, onSucce
           <Button
             onClick={handleClose}
             disabled={loading}
-            variant="outlined"
-            sx={{ borderRadius: 2 }}
+            color="inherit"
           >
             Cancelar
           </Button>
           <Button
             type="submit"
-            disabled={loading}
             variant="contained"
-            sx={{ borderRadius: 2, px: 3 }}
+            disabled={loading}
+            sx={{ minWidth: 120 }}
           >
             {loading ? (
-              <CircularProgress size={20} color="inherit" />
+              <CircularProgress size={20} />
             ) : (
-              isEditing ? 'Actualizar' : 'Crear Escuela'
+              isEditing ? 'Actualizar' : 'Crear'
             )}
           </Button>
         </DialogActions>

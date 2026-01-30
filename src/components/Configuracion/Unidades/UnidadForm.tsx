@@ -8,7 +8,8 @@ import {
   Button,
   Box,
   IconButton,
-  Alert
+  Alert,
+  CircularProgress
 } from '@mui/material'
 import { Close, Straighten } from '@mui/icons-material'
 import { unidadService, type Unidad } from '../../../services/unidadService'
@@ -121,85 +122,77 @@ export const UnidadForm: React.FC<UnidadFormProps> = ({
     setLoading(false)
   }
 
+  const handleClose = () => {
+    if (!loading) {
+      onClose()
+    }
+  }
+
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       maxWidth="sm"
       fullWidth
       PaperProps={{
         sx: { borderRadius: 2 }
       }}
     >
-      <DialogTitle sx={{
-        pb: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        bgcolor: 'primary.main',
-        color: 'white'
-      }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Straighten />
+      <DialogTitle sx={{ pb: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           {unidad ? 'Editar Unidad' : 'Nueva Unidad'}
+          <IconButton onClick={handleClose} disabled={loading}>
+            <Close />
+          </IconButton>
         </Box>
-        <IconButton
-          onClick={onClose}
-          size="small"
-          sx={{ color: 'white' }}
-        >
-          <Close />
-        </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ mt: 2 }}>
+      <DialogContent>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
 
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* Símbolo */}
-          <TextField
-            label="Símbolo"
-            value={formData.simbolo}
-            onChange={(e) => handleInputChange('simbolo', e.target.value)}
-            fullWidth
-            required
-            helperText="Ejemplo: kg, L, ml, unidades, g"
-            inputProps={{ maxLength: 10 }}
-          />
+        <TextField
+          label="Símbolo"
+          value={formData.simbolo}
+          onChange={(e) => handleInputChange('simbolo', e.target.value)}
+          fullWidth
+          required
+          disabled={loading}
+          sx={{ mb: 2 }}
+          placeholder="Ej.: kg"
+        />
 
-          {/* Nombre */}
-          <TextField
-            label="Nombre"
-            value={formData.nombre}
-            onChange={(e) => handleInputChange('nombre', e.target.value)}
-            fullWidth
-            required
-            helperText="Ejemplo: Kilogramos, Litros, Mililitros, Unidades, Gramos"
-            inputProps={{ maxLength: 120 }}
-          />
+        <TextField
+          label="Nombre"
+          value={formData.nombre}
+          onChange={(e) => handleInputChange('nombre', e.target.value)}
+          fullWidth
+          required
+          disabled={loading}
+          sx={{ mb: 2 }}
+          placeholder="Ej.: Kilogramos"
+        />
 
-          {/* Descripción */}
-          <TextField
-            label="Descripción"
-            value={formData.descripcion}
-            onChange={(e) => handleInputChange('descripcion', e.target.value)}
-            fullWidth
-            multiline
-            rows={3}
-            helperText="Descripción opcional de la unidad de medida"
-            inputProps={{ maxLength: 250 }}
-          />
-        </Box>
+        <TextField
+          label="Descripción"
+          value={formData.descripcion}
+          onChange={(e) => handleInputChange('descripcion', e.target.value)}
+          fullWidth
+          multiline
+          rows={3}
+          disabled={loading}
+          placeholder="Descripción opcional de la unidad de medida"
+        />
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, pb: 2 }}>
+      <DialogActions sx={{ px: 3, pb: 3 }}>
         <Button
-          onClick={onClose}
+          onClick={handleClose}
           disabled={loading}
+          color="inherit"
         >
           Cancelar
         </Button>
@@ -207,8 +200,13 @@ export const UnidadForm: React.FC<UnidadFormProps> = ({
           onClick={handleSubmit}
           variant="contained"
           disabled={loading}
+          sx={{ minWidth: 120 }}
         >
-          {loading ? 'Guardando...' : unidad ? 'Actualizar' : 'Crear'}
+          {loading ? (
+            <CircularProgress size={20} />
+          ) : (
+            unidad ? 'Actualizar' : 'Crear'
+          )}
         </Button>
       </DialogActions>
     </Dialog>

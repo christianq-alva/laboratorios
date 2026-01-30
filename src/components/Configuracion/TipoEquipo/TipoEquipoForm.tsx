@@ -8,7 +8,8 @@ import {
   Button,
   Box,
   IconButton,
-  Alert
+  Alert,
+  CircularProgress
 } from '@mui/material'
 import { Close, Category } from '@mui/icons-material'
 import { tipoEquipoService, type TipoEquipo } from '../../../services/tipoEquipoService'
@@ -109,74 +110,66 @@ export const TipoEquipoForm: React.FC<TipoEquipoFormProps> = ({
     setLoading(false)
   }
 
+  const handleClose = () => {
+    if (!loading) {
+      onClose()
+    }
+  }
+
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       maxWidth="sm"
       fullWidth
       PaperProps={{
         sx: { borderRadius: 2 }
       }}
     >
-      <DialogTitle sx={{
-        pb: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        bgcolor: 'primary.main',
-        color: 'white'
-      }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Category />
+      <DialogTitle sx={{ pb: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           {tipoEquipo ? 'Editar Tipo de Equipo' : 'Nuevo Tipo de Equipo'}
+          <IconButton onClick={handleClose} disabled={loading}>
+            <Close />
+          </IconButton>
         </Box>
-        <IconButton
-          onClick={onClose}
-          size="small"
-          sx={{ color: 'white' }}
-        >
-          <Close />
-        </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ mt: 2 }}>
+      <DialogContent>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
 
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* Nombre */}
-          <TextField
-            label="Nombre"
-            value={formData.nombre}
-            onChange={(e) => handleInputChange('nombre', e.target.value)}
-            fullWidth
-            required
-            helperText="Ejemplo: Monitor, Microscopio, Centrífuga"
-            inputProps={{ maxLength: 100 }}
-          />
+        <TextField
+          label="Nombre"
+          value={formData.nombre}
+          onChange={(e) => handleInputChange('nombre', e.target.value)}
+          fullWidth
+          required
+          disabled={loading}
+          sx={{ mb: 2 }}
+          placeholder="Ej.: Microscopio"
+        />
 
-          {/* Descripción */}
-          <TextField
-            label="Descripción"
-            value={formData.descripcion}
-            onChange={(e) => handleInputChange('descripcion', e.target.value)}
-            fullWidth
-            multiline
-            rows={3}
-            helperText="Descripción breve del tipo de equipo"
-            inputProps={{ maxLength: 255 }}
-          />
-        </Box>
+        <TextField
+          label="Descripción"
+          value={formData.descripcion}
+          onChange={(e) => handleInputChange('descripcion', e.target.value)}
+          fullWidth
+          multiline
+          rows={3}
+          disabled={loading}
+          placeholder="Descripción breve del tipo de equipo"
+        />
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, pb: 2 }}>
+      <DialogActions sx={{ px: 3, pb: 3 }}>
         <Button
-          onClick={onClose}
+          onClick={handleClose}
           disabled={loading}
+          color="inherit"
         >
           Cancelar
         </Button>
@@ -184,8 +177,13 @@ export const TipoEquipoForm: React.FC<TipoEquipoFormProps> = ({
           onClick={handleSubmit}
           variant="contained"
           disabled={loading}
+          sx={{ minWidth: 120 }}
         >
-          {loading ? 'Guardando...' : tipoEquipo ? 'Actualizar' : 'Crear'}
+          {loading ? (
+            <CircularProgress size={20} />
+          ) : (
+            tipoEquipo ? 'Actualizar' : 'Crear'
+          )}
         </Button>
       </DialogActions>
     </Dialog>

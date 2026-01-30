@@ -164,11 +164,9 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 2 } }}>
       <DialogTitle sx={{ pb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>
-            {isEditing ? 'Editar Laboratorio' : 'Nuevo Laboratorio'}
-          </Typography>
-          <IconButton onClick={handleClose} disabled={loading} sx={{ color: 'grey.500' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          {isEditing ? 'Editar Laboratorio' : 'Nuevo Laboratorio'}
+          <IconButton onClick={handleClose} disabled={loading}>
             <Close />
           </IconButton>
         </Box>
@@ -190,8 +188,7 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
             required
             disabled={loading}
             sx={{ mb: 2 }}
-            placeholder="Ej.: LAB-001, COMP-01, BIO-A1"
-            helperText="Puedes usar cualquier código que desees. No tiene que ser único."
+            placeholder="Ej.: LAB-001"
           />
 
           <TextField
@@ -213,7 +210,7 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
             required
             disabled={loading}
             sx={{ mb: 2 }}
-            placeholder="Ej.: Pabellón A, Pabellón B, Pabellón C, etc"
+            placeholder="Ej.: Pabellón A"
           />
 
           <TextField
@@ -224,7 +221,7 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
             required
             disabled={loading}
             sx={{ mb: 2 }}
-            placeholder="Ej.: 1, 2, 3, 4, etc"
+            placeholder="Ej.: 1"
           />
 
           <FormControl fullWidth sx={{ mb: 2 }}>
@@ -245,16 +242,9 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
                 </MenuItem>
               ))}
             </Select>
-            {escuelas.length === 0 && !loadingEscuelas && (
-              <Box sx={{ mt: 1 }}>
-                <Alert severity="warning" sx={{ fontSize: '0.875rem' }}>
-                  No se encontraron escuelas disponibles. Verifica que existan escuelas en la base de datos.
-                </Alert>
-              </Box>
-            )}
           </FormControl>
 
-          <FormControl fullWidth sx={{ mb: 1 }}>
+          <FormControl fullWidth sx={{ mb: 2 }}>
             <InputLabel>Estado del Laboratorio</InputLabel>
             <Select
               value={formData.estado}
@@ -275,21 +265,20 @@ export const LaboratorioForm: React.FC<LaboratorioFormProps> = ({ open, onClose,
           <Button
             onClick={handleClose}
             disabled={loading}
-            variant="outlined"
-            sx={{ borderRadius: 2 }}
+            color="inherit"
           >
             Cancelar
           </Button>
           <Button
             type="submit"
-            disabled={loading}
             variant="contained"
-            sx={{ borderRadius: 2, px: 3 }}
+            disabled={loading}
+            sx={{ minWidth: 120 }}
           >
             {loading ? (
-              <CircularProgress size={20} color="inherit" />
+              <CircularProgress size={20} />
             ) : (
-              isEditing ? 'Actualizar' : 'Crear Laboratorio'
+              isEditing ? 'Actualizar' : 'Crear'
             )}
           </Button>
         </DialogActions>
