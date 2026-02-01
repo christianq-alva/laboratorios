@@ -175,11 +175,13 @@ export const HorariosTable: React.FC<HorariosTableProps> = ({
   }, [])
 
   useEffect(() => {
+    setPage(0)
     fetchHorarios()
   }, [filters])
 
   useEffect(() => {
     if (refresh) {
+      setPage(0)
       fetchHorarios().then(() => {
         onRefreshComplete()
       })
