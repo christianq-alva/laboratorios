@@ -23,13 +23,14 @@ const router = express.Router()
 // Aplicar autenticación a todas las rutas
 router.use(authenticateToken)
 
-// Rutas de usuarios
+// Listar usuarios
 router.get(
   '/',
   authorize('read', 'Usuario'),
   getAll
 )
 
+// Obtener usuario por ID
 router.get(
   '/:id',
   authorize('read', 'Usuario'),
@@ -37,6 +38,7 @@ router.get(
   getById
 )
 
+// Crear usuario
 router.post(
   '/',
   authorize('create', 'Usuario'),
@@ -44,6 +46,7 @@ router.post(
   createUsuario
 )
 
+// Actualizar usuario
 router.put(
   '/:id',
   authorize('update', 'Usuario'),
@@ -51,6 +54,7 @@ router.put(
   updateUsuario
 )
 
+// Eliminar usuario
 router.delete(
   '/:id',
   authorize('delete', 'Usuario'),
@@ -58,6 +62,7 @@ router.delete(
   deleteUsuario
 )
 
+// Cambiar estado de un usuario
 router.patch(
   '/:id/estado',
   authorize('update', 'Usuario'),

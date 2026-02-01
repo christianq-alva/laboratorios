@@ -23,25 +23,28 @@ const router = express.Router()
 // Aplicar autenticación a todas las rutas
 router.use(authenticateToken)
 
-// Rutas de tipos de equipo
+// Listar tipos de equipo
 router.get(
   '/',
   authorize('read', 'TipoEquipo'),
   getAll
 )
 
+// Obtener tipos de equipo activos
 router.get(
   '/activos',
   authorize('read', 'TipoEquipo'),
   getActivos
 )
 
+// Obtener tipos de equipo con cantidad de equipos asociados
 router.get(
   '/with-count-equipos',
   authorize('read', 'TipoEquipo'),
   getAllWithCountEquipos
 )
 
+// Obtener tipo de equipo por ID
 router.get(
   '/:id',
   authorize('read', 'TipoEquipo'),
@@ -49,6 +52,7 @@ router.get(
   getById
 )
 
+// Crear tipo de equipo
 router.post(
   '/',
   authorize('create', 'TipoEquipo'),
@@ -56,6 +60,7 @@ router.post(
   createTipoEquipo
 )
 
+// Actualizar tipo de equipo
 router.put(
   '/:id',
   authorize('update', 'TipoEquipo'),
@@ -63,6 +68,7 @@ router.put(
   updateTipoEquipo
 )
 
+// Eliminar tipo de equipo
 router.delete(
   '/:id',
   authorize('delete', 'TipoEquipo'),

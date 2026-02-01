@@ -6,6 +6,7 @@ import express from 'express'
 
 const router = express.Router()
 
+// Listar ciclos
 router.get('/',
     authenticateToken,
     authorize('read', 'Ciclo'),

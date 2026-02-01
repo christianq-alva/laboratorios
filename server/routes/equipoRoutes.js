@@ -18,6 +18,7 @@ import {
   createEquipoSchema,
   updateEquipoSchema,
   deleteEquipoSchema,
+  getEquiposSchema,
   getEquipoByLaboratorioSchema,
   getActividadEquiposSchema
 } from '../validations/index.js'
@@ -56,7 +57,8 @@ router.get('/:laboratorio_id',
 
 router.get('/', 
   authenticateToken, 
-  authorize('read', 'Equipo'), 
+  authorize('read', 'Equipo'),
+  validate(getEquiposSchema),
   getEquipos
 )
 

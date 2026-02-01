@@ -1,9 +1,15 @@
 import express from 'express'
 import { authenticateToken } from '../middleware/auth.js'
 import { authorize } from '../middleware/authorize.js'
-import { 
+import { validate } from '../validations/middleware.js'
+import {
+  getIncidenciaByIdSchema,
+  createIncidenciaSchema,
+  deleteIncidenciaSchema
+} from '../validations/index.js'
+import {
   getIncidencias,
-  getIncidencia, 
+  getIncidencia,
   createIncidencia,
   getHorariosParaIncidencias,
   deleteIncidencia
@@ -11,38 +17,41 @@ import {
 
 const router = express.Router()
 
-// 📋 LISTAR INCIDENCIAS
-router.get('/', 
+// Listar incidencias
+router.get('/',
   authenticateToken,
   authorize('read', 'Incidencia'),
   getIncidencias
 )
 
-// 🔍 VER INCIDENCIA ESPECÍFICA
-router.get('/:id', 
-  authenticateToken,
-  authorize('read', 'Incidencia'),
-  getIncidencia
-)
-
-// ➕ CREAR INCIDENCIA
-router.post('/', 
-  authenticateToken,
-  authorize('create', 'Incidencia'),
-  createIncidencia
-)
-
-// 📅 OBTENER HORARIOS PARA REPORTAR INCIDENCIAS
-router.get('/horarios/disponibles', 
+// Obtener horarios disponibles para reportar incidencias
+router.get('/horarios/disponibles',
   authenticateToken,
   authorize('read', 'Incidencia'),
   getHorariosParaIncidencias
 )
 
-// 🗑️ ELIMINAR INCIDENCIA
-router.delete('/:id', 
+// Ver incidencia específica
+router.get('/:id',
+  authenticateToken,
+  authorize('read', 'Incidencia'),
+  validate(getIncidenciaByIdSchema),
+  getIncidencia
+)
+
+// Crear incidencia
+router.post('/',
+  authenticateToken,
+  authorize('create', 'Incidencia'),
+  validate(createIncidenciaSchema),
+  createIncidencia
+)
+
+// Eliminar incidencia
+router.delete('/:id',
   authenticateToken,
   authorize('delete', 'Incidencia'),
+  validate(deleteIncidenciaSchema),
   deleteIncidencia
 )
 

@@ -1,7 +1,7 @@
-import { pool } from '../config/database.js'
 import { Horario } from '../models/Horario.js'
 import { Incidencia } from '../models/Incidencia.js'
-export const getIncidencias = async (req, res) => {
+import { incidenciaService } from '../services/incidenciaService.js'
+export const getIncidencias = async (req, res, next) => {
   try {
     const incidencias = await Incidencia.getByUser(req.user)
     res.status(200).json({
@@ -9,17 +9,16 @@ export const getIncidencias = async (req, res) => {
       total: incidencias.length
     })
   } catch (error) {
-    res.status(500).json({
-      message: error.message
-    })
+    next(error)
   }
 }
-export const getIncidencia = async (req, res) => {
+export const getIncidencia = async (req, res, next) => {
   try {
     const { id } = req.params
     const incidencia = await Incidencia.getById(id, req.user)
     if (!incidencia) {
       return res.status(404).json({
+        success: false,
         message: 'Incidencia no encontrada o sin permisos para verla'
       })
     }
@@ -27,94 +26,44 @@ export const getIncidencia = async (req, res) => {
       data: incidencia
     })
   } catch (error) {
-    res.status(500).json({
-      message: error.message
-    })
+    next(error)
   }
 }
-export const createIncidencia = async (req, res) => {
+export const createIncidencia = async (req, res, next) => {
   try {
     const { reserva_id, titulo, descripcion } = req.body
-    // Verificar que puede crear incidencia para esta reserva
-    const canCreate = await Incidencia.canCreateForReserva(reserva_id, req.user)
-    if (!canCreate) {
-      return res.status(403).json({
-        message: 'No puedes crear incidencias para esta reserva'
-      })
-    }
-    // Crear la incidencia
-    const incidencia_id = await Incidencia.create(
-      { reserva_id, titulo, descripcion },
-      req.user.userId
-    )
+    const incidencia_id = await incidenciaService.crearIncidencia(reserva_id, titulo, descripcion, req.user)
     res.status(201).json({
+      success: true,
       message: 'Incidencia creada correctamente',
-      incidencia_id: incidencia_id
+      incidencia_id
     })
   } catch (error) {
-    res.status(500).json({
-      message: error.message
-    })
+    next(error)
   }
 }
 // Obtener horarios disponibles para reportar incidencias
-export const getHorariosParaIncidencias = async (req, res) => {
+export const getHorariosParaIncidencias = async (req, res, next) => {
   try {
     const horarios = await Horario.getHorarioLastMonth(req.user.rol, req.user.laboratorio_ids)
     res.status(200).json({
       data: horarios
     })
   } catch (error) {
-    res.status(500).json({
-      message: error.message
-    })
+    next(error)
   }
 }
 
 // Eliminar incidencia
-export const deleteIncidencia = async (req, res) => {
+export const deleteIncidencia = async (req, res, next) => {
   try {
     const { id } = req.params
-    const incidenciaId = parseInt(id, 10)
-    
-    // Validar ID
-    if (isNaN(incidenciaId) || incidenciaId <= 0) {
-      return res.status(400).json({
-        message: 'ID de incidencia inválido'
-      })
-    }
-
-    // Verificar que el usuario puede eliminar esta incidencia
-    const canDelete = await Incidencia.canDelete(incidenciaId, req.user)
-    if (!canDelete) {
-      return res.status(403).json({
-        message: 'No tienes permisos para eliminar esta incidencia'
-      })
-    }
-
-    // Verificar que la incidencia existe
-    const incidencia = await Incidencia.getById(incidenciaId, req.user)
-    if (!incidencia) {
-      return res.status(404).json({
-        message: 'Incidencia no encontrada'
-      })
-    }
-
-    // Eliminar la incidencia
-    const deleted = await Incidencia.delete(incidenciaId)
-    if (!deleted) {
-      return res.status(404).json({
-        message: 'No se pudo eliminar la incidencia'
-      })
-    }
-
+    await incidenciaService.eliminarIncidencia(id, req.user)
     res.status(200).json({
+      success: true,
       message: 'Incidencia eliminada exitosamente'
     })
   } catch (error) {
-    console.error('Error al eliminar incidencia:', error)
-    res.status(500).json({
-      message: 'Error al eliminar la incidencia'
-    })
+    next(error)
   }
 }

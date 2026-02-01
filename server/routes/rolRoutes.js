@@ -5,6 +5,7 @@ import { getAll } from '../controllers/rolController.js'
 
 const router = express.Router()
 
+// Obtener todos los roles
 router.get('/',
     authenticateToken,
     authorize('read', 'Rol'),

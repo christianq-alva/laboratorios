@@ -190,6 +190,27 @@ export const deleteEquipoSchema = z.object({
 })
 
 /**
+ * Schema para query de listado de equipos (GET /)
+ */
+export const getEquiposSchema = z.object({
+    query: z.object({
+        tipo_equipo_id: z.string()
+            .regex(/^\d+$/, 'ID de tipo de equipo debe ser un número')
+            .transform((val) => parseInt(val, 10))
+            .refine((val) => val > 0, 'ID de tipo de equipo debe ser mayor a 0')
+            .optional(),
+        laboratorio_id: z.string()
+            .regex(/^\d+$/, 'ID de laboratorio debe ser un número')
+            .transform((val) => parseInt(val, 10))
+            .refine((val) => val > 0, 'ID de laboratorio debe ser mayor a 0')
+            .optional(),
+        estado: z.enum(estadosValidos, {
+            errorMap: () => ({ message: `El estado debe ser uno de: ${estadosValidos.join(', ')}` })
+        }).optional()
+    }).optional()
+})
+
+/**
  * Schema para obtener equipos por laboratorio
  */
 export const getEquipoByLaboratorioSchema = z.object({

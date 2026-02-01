@@ -78,6 +78,7 @@ export const inventarioService = {
     //Obtener los insumos y su stock de todos los laboratorios
     getAllWithStock: async (): Promise<ApiDataResponse<InsumoSaldo[]>> => {
         const response = await api.get('/inventario/all-con-saldo')
+        console.log(response.data)
         return response.data
     },
 

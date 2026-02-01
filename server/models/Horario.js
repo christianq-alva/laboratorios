@@ -1,8 +1,9 @@
 import { pool } from '../config/database.js'
+import { handleDBError } from '../utils/handleDBError.js'
 
 export const Horario = {
     getAllHorarios: async (user_rol, user_laboratorio_ids, filters) => {
-
+        try {
         const { laboratorio_id, escuela_id, docente_id, ciclo_id, fecha_inicio, fecha_fin, estado } = filters;
 
         let query = `
@@ -87,8 +88,12 @@ export const Horario = {
         const [horarios] = await pool.execute(query, params)
 
         return horarios;
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
     },
     getHorarioById: async (reserva_id) => {
+        try {
         const [horario] = await pool.execute(`
         SELECT 
           r.id,
@@ -114,16 +119,24 @@ export const Horario = {
       `, [reserva_id])
 
         return horario[0] || null;
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
     },
 
     exitsById: async (reserva_id) => {
+        try {
         const [result] = await pool.execute(`
             SELECT id FROM reservas WHERE id = ?
         `, [reserva_id])
         return result.length > 0;
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
     },
 
     getInsumosRequeridosByHorario: async (reserva_id) => {
+        try {
         const [insumos] = await pool.execute(`
             SELECT 
               i.id,
@@ -140,8 +153,12 @@ export const Horario = {
             ORDER BY i.nombre
         `, [reserva_id])
         return insumos;
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
     },
     getEquiposRequeridosByHorario: async (reserva_id) => {
+        try {
         const [equipos] = await pool.execute(`
             SELECT 
               dre.equipo_id as id,
@@ -156,10 +173,13 @@ export const Horario = {
             ORDER BY e.nombre
         `, [reserva_id])
         return equipos;
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
     },
     getCruceLab: async (laboratorio_id, reserva_id,
         fechaInicio, fechaFin) => {
-
+        try {
         const [result] = await pool.execute(`
             SELECT 
             r.id,
@@ -186,11 +206,14 @@ export const Horario = {
             [laboratorio_id, reserva_id, fechaInicio, fechaInicio, fechaFin, fechaFin, fechaInicio, fechaFin])
 
         return result;
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
     },
 
     getCruceDocente: async (laboratorio_id, reserva_id,
         fechaInicio, fechaFin) => {
-
+        try {
         const [result] = await pool.execute(`
             SELECT 
             r.id,
@@ -217,8 +240,12 @@ export const Horario = {
             [laboratorio_id, reserva_id, fechaInicio, fechaInicio, fechaFin, fechaFin, fechaInicio, fechaFin])
 
         return result;
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
     },
     getActividadHorarios: async (user_rol, user_laboratorio_ids, laboratorio_id, fecha_inicio, fecha_fin, accion, usuario_id) => {
+        try {
         let query = `
             SELECT 
                 ah.id actividad_id,
@@ -285,6 +312,9 @@ export const Horario = {
         const [rows] = await pool.execute(query, params)
 
         return rows;
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
     },
 
     registroCreateHorario: async (datosHorario, insumos_requeridos, equipos_requeridos, connection) => {
@@ -328,16 +358,19 @@ export const Horario = {
     },
 
     createHorario: async (laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, connection) => {
-
+        try {
         const [result] = await connection.execute(`
         INSERT INTO reservas (laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos, color) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color])
 
         return result.insertId;
-
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
     },
     getInsumosRequeridosById: async (reserva_id) => {
+        try {
         const [insumos] = await pool.execute(`
             SELECT 
               i.id,
@@ -353,6 +386,9 @@ export const Horario = {
             WHERE dri.reserva_id = ?
         `, [reserva_id])
         return insumos;
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
     },
     registroUpdateHorario: async (datosHorario, insumos_requeridos, equipos_requeridos, connection) => {
 
@@ -390,19 +426,23 @@ export const Horario = {
 
         } catch (error) {
             await connection.rollback();
-            throw error;
+            handleDBError(error, 'Horario');
         }
     },
     updateHorario: async (laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, reserva_id, connection) => {
+        try {
         await connection.execute(`
         UPDATE reservas 
         SET laboratorio_id = ?, docente_id = ?, escuela_id = ?, ciclo_id = ?, descripcion = ?, fecha_inicio = ?, fecha_fin = ?, cantidad_alumnos = ?, color = ?
         WHERE id = ?
       `, [laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, reserva_id])
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
     },
 
     createHorarioInsumos: async (reserva_id, insumos_requeridos, connection) => {
-
+        try {
         for (const insumo of insumos_requeridos) {
 
             // Insertar en detalle_reserva_insumos
@@ -412,10 +452,13 @@ export const Horario = {
             `, [reserva_id, insumo.insumo_id, insumo.cantidad])
 
         }
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
     },
 
     createHorarioEquipos: async (reserva_id, equipos_requeridos, connection) => {
-
+        try {
         for (const equipo of equipos_requeridos) {
 
             // Insertar en detalle_reserva_equipos
@@ -424,28 +467,42 @@ export const Horario = {
             VALUES (?, ?)
             `, [reserva_id, equipo.equipo_id])
         }
-
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
     },
     deleteHorarioInsumos: async (reserva_id, connection) => {
+        try {
         await connection.execute(`
             DELETE 
             FROM detalle_reserva_insumos
             WHERE reserva_id = ?`,
             [reserva_id])
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
     },
     deleteHorarioEquipos: async (reserva_id, connection) => {
+        try {
         await connection.execute(`
             DELETE 
             FROM detalle_reserva_equipos
             WHERE reserva_id = ?`,
             [reserva_id])
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
     },
     deleteHorario: async (reserva_id, connection) => {
+        try {
         await connection.execute(`
             DELETE 
             FROM reservas
             WHERE id = ?`,
             [reserva_id])
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
     },
 
     registrarActividadHorario: async ({ accion, reserva_id, descripcion, usuario_id, ip_address }) => {
@@ -475,6 +532,7 @@ export const Horario = {
         }
     },
     estadoHorario: async (reserva_id) => {
+        try {
         const [result] = await pool.execute(
             `SELECT estado
             FROM reservas
@@ -482,15 +540,23 @@ export const Horario = {
             [reserva_id])
 
         return (result[0].estado == 'C');
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
     },
     cerrarHorario: async (reserva_id, connection) => {
+        try {
         await connection.execute(`
             UPDATE reservas
             SET estado = 'C'
             WHERE id = ?`,
             [reserva_id])
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
     },
     getHorarioLastMonth: async (user_rol, user_laboratorio_ids) => {
+        try {
         let query = `
       SELECT 
         r.id,
@@ -523,8 +589,12 @@ export const Horario = {
         const [horarios] = await pool.execute(query, params)
 
         return horarios;
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
     },
     getDocentesReservasByLaboratorio: async (laboratorio_id) => {
+        try {
         const [docentes] = await pool.execute(`
             SELECT DISTINCT d.nombre
             FROM reservas r
@@ -532,8 +602,12 @@ export const Horario = {
             WHERE r.laboratorio_id = ?
         `, [laboratorio_id])
         return docentes;
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
     },
     getCiclosReservasByLaboratorio: async (laboratorio_id) => {
+        try {
         const [ciclos] = await pool.execute(`
             SELECT DISTINCT c.nombre
             FROM reservas r
@@ -541,8 +615,12 @@ export const Horario = {
             WHERE r.laboratorio_id = ?
         `, [laboratorio_id])
         return ciclos;
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
     },
     getPublicHorarios: async (laboratorio_id) => {
+        try {
         const [horarios] = await pool.execute(`
             SELECT 
                 r.id as reserva_id,
@@ -564,5 +642,8 @@ export const Horario = {
             ORDER BY r.fecha_inicio DESC
         `, [laboratorio_id])
         return horarios;
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
     }
 }

@@ -1,5 +1,6 @@
-import { pool } from "../config/database.js"
-import { eliminarMovimientoInventario } from "../controllers/inventarioController.js"
+import { pool } from '../config/database.js'
+import { handleDBError } from '../utils/handleDBError.js'
+import { AppError } from '../utils/errors.js'
 
 export const Inventario = {
   getAllInsumosConSaldo: async (user_rol, user_laboratorio_ids) => {
@@ -33,13 +34,17 @@ export const Inventario = {
           GROUP BY i.id
           ORDER BY i.nombre; `
 
-    const insumos = await pool.execute(query)
-
-    return insumos;
+    try {
+      const [insumos] = await pool.execute(query)
+      return insumos
+    } catch (error) {
+      handleDBError(error, 'Inventario')
+    }
   },
 
   getInsumosConSaldo: async (laboratorio_id) => {
-    const insumos = await pool.execute(`
+    try {
+      const [insumos] = await pool.execute(`
           SELECT 
             i.id, 
             i.codigo, 
@@ -62,11 +67,15 @@ export const Inventario = {
           ORDER BY i.nombre;
           `, [laboratorio_id])
 
-    return insumos;
+      return insumos;
+    } catch (error) {
+      handleDBError(error, 'Inventario')
+    }
   },
 
   getInsumosConSaldoPositivo: async (laboratorio_id) => {
-    const insumos = await pool.execute(`
+    try {
+      const insumos = await pool.execute(`
           SELECT 
             i.id, 
             i.codigo, 
@@ -88,10 +97,14 @@ export const Inventario = {
           ORDER BY i.nombre;
           `, [laboratorio_id])
 
-    return insumos;
+      return insumos
+    } catch (error) {
+      handleDBError(error, 'Inventario')
+    }
   },
   getLotesConSaldo: async (laboratorio_id, insumo_id) => {
-    const [lotes] = await pool.execute(`
+    try {
+      const [lotes] = await pool.execute(`
           SELECT 
             mid.id as detalle_id,
             mid.insumo_id,
@@ -122,10 +135,12 @@ export const Inventario = {
            COALESCE(mid.fecha_vencimiento, 0) asc
         `, [laboratorio_id, insumo_id])
 
-    return lotes;
+      return lotes
+    } catch (error) {
+      handleDBError(error, 'Inventario')
+    }
   },
 
-  // Obtener todos los lotes de un insumo agrupados por laboratorio
   getLotesPorInsumo: async (insumo_id, user_rol, user_laboratorio_ids) => {
     let query = `
       SELECT 
@@ -171,8 +186,12 @@ export const Inventario = {
 
     query += ` ORDER BY l.nombre, COALESCE(mid.fecha_vencimiento, '9999-12-31') ASC, mi.fecha_ingreso DESC`
 
-    const [lotes] = await pool.execute(query, params)
-    return lotes
+    try {
+      const [lotes] = await pool.execute(query, params)
+      return lotes
+    } catch (error) {
+      handleDBError(error, 'Inventario')
+    }
   },
 
   eliminarMovimientoInventario: async (connection, movimiento_id) => {
@@ -227,9 +246,9 @@ export const Inventario = {
 
     await connection.commit();
     } catch (error) {
-      await connection.rollback();
-      throw new Error(error.message || 'Error al eliminar el movimiento');
-    } 
+      await connection.rollback()
+      handleDBError(error, 'Inventario')
+    }
   },
 
   registrarMovimientoManual: async (connection, usuario_id, fecha_movimiento, laboratorio_id, tipo_movimiento, observaciones, reserva_id, detalles) => {
@@ -244,8 +263,8 @@ export const Inventario = {
       return movimientoId;
 
     } catch (error) {
-      await connection.rollback();
-      throw new Error(error.message || 'Error al registrar el movimiento');
+      await connection.rollback()
+      handleDBError(error, 'Inventario')
     }
   },
 
@@ -280,12 +299,12 @@ export const Inventario = {
           WHERE id = ?
         `, [entrada_detalle_id]);
 
-    if (!row) {
-      throw new Error(`No se encontró el lote con ID ${entrada_detalle_id}`);
+    if (!row || row.length === 0) {
+      throw new AppError(`No se encontró el lote con ID ${entrada_detalle_id}`, 404)
     }
 
     if (row[0].saldo < cantidad) {
-      throw new Error(`Saldo insuficiente en el lote ${entrada_detalle_id}. Disponible: ${row[0].saldo}, solicitado: ${cantidad}`);
+      throw new AppError(`Saldo insuficiente en el lote ${entrada_detalle_id}. Disponible: ${row[0].saldo}, solicitado: ${cantidad}`, 400)
     }
   },
 
@@ -369,9 +388,12 @@ export const Inventario = {
 
     query += ` ORDER BY m.fecha_movimiento DESC LIMIT 100`
 
-    const [rows] = await pool.execute(query, params)
-
-    return rows;
+    try {
+      const [rows] = await pool.execute(query, params)
+      return rows;
+    } catch (error) {
+      handleDBError(error, 'Inventario')
+    }
   },
 
   getActividadDetalleInsumos: async (user_rol, user_laboratorio_ids, laboratorio_id, insumo_id) => {
@@ -401,11 +423,16 @@ export const Inventario = {
 
     query += ` ORDER BY m.fecha_movimiento DESC LIMIT 100`
 
-    const [rows] = await pool.execute(query)
-    return rows;
-  }, 
+    try {
+      const [rows] = await pool.execute(query)
+      return rows;
+    } catch (error) {
+      handleDBError(error, 'Inventario')
+    }
+  },
   getInsumosConfiguradosByLaboratorio: async (laboratorio_id) => {
-    const [insumos] = await pool.execute(`
+    try {
+      const [insumos] = await pool.execute(`
         SELECT 
           l.codigo AS lab_codigo,
           l.id AS lab_id,
@@ -415,17 +442,21 @@ export const Inventario = {
           i.nombre AS ins_nombre,
           i.unidad_id,
           u.simbolo as unidad_simbolo,
-          u.nombre as unidad_nombre,
+          u.nombre as unidad_nombre
         FROM inventario_insumos ii
         INNER JOIN laboratorios l ON l.id = ii.laboratorio_id 
         INNER JOIN insumos i ON i.id = ii.insumo_id
         INNER JOIN unidades u on i.unidad_id = u.id
         WHERE ii.laboratorio_id = ?
         `, [laboratorio_id])
-    return insumos;
+      return insumos;
+    } catch (error) {
+      handleDBError(error, 'Inventario')
+    }
   },
   validarSaldoByInsumoId: async (laboratorio_id, insumo_id, cantidad) => {
-    const [result] = await pool.execute(`
+    try {
+      const [result] = await pool.execute(`
       SELECT 
       sum(mid.saldo) stock_disponible
       FROM movimientos_insumos mi
@@ -433,6 +464,9 @@ export const Inventario = {
       WHERE mi.laboratorio_id = ? and mid.insumo_id = ?
       `, [laboratorio_id, insumo_id])
 
-    return result[0].stock_disponible > cantidad;
+      return result[0].stock_disponible > cantidad;
+    } catch (error) {
+      handleDBError(error, 'Inventario')
+    }
   },
 }

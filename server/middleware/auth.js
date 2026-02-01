@@ -1,7 +1,8 @@
 import jwt from 'jsonwebtoken'
+import { AppError } from '../utils/errors.js'
 
 if (!process.env.JWT_SECRET) {
-  throw new Error('❌ JWT_SECRET no está definido en las variables de entorno')
+  throw new AppError('JWT_SECRET no está definido en las variables de entorno', 500)
 }
 
 const JWT_SECRET = process.env.JWT_SECRET
@@ -12,21 +13,15 @@ export const authenticateToken = (req, res, next) => {
   const token = authHeader && authHeader.split(' ')[1]
 
   if (!token) {
-    return res.status(401).json({
-      success: false,
-      message: 'Token requerido'
-    })
+    return next(new AppError('Token requerido', 401))
   }
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
-      console.error('❌ JWT verify error:', err)
       const message = err.name === 'TokenExpiredError'
         ? 'Token expirado'
         : 'Token inválido'
-      return res.status(401).json({
-        message
-      })
+      return next(new AppError(message, 401))
     }
 
     req.user = user

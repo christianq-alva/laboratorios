@@ -1,5 +1,6 @@
 import mysql from 'mysql2/promise'
 import dotenv from 'dotenv'
+import logger from '../utils/logger.js'
 
 // Cargar variables de entorno
 dotenv.config()
@@ -19,13 +20,13 @@ const dbConfig = {
   timezone: '-05:00'
 }
 
-console.log('🔧 Configuración de BD:', {
+logger.info({
   host: dbConfig.host,
   port: dbConfig.port,
   user: dbConfig.user,
   database: dbConfig.database,
   password: dbConfig.password ? '***oculta***' : 'sin_password'
-})
+}, 'Configuración de BD')
 
 export const pool = mysql.createPool(dbConfig)
 
@@ -36,26 +37,21 @@ export const testConnection = async () => {
     
     // Probar una consulta simple
     const [rows] = await connection.execute('SELECT 1 as test')
-    
-    console.log('✅ Conectado a MySQL Railway - Host:', dbConfig.host)
-    console.log('✅ Base de datos:', dbConfig.database)
-    console.log('✅ Test query exitoso:', rows[0])
-    
+    logger.info({
+      host: dbConfig.host,
+      database: dbConfig.database,
+      test: rows[0]
+    }, 'Conectado a MySQL')
     connection.release()
   } catch (error) {
-    console.error('❌ Error conectando a MySQL Railway:')
-    console.error('   Host:', dbConfig.host)
-    console.error('   Port:', dbConfig.port)
-    console.error('   Database:', dbConfig.database)
-    console.error('   User:', dbConfig.user)
-    console.error('   Error:', error.message)
-    
-    // Si es error de conexión, mostrar más detalles
-    if (error.code) {
-      console.error('   Código:', error.code)
-    }
-    if (error.errno) {
-      console.error('   Errno:', error.errno)
-    }
+    logger.error({
+      host: dbConfig.host,
+      port: dbConfig.port,
+      database: dbConfig.database,
+      user: dbConfig.user,
+      message: error.message,
+      code: error.code,
+      errno: error.errno
+    }, 'Error conectando a MySQL')
   }
 }

@@ -1,20 +1,32 @@
 import express from 'express'
-import { 
+import { authenticateToken } from '../middleware/auth.js'
+import { authorize } from '../middleware/authorize.js'
+import { validate } from '../validations/middleware.js'
+import {
+  getRequeridoVsConsumidoSchema,
+  getStockVsRequeridoSchema
+} from '../validations/index.js'
+import {
   getRequeridoVsConsumido,
   getStockVsRequerido
 } from '../controllers/reporteController.js'
-import { authenticateToken } from '../middleware/auth.js'
 
 const router = express.Router()
 
-// GET /api/reportes/requerido-vs-consumido - Comparación de cantidad requerida vs consumida
-router.get('/requerido-vs-consumido', 
+// Comparación de cantidad requerida vs consumida
+router.get('/requerido-vs-consumido',
   authenticateToken,
-  getRequeridoVsConsumido)
+  authorize('read', 'Reporte'),
+  validate(getRequeridoVsConsumidoSchema),
+  getRequeridoVsConsumido
+)
 
-// GET /api/reportes/stock-vs-requerido - Comparación de stock actual vs cantidad requerida
-router.get('/stock-vs-requerido', 
+// Comparación de stock actual vs cantidad requerida
+router.get('/stock-vs-requerido',
   authenticateToken,
-  getStockVsRequerido)
+  authorize('read', 'Reporte'),
+  validate(getStockVsRequeridoSchema),
+  getStockVsRequerido
+)
 
 export default router
