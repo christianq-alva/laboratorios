@@ -128,13 +128,16 @@ export const HorariosTable: React.FC<HorariosTableProps> = ({
       ])
 
       if (labResult.data?.data) {
-        setLaboratorios(labResult.data.data)
+        const sortedLabs = [...labResult.data.data].sort((a, b) => a.nombre.localeCompare(b.nombre))
+        setLaboratorios(sortedLabs)
       }
       if (escResult.data?.data) {
-        setEscuelas(escResult.data.data)
+        const sortedEscuelas = [...escResult.data.data].sort((a, b) => a.nombre.localeCompare(b.nombre))
+        setEscuelas(sortedEscuelas)
       }
       if (docResult.data?.data) {
-        setDocentes(docResult.data.data)
+        const sortedDocentes = [...docResult.data.data].sort((a, b) => a.nombre.localeCompare(b.nombre))
+        setDocentes(sortedDocentes)
       }
       if (cicResult.data?.data) {
         setCiclos(cicResult.data.data)

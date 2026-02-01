@@ -67,7 +67,8 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
     if (laboratoriosResponse.error) {
       setError(laboratoriosResponse.error)
     } else if (laboratoriosResponse.data) {
-      setLaboratorios(laboratoriosResponse.data.data)
+      const sortedLaboratorios = [...(laboratoriosResponse.data.data || [])].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      setLaboratorios(sortedLaboratorios)
     }
 
     // Cargar tipos de equipo para el filtro
@@ -75,7 +76,8 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
     if (tiposEquipoResponse.error) {
       console.error('Error al cargar tipos de equipo:', tiposEquipoResponse.error)
     } else if (tiposEquipoResponse.data) {
-      setTiposEquipo(tiposEquipoResponse.data.data || [])
+      const sortedTipos = [...(tiposEquipoResponse.data.data || [])].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      setTiposEquipo(sortedTipos)
     }
 
     // Preparar filtros para la consulta

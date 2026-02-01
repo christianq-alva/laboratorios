@@ -147,13 +147,14 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
     if (result.error) {
       setError(result.error)
     } else if (result.data) {
-      setLaboratorios(result.data?.data || [])
+      const sortedLaboratorios = [...(result.data?.data || [])].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      setLaboratorios(sortedLaboratorios)
       setUserRole('') // temporalmente, se borra el rol del usuario
       //setUserRole(result.data.user_role || '')
 
       // Si solo tiene un lab, seleccionarlo automáticamente
-      if (result.data?.data?.length === 1) {
-        setSelectedLaboratorio(result.data?.data?.[0].id || 0)
+      if (sortedLaboratorios?.length === 1) {
+        setSelectedLaboratorio(sortedLaboratorios?.[0].id || 0)
       }
     }
   }, [])

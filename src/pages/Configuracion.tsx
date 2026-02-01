@@ -140,7 +140,8 @@ export const Configuracion: React.FC = () => {
         severity: 'error'
       })
     } else if (result.data) {
-      setTiposEquipo(result.data.data)
+      const sortedData = [...result.data.data].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      setTiposEquipo(sortedData)
     }
 
     setLoadingTipos(false)
@@ -158,7 +159,8 @@ export const Configuracion: React.FC = () => {
         severity: 'error'
       })
     } else if (result.data) {
-      setInsumos(result.data.data)
+      const sortedData = [...result.data.data].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      setInsumos(sortedData)
     }
 
     setLoadingInsumos(false)
@@ -175,7 +177,8 @@ export const Configuracion: React.FC = () => {
         severity: 'error'
       })
     } else if (result.data) {
-      setUnidades(result.data.data)
+      const sortedData = [...result.data.data].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      setUnidades(sortedData)
     }
     setLoadingUnidades(false)
   }
@@ -191,7 +194,8 @@ export const Configuracion: React.FC = () => {
         severity: 'error'
       })
     } else if (result.data) {
-      setDocentes(result.data.data)
+      const sortedData = [...result.data.data].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      setDocentes(sortedData)
     }
     setLoadingDocentes(false)
   }
@@ -208,7 +212,8 @@ export const Configuracion: React.FC = () => {
         severity: 'error'
       })
     } else if (result.data) {
-      setLaboratorios(result.data.data)
+      const sortedData = [...result.data.data].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      setLaboratorios(sortedData)
     }
     setLoadingLaboratorios(false)
   }
@@ -225,7 +230,8 @@ export const Configuracion: React.FC = () => {
         severity: 'error'
       })
     } else if (result.data) {
-      setEscuelas(result.data.data)
+      const sortedData = [...result.data.data].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      setEscuelas(sortedData)
     }
     setLoadingEscuelas(false)
   }
@@ -242,7 +248,8 @@ export const Configuracion: React.FC = () => {
         severity: 'error'
       })
     } else if (result.data) {
-      setUsuarios(result.data.data)
+      const sortedData = [...result.data.data].sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo))
+      setUsuarios(sortedData)
     }
 
     setLoadingUsuarios(false)

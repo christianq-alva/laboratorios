@@ -82,12 +82,14 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
     if (tiposResult.error) {
       setError(tiposResult.error)
     } else if (tiposResult.data) {
-      setTiposEquipo(tiposResult.data.data || [])
+      const sortedTipos = [...(tiposResult.data.data || [])].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      setTiposEquipo(sortedTipos)
     }
     if (laboratoriosResult.error) {
       setError(laboratoriosResult.error)
     } else if (laboratoriosResult.data) {
-      setLaboratorios(laboratoriosResult.data.data || [])
+      const sortedLaboratorios = [...(laboratoriosResult.data.data || [])].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      setLaboratorios(sortedLaboratorios)
     }
     setLoadingData(false)
   }

@@ -133,9 +133,18 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
         horarioService.getCiclos()
       ])
 
-      setLaboratorios(labsRes.data || [])
-      setDocentes(docentesRes.data || [])
-      setEscuelas(escuelasRes.data || [])
+      if (labsRes.data) {
+        const sortedLabs = [...(labsRes.data || [])].sort((a, b) => a.nombre.localeCompare(b.nombre))
+        setLaboratorios(sortedLabs)
+      }
+      if (docentesRes.data) {
+        const sortedDocentes = [...(docentesRes.data || [])].sort((a, b) => a.nombre.localeCompare(b.nombre))
+        setDocentes(sortedDocentes)
+      }
+      if (escuelasRes.data) {
+        const sortedEscuelas = [...(escuelasRes.data || [])].sort((a, b) => a.nombre.localeCompare(b.nombre))
+        setEscuelas(sortedEscuelas)
+      }
       setCiclos(ciclosRes.data || [])
     } catch (error: any) {
       setError('Error al cargar datos iniciales')

@@ -82,7 +82,8 @@ export const ConfigurarInsumosModal: React.FC<ConfigurarInsumosModalProps> = ({
       setError('Error al cargar los insumos disponibles')
       console.error('Error al cargar insumos:', response.error)
     } else if (response.data) {
-      setInsumos(response.data.data || [])
+      const sortedInsumos = [...(response.data.data || [])].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      setInsumos(sortedInsumos)
     }
     setLoadingInsumos(false)
   }

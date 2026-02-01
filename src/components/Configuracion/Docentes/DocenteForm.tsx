@@ -54,7 +54,8 @@ export const DocenteForm: React.FC<DocenteFormProps> = ({
     if (result.error) {
       setError(result.error)
     } else if (result.data) {
-      setEscuelas(result.data.data)
+      const sortedEscuelas = [...result.data.data].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      setEscuelas(sortedEscuelas)
     }
     setLoadingEscuelas(false)
   }

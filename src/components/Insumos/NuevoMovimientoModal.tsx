@@ -134,7 +134,8 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
     if (response.error) {
       setError(response.error)
     } else if (response.data) {
-      setLaboratorios(response.data.data || [])
+      const sortedLaboratorios = [...(response.data.data || [])].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      setLaboratorios(sortedLaboratorios)
     }
     setLoadingData(false)
   }

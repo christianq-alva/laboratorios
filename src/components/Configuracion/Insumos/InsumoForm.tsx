@@ -55,7 +55,8 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
         setLoadingUnidades(true)
         const result = await execute(() => unidadService.getAll())
         if (result.data) {
-          setUnidades(result.data.data)
+          const sortedUnidades = [...result.data.data].sort((a, b) => a.nombre.localeCompare(b.nombre))
+          setUnidades(sortedUnidades)
         }
         setLoadingUnidades(false)
       }

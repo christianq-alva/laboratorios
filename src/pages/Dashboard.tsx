@@ -37,7 +37,8 @@ export const Dashboard: React.FC = () => {
         setLoadingLaboratorios(true)
         const result = await execute(() => laboratorioService.getAll())
         if (result.data) {
-          setLaboratorios(result.data.data || [])
+          const sortedLaboratorios = [...(result.data.data || [])].sort((a, b) => a.nombre.localeCompare(b.nombre))
+          setLaboratorios(sortedLaboratorios)
         }
         setLoadingLaboratorios(false)
       }

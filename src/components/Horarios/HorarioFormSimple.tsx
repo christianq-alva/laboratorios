@@ -151,9 +151,18 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
         horarioService.getCiclos()
       ])
 
-      if (labsResult.data) setLaboratorios(labsResult.data || [])
-      if (docentesResult.data) setDocentes(docentesResult.data || [])
-      if (escuelasResult.data) setEscuelas(escuelasResult.data || [])
+      if (labsResult.data) {
+        const sortedLabs = [...(labsResult.data || [])].sort((a, b) => a.nombre.localeCompare(b.nombre))
+        setLaboratorios(sortedLabs)
+      }
+      if (docentesResult.data) {
+        const sortedDocentes = [...(docentesResult.data || [])].sort((a, b) => a.nombre.localeCompare(b.nombre))
+        setDocentes(sortedDocentes)
+      }
+      if (escuelasResult.data) {
+        const sortedEscuelas = [...(escuelasResult.data || [])].sort((a, b) => a.nombre.localeCompare(b.nombre))
+        setEscuelas(sortedEscuelas)
+      }
       if (ciclosResult.data) setCiclos(ciclosResult.data || [])
 
     } catch (err: any) {

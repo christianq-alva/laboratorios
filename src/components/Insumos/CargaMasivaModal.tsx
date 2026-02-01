@@ -93,7 +93,8 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
     try {
       setFechaMovimiento(new Date().toISOString().split('T')[0])
       const response = await laboratorioService.getAll()
-      setLaboratorios(response.data || [])
+      const sortedLaboratorios = [...(response.data || [])].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      setLaboratorios(sortedLaboratorios)
     } catch (error: any) {
       setError('Error al cargar laboratorios')
       console.error('Error:', error)

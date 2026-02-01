@@ -91,7 +91,8 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     if (labsResult.error) {
       setError(labsResult.error)
     } else if (labsResult.data) {
-      setLaboratorios(labsResult.data.data)
+      const sortedLaboratorios = [...(labsResult.data.data || [])].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      setLaboratorios(sortedLaboratorios)
     }
 
     if (linksResult.error) {

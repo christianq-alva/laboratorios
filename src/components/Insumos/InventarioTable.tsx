@@ -61,7 +61,8 @@ export const InventarioTable: React.FC<InventarioTableProps> = ({
     try {
       // Cargar laboratorios para el filtro
       const laboratoriosResponse = await laboratorioService.getAll()
-      setLaboratorios(laboratoriosResponse.data || [])
+      const sortedLaboratorios = [...(laboratoriosResponse.data || [])].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      setLaboratorios(sortedLaboratorios)
 
       // Cargar insumos
       let insumosResponse

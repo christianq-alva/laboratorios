@@ -77,10 +77,11 @@ export const ComparacionInsumos: React.FC = () => {
     setLoadingLabs(true)
     const response = await execute(() => laboratorioService.getAll())
     if (response.data && response.data.data && response.data.data.length > 0) {
-      setLaboratorios(response.data.data)
+      const sortedLaboratorios = [...response.data.data].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      setLaboratorios(sortedLaboratorios)
       if (!laboratorio1 && !laboratorio2) {
-        setLaboratorio1(response.data.data[0].id)
-        setLaboratorio2(response.data.data[0].id)
+        setLaboratorio1(sortedLaboratorios[0].id)
+        setLaboratorio2(sortedLaboratorios[0].id)
       }
     }
     setLoadingLabs(false)
@@ -90,9 +91,10 @@ export const ComparacionInsumos: React.FC = () => {
     setLoadingEscuelas(true)
     const response = await execute(() => escuelaService.getAll())
     if (response.data && response.data.data && response.data.data.length > 0) {
-      setEscuelas(response.data.data)
+      const sortedEscuelas = [...response.data.data].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      setEscuelas(sortedEscuelas)
       if (!escuela1) {
-        setEscuela1(response.data.data[0].id)
+        setEscuela1(sortedEscuelas[0].id)
       }
     }
     setLoadingEscuelas(false)

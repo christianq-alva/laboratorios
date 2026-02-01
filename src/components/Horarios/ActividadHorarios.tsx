@@ -83,7 +83,8 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
     if (response.error) {
       setError(response.error)
     } else if (response.data) {
-      setLaboratorios(response.data.data)
+      const sortedLaboratorios = [...(response.data.data || [])].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      setLaboratorios(sortedLaboratorios)
     }
   }
 
