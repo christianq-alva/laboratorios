@@ -147,7 +147,7 @@ export const UnidadForm: React.FC<UnidadFormProps> = ({
         </Box>
       </DialogTitle>
 
-      <DialogContent>
+      <DialogContent sx={{ pt: 3 }}>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
@@ -161,7 +161,7 @@ export const UnidadForm: React.FC<UnidadFormProps> = ({
           fullWidth
           required
           disabled={loading}
-          sx={{ mb: 2 }}
+          sx={{ mb: 2, mt: 2 }}
           placeholder="Ej.: kg"
         />
 

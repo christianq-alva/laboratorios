@@ -11,7 +11,7 @@ import {
   Alert,
   CircularProgress
 } from '@mui/material'
-import { Close, Category } from '@mui/icons-material'
+import { Close} from '@mui/icons-material'
 import { tipoEquipoService, type TipoEquipo } from '../../../services/tipoEquipoService'
 import { useApi } from '../../../hooks/useApi'
 
@@ -126,7 +126,7 @@ export const TipoEquipoForm: React.FC<TipoEquipoFormProps> = ({
         sx: { borderRadius: 2 }
       }}
     >
-      <DialogTitle sx={{ pb: 2 }}>
+        <DialogTitle sx={{ pb: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           {tipoEquipo ? 'Editar Tipo de Equipo' : 'Nuevo Tipo de Equipo'}
           <IconButton onClick={handleClose} disabled={loading}>
@@ -135,7 +135,7 @@ export const TipoEquipoForm: React.FC<TipoEquipoFormProps> = ({
         </Box>
       </DialogTitle>
 
-      <DialogContent>
+      <DialogContent sx={{ pt: 3 }}>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
@@ -149,7 +149,7 @@ export const TipoEquipoForm: React.FC<TipoEquipoFormProps> = ({
           fullWidth
           required
           disabled={loading}
-          sx={{ mb: 2 }}
+          sx={{ mb: 2, mt: 2 }}
           placeholder="Ej.: Microscopio"
         />
 
