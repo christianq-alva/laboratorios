@@ -40,33 +40,20 @@ export const Horario = {
     return result
   },
 
-  registroCreateHorario: async (datos, insumos, equipos, connection) => {
+  createHorario: async (laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, connection) => {
     const conn = connection || pool
-    try {
-      const [res] = await conn.execute(
-        `INSERT INTO reservas (laboratorio_id, docente_id, escuela_id, ...) VALUES (?, ?, ?, ...)`,
-        [datos.laboratorio_id, datos.docente_id, datos.escuela_id, ...]
-      )
-      const reserva_id = res.insertId
-      // insertar insumos y equipos en detalle_reserva_insumos, detalle_reserva_equipos
-      return reserva_id
-    } catch (error) {
-      // if (handleDBError) throw handleDBError(error, 'Horario')
-      throw error
-    }
-  }
+    const [res] = await conn.execute(
+      `INSERT INTO reservas (laboratorio_id, docente_id, escuela_id, ...) VALUES (?, ?, ?, ...)`,
+      [laboratorio_id, docente_id, escuela_id, ...]
+    )
+    return res.insertId
+  },
+  createHorarioInsumos: async (reserva_id, insumos, connection) => { /* ... */ },
+  createHorarioEquipos: async (reserva_id, equipos, connection) => { /* ... */ }
 }
 ```
 
-**Evitar en el Model:**
-
-```javascript
-// ❌ Lógica de negocio en model
-registroCreateHorario: async (datos, insumos, equipos, connection) => {
-  const cruce = await this.verificarCruce(...)  // NO: eso va en el Service
-  if (cruce) throw new Error('Conflicto')      // NO: validaciones de negocio en Service
-}
-```
+**El model no debe** iniciar transacciones ni orquestar validaciones de negocio; el Service obtiene la conexión, inicia la transacción y llama a `createHorario`, `createHorarioInsumos`, `createHorarioEquipos` por separado.
 
 ---
 
@@ -100,26 +87,33 @@ function throwError(message, statusCode = 400) {
 }
 
 export const horarioService = {
-  async crearReserva(datos, insumos, equipos, connection) {
-    const escuelaInfo = await Escuela.getById(datos.escuela_id)
-    if (!escuelaInfo) throwError('La escuela seleccionada no existe', 404)
-    const cicloInfo = await Ciclo.getById(datos.ciclo_id)
-    if (!cicloInfo) throwError('El ciclo seleccionado no existe', 404)
-    const docenteInfo = await Docente.getById(datos.docente_id)
-    if (!docenteInfo) throwError('Docente no encontrado', 404)
+  async crearReserva(datos, insumos, equipos, userId, ip) {
+    const connection = await pool.getConnection()
+    try {
+      await connection.beginTransaction()
+      const escuelaInfo = await Escuela.getById(datos.escuela_id)
+      if (!escuelaInfo) throwError('La escuela seleccionada no existe', 404)
+      const cicloInfo = await Ciclo.getById(datos.ciclo_id)
+      if (!cicloInfo) throwError('El ciclo seleccionado no existe', 404)
+      const docenteInfo = await Docente.getById(datos.docente_id)
+      if (!docenteInfo) throwError('Docente no encontrado', 404)
 
-    const cruce = await this._verificarCruce(
-      datos.laboratorio_id, datos.docente_id,
-      datos.fecha_inicio, datos.fecha_fin, null, connection
-    )
-    if (cruce) throwError(`Conflicto de horario: ${cruce.mensaje}`, 409)
+      const cruce = await verificarCruceHorarios(datos.laboratorio_id, datos.docente_id, datos.fecha_inicio, datos.fecha_fin, null)
+      if (cruce) throwError(`Conflicto de horario: ${cruce.mensaje}`, 409)
 
-    const fechaInicioMySQL = convertirFechaParaMySQL(datos.fecha_inicio)
-    const fechaFinMySQL = convertirFechaParaMySQL(datos.fecha_fin)
-    const reserva_id = await Horario.registroCreateHorario(
-      { ...datos, fechaInicioMySQL, fechaFinMySQL }, insumos, equipos, connection
-    )
-    return reserva_id
+      const fechaInicioMySQL = convertirFechaParaMySQL(datos.fecha_inicio)
+      const fechaFinMySQL = convertirFechaParaMySQL(datos.fecha_fin)
+      const reserva_id = await Horario.createHorario(datos.laboratorio_id, datos.docente_id, datos.escuela_id, datos.ciclo_id, datos.descripcion, fechaInicioMySQL, fechaFinMySQL, datos.cantidad_alumnos, datos.color, connection)
+      if (insumos?.length > 0) await Horario.createHorarioInsumos(reserva_id, insumos, connection)
+      if (equipos?.length > 0) await Horario.createHorarioEquipos(reserva_id, equipos, connection)
+      await connection.commit()
+      return reserva_id
+    } catch (error) {
+      await connection.rollback()
+      throw error
+    } finally {
+      connection.release()
+    }
   },
 
   validarRangoFechas(fecha_inicio, fecha_fin) {

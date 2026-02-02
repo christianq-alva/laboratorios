@@ -7,7 +7,9 @@ export const inventarioService = {
   async ejecutarReabastecimientoMasivo(userId, fecha_movimiento, laboratorio_id, motivo_general, datos_reabastecimiento) {
     const connection = await pool.getConnection()
     try {
-      await Inventario.registrarMovimientoManual(connection, userId, fecha_movimiento, laboratorio_id, 'entrada', motivo_general, null, datos_reabastecimiento)
+      await connection.beginTransaction()
+      await Inventario.registrarMovimiento(connection, userId, fecha_movimiento, laboratorio_id, 'entrada', motivo_general, null, datos_reabastecimiento)
+      await connection.commit()
       return {
         total_registros: datos_reabastecimiento.length,
         registros_procesados: datos_reabastecimiento.length,
@@ -16,6 +18,7 @@ export const inventarioService = {
         resultados: []
       }
     } catch (error) {
+      await connection.rollback()
       throw error
     } finally {
       connection.release()
@@ -25,9 +28,12 @@ export const inventarioService = {
   async registrarMovimientoManual(userId, fecha_movimiento, laboratorio_id, tipo_movimiento, observaciones, reserva_id, detalles) {
     const connection = await pool.getConnection()
     try {
-      const movimientoId = await Inventario.registrarMovimientoManual(connection, userId, fecha_movimiento, laboratorio_id, tipo_movimiento, observaciones, reserva_id, detalles)
+      await connection.beginTransaction()
+      const movimientoId = await Inventario.registrarMovimiento(connection, userId, fecha_movimiento, laboratorio_id, tipo_movimiento, observaciones, reserva_id, detalles)
+      await connection.commit()
       return movimientoId
     } catch (error) {
+      await connection.rollback()
       throw new AppError(error.message || 'Error al registrar el movimiento', error.statusCode || 400)
     } finally {
       connection.release()
@@ -37,8 +43,11 @@ export const inventarioService = {
   async eliminarMovimientoInventario(movimiento_id) {
     const connection = await pool.getConnection()
     try {
+      await connection.beginTransaction()
       await Inventario.eliminarMovimientoInventario(connection, movimiento_id)
+      await connection.commit()
     } catch (error) {
+      await connection.rollback()
       throw new AppError(error.message || 'Error al eliminar el movimiento de inventario', error.statusCode || 500)
     } finally {
       connection.release()

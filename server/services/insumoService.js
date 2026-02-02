@@ -50,10 +50,6 @@ export const insumoService = {
       await connection.commit()
     } catch (error) {
       await connection.rollback()
-      if (error.statusCode) throw error
-      if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.code === 'ER_ROW_IS_REFERENCED') {
-        throw new AppError('No se puede eliminar. El insumo está siendo usado en el sistema.', 409)
-      }
       throw error
     } finally {
       connection.release()

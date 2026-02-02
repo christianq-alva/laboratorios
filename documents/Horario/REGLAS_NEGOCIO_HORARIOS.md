@@ -4,6 +4,8 @@
 
 El módulo de **Horarios** gestiona las reservas de laboratorios para clases o actividades. Cada reserva asocia un laboratorio, un docente, una escuela, un ciclo académico y un rango de fechas/horas. Opcionalmente se pueden asignar insumos y equipos requeridos.
 
+**Regla general**: Si el horario está **cerrado** (`estado === 'C'`), no se permite **eliminarlo** ni **editarlo**. Solo se permite reabrirlo (y luego editarlo o eliminarlo si se desea).
+
 ---
 
 ## 1. Creación de Horarios
@@ -49,6 +51,9 @@ En caso de conflicto se responde con **409 Conflict** e información del conflic
 
 ## 2. Actualización de Horarios
 
+- El horario debe **existir**.
+- **No se puede editar** un horario con estado **cerrado** (`estado === 'C'`).  
+  Mensaje: "Horario cerrado, no se puede editar" (409).
 - Se aplican **las mismas reglas** que en creación para: escuela, ciclo, docente, cruces, fechas, insumos y equipos.
 - Al verificar cruces se **excluye el horario que se está editando** (se pasa `horarioId` como `reserva_id`).
 - Se reemplazan por completo los insumos y equipos asociados: se eliminan los anteriores y se insertan los nuevos.

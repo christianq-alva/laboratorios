@@ -1,5 +1,17 @@
 # Estándar de Manejo de Conexiones de Base de Datos
 
+## Estado actual del sistema (resumen)
+
+- **Arquitectura**: Controller → **Service** → Model. Los **controllers** no obtienen conexiones ni inician transacciones; delegan en **services**.
+- **Configuración del pool**: `server/config/database.js` — `mysql2/promise`, `connectionLimit: 10`, `queueLimit: 0`, `acquireTimeout: 60000`, `timeout: 60000`, `timezone: '-05:00'`, puerto por `DB_PORT` o `31787`, SSL en producción. Helper `testConnection()` para verificar conexión.
+- **Quién maneja conexiones y transacciones**:
+  - **horarioService**: Obtiene conexión, inicia transacción, commit/rollback, libera en `finally`. Usado en crearReserva, actualizarReserva, eliminarReserva, cerrarHorario, cerrarHorarioConInsumos, reabrirHorario.
+  - **equipoService**: Solo en **importarMasiva** obtiene conexión y transacción; create/update/delete usan `pool` vía modelo (sin transacción en service).
+  - **insumoService**: Obtiene conexión, beginTransaction, commit/rollback, libera en `finally`. Usado en eliminarInsumo e importacionMasiva. En el `catch` solo hace rollback y `throw error` (propaga el error); las sentencias SQL y las reglas de negocio ya lanzan errores normalizados (handleDBError en modelo, AppError en service).
+  - **inventarioService**: Obtiene conexión, inicia transacción, commit/rollback, libera en `finally`. Usado en ejecutarReabastecimientoMasivo, registrarMovimientoManual, eliminarMovimientoInventario. El **modelo** Inventario expone `registrarMovimiento(connection, ...)` (usado por movimiento manual y reabastecimiento masivo) y `eliminarMovimientoInventario(connection, ...)`; solo ejecuta sentencias con la conexión recibida y **no** inicia transacciones. Para movimientos usa validación/actualización/inserción en lote (menos round-trips).
+
+---
+
 ## 📋 Tabla de Contenidos
 
 1. [Análisis de Patrones Actuales](#1-análisis-de-patrones-actuales)
@@ -15,51 +27,149 @@
 
 ## 1. Análisis de Patrones Actuales
 
-### 1.1 Patrones Identificados
+### 1.1 Configuración del pool
 
-#### Patrón A: Controller-Managed Connection (con transacciones)
-**Ubicación**: `server/controllers/horarioController.js`, `equipoController.js`, `inventarioController.js`
+**Ubicación**: `server/config/database.js`
+
+- **Driver**: `mysql2/promise` (`mysql.createPool(dbConfig)`).
+- **Parámetros**: `host`, `port` (env `DB_PORT` o `31787`), `user`, `password`, `database`, `waitForConnections: true`, `connectionLimit: 10`, `queueLimit: 0`, `acquireTimeout: 60000`, `timeout: 60000`, `timezone: '-05:00'`, `ssl` en producción (`rejectUnauthorized: false`).
+- **Export**: `pool`, `testConnection()` (obtiene conexión, `SELECT 1`, libera, log de éxito/error).
+
+### 1.2 Patrones en uso
+
+#### Patrón A: Service-Managed Connection (transacciones en Service)
+**Ubicación**: `server/services/horarioService.js`, `server/services/insumoService.js`, `server/services/equipoService.js` (solo en `importarMasiva`), `server/services/inventarioService.js` (ejecutarReabastecimientoMasivo, registrarMovimientoManual, eliminarMovimientoInventario)
 
 **Características**:
-- Controller obtiene conexión con `pool.getConnection()`
-- Controller inicia transacción con `beginTransaction()`
-- Controller pasa conexión a los models
-- Controller maneja commit/rollback
-- Controller libera conexión en `finally`
+- El **service** obtiene conexión con `pool.getConnection()`.
+- El service inicia transacción con `beginTransaction()`, hace commit/rollback y libera en `finally`.
+- El service pasa `connection` a los modelos; los modelos **no** inician transacción (usan la conexión recibida).
+- En el `catch` del service: solo `await connection.rollback()` y `throw error` (propagar). No se convierte ni normaliza errores; el modelo (handleDBError) y las reglas de negocio (AppError) ya lanzan errores listos para el controller/middleware.
+- Los controllers solo llaman al service y devuelven la respuesta; no tocan conexiones.
 
-**Ejemplo actual**:
+**Ejemplo actual** (`horarioService.crearReserva`):
 ```javascript
-export const createHorario = async (req, res) => {
-  const connection = await pool.getConnection()
-  try {
-    await connection.beginTransaction() // ❌ PROBLEMA: No siempre se inicia
-    // ... operaciones
-    await connection.commit()
-  } catch (error) {
-    await connection.rollback()
-  } finally {
-    connection.release()
-  }
+const connection = await pool.getConnection()
+try {
+  await connection.beginTransaction()
+  const reserva_id = await Horario.createHorario(..., connection)
+  if (insumos?.length > 0) await Horario.createHorarioInsumos(reserva_id, insumos, connection)
+  if (equipos?.length > 0) await Horario.createHorarioEquipos(reserva_id, equipos, connection)
+  await connection.commit()
+  await Horario.registrarActividadHorario({ ... }) // usa pool, fuera de transacción
+  return { reserva_id, ... }
+} catch (error) {
+  await connection.rollback()
+  throw error
+} finally {
+  connection.release()
 }
 ```
 
-#### Patrón B: Model-Managed Connection (con transacciones)
-**Ubicación**: `server/models/ShareLink.js`, `User.js`, `TipoEquipo.js`
+#### Patrón B: Model con conexión opcional
+**Ubicación**: `server/models/Insumo.js`, `server/models/Equipo.js` (y otros)
 
 **Características**:
-- Model obtiene su propia conexión
-- Model maneja transacción completa
-- Model libera conexión en `finally`
+- Métodos del modelo aceptan `connection` opcional: `const conn = connection || pool`.
+- Si reciben conexión, la usan; si no, usan `pool`. No inician transacciones.
 
-**Ejemplo actual**:
+**Ejemplo actual** (`Insumo.create`, `Equipo.create`):
 ```javascript
-export const ShareLink = {
-  createOrUpdate: async (laboratorioId, userId) => {
+create: async (data, connection) => {
+  const conn = connection || pool
+  const [result] = await conn.execute('INSERT INTO...', [...])
+  return result.insertId
+}
+```
+
+#### Patrón C: Direct Pool (solo lectura o una sola escritura)
+**Ubicación**: `server/models/Inventario.js`, `server/models/Horario.js`, `Reporte.js`, `User.js`, `Laboratorio.js`, etc.
+
+**Características**:
+- Consultas con `pool.execute()` directamente, sin conexión explícita ni transacción.
+- Usado para lecturas, reportes y operaciones de una sola sentencia.
+
+#### Patrón D: Model autónomo (conexión y transacción en el modelo)
+**Ubicación**: `server/models/ShareLink.js` (`createOrUpdate`), `server/models/Laboratorio.js` (método con transacción interna)
+
+**Características**:
+- El modelo obtiene su propia conexión, inicia transacción, commit/rollback y libera en `finally`.
+- No reciben conexión desde fuera; usados en flujos independientes.
+
+### 1.3 Controllers
+
+Los controllers **no** obtienen conexiones ni manejan transacciones. Solo extraen datos de `req`, llaman al service y envían la respuesta (o pasan errores con `next(error)`).
+
+**Ejemplo** (`horarioController.createHorario`):
+```javascript
+const result = await horarioService.crearReserva(
+  { laboratorio_id, docente_id, ... }, insumos, equipos, req.user.userId, req.ip
+)
+res.status(201).json({ success: true, message: '...', data: result })
+```
+
+---
+
+## 2. Problemas Identificados
+
+### 2.1 Inconsistencia de patrones
+
+- **Equipo**: create/update/delete sin transacción en el service (una sola escritura o lecturas); solo la importación masiva usa transacción en el service.
+
+### 2.2 Otros
+
+- No existe `server/utils/transaction.js` (el documento lo propone como opcional).
+- Manejo de errores: uso de `AppError` y `next(error)` en controllers; los services hacen `throw` y liberan conexión en `finally`.
+
+---
+
+## 3. Propuesta Estandarizada
+
+### 3.1 Principios Fundamentales
+
+1. **Separación de Responsabilidades** (alineado con el estado actual):
+   - **Controllers**: No obtienen conexiones ni transacciones; delegan en services y responden.
+   - **Services**: Para operaciones complejas (varias escrituras relacionadas), el service obtiene la conexión, inicia la transacción, hace commit/rollback y libera en `finally`.
+   - **Models**: Aceptan `connection` opcional; si reciben conexión, **no** deben iniciar transacciones (`beginTransaction()`).
+
+2. **Regla de Transacciones**:
+   - Una transacción = Un `beginTransaction()` = Un `commit()` o `rollback()`
+   - Quien inicia la transacción (service o, en casos legacy, modelo) es el único que hace commit/rollback en ese flujo.
+   - Los models que reciben `connection` no deben llamar a `beginTransaction()`.
+
+3. **Regla de Conexiones**:
+   - Toda conexión obtenida (`pool.getConnection()`) debe liberarse en `finally` con `connection.release()`.
+   - Operaciones simples pueden usar `pool.execute()` directamente sin obtener conexión.
+
+4. **Regla de Operaciones**:
+   - Operaciones simples (1 query o lecturas): `pool.execute()` en el modelo, sin transacción.
+   - Operaciones complejas (2+ queries relacionadas): Transacción manejada por **service** (no por controller).
+
+### 3.2 Patrón Híbrido Propuesto
+
+#### Patrón 1: Service con Transacción (Operaciones Complejas)
+**Cuándo usar**: 
+- Múltiples operaciones relacionadas
+- Necesidad de atomicidad
+- Validaciones complejas antes de operaciones
+
+**Estructura** (el controller solo llama al service y responde):
+```javascript
+// Service
+export const resourceService = {
+  async createResource(data, userId, ip) {
     const connection = await pool.getConnection()
     try {
       await connection.beginTransaction()
-      // ... operaciones
+      const exists = await Model.existsById(data.id)
+      if (!exists) {
+        await connection.rollback()
+        throw new AppError('No encontrado', 404)
+      }
+      const result = await Model.create(data, connection)
+      await Model.createRelated(result.id, data.related, connection)
       await connection.commit()
+      return result
     } catch (error) {
       await connection.rollback()
       throw error
@@ -68,212 +178,14 @@ export const ShareLink = {
     }
   }
 }
-```
 
-#### Patrón C: Connection Optional (sin transacciones)
-**Ubicación**: `server/models/Insumo.js`, `Equipo.js`, `Unidad.js`
-
-**Características**:
-- Model acepta `connection` opcional: `const conn = connection || pool`
-- Si se pasa conexión, la usa; si no, usa pool directamente
-- No maneja transacciones
-
-**Ejemplo actual**:
-```javascript
-export const Insumo = {
-  create: async (nombre, descripcion, unidad_id, categoria, presentacion, connection) => {
-    const conn = connection || pool
-    const [result] = await conn.execute('INSERT INTO...', [...])
-    return result.insertId
-  }
-}
-```
-
-#### Patrón D: Direct Pool (sin transacciones)
-**Ubicación**: `server/models/Inventario.js`, `Horario.js` (algunos métodos)
-
-**Características**:
-- Usa `pool.execute()` directamente
-- No maneja conexiones ni transacciones
-- Para operaciones de solo lectura
-
-**Ejemplo actual**:
-```javascript
-export const Inventario = {
-  getAllInsumosConSaldo: async (user_rol, user_laboratorio_ids) => {
-    const insumos = await pool.execute(query)
-    return insumos
-  }
-}
-```
-
-#### Patrón E: Transacciones Anidadas (PROBLEMA)
-**Ubicación**: `server/models/Horario.js`, `Inventario.js`
-
-**Características**:
-- Recibe conexión con transacción iniciada
-- Inicia otra transacción dentro del método
-- Causa errores o comportamiento inesperado
-
-**Ejemplo problemático**:
-```javascript
 // Controller
-const connection = await pool.getConnection()
-await connection.beginTransaction()
-await Horario.registroCreateHorario(..., connection)
-
-// Model - ❌ PROBLEMA: Inicia otra transacción
-registroCreateHorario: async (datosHorario, insumos, equipos, connection) => {
-  await connection.beginTransaction() // ❌ Transacción anidada
+export const createResource = async (req, res, next) => {
   try {
-    // ... operaciones
-    await connection.commit()
-  } catch (error) {
-    await connection.rollback()
-  }
-}
-```
-
----
-
-## 2. Problemas Identificados
-
-### 2.1 Problemas Críticos
-
-#### ❌ Problema 1: Transacciones Anidadas
-**Ubicación**: `server/models/Horario.js:290`, `server/models/Inventario.js:178, 235`
-
-**Descripción**: Los models inician transacciones cuando ya reciben una conexión con transacción iniciada.
-
-**Impacto**: 
-- Comportamiento impredecible
-- Posibles errores de MySQL
-- Rollback parcial de datos
-
-**Ejemplo**:
-```javascript
-// Controller
-const connection = await pool.getConnection()
-try {
-  await connection.beginTransaction() // Transacción 1
-  await Horario.registroCreateHorario(..., connection)
-} finally {
-  connection.release()
-}
-
-// Model
-registroCreateHorario: async (..., connection) => {
-  await connection.beginTransaction() // ❌ Transacción 2 (anidada)
-  // ...
-}
-```
-
-#### ❌ Problema 2: Rollback sin BeginTransaction
-**Ubicación**: `server/controllers/horarioController.js:173`
-
-**Descripción**: Se hace `rollback()` sin haber iniciado transacción primero.
-
-**Impacto**:
-- Errores de MySQL
-- Comportamiento inconsistente
-
-**Ejemplo**:
-```javascript
-export const createHorario = async (req, res) => {
-  const connection = await pool.getConnection()
-  try {
-    // ❌ No hay beginTransaction()
-    const escuelaInfo = await Escuela.getById(escuela_id)
-    if (!escuelaInfo) {
-      await connection.rollback() // ❌ Error: No hay transacción activa
-      return res.status(404).json({...})
-    }
-  } finally {
-    connection.release()
-  }
-}
-```
-
-#### ❌ Problema 3: Conexiones No Liberadas
-**Ubicación**: `server/controllers/equipoController.js:236` (antes de corrección)
-
-**Descripción**: Se obtiene conexión pero no se libera en `finally`.
-
-**Impacto**:
-- Agotamiento del pool de conexiones
-- Timeouts y errores de conexión
-- Degradación del rendimiento
-
-#### ❌ Problema 4: Inconsistencia de Patrones
-**Descripción**: Diferentes archivos usan diferentes patrones, incluso dentro del mismo archivo.
-
-**Impacto**:
-- Código difícil de mantener
-- Errores difíciles de detectar
-- Curva de aprendizaje alta
-
-### 2.2 Problemas Menores
-
-- Falta de logging consistente
-- Manejo de errores inconsistente
-- Validaciones antes de transacciones innecesarias
-
----
-
-## 3. Propuesta Estandarizada
-
-### 3.1 Principios Fundamentales
-
-1. **Separación de Responsabilidades**:
-   - Controllers: Manejan conexiones y transacciones para operaciones complejas
-   - Models: Aceptan conexión opcional, nunca inician transacciones si reciben conexión
-
-2. **Regla de Transacciones**:
-   - Una transacción = Un `beginTransaction()` = Un `commit()` o `rollback()`
-   - Los models nunca deben iniciar transacciones si reciben una conexión
-
-3. **Regla de Conexiones**:
-   - Toda conexión obtenida debe liberarse en `finally`
-   - Operaciones simples pueden usar `pool.execute()` directamente
-
-4. **Regla de Operaciones**:
-   - Operaciones simples (1 query): `pool.execute()` directo
-   - Operaciones complejas (2+ queries relacionadas): Transacción manejada por controller
-
-### 3.2 Patrón Híbrido Propuesto
-
-#### Patrón 1: Controller con Transacción (Operaciones Complejas)
-**Cuándo usar**: 
-- Múltiples operaciones relacionadas
-- Necesidad de atomicidad
-- Validaciones complejas antes de operaciones
-
-**Estructura**:
-```javascript
-export const createResource = async (req, res) => {
-  const connection = await pool.getConnection()
-  try {
-    await connection.beginTransaction()
-    
-    // Validaciones (sin usar conexión)
-    const exists = await Model.existsById(id)
-    if (!exists) {
-      await connection.rollback()
-      return res.status(404).json({ success: false, message: 'No encontrado' })
-    }
-    
-    // Operaciones con conexión
-    const result = await Model.create(data, connection)
-    await Model.createRelated(result.id, relatedData, connection)
-    
-    await connection.commit()
+    const result = await resourceService.createResource(req.body, req.user.userId, req.ip)
     res.status(201).json({ success: true, data: result })
   } catch (error) {
-    await connection.rollback()
-    console.error('Error:', error)
-    res.status(500).json({ success: false, message: error.message })
-  } finally {
-    connection.release()
+    next(error)
   }
 }
 ```
@@ -312,15 +224,14 @@ export const Model = {
 - Operaciones de solo lectura
 - No hay necesidad de atomicidad
 
-**Estructura**:
+**Estructura** (controller llama al service o al modelo; no se usa conexión explícita):
 ```javascript
-export const getResources = async (req, res) => {
+export const getResources = async (req, res, next) => {
   try {
-    const resources = await Model.getAll()
+    const resources = await resourceService.getAll(req.query) // o Model.getAll()
     res.status(200).json({ success: true, data: resources })
   } catch (error) {
-    console.error('Error:', error)
-    res.status(500).json({ success: false, message: error.message })
+    next(error)
   }
 }
 ```
@@ -363,70 +274,51 @@ export const Model = {
 
 ## 4. Patrones de Implementación
 
-### 4.1 Template: Controller con Transacción
+### 4.1 Template: Service con Transacción
+
+En el sistema actual la transacción la maneja el **service**; el controller solo invoca al service y envía la respuesta. Ejemplo de service:
 
 ```javascript
 import { pool } from '../config/database.js'
 import { Model } from '../models/Model.js'
+import { AppError } from '../utils/errors.js'
 
-export const createResource = async (req, res) => {
-  const connection = await pool.getConnection()
-  try {
-    await connection.beginTransaction()
-    
-    // 1. Validaciones (preferiblemente sin conexión para no bloquear)
-    const { field1, field2 } = req.body
-    
-    // Validaciones simples (sin DB)
-    if (!field1 || !field2) {
+export const resourceService = {
+  async createResource(body, userId, ip) {
+    const connection = await pool.getConnection()
+    try {
+      await connection.beginTransaction()
+      const { field1, field2 } = body
+
+      if (!field1 || !field2) {
+        await connection.rollback()
+        throw new AppError('Campos requeridos faltantes', 400)
+      }
+
+      const exists = await Model.existsByField(field1, connection)
+      if (exists) {
+        await connection.rollback()
+        throw new AppError('Recurso ya existe', 409)
+      }
+
+      const resourceId = await Model.create({ field1, field2 }, connection)
+      if (body.relatedData) {
+        await Model.createRelated(resourceId, body.relatedData, connection)
+      }
+
+      await connection.commit()
+      return { id: resourceId }
+    } catch (error) {
       await connection.rollback()
-      return res.status(400).json({
-        success: false,
-        message: 'Campos requeridos faltantes'
-      })
+      throw error
+    } finally {
+      connection.release()
     }
-    
-    // Validaciones de negocio (con conexión si es necesario)
-    const exists = await Model.existsByField(field1, connection)
-    if (exists) {
-      await connection.rollback()
-      return res.status(409).json({
-        success: false,
-        message: 'Recurso ya existe'
-      })
-    }
-    
-    // 2. Operaciones principales
-    const resourceId = await Model.create({ field1, field2 }, connection)
-    
-    // 3. Operaciones relacionadas
-    if (req.body.relatedData) {
-      await Model.createRelated(resourceId, req.body.relatedData, connection)
-    }
-    
-    // 4. Commit
-    await connection.commit()
-    
-    // 5. Respuesta exitosa
-    res.status(201).json({
-      success: true,
-      message: 'Recurso creado exitosamente',
-      data: { id: resourceId }
-    })
-  } catch (error) {
-    // Rollback en caso de error
-    await connection.rollback()
-    console.error('Error al crear recurso:', error)
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error interno del servidor'
-    })
-  } finally {
-    // SIEMPRE liberar conexión
-    connection.release()
   }
 }
 ```
+
+Controller: `const result = await resourceService.createResource(req.body, req.user.userId, req.ip)` y `res.status(201).json({ success: true, data: result })`.
 
 ### 4.2 Template: Model con Conexión Opcional
 
@@ -637,26 +529,24 @@ export const hasActiveTransaction = async (connection) => {
 
 ## 6. Guía de Migración
 
-### 6.1 Pasos para Migrar un Controller
+### 6.1 Pasos para migrar un flujo con transacción
 
 1. **Identificar el patrón actual**
-   - ¿Usa transacciones?
-   - ¿Maneja conexiones?
-   - ¿Pasa conexión a models?
+   - ¿La transacción está en el service o en el controller/model?
+   - ¿Quién obtiene la conexión y quién la libera?
 
 2. **Aplicar el patrón correcto**
-   - Si tiene múltiples operaciones → Patrón 1 (Controller con transacción)
-   - Si es operación simple → Patrón 3 (Sin transacción)
+   - Múltiples operaciones relacionadas → Patrón 1: **Service** obtiene conexión, inicia transacción, commit/rollback, release en `finally`. Controller solo llama al service.
+   - Operación simple → Sin transacción; modelo usa `pool` o service sin conexión explícita.
 
 3. **Verificar que los models no inicien transacciones**
-   - Si un model recibe `connection`, no debe hacer `beginTransaction()`
+   - Si un model recibe `connection`, no debe hacer `beginTransaction()`.
 
 4. **Asegurar liberación de conexión**
-   - Todo `getConnection()` debe tener `finally` con `release()`
+   - Todo `pool.getConnection()` debe tener `finally { connection.release() }`.
 
 5. **Probar la migración**
-   - Verificar que las transacciones funcionan correctamente
-   - Verificar que no hay conexiones sin liberar
+   - Verificar que las transacciones funcionan correctamente y que no hay conexiones sin liberar.
 
 ### 6.2 Pasos para Migrar un Model
 
@@ -672,17 +562,17 @@ export const hasActiveTransaction = async (connection) => {
 
 ### 6.3 Checklist de Migración
 
-- [ ] Controller obtiene conexión con `pool.getConnection()`
-- [ ] Controller inicia transacción con `beginTransaction()` antes de operaciones
-- [ ] Controller hace `commit()` antes de respuesta exitosa
-- [ ] Controller hace `rollback()` en `catch` y antes de `return` tempranos
-- [ ] Controller libera conexión en `finally` con `connection.release()`
+- [ ] Para flujos con transacción: **Service** (no controller) obtiene conexión con `pool.getConnection()`
+- [ ] Service inicia transacción con `beginTransaction()` antes de operaciones
+- [ ] Service hace `commit()` antes de retornar resultado exitoso
+- [ ] Service hace `rollback()` en `catch` y antes de `throw` tempranos
+- [ ] Service libera conexión en `finally` con `connection.release()`
 - [ ] Models aceptan `connection` opcional: `const conn = connection || pool`
 - [ ] Models NO inician transacciones si reciben `connection`
-- [ ] Operaciones simples usan `pool.execute()` directamente
-- [ ] No hay transacciones anidadas
-- [ ] No hay `rollback()` sin `beginTransaction()`
-- [ ] Todas las conexiones se liberan
+- [ ] Operaciones simples usan `pool.execute()` directamente en el modelo
+- [ ] No hay transacciones anidadas (un solo `beginTransaction()` por flujo)
+- [ ] No hay `rollback()` sin `beginTransaction()` previo
+- [ ] Todas las conexiones obtenidas se liberan
 
 ---
 
@@ -721,140 +611,33 @@ export const hasActiveTransaction = async (connection) => {
 
 ## 8. Ejemplos Completos
 
-### 8.1 Ejemplo: Crear Horario (Corregido)
+Los ejemplos siguientes ilustran el **patrón recomendado** (service con transacción). El sistema actual ya sigue este patrón en `horarioService.crearReserva`, etc.: el controller llama al service y el service maneja conexión y transacción.
 
-**Controller** (`server/controllers/horarioController.js`):
+### 8.1 Ejemplo: Crear Horario (patrón recomendado; implementación actual en service)
+
+**Service** (`server/services/horarioService.js`) — el controller solo llama a `horarioService.crearReserva(...)` y responde. Ejemplo de flujo equivalente:
 
 ```javascript
-import { pool } from '../config/database.js'
-import { Horario } from '../models/Horario.js'
-import { Escuela } from '../models/Escuela.js'
-import { Ciclo } from '../models/Ciclo.js'
-import { Docente } from '../models/Docente.js'
-
-export const createHorario = async (req, res) => {
-  const connection = await pool.getConnection()
-  try {
-    await connection.beginTransaction()
-    
-    const {
-      laboratorio_id,
-      docente_id,
-      escuela_id,
-      ciclo_id,
-      descripcion,
-      fecha_inicio,
-      fecha_fin,
-      cantidad_alumnos,
-      color = '#4ecdc4',
-      insumos = [],
-      equipos = []
-    } = req.body
-
-    // Convertir fechas
-    const fechaInicioMySQL = convertirFechaParaMySQL(fecha_inicio)
-    const fechaFinMySQL = convertirFechaParaMySQL(fecha_fin)
-
-    // Validaciones (sin conexión para no bloquear)
-    const escuelaInfo = await Escuela.getById(escuela_id)
-    if (!escuelaInfo) {
-      await connection.rollback()
-      return res.status(404).json({
-        success: false,
-        message: 'La escuela seleccionada no existe'
-      })
-    }
-
-    const cicloInfo = await Ciclo.getById(ciclo_id)
-    if (!cicloInfo) {
-      await connection.rollback()
-      return res.status(404).json({
-        success: false,
-        message: 'El ciclo seleccionado no existe'
-      })
-    }
-
-    const docenteInfo = await Docente.getById(docente_id)
-    if (!docenteInfo) {
-      await connection.rollback()
-      return res.status(404).json({
-        success: false,
-        message: 'Docente no encontrado'
-      })
-    }
-
-    // Verificar cruces (con conexión)
-    const cruce = await verificarCruceHorarios(
-      connection,
-      laboratorio_id,
-      docente_id,
-      fecha_inicio,
-      fecha_fin
-    )
-    if (cruce) {
-      await connection.rollback()
-      return res.status(409).json({
-        success: false,
-        message: `Conflicto de horario: ${cruce.mensaje}`,
-        tipo_conflicto: cruce.tipo,
-        conflicto_detalle: cruce.conflicto
-      })
-    }
-
-    // Operaciones principales (con conexión)
-    const reserva_id = await Horario.createHorario({
-      laboratorio_id,
-      docente_id,
-      escuela_id,
-      ciclo_id,
-      descripcion,
-      fechaInicioMySQL,
-      fechaFinMySQL,
-      cantidad_alumnos,
-      color
-    }, connection)
-
-    // Operaciones relacionadas
-    if (insumos.length > 0) {
-      await Horario.createHorarioInsumos(reserva_id, insumos, connection)
-    }
-
-    if (equipos.length > 0) {
-      await Horario.createHorarioEquipos(reserva_id, equipos, connection)
-    }
-
-    await connection.commit()
-
-    // Registrar actividad (después del commit, sin conexión)
-    await Horario.registrarActividadHorario({
-      accion: 'crear',
-      reserva_id: reserva_id,
-      descripcion: `Horario creado: "${descripcion}"...`,
-      usuario_id: req.user.userId,
-      ip_address: req.ip || req.connection.remoteAddress
-    })
-
-    res.status(201).json({
-      success: true,
-      message: 'Horario creado correctamente',
-      data: {
-        reserva_id: reserva_id,
-        insumos_procesados: insumos.length,
-        equipos_procesados: equipos.length
-      }
-    })
-  } catch (error) {
-    await connection.rollback()
-    console.error('Error al crear horario:', error)
-    res.status(500).json({
-      success: false,
-      message: error.message
-    })
-  } finally {
-    connection.release()
-  }
+// Service (horarioService.crearReserva) — estado actual
+const connection = await pool.getConnection()
+try {
+  await connection.beginTransaction()
+  // Validaciones: Escuela.getById, Ciclo.getById, Docente.getById, verificarCruceHorarios
+  const reserva_id = await Horario.createHorario(..., connection)
+  if (insumos?.length > 0) await Horario.createHorarioInsumos(reserva_id, insumos, connection)
+  if (equipos?.length > 0) await Horario.createHorarioEquipos(reserva_id, equipos, connection)
+  await connection.commit()
+  await Horario.registrarActividadHorario({ accion: 'crear', ... }) // usa pool
+  return { reserva_id, insumos_procesados, equipos_procesados }
+} catch (error) {
+  await connection.rollback()
+  throw error
+} finally {
+  connection.release()
 }
 ```
+
+El controller solo hace: `const result = await horarioService.crearReserva(...); res.status(201).json({ success: true, data: result })`.
 
 **Model** (`server/models/Horario.js`):
 
@@ -930,84 +713,32 @@ export const Horario = {
 }
 ```
 
-### 8.2 Ejemplo: Eliminar Equipo (Corregido)
+### 8.2 Ejemplo: Eliminar Equipo
 
-**Controller** (`server/controllers/equipoController.js`):
+En el sistema actual, **equipoService.eliminarEquipo** no usa transacción (una sola eliminación y registro de actividad). Si en el futuro se requieren varias operaciones atómicas, el patrón sería: **service** obtiene conexión, beginTransaction, operaciones, commit/rollback, release. Ejemplo de template (service con transacción):
 
 ```javascript
-import { pool } from '../config/database.js'
-import { Equipo } from '../models/Equipo.js'
-
-export const deleteEquipo = async (req, res) => {
+// Service con transacción (template)
+async eliminarEquipo(equipoId, userId, ip) {
   const connection = await pool.getConnection()
   try {
     await connection.beginTransaction()
-    
-    const { id } = req.params
-    const equipoId = parseInt(id, 10)
-
-    // Validación de ID
-    if (isNaN(equipoId) || equipoId <= 0) {
-      await connection.rollback()
-      return res.status(400).json({
-        success: false,
-        message: 'ID de equipo inválido'
-      })
-    }
-
-    // Verificar existencia
-    const existingEquipo = await Equipo.existsById(equipoId)
-    if (!existingEquipo) {
-      await connection.rollback()
-      return res.status(404).json({
-        success: false,
-        message: 'Equipo no encontrado'
-      })
-    }
-
-    // Verificar relaciones
-    const reservasActivas = await Equipo.reservasActivas(equipoId)
-    if (reservasActivas) {
-      await connection.rollback()
-      return res.status(400).json({
-        success: false,
-        message: 'No se puede eliminar. El equipo está siendo usado en el sistema.'
-      })
-    }
-
-    // Obtener información para actividad
+    if (!(await Equipo.existsById(equipoId))) throw new AppError('Equipo no encontrado', 404)
+    if (await Equipo.reservasActivas(equipoId)) throw new AppError('Equipo en uso', 400)
     const equipoInfo = await Equipo.getById(equipoId)
-
-    // Eliminar equipo
     await Equipo.delete(equipoId, connection)
-
     await connection.commit()
-
-    // Registrar actividad (después del commit)
-    await Equipo.registrarActividadEquipo({
-      accion: 'eliminar',
-      equipo_id: equipoInfo.id,
-      descripcion: `Equipo eliminado: ${equipoInfo.nombre}...`,
-      usuario_id: req.user.userId,
-      ip_address: req.ip || req.connection.remoteAddress
-    })
-
-    res.status(200).json({
-      success: true,
-      message: 'Equipo eliminado exitosamente'
-    })
+    await Equipo.registrarActividadEquipo({ accion: 'eliminar', ... })
   } catch (error) {
     await connection.rollback()
-    console.error('Error al eliminar equipo:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Error interno al eliminar el equipo'
-    })
+    throw error
   } finally {
     connection.release()
   }
 }
 ```
+
+Hoy `equipoService.eliminarEquipo` usa `Equipo.delete(equipoId)` sin conexión y luego `Equipo.registrarActividadEquipo` (pool); no hay transacción porque son operaciones secuenciales aceptables.
 
 ### 8.3 Ejemplo: Model con Conexión Opcional
 
@@ -1075,7 +806,7 @@ export const Insumo = {
 2. **Una transacción = Un `beginTransaction()` = Un `commit()` o `rollback()`**
 3. **Los models nunca inician transacciones si reciben `connection`**
 4. **Operaciones simples usan `pool.execute()` directamente**
-5. **Operaciones complejas requieren transacción manejada por controller**
+5. **Operaciones complejas requieren transacción manejada por service**
 
 ### ❌ Errores Comunes a Evitar
 
@@ -1095,6 +826,6 @@ export const Insumo = {
 
 ---
 
-**Última actualización**: Enero 2026  
-**Versión**: 1.0  
-**Autor**: Análisis y propuesta estandarizada del sistema
+**Última actualización**: Febrero 2026  
+**Versión**: 1.1  
+**Estado**: Documento alineado con la arquitectura actual: Controller → Service → Model; transacciones y conexiones manejadas por **services** (horarioService, equipoService en importación, insumoService, inventarioService). El modelo Inventario ya no inicia transacciones; el service es dueño de beginTransaction/commit/rollback.

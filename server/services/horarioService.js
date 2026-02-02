@@ -130,6 +130,8 @@ export const horarioService = {
     }
     const horarioExists = await Horario.exitsById(horarioId)
     if (!horarioExists) throw new AppError('Horario no encontrado', 404)
+    const horario = await Horario.getHorarioById(horarioId)
+    if (horario?.estado === 'C') throw new AppError('Horario cerrado, no se puede editar', 409)
 
     const fechaInicioMySQL = convertirFechaParaMySQL(fecha_inicio)
     const fechaFinMySQL = convertirFechaParaMySQL(fecha_fin)
