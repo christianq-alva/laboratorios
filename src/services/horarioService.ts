@@ -43,7 +43,9 @@ export interface HorarioSimple {
 
 export interface HorarioFull extends HorarioSimple {
   insumos?: InsumoHorario[]
+  insumos_consumidos?: InsumoConsumido[]
   equipos?: EquipoHorario[]
+  tiene_consumo_insumos?: number // TINYINT(1): 0 o 1
 }
 
 export interface InsumoHorario {
@@ -53,6 +55,16 @@ export interface InsumoHorario {
   categoria: string
   unidad_nombre: string
   cantidad_usada: number
+}
+
+export interface InsumoConsumido {
+  id: number
+  codigo: string
+  nombre: string
+  categoria: string
+  unidad_nombre: string
+  unidad_simbolo: string
+  cantidad_consumida: number
 }
 
 export interface EquipoHorario {
@@ -66,7 +78,7 @@ export interface EquipoHorario {
 
 export interface ActividadHorario {
   actividad_id: number
-  accion: 'crear' | 'editar' | 'eliminar'
+  accion: 'crear' | 'editar' | 'eliminar' | 'cerrar' | 'reabrir'
   descripcion: string
   fecha_actividad: string
   usuario_id: number
@@ -250,6 +262,12 @@ export const horarioService = {
   // Cerrar horario sin registrar insumos
   cerrarHorario: async (id: number) => {
     const response = await api.post(`/horarios/${id}/cerrar`)
+    return response.data
+  },
+
+  // Reabrir horario
+  reabrirHorario: async (id: number): Promise<ApiMessageResponse & { data?: { tiene_movimiento: boolean; movimiento_id?: number } }> => {
+    const response = await api.patch(`/horarios/${id}/reabrir`)
     return response.data
   }
 } 

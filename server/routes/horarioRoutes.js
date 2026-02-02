@@ -12,6 +12,7 @@ import {
   cerrarHorario,
   getInsumosRequeridosById,
   cerrarHorarioConInsumos,
+  reabrirHorario,
 } from '../controllers/horarioController.js'
 import {
   validate,
@@ -39,6 +40,12 @@ router.post('/:id/cerrar',
   authenticateToken,
   authorize('update', 'Horario'),
   cerrarHorario
+)
+
+router.patch('/:id/reabrir',
+  authenticateToken,
+  authorize('update', 'Horario'),
+  reabrirHorario
 )
 
 // Listar horarios

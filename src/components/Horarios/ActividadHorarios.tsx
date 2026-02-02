@@ -36,6 +36,8 @@ import {
   Schedule,
   Person,
   LocationOn,
+  Lock,
+  LockOpen,
 } from '@mui/icons-material'
 import { horarioService, type ActividadHorario } from '../../services/horarioService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
@@ -143,6 +145,8 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
       case 'crear': return 'success'
       case 'editar': return 'warning'
       case 'eliminar': return 'error'
+      case 'cerrar': return 'info'
+      case 'reabrir': return 'success'
       default: return 'default'
     }
   }
@@ -152,6 +156,8 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
       case 'crear': return <Add />
       case 'editar': return <Edit />
       case 'eliminar': return <Delete />
+      case 'cerrar': return <Lock />
+      case 'reabrir': return <LockOpen />
       default: return <History />
     }
   }
@@ -161,6 +167,8 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
       case 'crear': return 'Crear'
       case 'editar': return 'Editar'
       case 'eliminar': return 'Eliminar'
+      case 'cerrar': return 'Cerrar'
+      case 'reabrir': return 'Reabrir'
       default: return accion
     }
   }
@@ -292,6 +300,8 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
                 <MenuItem value="crear">Crear</MenuItem>
                 <MenuItem value="editar">Editar</MenuItem>
                 <MenuItem value="eliminar">Eliminar</MenuItem>
+                <MenuItem value="cerrar">Cerrar</MenuItem>
+                <MenuItem value="reabrir">Reabrir</MenuItem>
               </Select>
             </FormControl>
             {user?.rol === 'Administrador' && (

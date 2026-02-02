@@ -4,7 +4,7 @@ import { idParamSchema } from './common.js'
 /**
  * Acciones válidas para actividad de horarios
  */
-const accionesValidas = ['crear', 'editar', 'eliminar']
+const accionesValidas = ['crear', 'editar', 'eliminar', 'cerrar', 'reabrir']
 
 /**
  * Schema para obtener un horario por ID

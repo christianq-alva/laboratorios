@@ -73,42 +73,78 @@ En caso de conflicto se responde con **409 Conflict** e información del conflic
 - El horario **no** debe estar ya cerrado.  
   Si está cerrado: "El Horario ya se encuentra cerrado" (409).
 - Al cerrar se actualiza `reservas.estado` a cerrado (`'C'`).
+- Se registra la actividad de cierre en `actividad_horarios` con acción `'cerrar'`.
 
 ### 4.2 Cerrar Horario con Insumos
 
 - Mismas condiciones que cerrar sin insumos (existencia y no cerrado).
 - Se requiere: `laboratorio_id`, `tipo_movimiento` (entrada/salida), `fecha_movimiento`, `reserva_id`, `detalles` (array de insumos con cantidades y, si es salida, `entrada_detalle_id`).
 - Se cierra el horario y se registra un movimiento de inventario (salida típicamente) asociado a la reserva, con las reglas del módulo de Insumos (stock, lotes, etc.).
+- **Se actualiza el campo `tiene_consumo_insumos = 1`** en la tabla `reservas` para indicar que el horario tiene consumo de insumos registrado.
+- Se registra la actividad de cierre en `actividad_horarios` con acción `'cerrar'` incluyendo el ID del movimiento de inventario.
 
 ---
 
-## 5. Consultas y Filtros
+## 5. Reapertura de Horarios
+
+### 5.1 Reabrir Horario
+
+- El horario debe existir.
+- El horario **debe** estar cerrado (`estado === 'C'`).  
+  Si no está cerrado: "El horario no está cerrado" (409).
+- Si el horario tiene un movimiento de inventario asociado (`movimientos_insumos.reserva_id`):
+  - Se elimina el movimiento de inventario (esto revierte automáticamente los saldos de los lotes afectados).
+  - **Se actualiza el campo `tiene_consumo_insumos = 0`** en la tabla `reservas` para indicar que ya no tiene consumo registrado.
+  - Se actualiza el estado del horario a programado (`'P'`).
+- Si el horario no tiene movimiento de inventario:
+  - Se actualiza el estado del horario a programado (`'P'`).
+- Se registra la actividad de reapertura en `actividad_horarios` con acción `'reabrir'`, indicando si se eliminó un movimiento de inventario.
+- Después de reabrir, el horario puede ser editado nuevamente.
+
+**Nota**: La eliminación del movimiento de inventario revierte los saldos de los lotes que fueron afectados por la salida original, restaurando el inventario al estado previo al cierre.
+
+---
+
+## 6. Consultas y Filtros
 
 - **Rango de fechas**: En listado de horarios, si se envían `fecha_inicio` y `fecha_fin`, el rango máximo permitido es **60 días**. Si se excede: "El rango máximo permitido es de 60 días" (400). La fecha de inicio debe ser anterior a la fecha de fin.
 - **Verificar disponibilidad**: Permite comprobar si hay conflicto para un laboratorio y docente en un rango de fechas, opcionalmente excluyendo un `horario_id` (por ejemplo, al editar).
 
+### 6.1 Consulta de Horario por ID (`getHorarioById`)
+
+- Retorna el horario completo con la siguiente información adicional:
+  - **`insumos`**: Array de insumos requeridos/planificados (de `detalle_reserva_insumos`), con `cantidad_usada` (cantidad planificada).
+  - **`insumos_consumidos`**: Array de insumos realmente consumidos (de `movimiento_insumo_detalle` cuando existe movimiento de salida asociado), con `cantidad_consumida` (suma de cantidades del movimiento). Solo aparece si el horario tiene `tiene_consumo_insumos = 1`.
+  - **`tiene_consumo_insumos`**: Campo booleano (0/1) que indica si el horario tiene un movimiento de consumo de insumos asociado. Permite identificar rápidamente horarios con consumo registrado sin necesidad de consultas adicionales.
+  - **`equipos`**: Array de equipos requeridos.
+
+**Nota**: El campo `tiene_consumo_insumos` se mantiene automáticamente sincronizado:
+- Se establece en `1` cuando se cierra un horario con consumo de insumos.
+- Se establece en `0` cuando se reabre un horario que tenía movimiento asociado.
+
 ---
 
-## 6. Permisos y Visibilidad
+## 7. Permisos y Visibilidad
 
 - Los horarios se filtran según el **rol** y los **laboratorio_ids** del usuario (Jefe de Laboratorio solo ve sus laboratorios; Administrador ve todos).
-- Las acciones (crear, editar, eliminar, cerrar, verificar disponibilidad) están sujetas a los permisos definidos en el sistema de autorización (recurso "Horario").
+- Las acciones (crear, editar, eliminar, cerrar, reabrir, verificar disponibilidad) están sujetas a los permisos definidos en el sistema de autorización (recurso "Horario").
 
 ---
 
-## 7. Actividad y Auditoría
+## 8. Actividad y Auditoría
 
-- Se registra en `actividad_horarios` las acciones: **crear**, **editar**, **eliminar**, con descripción, reserva_id, usuario_id, ip_address y fecha (America/Lima).
+- Se registra en `actividad_horarios` las acciones: **crear**, **editar**, **eliminar**, **cerrar**, **reabrir**, con descripción, reserva_id, usuario_id, ip_address y fecha (America/Lima).
+- Las acciones de cierre y reapertura incluyen información sobre movimientos de inventario cuando aplica.
 
 ---
 
-## 8. Resumen de Códigos HTTP y Mensajes
+## 9. Resumen de Códigos HTTP y Mensajes
 
 | Código | Situación |
 |--------|-----------|
 | 400 | Rango de fechas > 60 días; fecha_fin ≤ fecha_inicio |
 | 404 | Escuela, ciclo, docente u horario no encontrado |
-| 409 | Conflicto de horario (laboratorio o docente); horario cerrado (no se puede eliminar/cerrar dos veces) |
+| 409 | Conflicto de horario (laboratorio o docente); horario cerrado (no se puede eliminar/cerrar dos veces); horario no cerrado (no se puede reabrir) |
 | 500 | Error interno (con mensaje genérico o de excepción) |
 
 ---
