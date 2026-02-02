@@ -33,7 +33,8 @@ import {
   Warning,
   Download,
   Upload,
-  FileUpload
+  FileUpload,
+  Refresh
 } from '@mui/icons-material'
 import { equipoService } from '../../services/equipoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
@@ -108,6 +109,16 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
 
   useEffect(() => {
     if (open) {
+      // Resetear estado cuando se abre el modal
+      setCurrentStep('subida')
+      setSelectedFile(null)
+      setPreview(null)
+      setResultado(null)
+      setError(null)
+      setPlantillaDescargada(false)
+      setFilters({
+        laboratorio_id: ''
+      })
       loadLaboratorios()
     }
   }, [open])
@@ -128,7 +139,7 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
   }
 
   const handleClose = () => {
-    setCurrentStep('descarga')
+    setCurrentStep('subida')
     setSelectedFile(null)
     setPreview(null)
     setResultado(null)
@@ -217,11 +228,15 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
   }
 
   const handleReiniciar = () => {
-    setCurrentStep('descarga')
+    setCurrentStep('subida')
     setSelectedFile(null)
     setPreview(null)
     setResultado(null)
     setError(null)
+    setPlantillaDescargada(false)
+    setFilters({
+      laboratorio_id: ''
+    })
   }
 
   const getEstadoColor = (estado: string) => {
@@ -499,12 +514,9 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
           </>
         ) : (
           <>
-            {currentStep !== 'descarga' && (
+            {currentStep === 'preview' && (
               <Button 
-                onClick={() => {
-                  if (currentStep === 'subida') setCurrentStep('descarga')
-                  else if (currentStep === 'preview') setCurrentStep('subida')
-                }} 
+                onClick={() => setCurrentStep('subida')} 
                 variant="outlined"
               >
                 Atrás
@@ -513,16 +525,11 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
             <Button onClick={handleClose} variant="outlined" color="inherit">
               Cancelar
             </Button>
-            {currentStep === 'descarga' && (
-              <Button onClick={() => setCurrentStep('subida')} variant="contained">
-                Siguiente
-              </Button>
-            )}
             {currentStep === 'preview' && (
               <Button
                 onClick={handleProcesarArchivo}
                 variant="contained"
-                disabled={loading}
+                disabled={loading || !filters.laboratorio_id}
               >
                 {loading ? <CircularProgress size={20} /> : 'Confirmar e Importar'}
               </Button>
