@@ -177,7 +177,8 @@ export const cerrarHorarioConInsumos = async (req, res, next) => {
       fecha_movimiento,
       detalles,
       observaciones,
-      req.user.userId
+      req.user.userId,
+      req.ip || req.connection?.remoteAddress
     )
     res.status(200).json({
       success: true,
@@ -192,10 +193,32 @@ export const cerrarHorarioConInsumos = async (req, res, next) => {
 export const cerrarHorario = async (req, res, next) => {
   try {
     const { id: reserva_id } = req.params
-    await horarioService.cerrarHorario(reserva_id)
+    await horarioService.cerrarHorario(
+      reserva_id,
+      req.user.userId,
+      req.ip || req.connection?.remoteAddress
+    )
     res.status(200).json({
       success: true,
       message: 'Horario cerrado correctamente'
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const reabrirHorario = async (req, res, next) => {
+  try {
+    const { id: reserva_id } = req.params
+    const result = await horarioService.reabrirHorario(
+      reserva_id,
+      req.user.userId,
+      req.ip || req.connection?.remoteAddress
+    )
+    res.status(200).json({
+      success: true,
+      message: 'Horario reabierto correctamente',
+      data: result
     })
   } catch (error) {
     next(error)

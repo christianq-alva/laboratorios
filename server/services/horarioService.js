@@ -203,17 +203,29 @@ export const horarioService = {
     return { disponible: true, mensaje: 'Horario disponible - sin conflictos' }
   },
 
-  async cerrarHorario(reserva_id) {
+  async cerrarHorario(reserva_id, usuario_id, ip_address) {
     const horarioExists = await Horario.exitsById(reserva_id)
     if (!horarioExists) throw new AppError('Horario no encontrado', 404)
     const yaCerrado = await Horario.estadoHorario(reserva_id)
     if (yaCerrado) throw new AppError('El Horario ya se encuentra cerrado', 409)
+
+    // Obtener información del horario
+    const horario = await Horario.getHorarioById(reserva_id)
 
     const connection = await pool.getConnection()
     try {
       await connection.beginTransaction()
       await Horario.cerrarHorario(reserva_id, connection)
       await connection.commit()
+      
+      // Registrar actividad después del commit
+      await Horario.registrarActividadHorario({
+        accion: 'cerrar',
+        reserva_id: reserva_id,
+        descripcion: `Horario cerrado: "${horario?.descripcion}" | Lab: ${horario?.laboratorio || 'N/A'} | Docente: ${horario?.docente || 'N/A'} | Escuela: ${horario?.escuela || 'N/A'} | Ciclo: ${horario?.ciclo || 'N/A'} | ${new Date(horario?.fecha_inicio).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })} ${new Date(horario?.fecha_inicio).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} - ${new Date(horario?.fecha_fin).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} | ${horario?.cantidad_alumnos} alumnos`,
+        usuario_id,
+        ip_address
+      })
     } catch (error) {
       await connection.rollback()
       throw error
@@ -222,11 +234,14 @@ export const horarioService = {
     }
   },
 
-  async cerrarHorarioConInsumos(reserva_id, laboratorio_id, tipo_movimiento, fecha_movimiento, detalles, observaciones, usuario_id) {
+  async cerrarHorarioConInsumos(reserva_id, laboratorio_id, tipo_movimiento, fecha_movimiento, detalles, observaciones, usuario_id, ip_address) {
     const horarioExists = await Horario.exitsById(reserva_id)
     if (!horarioExists) throw new AppError('Horario no encontrado', 404)
     const yaCerrado = await Horario.estadoHorario(reserva_id)
     if (yaCerrado) throw new AppError('El Horario está cerrado', 409)
+
+    // Obtener información del horario
+    const horario = await Horario.getHorarioById(reserva_id)
 
     const connection = await pool.getConnection()
     try {
@@ -234,8 +249,74 @@ export const horarioService = {
       await Horario.cerrarHorario(reserva_id, connection)
       const movimientoId = await Inventario.insertarMovimiento(connection, usuario_id, fecha_movimiento, laboratorio_id, tipo_movimiento, reserva_id, observaciones)
       await Inventario.procesarDetallesMovimiento(connection, movimientoId, tipo_movimiento, detalles)
+      
+      // Marcar que tiene consumo de insumos
+      await connection.execute(
+        'UPDATE reservas SET tiene_consumo_insumos = 1 WHERE id = ?',
+        [reserva_id]
+      )
+      
       await connection.commit()
+      
+      // Registrar actividad después del commit
+      await Horario.registrarActividadHorario({
+        accion: 'cerrar',
+        reserva_id: reserva_id,
+        descripcion: `Horario cerrado con consumo de insumos: "${horario?.descripcion}" | Lab: ${horario?.laboratorio || 'N/A'} | Docente: ${horario?.docente || 'N/A'} | Escuela: ${horario?.escuela || 'N/A'} | Ciclo: ${horario?.ciclo || 'N/A'} | ${new Date(horario?.fecha_inicio).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })} ${new Date(horario?.fecha_inicio).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} - ${new Date(horario?.fecha_fin).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} | ${horario?.cantidad_alumnos} alumnos | Movimiento ID: ${movimientoId}`,
+        usuario_id,
+        ip_address
+      })
+      
       return { movimiento_id: movimientoId }
+    } catch (error) {
+      await connection.rollback()
+      throw error
+    } finally {
+      connection.release()
+    }
+  },
+
+  async reabrirHorario(reserva_id, usuario_id, ip_address) {
+    const horarioExists = await Horario.exitsById(reserva_id)
+    if (!horarioExists) throw new AppError('Horario no encontrado', 404)
+    const estaCerrado = await Horario.estadoHorario(reserva_id)
+    if (!estaCerrado) throw new AppError('El horario no está cerrado', 409)
+
+    // Verificar si tiene movimiento asociado
+    const movimiento = await Horario.getMovimientoByReservaId(reserva_id)
+    
+    // Obtener información del horario
+    const horario = await Horario.getHorarioById(reserva_id)
+
+    const connection = await pool.getConnection()
+    try {
+      await connection.beginTransaction()
+      
+      // Si tiene movimiento, eliminarlo (esto revierte los saldos automáticamente)
+      if (movimiento) {
+        await Inventario.eliminarMovimientoInventario(connection, movimiento.id)
+        // Desmarcar que tiene consumo de insumos
+        await connection.execute(
+          'UPDATE reservas SET tiene_consumo_insumos = 0 WHERE id = ?',
+          [reserva_id]
+        )
+      }
+      
+      // Reabrir el horario
+      await Horario.reabrirHorario(reserva_id, connection)
+      
+      await connection.commit()
+      
+      // Registrar actividad después del commit
+      await Horario.registrarActividadHorario({
+        accion: 'reabrir',
+        reserva_id: reserva_id,
+        descripcion: `Horario reabierto${movimiento ? ' (movimiento de inventario eliminado)' : ''}: "${horario?.descripcion}" | Lab: ${horario?.laboratorio || 'N/A'} | Docente: ${horario?.docente || 'N/A'} | Escuela: ${horario?.escuela || 'N/A'} | Ciclo: ${horario?.ciclo || 'N/A'} | ${new Date(horario?.fecha_inicio).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })} ${new Date(horario?.fecha_inicio).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} - ${new Date(horario?.fecha_fin).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} | ${horario?.cantidad_alumnos} alumnos`,
+        usuario_id,
+        ip_address
+      })
+      
+      return { tiene_movimiento: !!movimiento, movimiento_id: movimiento?.id }
     } catch (error) {
       await connection.rollback()
       throw error
@@ -261,10 +342,12 @@ export const horarioService = {
     const horario = await Horario.getHorarioById(horarioId)
     if (!horario) throw new AppError('Horario no encontrado o sin permisos para verlo', 404)
     const insumos = await Horario.getInsumosRequeridosByHorario(horarioId)
+    const insumosConsumidos = await Horario.getInsumosConsumidosByHorario(horarioId)
     const equipos = await Horario.getEquiposRequeridosByHorario(horarioId)
     return {
       ...horario,
       insumos: insumos || [],
+      insumos_consumidos: insumosConsumidos || [],
       equipos: equipos || []
     }
   },

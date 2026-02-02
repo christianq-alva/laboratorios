@@ -106,6 +106,7 @@ export const Horario = {
           r.fecha_fin,
           r.cantidad_alumnos,
           r.estado,
+          r.tiene_consumo_insumos,
           l.nombre as laboratorio,
           d.nombre as docente,
           e.nombre as escuela,
@@ -150,6 +151,31 @@ export const Horario = {
             JOIN insumos i ON dri.insumo_id = i.id
             JOIN unidades u ON i.unidad_id = u.id
             WHERE dri.reserva_id = ?
+            ORDER BY i.nombre
+        `, [reserva_id])
+        return insumos;
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
+    },
+    getInsumosConsumidosByHorario: async (reserva_id) => {
+        try {
+        const [insumos] = await pool.execute(`
+            SELECT 
+              i.id,
+              i.codigo,
+              i.nombre,
+              i.categoria,
+              u.nombre as unidad_nombre,
+              u.simbolo as unidad_simbolo,
+              SUM(mid.cantidad) as cantidad_consumida
+            FROM movimientos_insumos m
+            INNER JOIN movimiento_insumo_detalle mid ON m.id = mid.movimiento_id
+            INNER JOIN insumos i ON mid.insumo_id = i.id
+            INNER JOIN unidades u ON i.unidad_id = u.id
+            WHERE m.reserva_id = ? 
+              AND m.tipo_movimiento = 'salida'
+            GROUP BY i.id, i.codigo, i.nombre, i.categoria, u.nombre, u.simbolo
             ORDER BY i.nombre
         `, [reserva_id])
         return insumos;
@@ -551,6 +577,30 @@ export const Horario = {
             SET estado = 'C'
             WHERE id = ?`,
             [reserva_id])
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
+    },
+    reabrirHorario: async (reserva_id, connection) => {
+        try {
+        await connection.execute(`
+            UPDATE reservas
+            SET estado = 'P'
+            WHERE id = ?`,
+            [reserva_id])
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
+    },
+    getMovimientoByReservaId: async (reserva_id) => {
+        try {
+        const [result] = await pool.execute(`
+            SELECT id, tipo_movimiento, fecha_movimiento, observaciones
+            FROM movimientos_insumos
+            WHERE reserva_id = ?
+            LIMIT 1`,
+            [reserva_id])
+        return result[0] || null
         } catch (error) {
             handleDBError(error, 'Horario')
         }

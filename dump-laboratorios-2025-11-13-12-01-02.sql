@@ -140,7 +140,7 @@ INSERT INTO `actividad_equipos` (`id`, `accion`, `equipo_id`, `descripcion`, `us
 DROP TABLE IF EXISTS `actividad_horarios`;
 CREATE TABLE `actividad_horarios` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `accion` enum('crear','editar','eliminar','ver') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `accion` enum('crear','editar','eliminar') COLLATE utf8mb4_unicode_ci NOT NULL,
   `reserva_id` int NOT NULL,
   `descripcion` text COLLATE utf8mb4_unicode_ci,
   `fecha_actividad` timestamp NULL DEFAULT CURRENT_TIMESTAMP,

@@ -29,7 +29,8 @@ import {
   CalendarToday,
   People,
   CheckCircle,
-  LockOpen
+  Refresh,
+  Warning
 } from '@mui/icons-material'
 import { horarioService, type HorarioFull } from '../../services/horarioService'
 import { RegistrarInsumosUsadosModal } from './RegistrarInsumosUsadosModal'
@@ -52,6 +53,8 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
   const [error, setError] = useState<string | null>(null)
   const [registrarInsumosOpen, setRegistrarInsumosOpen] = useState(false)
   const [confirmacionDialogOpen, setConfirmacionDialogOpen] = useState(false)
+  const [confirmarReabrirOpen, setConfirmarReabrirOpen] = useState(false)
+  const [tieneMovimiento, setTieneMovimiento] = useState(false)
 
   // Cargar detalles del horario
   const loadHorario = async () => {
@@ -95,7 +98,6 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
   }
 
   const handleCerrarHorario = async () => {
-
     console.log('Cerrando horario sin insumos: ', horarioId)
 
     setConfirmacionDialogOpen(false)
@@ -110,6 +112,36 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
   const handleRegistrarInsumosSuccess = () => {
     setRegistrarInsumosOpen(false)
     loadHorario() // Recargar datos
+  }
+
+  // Función para verificar si tiene movimiento y mostrar modal de confirmación
+  const handleReabrirClick = () => {
+    // El campo tiene_consumo_insumos es TINYINT(1), devuelve 0 o 1 como número
+    const tieneMovimiento = horario?.tiene_consumo_insumos === 1
+    setTieneMovimiento(tieneMovimiento)
+    setConfirmarReabrirOpen(true)
+  }
+
+  // Función para reabrir horario
+  const handleReabrirHorario = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await execute(() => horarioService.reabrirHorario(horarioId))
+      
+      if (response.error) {
+        setError(response.error)
+      } else {
+        // Recargar horario
+        await loadHorario()
+        setConfirmarReabrirOpen(false)
+        setTieneMovimiento(false)
+      }
+    } catch (err) {
+      setError('Error al reabrir el horario')
+    } finally {
+      setLoading(false)
+    }
   }
 
   // Función para formatear hora
@@ -173,6 +205,23 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                 {horario.descripcion}
               </Typography>
             </Paper>
+
+            {/* Alerta de consumo de insumos */}
+            {horario.estado === 'C' && horario.tiene_consumo_insumos === 1 && (
+              <Alert 
+                severity="info" 
+                icon={<Inventory />}
+                sx={{ mb: 3 }}
+              >
+                <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
+                  Este horario tiene un movimiento de inventario asociado
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Se registró el consumo real de insumos al cerrar este horario. 
+                  Los saldos de inventario fueron actualizados según el consumo registrado.
+                </Typography>
+              </Alert>
+            )}
 
             {/* Información de la clase */}
             <Paper sx={{ p: 3, mb: 3 }}>
@@ -382,14 +431,25 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
         <Button onClick={handleClose} variant="outlined">
           Cerrar
         </Button>
-        {horario && (
+        {horario && horario.estado === 'P' && (
           <Button
             variant="contained"
             color="success"
-            startIcon={horario.estado === 'P' ? <CheckCircle /> : <LockOpen />}
+            startIcon={<CheckCircle />}
             onClick={handleOpenRegistrarInsumos}
-            disabled={horario.estado === 'C'}
-          >{horario.estado === 'P' ? 'Cerrar Horario' : 'Horario Cerrado'}
+          >
+            Cerrar Horario
+          </Button>
+        )}
+        {horario && horario.estado === 'C' && (
+          <Button
+            variant="contained"
+            color="success"
+            startIcon={<Refresh />}
+            onClick={handleReabrirClick}
+            disabled={loading}
+          >
+            Reabrir Horario
           </Button>
         )}
       </DialogActions>
@@ -447,6 +507,58 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
             color="warning"
           >
             Registrar insumos
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Diálogo de confirmación para reabrir horario */}
+      <Dialog
+        open={confirmarReabrirOpen}
+        onClose={() => setConfirmarReabrirOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Warning color="warning" />
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Confirmar Reapertura
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            ¿Estás seguro de que deseas reabrir este horario?
+          </Typography>
+          {tieneMovimiento && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                <strong>Advertencia:</strong> Este horario tiene un movimiento de inventario asociado 
+                que será eliminado al reabrir. Los saldos de los insumos serán revertidos automáticamente.
+              </Typography>
+            </Alert>
+          )}
+          <Typography variant="body2" color="text.secondary">
+            Al reabrir el horario, podrás editarlo nuevamente.
+            {tieneMovimiento && ' El movimiento de inventario será eliminado y los saldos revertidos.'}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ gap: 1 }}>
+          <Button
+            onClick={() => setConfirmarReabrirOpen(false)}
+            variant="outlined"
+            disabled={loading}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleReabrirHorario}
+            variant="contained"
+            color="success"
+            disabled={loading}
+            startIcon={loading ? <CircularProgress size={20} /> : <Refresh />}
+          >
+            {loading ? 'Reabriendo...' : 'Reabrir Horario'}
           </Button>
         </DialogActions>
       </Dialog>

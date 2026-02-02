@@ -233,7 +233,7 @@ export const Inventario = {
       // Si el movimiento está asociado a una reserva, actualizar el estado de la reserva
       await connection.execute(`
         UPDATE reservas
-        SET estado = 'P'
+        SET estado = 'P', tiene_consumo_insumos = 0
         WHERE id = ?
       `, [movimientoInfo[0][0].reserva_id]);
     }
