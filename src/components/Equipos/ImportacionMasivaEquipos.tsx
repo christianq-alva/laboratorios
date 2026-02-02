@@ -89,7 +89,7 @@ interface ResultadoImportacion {
   }>
 }
 
-type Step = 'filtros' | 'subida' | 'preview' | 'resultado'
+type Step = 'subida' | 'preview' | 'resultado'
 
 export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> = ({ open, onClose, onSuccess }) => {
   const { execute } = useApi()
@@ -174,19 +174,34 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
 
       if (!validTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls)$/i)) {
         setError('Por favor selecciona un archivo Excel válido (.xlsx o .xls)')
+        setSelectedFile(null)
         return
       }
 
       if (file.size > 5 * 1024 * 1024) {
         setError('El archivo es demasiado grande. Máximo 5MB.')
+        setSelectedFile(null)
         return
       }
 
       setSelectedFile(file)
       setError(null)
-      setCurrentStep('preview')
-      handlePrevisualizarArchivo(file)
     }
+  }
+
+  const handleSiguiente = async () => {
+    if (!selectedFile) {
+      setError('Por favor selecciona un archivo Excel')
+      return
+    }
+
+    if (!filters.laboratorio_id) {
+      setError('Por favor selecciona un laboratorio')
+      return
+    }
+
+    setCurrentStep('preview')
+    handlePrevisualizarArchivo(selectedFile)
   }
 
   const handlePrevisualizarArchivo = async (file: File) => {
@@ -250,7 +265,6 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
 
   const getStepLabel = (step: Step): string => {
     const labels: Record<Step, string> = {
-      filtros: 'Filtros',
       subida: 'Subir Archivo',
       preview: 'Previsualizar Datos',
       resultado: 'Confirmar Reabastecimiento'
@@ -259,7 +273,7 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
   }
 
   const getStepNumber = (step: Step): number => {
-    const steps: Step[] = ['filtros', 'subida', 'preview', 'resultado']
+    const steps: Step[] = ['subida', 'preview', 'resultado']
     return steps.indexOf(step) + 1
   }
 
@@ -274,7 +288,7 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
       <DialogTitle sx={{ pb: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Carga Masiva de Stock
+            Importación Masiva de Equipos
           </Typography>
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
             <Button
@@ -301,14 +315,14 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
           </Alert>
         )}
 
-        {/* Filtros siempre visibles y editables - Estilo compacto similar a la imagen */}
+        {/* Filtros siempre visibles y editables - Estilo compacto */}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2, mb: 3, pb: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
-          <FormControl fullWidth size="small">
-            <InputLabel>Laboratorio *</InputLabel>
+          <FormControl fullWidth size="small" required>
+            <InputLabel>Laboratorio</InputLabel>
             <Select
               value={filters.laboratorio_id}
               onChange={(e) => setFilters({ ...filters, laboratorio_id: e.target.value })}
-              label="Laboratorio *"
+              label="Laboratorio"
               disabled={loadingLabs}
             >
               <MenuItem value="">
@@ -321,10 +335,12 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
               ))}
             </Select>
           </FormControl>
+          <Box /> {/* Espacio vacío para mantener el grid de 3 columnas */}
+          <Box /> {/* Espacio vacío para mantener el grid de 3 columnas */}
         </Box>
 
-        {/* Pasos visuales */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, px: 2 }}>
+        {/* Indicador visual de pasos */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, px: 2 }}>
           {(['subida', 'preview', 'resultado'] as const).map((step, index) => {
             const stepNum = getStepNumber(step)
             const currentNum = getStepNumber(currentStep)
@@ -344,8 +360,8 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
                 >
                   <Box
                     sx={{
-                      width: 48,
-                      height: 48,
+                      width: 40,
+                      height: 40,
                       borderRadius: '50%',
                       display: 'flex',
                       alignItems: 'center',
@@ -353,10 +369,10 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
                       fontWeight: 600,
                       backgroundColor: isActive ? 'primary.main' : isCompleted ? 'primary.main' : 'grey.300',
                       color: 'white',
-                      fontSize: '1rem'
+                      fontSize: '0.875rem'
                     }}
                   >
-                    {isCompleted ? <CheckCircle /> : stepNum}
+                    {isCompleted ? <CheckCircle sx={{ fontSize: 24 }} /> : stepNum}
                   </Box>
                   <Typography variant="caption" sx={{ textAlign: 'center', fontSize: '0.75rem', fontWeight: 500 }}>
                     {getStepLabel(step)}
@@ -386,7 +402,7 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
               Subir Archivo
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 4, maxWidth: 500, mx: 'auto' }}>
-              Selecciona el archivo Excel completado con los datos de stock que deseas importar.
+              Selecciona el archivo Excel completado con los datos de equipos que deseas importar.
             </Typography>
 
             <input
@@ -525,6 +541,15 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
             <Button onClick={handleClose} variant="outlined" color="inherit">
               Cancelar
             </Button>
+            {currentStep === 'subida' && (
+              <Button
+                onClick={handleSiguiente}
+                variant="contained"
+                disabled={!selectedFile || !filters.laboratorio_id || loading}
+              >
+                {loading ? <CircularProgress size={20} /> : 'Siguiente'}
+              </Button>
+            )}
             {currentStep === 'preview' && (
               <Button
                 onClick={handleProcesarArchivo}
