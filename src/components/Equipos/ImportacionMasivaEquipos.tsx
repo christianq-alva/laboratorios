@@ -32,7 +32,8 @@ import {
   Error as ErrorIcon,
   Warning,
   Download,
-  Upload
+  Upload,
+  FileUpload
 } from '@mui/icons-material'
 import { equipoService } from '../../services/equipoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
@@ -91,7 +92,7 @@ type Step = 'filtros' | 'subida' | 'preview' | 'resultado'
 
 export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> = ({ open, onClose, onSuccess }) => {
   const { execute } = useApi()
-  const [currentStep, setCurrentStep] = useState<Step>('filtros')
+  const [currentStep, setCurrentStep] = useState<Step>('subida')
   const [loading, setLoading] = useState(false)
   const [loadingLabs, setLoadingLabs] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -102,9 +103,7 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
   const [plantillaDescargada, setPlantillaDescargada] = useState(false)
 
   const [filters, setFilters] = useState({
-    laboratorio_id: '',
-    fecha_movimiento: new Date().toISOString().split('T')[0],
-    referencia: ''
+    laboratorio_id: ''
   })
 
   useEffect(() => {
@@ -129,16 +128,14 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
   }
 
   const handleClose = () => {
-    setCurrentStep('filtros')
+    setCurrentStep('descarga')
     setSelectedFile(null)
     setPreview(null)
     setResultado(null)
     setError(null)
     setPlantillaDescargada(false)
     setFilters({
-      laboratorio_id: '',
-      fecha_movimiento: new Date().toISOString().split('T')[0],
-      referencia: ''
+      laboratorio_id: ''
     })
     onClose()
   }
@@ -220,7 +217,7 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
   }
 
   const handleReiniciar = () => {
-    setCurrentStep('filtros')
+    setCurrentStep('descarga')
     setSelectedFile(null)
     setPreview(null)
     setResultado(null)
@@ -289,48 +286,27 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
           </Alert>
         )}
 
-        {/* Panel de Filtros Persistente - Editable en todas las pantallas */}
-        <Paper sx={{ p: 2.5, mb: 3, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2 }}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Laboratorio *</InputLabel>
-              <Select
-                value={filters.laboratorio_id}
-                onChange={(e) => setFilters({ ...filters, laboratorio_id: e.target.value })}
-                label="Laboratorio *"
-                disabled={loadingLabs || currentStep === 'resultado'}
-              >
-                <MenuItem value="">
-                  <em>Selecciona un laboratorio</em>
+        {/* Filtros siempre visibles y editables - Estilo compacto similar a la imagen */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2, mb: 3, pb: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
+          <FormControl fullWidth size="small">
+            <InputLabel>Laboratorio *</InputLabel>
+            <Select
+              value={filters.laboratorio_id}
+              onChange={(e) => setFilters({ ...filters, laboratorio_id: e.target.value })}
+              label="Laboratorio *"
+              disabled={loadingLabs}
+            >
+              <MenuItem value="">
+                <em>Selecciona un laboratorio</em>
+              </MenuItem>
+              {laboratorios.map((lab) => (
+                <MenuItem key={lab.id} value={lab.id.toString()}>
+                  {lab.nombre}
                 </MenuItem>
-                {laboratorios.map((lab) => (
-                  <MenuItem key={lab.id} value={lab.id.toString()}>
-                    {lab.nombre}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <TextField
-              type="date"
-              label="Fecha del Movimiento *"
-              value={filters.fecha_movimiento}
-              onChange={(e) => setFilters({ ...filters, fecha_movimiento: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-              size="small"
-              disabled={currentStep === 'resultado'}
-            />
-
-            <TextField
-              label="Referencia"
-              placeholder="Referencia"
-              value={filters.referencia}
-              onChange={(e) => setFilters({ ...filters, referencia: e.target.value })}
-              size="small"
-              disabled={currentStep === 'resultado'}
-            />
-          </Box>
-        </Paper>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
 
         {/* Pasos visuales */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, px: 2 }}>
@@ -387,51 +363,10 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
           })}
         </Box>
 
-        {/* Paso 1: Filtros */}
-        {currentStep === 'filtros' && (
-          <Box sx={{ py: 2 }}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2, mb: 3 }}>
-              <FormControl fullWidth>
-                <InputLabel>Laboratorio *</InputLabel>
-                <Select
-                  value={filters.laboratorio_id}
-                  onChange={(e) => setFilters({ ...filters, laboratorio_id: e.target.value })}
-                  label="Laboratorio *"
-                  disabled={loadingLabs}
-                >
-                  <MenuItem value="">
-                    <em>Selecciona un laboratorio</em>
-                  </MenuItem>
-                  {laboratorios.map((lab) => (
-                    <MenuItem key={lab.id} value={lab.id.toString()}>
-                      {lab.nombre}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <TextField
-                type="date"
-                label="Fecha del Movimiento *"
-                value={filters.fecha_movimiento}
-                onChange={(e) => setFilters({ ...filters, fecha_movimiento: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-              />
-
-              <TextField
-                label="Referencia"
-                placeholder="Referencia"
-                value={filters.referencia}
-                onChange={(e) => setFilters({ ...filters, referencia: e.target.value })}
-              />
-            </Box>
-          </Box>
-        )}
-
         {/* Paso 1: Subir Archivo */}
         {currentStep === 'subida' && (
           <Box sx={{ py: 4, textAlign: 'center' }}>
-            <Upload sx={{ fontSize: 80, color: 'secondary.main', mb: 2 }} />
+            <FileUpload sx={{ fontSize: 80, color: 'secondary.main', mb: 2 }} />
             <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
               Subir Archivo
             </Typography>
@@ -460,7 +395,7 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
           </Box>
         )}
 
-        {/* Paso 3: Preview */}
+        {/* Paso 2: Preview */}
         {currentStep === 'preview' && preview && (
           <Box>
             <Paper sx={{ p: 2, mb: 3, bgcolor: 'info.50', border: '1px solid', borderColor: 'info.main' }}>
@@ -511,7 +446,7 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
           </Box>
         )}
 
-        {/* Paso 4: Resultado */}
+        {/* Paso 3: Resultado */}
         {currentStep === 'resultado' && resultado && (
           <Box sx={{ py: 2 }}>
             <Paper sx={{ p: 3, mb: 3, bgcolor: resultado.success ? 'success.50' : 'warning.50', border: '1px solid', borderColor: resultado.success ? 'success.main' : 'warning.main' }}>
@@ -564,10 +499,11 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
           </>
         ) : (
           <>
-            {currentStep !== 'subida' && (
+            {currentStep !== 'descarga' && (
               <Button 
                 onClick={() => {
-                  if (currentStep === 'preview') setCurrentStep('subida')
+                  if (currentStep === 'subida') setCurrentStep('descarga')
+                  else if (currentStep === 'preview') setCurrentStep('subida')
                 }} 
                 variant="outlined"
               >
@@ -577,13 +513,9 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
             <Button onClick={handleClose} variant="outlined" color="inherit">
               Cancelar
             </Button>
-            {currentStep === 'subida' && (
-              <Button
-                onClick={() => {}}
-                variant="contained"
-                disabled={!filters.laboratorio_id || !filters.fecha_movimiento}
-              >
-                Archivo seleccionado
+            {currentStep === 'descarga' && (
+              <Button onClick={() => setCurrentStep('subida')} variant="contained">
+                Siguiente
               </Button>
             )}
             {currentStep === 'preview' && (

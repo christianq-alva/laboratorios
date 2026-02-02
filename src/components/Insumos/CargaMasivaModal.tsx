@@ -7,9 +7,6 @@ import {
   Button,
   Box,
   Typography,
-  Stepper,
-  Step,
-  StepLabel,
   Alert,
   LinearProgress,
   Table,
@@ -33,7 +30,9 @@ import {
   CheckCircle,
   Error,
   Delete,
-  Refresh
+  Refresh,
+  Close,
+  FileUpload
 } from '@mui/icons-material'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
 import dayjs from 'dayjs'
@@ -64,8 +63,7 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
   const [comentario, setComentario] = useState('');
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
   const [laboratorioId, setLaboratorioId] = useState<number>(0);
-  const [loadingData, setLoadingData] = useState(false);
-  const [activeStep, setActiveStep] = useState(0)
+  const [activeStep, setActiveStep] = useState(1)
   const [archivo, setArchivo] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -73,7 +71,6 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
   const [procesando, setProcesando] = useState(false)
 
   const steps = [
-    'Descargar Plantilla',
     'Subir Archivo',
     'Previsualizar Datos',
     'Confirmar Reabastecimiento'
@@ -81,30 +78,24 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
 
   useEffect(() => {
     if (open) {
-      if (!open) console.log("loadingData", loadingData) //Observación: Hay que borrarlo      
       loadInitialData()
-    } else {
-      handleClose
     }
   }, [open])
 
   const loadInitialData = async () => {
-    setLoadingData(true)
     try {
       setFechaMovimiento(new Date().toISOString().split('T')[0])
       const response = await laboratorioService.getAll()
       const sortedLaboratorios = [...(response.data || [])].sort((a, b) => a.nombre.localeCompare(b.nombre))
       setLaboratorios(sortedLaboratorios)
-    } catch (error: any) {
+    } catch (error) {
       setError('Error al cargar laboratorios')
       console.error('Error:', error)
-    } finally {
-      setLoadingData(false)
     }
   }
 
   const handleClose = () => {
-    setActiveStep(0)
+    setActiveStep(1)
     setArchivo(null)
     setError(null)
     setResultado(null)
@@ -135,8 +126,6 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
       link.click()
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
-
-      setActiveStep(1)
     } catch (err: any) {
       setError(err.message || 'Error al descargar la plantilla')
     } finally {
@@ -212,88 +201,76 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
 
   const renderStepContent = () => {
     switch (activeStep) {
-      case 0:
-        return (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Download sx={{ fontSize: 64, color: 'primary.main', mb: 2 }} />
-            <Typography variant="h6" gutterBottom>
-              Descargar Plantilla Excel
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Descarga la plantilla Excel que contiene el formato correcto para la carga masiva de stock.
-              La plantilla incluye ejemplos y listas de códigos de insumos y laboratorios disponibles.
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<Download />}
-              onClick={descargarPlantilla}
-              disabled={loading}
-              size="large"
-            >
-              {loading ? 'Descargando...' : 'Descargar Plantilla'}
-            </Button>
-          </Box>
-        )
-
       case 1:
         return (
-          <Box sx={{ py: 2 }}>
-            <Box sx={{ textAlign: 'center', mb: 3 }}>
-              <CloudUpload sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />
-              <Typography variant="h6" gutterBottom>
-                Subir Archivo Excel
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Selecciona el archivo Excel completado con los datos de reabastecimiento
-              </Typography>
-            </Box>
+          <Box sx={{ py: 4, textAlign: 'center' }}>
+            <FileUpload sx={{ fontSize: 80, color: 'secondary.main', mb: 2 }} />
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+              Subir Archivo
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 4, maxWidth: 500, mx: 'auto' }}>
+              Selecciona el archivo Excel completado con los datos de stock que deseas importar.
+            </Typography>
 
-            <Box sx={{ border: 2, borderColor: 'grey.300', borderStyle: 'dashed', borderRadius: 2, p: 3, textAlign: 'center' }}>
-              <input
-                accept=".xlsx,.xls"
-                style={{ display: 'none' }}
-                id="archivo-excel"
-                type="file"
-                onChange={handleFileChange}
-              />
-              <label htmlFor="archivo-excel">
-                <Button variant="outlined" component="span" startIcon={<CloudUpload />}>
-                  Seleccionar Archivo Excel
-                </Button>
-              </label>
-
-              {archivo && (
-                <Box sx={{ mt: 2 }}>
-                  <Chip
-                    label={archivo.name}
-                    onDelete={() => setArchivo(null)}
-                    deleteIcon={<Delete />}
-                    color="primary"
-                    variant="outlined"
-                  />
-                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                    Tamaño: {(archivo.size / 1024).toFixed(1)} KB
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-
-            <Box sx={{ mt: 3, textAlign: 'center' }}>
+            <input
+              accept=".xlsx,.xls"
+              style={{ display: 'none' }}
+              id="archivo-excel"
+              type="file"
+              onChange={handleFileChange}
+            />
+            <label htmlFor="archivo-excel">
               <Button
                 variant="contained"
-                onClick={procesarArchivo}
-                disabled={!archivo || loading}
-                startIcon={loading ? <Refresh className="animate-spin" /> : <Preview />}
+                component="span"
+                startIcon={<CloudUpload />}
+                color="secondary"
+                sx={{ borderRadius: 2, minWidth: 200 }}
               >
-                {loading ? 'Procesando...' : 'Procesar Archivo'}
+                Seleccionar Archivo
               </Button>
-            </Box>
+            </label>
+
+            {archivo && (
+              <Box sx={{ mt: 3 }}>
+                <Chip
+                  label={archivo.name}
+                  onDelete={() => setArchivo(null)}
+                  deleteIcon={<Delete />}
+                  color="primary"
+                  variant="outlined"
+                />
+                <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                  Tamaño: {(archivo.size / 1024).toFixed(1)} KB
+                </Typography>
+              </Box>
+            )}
+
+            {archivo && (
+              <Box sx={{ mt: 3, textAlign: 'center' }}>
+                <Button
+                  variant="contained"
+                  onClick={procesarArchivo}
+                  disabled={loading}
+                  startIcon={loading ? <Refresh className="animate-spin" /> : <Preview />}
+                >
+                  {loading ? 'Procesando...' : 'Procesar Archivo'}
+                </Button>
+              </Box>
+            )}
           </Box>
         )
 
       case 2:
         return (
           <Box sx={{ py: 2 }}>
+            <Paper sx={{ p: 2, mb: 3, bgcolor: 'success.50', border: '1px solid', borderColor: 'success.light' }}>
+              <Typography variant="body2" sx={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CheckCircle sx={{ color: 'success.main' }} />
+                {resultado?.registros_validos} insumos encontrados y validados
+              </Typography>
+            </Paper>
+
             <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Preview color="primary" />
               Previsualización de Datos
@@ -446,56 +423,114 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
         sx: { minHeight: '600px' }
       }}
     >
-      <DialogTitle>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <CloudUpload color="primary" />
-          Carga Masiva de Stock
+      <DialogTitle sx={{ pb: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Carga Masiva de Stock
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <Button
+              startIcon={<Download />}
+              onClick={descargarPlantilla}
+              disabled={loading}
+              size="small"
+              variant="outlined"
+              sx={{ borderRadius: 2 }}
+            >
+              {loading ? 'Descargando...' : 'Descargar Plantilla'}
+            </Button>
+            <Button onClick={handleClose} color="inherit" sx={{ minWidth: 'auto' }}>
+              <Close />
+            </Button>
+          </Box>
         </Box>
       </DialogTitle>
 
-
-      <DialogContent>
-        {/* Campos del encabezado */}
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', flexWrap: 'nowrap', overflow: 'auto', gap: 2, mb: 2, p: 2 }}>
-          <FormControl sx={{ minWidth: 220, flex: 1 }} required>
+      <DialogContent sx={{ pt: 3 }}>
+        {/* Filtros siempre visibles y editables - Estilo compacto */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2, mb: 3, pb: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
+          <FormControl fullWidth size="small" required>
             <InputLabel>Laboratorio</InputLabel>
             <Select
               value={laboratorioId}
               onChange={(e) => setLaboratorioId(Number(e.target.value))}
               label="Laboratorio"
             >
+              <MenuItem value={0}>
+                <em>Selecciona un laboratorio</em>
+              </MenuItem>
               {laboratorios.map(lab => (
                 <MenuItem key={lab.id} value={lab.id}>
-                  {lab.nombre} - {lab.ubicacion}
+                  {lab.nombre}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
           <TextField
-            sx={{ minWidth: 180 }}
             type="date"
             label="Fecha del Movimiento"
             value={fechaMovimiento}
             onChange={(e) => setFechaMovimiento(e.target.value)}
             InputLabelProps={{ shrink: true }}
             required
+            size="small"
           />
           <TextField
-            fullWidth
             label="Referencia"
             value={comentario}
             onChange={(e) => setComentario(e.target.value)}
             placeholder="Referencia del reabastecimiento"
+            size="small"
           />
         </Box>
-        {/* Stepper */}
-        <Stepper activeStep={activeStep} sx={{ mb: 4, pl: 2, pr: 2 }}>
-          {steps.map((label) => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
+
+        {/* Indicador visual de pasos */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, px: 2 }}>
+          {steps.map((label, index) => (
+            <React.Fragment key={label}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 1,
+                  opacity: activeStep >= index + 1 ? 1 : 0.5
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 600,
+                    backgroundColor: activeStep === index + 1 ? 'primary.main' : activeStep > index + 1 ? 'primary.main' : 'grey.300',
+                    color: 'white',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  {activeStep > index + 1 ? <CheckCircle sx={{ fontSize: 24 }} /> : index + 1}
+                </Box>
+                <Typography variant="caption" sx={{ textAlign: 'center', fontSize: '0.75rem', fontWeight: 500 }}>
+                  {label}
+                </Typography>
+              </Box>
+
+              {index < steps.length - 1 && (
+                <Box
+                  sx={{
+                    flex: 1,
+                    height: 3,
+                    backgroundColor: activeStep > index + 1 ? 'primary.main' : 'grey.300',
+                    mx: 1
+                  }}
+                />
+              )}
+            </React.Fragment>
           ))}
-        </Stepper>
+        </Box>
 
         {/* Loading indicator */}
         {loading && (
@@ -515,17 +550,26 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
         {renderStepContent()}
       </DialogContent>
 
-      <DialogActions>
-        <Button onClick={handleClose}>
-          {activeStep === 3 ? 'Cerrar' : 'Cancelar'}
-        </Button>
-        {activeStep > 0 && activeStep < 3 && (
-          <Button
-            onClick={() => setActiveStep(activeStep - 1)}
-            disabled={loading || procesando}
-          >
-            Atrás
+      <DialogActions sx={{ px: 3, pb: 3 }}>
+        {activeStep === 3 ? (
+          <Button onClick={handleClose} variant="contained">
+            Cerrar
           </Button>
+        ) : (
+          <>
+            {activeStep > 1 && (
+              <Button
+                onClick={() => setActiveStep(activeStep - 1)}
+                disabled={loading || procesando}
+                variant="outlined"
+              >
+                Atrás
+              </Button>
+            )}
+            <Button onClick={handleClose} variant="outlined" color="inherit">
+              Cancelar
+            </Button>
+          </>
         )}
       </DialogActions>
     </Dialog>
