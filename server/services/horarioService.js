@@ -95,7 +95,6 @@ export const horarioService = {
       if (equipos && equipos.length > 0) {
         await Horario.createHorarioEquipos(reserva_id, equipos, connection)
       }
-      await connection.commit()
       const labInfo = await Laboratorio.getLaboratorioById(laboratorio_id)
       await Horario.registrarActividadHorario({
         accion: 'crear',
@@ -103,7 +102,8 @@ export const horarioService = {
         descripcion: `Horario creado: "${descripcion}" | Lab: ${labInfo?.nombre || 'N/A'} | Docente: ${docenteInfo?.nombre || 'N/A'} | Escuela: ${escuelaInfo?.nombre || 'N/A'} | Ciclo: ${cicloInfo?.nombre || 'N/A'} | ${new Date(fechaInicioMySQL).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })} ${new Date(fechaInicioMySQL).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} - ${new Date(fechaFinMySQL).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} | ${cantidad_alumnos} alumnos`,
         usuario_id,
         ip_address
-      })
+      }, connection)
+      await connection.commit()
       return { reserva_id, insumos_procesados: insumos?.length || 0, equipos_procesados: equipos?.length || 0 }
     } catch (error) {
       await connection.rollback()
@@ -130,6 +130,8 @@ export const horarioService = {
     }
     const horarioExists = await Horario.exitsById(horarioId)
     if (!horarioExists) throw new AppError('Horario no encontrado', 404)
+    const horario = await Horario.getHorarioById(horarioId)
+    if (horario?.estado === 'C') throw new AppError('Horario cerrado, no se puede editar', 409)
 
     const fechaInicioMySQL = convertirFechaParaMySQL(fecha_inicio)
     const fechaFinMySQL = convertirFechaParaMySQL(fecha_fin)
@@ -148,7 +150,6 @@ export const horarioService = {
       if (equipos && equipos.length > 0) {
         await Horario.createHorarioEquipos(horarioId, equipos, connection)
       }
-      await connection.commit()
       const labInfo = await Laboratorio.getLaboratorioById(laboratorio_id)
       await Horario.registrarActividadHorario({
         accion: 'editar',
@@ -156,7 +157,8 @@ export const horarioService = {
         descripcion: `Horario editado: "${descripcion}" | Lab: ${labInfo?.nombre || 'N/A'} | Docente: ${docenteInfo?.nombre || 'N/A'} | Escuela: ${escuelaInfo?.nombre || 'N/A'} | Ciclo: ${cicloInfo?.nombre || 'N/A'} | ${new Date(fechaInicioMySQL).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })} ${new Date(fechaInicioMySQL).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} - ${new Date(fechaFinMySQL).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} | ${cantidad_alumnos} alumnos`,
         usuario_id,
         ip_address
-      })
+      }, connection)
+      await connection.commit()
       return { escuela: escuelaInfo.nombre, ciclo: cicloInfo.nombre, docente: docenteInfo.nombre, insumos_nuevos: insumos?.length || 0, equipos_nuevos: equipos?.length || 0 }
     } catch (error) {
       await connection.rollback()
@@ -178,14 +180,14 @@ export const horarioService = {
       await Horario.deleteHorarioInsumos(horarioId, connection)
       await Horario.deleteHorarioEquipos(horarioId, connection)
       await Horario.deleteHorario(horarioId, connection)
-      await connection.commit()
       await Horario.registrarActividadHorario({
         accion: 'eliminar',
         reserva_id: horarioId,
         descripcion: `Horario eliminado: "${horario?.descripcion}" | Lab: ${horario?.laboratorio || 'N/A'} | Docente: ${horario?.docente || 'N/A'} | Escuela: ${horario?.escuela || 'N/A'} | Ciclo: ${horario?.ciclo || 'N/A'} | ${new Date(horario?.fecha_inicio).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })} ${new Date(horario?.fecha_inicio).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} - ${new Date(horario?.fecha_fin).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} | ${horario?.cantidad_alumnos} alumnos`,
         usuario_id,
         ip_address
-      })
+      }, connection)
+      await connection.commit()
       return { id: horario?.id }
     } catch (error) {
       await connection.rollback()
@@ -216,16 +218,14 @@ export const horarioService = {
     try {
       await connection.beginTransaction()
       await Horario.cerrarHorario(reserva_id, connection)
-      await connection.commit()
-      
-      // Registrar actividad después del commit
       await Horario.registrarActividadHorario({
         accion: 'cerrar',
         reserva_id: reserva_id,
         descripcion: `Horario cerrado: "${horario?.descripcion}" | Lab: ${horario?.laboratorio || 'N/A'} | Docente: ${horario?.docente || 'N/A'} | Escuela: ${horario?.escuela || 'N/A'} | Ciclo: ${horario?.ciclo || 'N/A'} | ${new Date(horario?.fecha_inicio).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })} ${new Date(horario?.fecha_inicio).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} - ${new Date(horario?.fecha_fin).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} | ${horario?.cantidad_alumnos} alumnos`,
         usuario_id,
         ip_address
-      })
+      }, connection)
+      await connection.commit()
     } catch (error) {
       await connection.rollback()
       throw error
@@ -255,18 +255,14 @@ export const horarioService = {
         'UPDATE reservas SET tiene_consumo_insumos = 1 WHERE id = ?',
         [reserva_id]
       )
-      
-      await connection.commit()
-      
-      // Registrar actividad después del commit
       await Horario.registrarActividadHorario({
         accion: 'cerrar',
         reserva_id: reserva_id,
         descripcion: `Horario cerrado con consumo de insumos: "${horario?.descripcion}" | Lab: ${horario?.laboratorio || 'N/A'} | Docente: ${horario?.docente || 'N/A'} | Escuela: ${horario?.escuela || 'N/A'} | Ciclo: ${horario?.ciclo || 'N/A'} | ${new Date(horario?.fecha_inicio).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })} ${new Date(horario?.fecha_inicio).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} - ${new Date(horario?.fecha_fin).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} | ${horario?.cantidad_alumnos} alumnos | Movimiento ID: ${movimientoId}`,
         usuario_id,
         ip_address
-      })
-      
+      }, connection)
+      await connection.commit()
       return { movimiento_id: movimientoId }
     } catch (error) {
       await connection.rollback()
@@ -302,20 +298,15 @@ export const horarioService = {
         )
       }
       
-      // Reabrir el horario
       await Horario.reabrirHorario(reserva_id, connection)
-      
-      await connection.commit()
-      
-      // Registrar actividad después del commit
       await Horario.registrarActividadHorario({
         accion: 'reabrir',
         reserva_id: reserva_id,
         descripcion: `Horario reabierto${movimiento ? ' (movimiento de inventario eliminado)' : ''}: "${horario?.descripcion}" | Lab: ${horario?.laboratorio || 'N/A'} | Docente: ${horario?.docente || 'N/A'} | Escuela: ${horario?.escuela || 'N/A'} | Ciclo: ${horario?.ciclo || 'N/A'} | ${new Date(horario?.fecha_inicio).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })} ${new Date(horario?.fecha_inicio).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} - ${new Date(horario?.fecha_fin).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })} | ${horario?.cantidad_alumnos} alumnos`,
         usuario_id,
         ip_address
-      })
-      
+      }, connection)
+      await connection.commit()
       return { tiene_movimiento: !!movimiento, movimiento_id: movimiento?.id }
     } catch (error) {
       await connection.rollback()

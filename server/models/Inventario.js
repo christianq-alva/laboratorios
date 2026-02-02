@@ -195,76 +195,119 @@ export const Inventario = {
   },
 
   eliminarMovimientoInventario: async (connection, movimiento_id) => {
-
-    await connection.beginTransaction();
     try {
-
-    // Obtener información de movimiento
-    const movimientoInfo = await connection.execute(`
-      SELECT tipo_movimiento, reserva_id
-      FROM movimientos_insumos
-      WHERE id = ?
-    `, [movimiento_id]);
-
-    console.log(movimientoInfo);
-
-    // actualizar saldos de entradas afectadas por la salida
-    const detalleMovimiento = await connection.execute(`
-      SELECT id, mov_det_ref, cantidad
-      FROM movimiento_insumo_detalle
-      WHERE movimiento_id = ?
-    `, [movimiento_id]);
-
-    console.log(detalleMovimiento);
-
-    for (const detalle of detalleMovimiento[0]) {
-      const { mov_det_ref, cantidad } = detalle;
-      if (mov_det_ref) {
-        // Es una salida, actualizar el saldo de la entrada referenciada
-        await connection.execute(`
-          UPDATE movimiento_insumo_detalle
-          SET saldo = saldo + ?
-          WHERE id = ?
-        `, [cantidad, mov_det_ref]);
-      }
-    }    
-
-    if  (movimientoInfo[0][0].reserva_id) {
-      // Si el movimiento está asociado a una reserva, actualizar el estado de la reserva
-      await connection.execute(`
-        UPDATE reservas
-        SET estado = 'P', tiene_consumo_insumos = 0
+      const [movimientoRows] = await connection.execute(`
+        SELECT tipo_movimiento, reserva_id
+        FROM movimientos_insumos
         WHERE id = ?
-      `, [movimientoInfo[0][0].reserva_id]);
-    }
+      `, [movimiento_id]);
 
-    // Eliminar movimiento
-    await connection.execute(`
-      DELETE FROM movimientos_insumos
-      WHERE id = ?
-    `, [movimiento_id]);
+      if (!movimientoRows || movimientoRows.length === 0) {
+        throw new AppError('Movimiento no encontrado', 404)
+      }
 
-    await connection.commit();
+      const [detalleMovimiento] = await connection.execute(`
+        SELECT id, mov_det_ref, cantidad
+        FROM movimiento_insumo_detalle
+        WHERE movimiento_id = ?
+      `, [movimiento_id]);
+
+      for (const detalle of detalleMovimiento) {
+        const { mov_det_ref, cantidad } = detalle;
+        if (mov_det_ref) {
+          await connection.execute(`
+            UPDATE movimiento_insumo_detalle
+            SET saldo = saldo + ?
+            WHERE id = ?
+          `, [cantidad, mov_det_ref]);
+        }
+      }
+
+      if (movimientoRows[0].reserva_id) {
+        await connection.execute(`
+          UPDATE reservas
+          SET estado = 'P', tiene_consumo_insumos = 0
+          WHERE id = ?
+        `, [movimientoRows[0].reserva_id]);
+      }
+
+      await connection.execute(`
+        DELETE FROM movimientos_insumos
+        WHERE id = ?
+      `, [movimiento_id]);
     } catch (error) {
-      await connection.rollback()
+      if (error.statusCode != null) throw error
       handleDBError(error, 'Inventario')
     }
   },
 
-  registrarMovimientoManual: async (connection, usuario_id, fecha_movimiento, laboratorio_id, tipo_movimiento, observaciones, reserva_id, detalles) => {
-    await connection.beginTransaction();
-
+  registrarMovimiento: async (connection, usuario_id, fecha_movimiento, laboratorio_id, tipo_movimiento, observaciones, reserva_id, detalles) => {
     try {
-      const movimientoId = await Inventario.insertarMovimiento(connection, usuario_id, fecha_movimiento, laboratorio_id, tipo_movimiento, reserva_id, observaciones);
-
-      await Inventario.procesarDetallesMovimiento(connection, movimientoId, tipo_movimiento, detalles);
-
-      await connection.commit();
-      return movimientoId;
-
+      if (!detalles?.length) {
+        throw new AppError('Debe incluir al menos un detalle', 400)
+      }
+      if (tipo_movimiento === 'salida') {
+        await Inventario.validarSaldosEnLote(connection, detalles)
+        await Inventario.actualizarSaldosEnLote(connection, detalles)
+      }
+      const movimientoId = await Inventario.insertarMovimiento(connection, usuario_id, fecha_movimiento, laboratorio_id, tipo_movimiento, reserva_id, observaciones)
+      await Inventario.insertarDetallesMovimientoBatch(connection, movimientoId, tipo_movimiento, detalles)
+      return movimientoId
     } catch (error) {
-      await connection.rollback()
+      if (error.statusCode != null) throw error
       handleDBError(error, 'Inventario')
+    }
+  },
+
+  validarSaldosEnLote: async (connection, detalles) => {
+    const ids = [...new Set(detalles.map(d => d.entrada_detalle_id).filter(Boolean))]
+    if (ids.length === 0) return
+    const placeholders = ids.map(() => '?').join(',')
+    const [rows] = await connection.execute(
+      `SELECT id, saldo FROM movimiento_insumo_detalle WHERE id IN (${placeholders})`,
+      ids
+    )
+    const mapSaldo = new Map(rows.map(r => [r.id, r.saldo]))
+    for (const d of detalles) {
+      if (d.entrada_detalle_id == null) continue
+      const saldo = mapSaldo.get(d.entrada_detalle_id)
+      if (saldo == null) throw new AppError('No se encontró el lote con ID ' + d.entrada_detalle_id, 404)
+      if (saldo < d.cantidad) throw new AppError('Saldo insuficiente en uno o más lotes', 400)
+    }
+  },
+
+  actualizarSaldosEnLote: async (connection, detalles) => {
+    const salidas = detalles.filter(d => d.entrada_detalle_id != null)
+    if (salidas.length === 0) return
+    const cantidadesPorId = new Map()
+    for (const d of salidas) {
+      const id = d.entrada_detalle_id
+      cantidadesPorId.set(id, (cantidadesPorId.get(id) || 0) + d.cantidad)
+    }
+    const ids = [...cantidadesPorId.keys()]
+    const caseParts = ids.map(() => 'WHEN ? THEN ?').join(' ')
+    const params = ids.flatMap(id => [id, cantidadesPorId.get(id)]).concat(ids)
+    await connection.execute(
+      `UPDATE movimiento_insumo_detalle SET saldo = saldo - CASE id ${caseParts} END WHERE id IN (${ids.map(() => '?').join(',')})`,
+      params
+    )
+  },
+
+  insertarDetallesMovimientoBatch: async (connection, movimientoId, tipo_movimiento, detalles) => {
+    if (tipo_movimiento === 'entrada') {
+      const placeholders = detalles.map(() => '(?, ?, ?, ?, ?, ?)').join(', ')
+      const params = detalles.flatMap(d => [movimientoId, d.insumo_id, d.cantidad, d.lote ?? null, d.fecha_vencimiento ?? null, d.cantidad])
+      await connection.execute(
+        `INSERT INTO movimiento_insumo_detalle (movimiento_id, insumo_id, cantidad, lote, fecha_vencimiento, saldo) VALUES ${placeholders}`,
+        params
+      )
+    } else if (tipo_movimiento === 'salida') {
+      const placeholders = detalles.map(() => '(?, ?, ?, ?)').join(', ')
+      const params = detalles.flatMap(d => [movimientoId, d.insumo_id, d.cantidad, d.entrada_detalle_id ?? null])
+      await connection.execute(
+        `INSERT INTO movimiento_insumo_detalle (movimiento_id, insumo_id, cantidad, mov_det_ref) VALUES ${placeholders}`,
+        params
+      )
     }
   },
 
@@ -276,63 +319,6 @@ export const Inventario = {
         `, [laboratorio_id, usuario_id, tipo_movimiento, reserva_id, observaciones, fecha_movimiento]);
 
     return result.insertId;
-  },
-
-  procesarDetallesMovimiento: async (connection, movimientoId, tipo_movimiento, detalles) => {
-    for (const detalle of detalles) {
-      const { insumo_id, cantidad, lote, fecha_vencimiento, entrada_detalle_id } = detalle;
-
-
-      if (tipo_movimiento === 'salida') {
-        await Inventario.validarSaldo(connection, entrada_detalle_id, cantidad);
-        await Inventario.actualizarSaldoEntrada(connection, entrada_detalle_id, cantidad);
-      }
-
-      await Inventario.registrarDetalleMovimiento(connection, tipo_movimiento, { movimientoId, insumo_id, cantidad, entrada_detalle_id, lote, fecha_vencimiento });
-    }
-  },
-
-  validarSaldo: async (connection, entrada_detalle_id, cantidad) => {
-    const [row] = await connection.execute(`
-          SELECT saldo 
-          FROM movimiento_insumo_detalle
-          WHERE id = ?
-        `, [entrada_detalle_id]);
-
-    if (!row || row.length === 0) {
-      throw new AppError(`No se encontró el lote con ID ${entrada_detalle_id}`, 404)
-    }
-
-    if (row[0].saldo < cantidad) {
-      throw new AppError(`Saldo insuficiente en el lote ${entrada_detalle_id}. Disponible: ${row[0].saldo}, solicitado: ${cantidad}`, 400)
-    }
-  },
-
-  actualizarSaldoEntrada: async (connection, entrada_detalle_id, cantidad) => {
-    await connection.execute(`
-          UPDATE movimiento_insumo_detalle
-          SET saldo = saldo - ?
-          WHERE id = ?
-        `, [cantidad, entrada_detalle_id]);
-  },
-
-  registrarDetalleMovimiento: async (connection, tipo_movimiento, { movimientoId, insumo_id, cantidad, entrada_detalle_id, lote, fecha_vencimiento }) => {
-
-    if (tipo_movimiento === 'entrada') {
-      await connection.execute(`
-            INSERT INTO movimiento_insumo_detalle
-            (movimiento_id, insumo_id, cantidad, lote, fecha_vencimiento, saldo)
-            VALUES (?, ?, ?, ?, ?, ?)
-          `, [movimientoId, insumo_id, cantidad, lote, fecha_vencimiento, cantidad]);
-    } else if (tipo_movimiento === 'salida') {
-      await connection.execute(`
-            INSERT INTO movimiento_insumo_detalle
-            (movimiento_id, insumo_id, cantidad, mov_det_ref)
-            VALUES (?, ?, ?, ?)
-          `, [movimientoId, insumo_id, cantidad, entrada_detalle_id]);
-    }
-
-
   },
 
   getActividadInsumos: async (user_rol, user_laboratorio_ids, laboratorio_id, fecha_inicio, fecha_fin, tipo_movimiento) => {

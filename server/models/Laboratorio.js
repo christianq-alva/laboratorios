@@ -176,12 +176,10 @@ export const Laboratorio = {
     }
   },
 
-  configurarInsumos: async (laboratorio_id, insumo_ids) => {
-    const connection = await pool.getConnection()
+  configurarInsumos: async (laboratorio_id, insumo_ids, connection) => {
+    const conn = connection || pool
     try {
-      await connection.beginTransaction()
-
-      await connection.execute(
+      await conn.execute(
         'DELETE FROM inventario_insumos WHERE laboratorio_id = ?',
         [laboratorio_id]
       )
@@ -190,19 +188,15 @@ export const Laboratorio = {
         const values = insumo_ids.map((insumo_id) => [laboratorio_id, insumo_id])
         const placeholders = values.map(() => '(?, ?)').join(', ')
         const flatValues = values.flat()
-        await connection.execute(
+        await conn.execute(
           `INSERT INTO inventario_insumos (laboratorio_id, insumo_id) VALUES ${placeholders}`,
           flatValues
         )
       }
 
-      await connection.commit()
       return true
     } catch (error) {
-      await connection.rollback()
       handleDBError(error, 'Laboratorio')
-    } finally {
-      connection.release()
     }
   }
 }

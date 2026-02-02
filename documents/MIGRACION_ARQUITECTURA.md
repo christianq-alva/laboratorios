@@ -23,7 +23,7 @@ Esta guía está adaptada al sistema actual de gestión de laboratorios: estruct
   - Sin transacciones
   - Sin reglas de negocio que orquesten varios modelos
 
-**En este sistema:** Ciclo, Rol, Escuela, Docente, Unidad, TipoEquipo, Laboratorio (CRUD y configuración de insumos), Usuario (CRUD);
+**En este sistema:** Ciclo, Rol, Escuela, Docente, Unidad, TipoEquipo, Usuario (CRUD); **Laboratorio** es un **módulo complejo** (Controller → Service → Model) con laboratorioService para CRUD, cambio de estado, insumos y configurarInsumos (ver `documents/Laboratorio/`).
 
 ### Módulos COMPLEJOS (SÍ necesitan Service)
 - **Flujo:** Router → Controller → Service → Model
@@ -86,11 +86,9 @@ export const horarioService = {
 
 ### Ejemplo real: Crear horario (createHorario)
 
-**ANTES (fragmento actual en `server/controllers/horarioController.js`):**
-- Validación de escuela, ciclo, docente (404 si no existen).
-- Llamada a `verificarCruceHorarios(connection, laboratorio_id, docente_id, fecha_inicio, fecha_fin)`.
-- Si hay cruce → 409 con mensaje y detalles.
-- `Horario.registroCreateHorario(...)` con insumos y equipos en la misma transacción.
+**ANTES (patrón legacy ya eliminado):**
+- El controller o el model podían iniciar transacción y llamar a métodos que a su vez hacían `beginTransaction()` (transacción anidada).
+- Se eliminaron los métodos legacy `Horario.registroCreateHorario` y `Horario.registroUpdateHorario` que recibían conexión y volvían a iniciar transacción.
 
 **DESPUÉS**
 
@@ -142,10 +140,9 @@ export const horarioService = {
       if (cruce) throwError(`Conflicto de horario: ${cruce.mensaje}`, 409)
       const fechaInicioMySQL = convertirFechaParaMySQL(fecha_inicio)
       const fechaFinMySQL = convertirFechaParaMySQL(fecha_fin)
-      const reserva_id = await Horario.registroCreateHorario(
-        { laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color },
-        insumos, equipos, connection
-      )
+      const reserva_id = await Horario.createHorario(laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, connection)
+      if (insumos?.length > 0) await Horario.createHorarioInsumos(reserva_id, insumos, connection)
+      if (equipos?.length > 0) await Horario.createHorarioEquipos(reserva_id, equipos, connection)
       await connection.commit()
       return reserva_id
     } catch (error) {
@@ -303,9 +300,9 @@ El Controller solo llama a `equipoService.crearEquipo(datos, req.user.userId, re
 
 ### Inventario (movimientos de insumos)
 **Operaciones que conviene llevar al Service:**
-- Registrar movimiento (entrada/salida; validar insumos por laboratorio; salida con `entrada_detalle_id` y saldo suficiente; transacción en Service) → `inventarioService.registrarMovimiento(laboratorio_id, tipo_movimiento, fecha_movimiento, detalles, reserva_id)`
-- Reabastecimiento masivo (validar códigos y laboratorio; procesar filas; transacción y commit parcial en Service) → `inventarioService.reabastecimientoMasivo(datos_reabastecimiento, fecha_movimiento, laboratorio_id, usuario_id)`
-- Eliminar movimiento (revertir saldos si es salida; transacción en Service) → `inventarioService.eliminarMovimiento(movimiento_id)`
+- Registrar movimiento manual (entrada/salida; validar insumos por laboratorio; salida con `entrada_detalle_id` y saldo suficiente; transacción en Service) → `inventarioService.registrarMovimientoManual(userId, fecha_movimiento, laboratorio_id, tipo_movimiento, observaciones, reserva_id, detalles)`. El modelo expone `Inventario.registrarMovimiento(connection, ...)` (usado también por reabastecimiento masivo).
+- Reabastecimiento masivo (validar códigos y laboratorio; procesar filas; transacción en Service) → `inventarioService.ejecutarReabastecimientoMasivo(userId, fecha_movimiento, laboratorio_id, motivo_general, datos_reabastecimiento)`. Usa `Inventario.registrarMovimiento(connection, ...)`.
+- Eliminar movimiento (revertir saldos si es salida; transacción en Service) → `inventarioService.eliminarMovimientoInventario(movimiento_id)`; modelo `Inventario.eliminarMovimientoInventario(connection, movimiento_id)`.
 
 ### Insumos (catálogo)
 **Operaciones que conviene llevar al Service:**
@@ -370,7 +367,7 @@ import { Horario } from '../models/Horario.js'
 
 ## Checklist de Migración
 
-### Por cada módulo complejo (Horarios, Equipos, Inventario, Insumos, Incidencias):
+### Por cada módulo complejo (Horarios, Equipos, Inventario, Insumos, Incidencias, Laboratorio):
 
 - [ ] Archivo Service creado en `server/services/<nombre>Service.js`
 - [ ] Lógica de validación movida del Controller al Service (fechas, unicidad, “no eliminar si…”)
@@ -405,4 +402,4 @@ Router (validate(schema) en rutas) → Controller (solo respuestas HTTP) → Ser
 
 ---
 
-**Migra primero UN módulo complejo (por ejemplo Horarios), verifica que las rutas y respuestas se mantienen, y luego replica el patrón en Equipos, Inventario, Insumos e Incidencias.**
+**Migra primero UN módulo complejo (por ejemplo Horarios), verifica que las rutas y respuestas se mantienen, y luego replica el patrón en Equipos, Inventario, Insumos, Incidencias y Laboratorio.**

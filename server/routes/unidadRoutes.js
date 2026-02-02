@@ -21,7 +21,7 @@ const router = express.Router()
 // Aplicar autenticación a todas las rutas
 router.use(authenticateToken)
 
-// Crear nueva unidad
+// Crear unidad
 router.post(
   '/',
   authorize('create', 'Unidad'),

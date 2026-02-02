@@ -1,8 +1,8 @@
-# Reglas de Negocio: Insumos e Inventario
+# Reglas de Negocio: Insumos
 
 ## Descripción del Módulo
 
-El módulo de **Insumos** gestiona el catálogo de insumos (reactivos, materiales, material biológico) y sus **unidades de medida**. El **Inventario** gestiona el stock por laboratorio mediante movimientos de **entrada** y **salida**, con trazabilidad por lote y fecha de vencimiento.
+El módulo de **Insumos** gestiona el catálogo de insumos (reactivos, materiales, material biológico) y sus **unidades de medida**. No incluye el stock por laboratorio ni los movimientos; eso corresponde al módulo **Inventario**.
 
 ---
 
@@ -32,72 +32,15 @@ Mensaje: "No se puede eliminar. El insumo \"[nombre]\" está siendo usado en el 
 
 ---
 
-## 2. Movimientos de Inventario
-
-### 2.1 Tipos de Movimiento
-
-- **entrada**: incrementa stock. Se puede indicar lote y fecha de vencimiento por detalle.
-- **salida**: disminuye stock. **Debe** indicarse de qué lote/entrada se sale (`entrada_detalle_id`).
-
-### 2.2 Reglas de Salida
-
-- Para cada detalle de tipo **salida** es obligatorio **entrada_detalle_id** (referencia al detalle de una entrada previa).
-- El **saldo** del detalle de entrada referenciado debe ser **≥ cantidad** solicitada.  
-  Si no: "Saldo insuficiente en el lote [id]. Disponible: [X], solicitado: [Y]."
-- Al registrar la salida se **descuenta** el saldo del detalle de entrada (`movimiento_insumo_detalle.saldo`).
-
-### 2.3 Registro de Movimiento Manual
-
-- **laboratorio_id**, **tipo_movimiento**, **fecha_movimiento**, **detalles** (array con al menos un elemento) son requeridos.
-- **reserva_id** y **observaciones** son opcionales.
-- Cada detalle: `insumo_id`, `cantidad` (entero > 0). Para salida: `entrada_detalle_id` obligatorio; para entrada: opcionalmente `lote`, `fecha_vencimiento`.
-- Los insumos deben estar configurados para el laboratorio (inventario_insumos).
-
-### 2.4 Reabastecimiento Masivo
-
-- Se envía `datos_reabastecimiento` (array), `fecha_movimiento`, `laboratorio_id`, y opcionalmente `motivo_general`.
-- Cada elemento puede incluir código de insumo, lote, fecha de vencimiento y cantidad.
-- Los insumos deben estar configurados para el laboratorio; si un código no es válido para el laboratorio, se reporta en errores.
-
-### 2.5 Eliminación de Movimiento
-
-- Permite eliminar un movimiento de inventario (y sus detalles). Se revierten saldos cuando el movimiento es una salida (se devuelve cantidad al lote de entrada referenciado). Si el movimiento estaba ligado a una reserva, la reserva puede actualizarse a estado pendiente según lógica en `Inventario.eliminarMovimientoInventario`.
-
----
-
-## 3. Cierre de Horario con Insumos
-
-- Al cerrar un horario con consumo de insumos se registra un movimiento de tipo **salida** asociado a `reserva_id`.
-- Los detalles deben cumplir las reglas de salida (entrada_detalle_id, saldo suficiente).
-- El horario no debe estar ya cerrado.
-
----
-
-## 4. Consultas y Permisos
-
-- **Insumos con stock**: Se filtran por rol. Jefe de Laboratorio solo ve insumos de sus `laboratorio_ids`.
-- **Lotes con saldo**: Por laboratorio e insumo; solo se consideran lotes con saldo > 0 cuando aplica.
-- **Actividad de insumos**: Filtrada por rol, laboratorio, rango de fechas y tipo de movimiento.
-
----
-
-## 5. Configuración de Insumos por Laboratorio
-
-- Un laboratorio tiene una lista de insumos “configurados” en **inventario_insumos**.
-- Solo esos insumos pueden tener movimientos (entrada/salida) en ese laboratorio.
-- La plantilla de reabastecimiento y la validación de movimientos usan esta configuración.
-
----
-
-## 6. Resumen de Mensajes y Códigos
+## 2. Resumen de Códigos (Insumos)
 
 | Código | Situación |
 |--------|-----------|
-| 400 | Datos incompletos; archivo Excel sin datos válidos; validación de esquema (Zod) |
-| 404 | Insumo, laboratorio o movimiento no encontrado |
+| 400 | Datos incompletos; validación de esquema (Zod) |
+| 404 | Insumo no encontrado |
 | 409 | Eliminar insumo con relaciones (lotes o laboratorios configurados) |
-| 500 | Saldo insuficiente en lote; error interno |
+| 500 | Error interno |
 
 ---
 
-**Referencias en código**: `server/controllers/insumoController.js`, `server/controllers/inventarioController.js`, `server/models/Insumo.js`, `server/models/Inventario.js`, `server/validations/schemas/insumo.js`, `server/validations/schemas/inventario.js`.
+**Referencias en código**: `server/controllers/insumoController.js`, `server/models/Insumo.js`, `server/validations/schemas/insumo.js`.

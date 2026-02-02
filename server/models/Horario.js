@@ -343,46 +343,6 @@ export const Horario = {
         }
     },
 
-    registroCreateHorario: async (datosHorario, insumos_requeridos, equipos_requeridos, connection) => {
-        await connection.beginTransaction()
-        try {
-
-            const {
-                laboratorio_id,
-                docente_id,
-                escuela_id,
-                ciclo_id,
-                descripcion,
-                fechaInicioMySQL,
-                fechaFinMySQL,
-                cantidad_alumnos,
-                color
-            } = datosHorario;
-
-            // 1. CREAR LA RESERVA
-            const reserva_id = await Horario.createHorario(laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, connection)
-
-            // 2. PROCESAR INSUMOS
-            if (insumos_requeridos.length > 0) {
-                await Horario.createHorarioInsumos(reserva_id, insumos_requeridos, connection)
-            }
-
-            // 3. PROCESAR EQUIPOS
-            if (equipos_requeridos.length > 0) {
-                await Horario.createHorarioEquipos(reserva_id, equipos_requeridos, connection)
-            }
-
-            await connection.commit()
-
-            return reserva_id;
-
-        } catch (error) {
-            console.log('error', error)
-            await connection.rollback();
-            throw error;
-        }
-    },
-
     createHorario: async (laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, connection) => {
         try {
         const [result] = await connection.execute(`
@@ -414,45 +374,6 @@ export const Horario = {
         return insumos;
         } catch (error) {
             handleDBError(error, 'Horario')
-        }
-    },
-    registroUpdateHorario: async (datosHorario, insumos_requeridos, equipos_requeridos, connection) => {
-
-        try {
-
-            const {
-                reserva_id,
-                laboratorio_id,
-                docente_id,
-                escuela_id,
-                ciclo_id,
-                descripcion,
-                fechaInicioMySQL,
-                fechaFinMySQL,
-                cantidad_alumnos,
-                color
-            } = datosHorario;
-
-            // 1. CREAR LA RESERVA
-            await Horario.updateHorario(laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, reserva_id, connection)
-
-            // 2. PROCESAR INSUMOS
-            if (insumos_requeridos.length > 0) {
-                await Horario.createHorarioInsumos(reserva_id, insumos_requeridos, connection)
-            }
-
-            // 3. PROCESAR EQUIPOS
-            if (equipos_requeridos.length > 0) {
-                await Horario.createHorarioEquipos(reserva_id, equipos_requeridos, connection)
-            }
-
-            await connection.commit()
-
-            return reserva_id;
-
-        } catch (error) {
-            await connection.rollback();
-            handleDBError(error, 'Horario');
         }
     },
     updateHorario: async (laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, reserva_id, connection) => {
@@ -531,9 +452,8 @@ export const Horario = {
         }
     },
 
-    registrarActividadHorario: async ({ accion, reserva_id, descripcion, usuario_id, ip_address }) => {
+    registrarActividadHorario: async ({ accion, reserva_id, descripcion, usuario_id, ip_address }, connection) => {
         try {
-            // Crear fecha en zona horaria de Perú
             const fechaPeru = new Date().toLocaleString('en-CA', {
                 timeZone: 'America/Lima',
                 year: 'numeric',
@@ -549,12 +469,9 @@ export const Horario = {
                 INSERT INTO actividad_horarios (accion, reserva_id, descripcion, usuario_id, ip_address, fecha_actividad) 
                 VALUES (?, ?, ?, ?, ?, ?)
             `
-
-            await pool.execute(query, [accion, reserva_id, descripcion, usuario_id, ip_address, fechaPeru])
-            console.log(`📋 Actividad registrada: ${accion} - ${descripcion} (${fechaPeru})`)
+            await connection.execute(query, [accion, reserva_id, descripcion, usuario_id, ip_address, fechaPeru])
         } catch (error) {
-            console.error('❌ Error al registrar actividad:', error)
-            // No lanzamos el error para no interrumpir la operación principal
+            handleDBError(error, 'Horario')
         }
     },
     estadoHorario: async (reserva_id) => {

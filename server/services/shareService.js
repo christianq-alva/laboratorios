@@ -1,3 +1,4 @@
+import { pool } from '../config/database.js'
 import { AppError } from '../utils/errors.js'
 import { ShareLink } from '../models/ShareLink.js'
 import { Laboratorio } from '../models/Laboratorio.js'
@@ -5,7 +6,7 @@ import { Horario } from '../models/Horario.js'
 
 /**
  * Crear o actualizar enlace compartido para un laboratorio.
- * Patrón complejo: validaciones de negocio en el servicio.
+ * Transacción manejada por el service; el modelo recibe connection.
  */
 export async function createShareLink(laboratorioId, userId, expiresInDays = 365) {
   const laboratorio = await Laboratorio.getLaboratorioById(laboratorioId)
@@ -13,10 +14,21 @@ export async function createShareLink(laboratorioId, userId, expiresInDays = 365
     throw new AppError('Laboratorio no encontrado', 404)
   }
 
-  const shareLink = await ShareLink.createOrUpdate(laboratorioId, userId, expiresInDays)
-  return {
-    shareLink,
-    laboratorio
+  const connection = await pool.getConnection()
+  try {
+    await connection.beginTransaction()
+    const shareId = await ShareLink.createOrUpdate(connection, laboratorioId, userId, expiresInDays)
+    await connection.commit()
+    const shareLink = await ShareLink.getById(shareId)
+    return {
+      shareLink,
+      laboratorio
+    }
+  } catch (error) {
+    await connection.rollback()
+    throw error
+  } finally {
+    connection.release()
   }
 }
 

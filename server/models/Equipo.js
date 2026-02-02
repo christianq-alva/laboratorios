@@ -124,9 +124,8 @@ export const Equipo = {
       handleDBError(error, 'Equipo')
     }
   },
-  registrarActividadEquipo: async ({ accion, equipo_id, descripcion, usuario_id, ip_address }) => {
+  registrarActividadEquipo: async ({ accion, equipo_id, descripcion, usuario_id, ip_address }, connection) => {
     try {
-      // Crear fecha en zona horaria de Perú
       const fechaPeru = new Date().toLocaleString('en-CA', {
         timeZone: 'America/Lima',
         year: 'numeric',
@@ -143,9 +142,7 @@ export const Equipo = {
           accion, equipo_id, descripcion, usuario_id, ip_address, fecha_actividad
         ) VALUES (?, ?, ?, ?, ?, ?)
       `
-
-      await pool.execute(query, [accion, equipo_id, descripcion, usuario_id, ip_address, fechaPeru])
-      console.log(`📋 Actividad de equipo registrada: ${accion} - ${descripcion} (${fechaPeru})`)
+      await connection.execute(query, [accion, equipo_id, descripcion, usuario_id, ip_address, fechaPeru])
     } catch (error) {
       handleDBError(error, 'Equipo')
     }
