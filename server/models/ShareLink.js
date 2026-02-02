@@ -32,32 +32,29 @@ const buildPublicUrl = (laboratorioId, token) => {
 }
 
 export const ShareLink = {
-  createOrUpdate: async (laboratorioId, userId, expiresInDays = 365) => {
-    const connection = await pool.getConnection()
+  createOrUpdate: async (connection, laboratorioId, userId, expiresInDays = 365) => {
+    const conn = connection || pool
     try {
-      await connection.beginTransaction()
-
       const fechaExpiracion = new Date()
       fechaExpiracion.setDate(fechaExpiracion.getDate() + expiresInDays)
 
-      const [existingLink] = await connection.execute(`
+      const [existingLink] = await conn.execute(`
         SELECT id, token FROM enlaces_compartidos 
         WHERE laboratorio_id = ? AND creado_por = ? AND activo = TRUE
       `, [laboratorioId, userId])
 
-      let shareId, shareToken
+      let shareId
 
       if (existingLink.length > 0) {
         shareId = existingLink[0].id
-        shareToken = existingLink[0].token
-        await connection.execute(`
+        await conn.execute(`
           UPDATE enlaces_compartidos 
           SET fecha_expiracion = ?, updated_at = NOW()
           WHERE id = ?
         `, [fechaExpiracion, shareId])
       } else {
-        shareToken = generateShareToken(laboratorioId, userId)
-        const [result] = await connection.execute(`
+        const shareToken = generateShareToken(laboratorioId, userId)
+        const [result] = await conn.execute(`
           INSERT INTO enlaces_compartidos 
           (laboratorio_id, token, creado_por, fecha_expiracion, activo, created_at, updated_at)
           VALUES (?, ?, ?, ?, TRUE, NOW(), NOW())
@@ -65,15 +62,9 @@ export const ShareLink = {
         shareId = result.insertId
       }
 
-      await connection.commit()
-
-      const shareLink = await ShareLink.getById(shareId)
-      return shareLink
+      return shareId
     } catch (error) {
-      await connection.rollback()
       handleDBError(error, 'Enlace compartido')
-    } finally {
-      connection.release()
     }
   },
 

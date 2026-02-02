@@ -23,7 +23,7 @@ Esta guía está adaptada al sistema actual de gestión de laboratorios: estruct
   - Sin transacciones
   - Sin reglas de negocio que orquesten varios modelos
 
-**En este sistema:** Ciclo, Rol, Escuela, Docente, Unidad, TipoEquipo, Laboratorio (CRUD y configuración de insumos), Usuario (CRUD);
+**En este sistema:** Ciclo, Rol, Escuela, Docente, Unidad, TipoEquipo, Usuario (CRUD); **Laboratorio** es un **módulo complejo** (Controller → Service → Model) con laboratorioService para CRUD, cambio de estado, insumos y configurarInsumos (ver `documents/Laboratorio/`).
 
 ### Módulos COMPLEJOS (SÍ necesitan Service)
 - **Flujo:** Router → Controller → Service → Model
@@ -367,7 +367,7 @@ import { Horario } from '../models/Horario.js'
 
 ## Checklist de Migración
 
-### Por cada módulo complejo (Horarios, Equipos, Inventario, Insumos, Incidencias):
+### Por cada módulo complejo (Horarios, Equipos, Inventario, Insumos, Incidencias, Laboratorio):
 
 - [ ] Archivo Service creado en `server/services/<nombre>Service.js`
 - [ ] Lógica de validación movida del Controller al Service (fechas, unicidad, “no eliminar si…”)
@@ -402,4 +402,4 @@ Router (validate(schema) en rutas) → Controller (solo respuestas HTTP) → Ser
 
 ---
 
-**Migra primero UN módulo complejo (por ejemplo Horarios), verifica que las rutas y respuestas se mantienen, y luego replica el patrón en Equipos, Inventario, Insumos e Incidencias.**
+**Migra primero UN módulo complejo (por ejemplo Horarios), verifica que las rutas y respuestas se mantienen, y luego replica el patrón en Equipos, Inventario, Insumos, Incidencias y Laboratorio.**

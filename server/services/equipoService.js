@@ -25,30 +25,40 @@ export const equipoService = {
     const existingCodigo = await Equipo.existsByCodigo(datos.codigo)
     if (existingCodigo) throw new AppError('Ya existe otro equipo con ese código', 400)
 
-    const equipo_id = await Equipo.create({
-      codigo: datos.codigo,
-      nombre: datos.nombre,
-      descripcion: datos.descripcion ?? '',
-      marca: datos.marca ?? '',
-      modelo: datos.modelo ?? '',
-      numero_serie: datos.numero_serie ?? '',
-      estado: datos.estado ?? 'Operativo',
-      fecha_ultimo_mantenimiento: datos.fecha_ultimo_mantenimiento || null,
-      fecha_proximo_mantenimiento: datos.fecha_proximo_mantenimiento || null,
-      comentarios: datos.comentarios || null,
-      condicion: datos.condicion ?? 'Bueno',
-      fecha_adquisicion: datos.fecha_adquisicion,
-      tipo_equipo_id: datos.tipo_equipo_id,
-      laboratorio_id: datos.laboratorio_id
-    })
-    await Equipo.registrarActividadEquipo({
-      accion: 'crear',
-      equipo_id,
-      descripcion: `Equipo creado: ${datos.nombre} (${datos.codigo}) - Marca: ${datos.marca || 'N/A'}, Modelo: ${datos.modelo || 'N/A'}, Estado: ${datos.estado || 'Operativo'}, Condición: ${datos.condicion || 'Bueno'}. Inventario inicial en ${inventario_inicial?.length || 0} laboratorio(s).`,
-      usuario_id,
-      ip_address
-    })
-    return equipo_id
+    const connection = await pool.getConnection()
+    try {
+      await connection.beginTransaction()
+      const equipo_id = await Equipo.create({
+        codigo: datos.codigo,
+        nombre: datos.nombre,
+        descripcion: datos.descripcion ?? '',
+        marca: datos.marca ?? '',
+        modelo: datos.modelo ?? '',
+        numero_serie: datos.numero_serie ?? '',
+        estado: datos.estado ?? 'Operativo',
+        fecha_ultimo_mantenimiento: datos.fecha_ultimo_mantenimiento || null,
+        fecha_proximo_mantenimiento: datos.fecha_proximo_mantenimiento || null,
+        comentarios: datos.comentarios || null,
+        condicion: datos.condicion ?? 'Bueno',
+        fecha_adquisicion: datos.fecha_adquisicion,
+        tipo_equipo_id: datos.tipo_equipo_id,
+        laboratorio_id: datos.laboratorio_id
+      }, connection)
+      await Equipo.registrarActividadEquipo({
+        accion: 'crear',
+        equipo_id,
+        descripcion: `Equipo creado: ${datos.nombre} (${datos.codigo}) - Marca: ${datos.marca || 'N/A'}, Modelo: ${datos.modelo || 'N/A'}, Estado: ${datos.estado || 'Operativo'}, Condición: ${datos.condicion || 'Bueno'}. Inventario inicial en ${inventario_inicial?.length || 0} laboratorio(s).`,
+        usuario_id,
+        ip_address
+      }, connection)
+      await connection.commit()
+      return equipo_id
+    } catch (error) {
+      await connection.rollback()
+      throw error
+    } finally {
+      connection.release()
+    }
   },
 
   async actualizarEquipo(equipoId, datos, usuario_id, ip_address) {
@@ -63,32 +73,44 @@ export const equipoService = {
       throw new AppError('No se puede actualizar. El equipo tiene reservas programadas en el laboratorio actual.', 400)
     }
 
-    const affectedRows = await Equipo.update(equipoId, {
-      codigo: datos.codigo?.trim() ?? '',
-      nombre: datos.nombre?.trim() ?? '',
-      descripcion: datos.descripcion?.trim() ?? '',
-      marca: datos.marca?.trim() ?? '',
-      modelo: datos.modelo?.trim() ?? '',
-      numero_serie: datos.numero_serie?.trim() ?? '',
-      estado: datos.estado || 'Operativo',
-      fecha_ultimo_mantenimiento: datos.fecha_ultimo_mantenimiento || null,
-      fecha_proximo_mantenimiento: datos.fecha_proximo_mantenimiento || null,
-      comentarios: datos.comentarios?.trim() ?? '',
-      condicion: datos.condicion || 'Bueno',
-      fecha_adquisicion: datos.fecha_adquisicion,
-      tipo_equipo_id: datos.tipo_equipo_id,
-      laboratorio_id: datos.laboratorio_id
-    })
-    if (affectedRows === 0) throw new AppError('Equipo no encontrado', 404)
-
-    await Equipo.registrarActividadEquipo({
-      accion: 'actualizar',
-      equipo_id: equipoId,
-      descripcion: `Equipo actualizado: ${datos.nombre?.trim()} - Marca: ${datos.marca?.trim() || 'N/A'}, Modelo: ${datos.modelo?.trim() || 'N/A'}, Estado: ${datos.estado || 'Operativo'}, Condición: ${datos.condicion || 'Bueno'}. Último mant.: ${datos.fecha_ultimo_mantenimiento || 'N/A'}, Próximo mant.: ${datos.fecha_proximo_mantenimiento || 'N/A'}.`,
-      usuario_id,
-      ip_address
-    })
-    return { id: equipoId, nombre: datos.nombre?.trim(), descripcion: datos.descripcion, marca: datos.marca, modelo: datos.modelo, numero_serie: datos.numero_serie, estado: datos.estado }
+    const connection = await pool.getConnection()
+    try {
+      await connection.beginTransaction()
+      const affectedRows = await Equipo.update(equipoId, {
+        codigo: datos.codigo?.trim() ?? '',
+        nombre: datos.nombre?.trim() ?? '',
+        descripcion: datos.descripcion?.trim() ?? '',
+        marca: datos.marca?.trim() ?? '',
+        modelo: datos.modelo?.trim() ?? '',
+        numero_serie: datos.numero_serie?.trim() ?? '',
+        estado: datos.estado || 'Operativo',
+        fecha_ultimo_mantenimiento: datos.fecha_ultimo_mantenimiento || null,
+        fecha_proximo_mantenimiento: datos.fecha_proximo_mantenimiento || null,
+        comentarios: datos.comentarios?.trim() ?? '',
+        condicion: datos.condicion || 'Bueno',
+        fecha_adquisicion: datos.fecha_adquisicion,
+        tipo_equipo_id: datos.tipo_equipo_id,
+        laboratorio_id: datos.laboratorio_id
+      }, connection)
+      if (affectedRows === 0) {
+        await connection.rollback()
+        throw new AppError('Equipo no encontrado', 404)
+      }
+      await Equipo.registrarActividadEquipo({
+        accion: 'actualizar',
+        equipo_id: equipoId,
+        descripcion: `Equipo actualizado: ${datos.nombre?.trim()} - Marca: ${datos.marca?.trim() || 'N/A'}, Modelo: ${datos.modelo?.trim() || 'N/A'}, Estado: ${datos.estado || 'Operativo'}, Condición: ${datos.condicion || 'Bueno'}. Último mant.: ${datos.fecha_ultimo_mantenimiento || 'N/A'}, Próximo mant.: ${datos.fecha_proximo_mantenimiento || 'N/A'}.`,
+        usuario_id,
+        ip_address
+      }, connection)
+      await connection.commit()
+      return { id: equipoId, nombre: datos.nombre?.trim(), descripcion: datos.descripcion, marca: datos.marca, modelo: datos.modelo, numero_serie: datos.numero_serie, estado: datos.estado }
+    } catch (error) {
+      await connection.rollback()
+      throw error
+    } finally {
+      connection.release()
+    }
   },
 
   async eliminarEquipo(equipoId, usuario_id, ip_address) {
@@ -98,14 +120,24 @@ export const equipoService = {
     if (reservasActivas) throw new AppError('No se puede eliminar. El equipo está siendo usado en el sistema.', 400)
 
     const equipoInfo = await Equipo.getById(equipoId)
-    await Equipo.delete(equipoId)
-    await Equipo.registrarActividadEquipo({
-      accion: 'eliminar',
-      equipo_id: equipoInfo.id,
-      descripcion: `Equipo eliminado: ${equipoInfo.nombre} (${equipoInfo.codigo || 'N/A'}) - Marca: ${equipoInfo.marca || 'N/A'}, Modelo: ${equipoInfo.modelo || 'N/A'}, Estado: ${equipoInfo.estado || 'N/A'}, Condición: ${equipoInfo.condicion || 'N/A'}.`,
-      usuario_id,
-      ip_address
-    })
+    const connection = await pool.getConnection()
+    try {
+      await connection.beginTransaction()
+      await Equipo.delete(equipoId, connection)
+      await Equipo.registrarActividadEquipo({
+        accion: 'eliminar',
+        equipo_id: equipoInfo.id,
+        descripcion: `Equipo eliminado: ${equipoInfo.nombre} (${equipoInfo.codigo || 'N/A'}) - Marca: ${equipoInfo.marca || 'N/A'}, Modelo: ${equipoInfo.modelo || 'N/A'}, Estado: ${equipoInfo.estado || 'N/A'}, Condición: ${equipoInfo.condicion || 'N/A'}.`,
+        usuario_id,
+        ip_address
+      }, connection)
+      await connection.commit()
+    } catch (error) {
+      await connection.rollback()
+      throw error
+    } finally {
+      connection.release()
+    }
   },
 
   async importarMasiva(rows, usuario_id, ip_address) {
@@ -226,7 +258,7 @@ export const equipoService = {
             descripcion: `Equipo creado por importación masiva: ${nombre} (${codigo}) - Marca: ${marca || 'N/A'}, Modelo: ${modelo || 'N/A'}, Estado: ${estado}, Condición: ${condicion}. Inventario en laboratorio ${laboratorio_codigo}.`,
             usuario_id,
             ip_address
-          })
+          }, connection)
           resultados.push({ fila: rowNum, codigo, nombre, marca: marca || 'N/A', modelo: modelo || 'N/A', estado, laboratorio_id, tipo_equipo_id })
           procesados++
         } catch (error) {

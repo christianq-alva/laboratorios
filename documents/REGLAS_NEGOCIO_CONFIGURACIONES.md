@@ -6,6 +6,8 @@ Este documento agrupa las reglas de negocio de los módulos de **configuración*
 
 ## 1. Laboratorios
 
+**Módulo complejo** (Controller → Service → Model). Flujo y reglas detalladas: `documents/Laboratorio/FLUJO_LABORATORIO.md`, `documents/Laboratorio/REGLAS_NEGOCIO_LABORATORIO.md`.
+
 ### 1.1 Creación
 
 - **codigo**, **nombre**, **ubicacion**, **escuela_id**, **piso** son obligatorios.

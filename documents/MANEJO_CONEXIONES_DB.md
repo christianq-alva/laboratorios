@@ -5,10 +5,12 @@
 - **Arquitectura**: Controller → **Service** → Model. Los **controllers** no obtienen conexiones ni inician transacciones; delegan en **services**.
 - **Configuración del pool**: `server/config/database.js` — `mysql2/promise`, `connectionLimit: 10`, `queueLimit: 0`, `acquireTimeout: 60000`, `timeout: 60000`, `timezone: '-05:00'`, puerto por `DB_PORT` o `31787`, SSL en producción. Helper `testConnection()` para verificar conexión.
 - **Quién maneja conexiones y transacciones**:
-  - **horarioService**: Obtiene conexión, inicia transacción, commit/rollback, libera en `finally`. Usado en crearReserva, actualizarReserva, eliminarReserva, cerrarHorario, cerrarHorarioConInsumos, reabrirHorario.
-  - **equipoService**: Solo en **importarMasiva** obtiene conexión y transacción; create/update/delete usan `pool` vía modelo (sin transacción en service).
-  - **insumoService**: Obtiene conexión, beginTransaction, commit/rollback, libera en `finally`. Usado en eliminarInsumo e importacionMasiva. En el `catch` solo hace rollback y `throw error` (propaga el error); las sentencias SQL y las reglas de negocio ya lanzan errores normalizados (handleDBError en modelo, AppError en service).
-  - **inventarioService**: Obtiene conexión, inicia transacción, commit/rollback, libera en `finally`. Usado en ejecutarReabastecimientoMasivo, registrarMovimientoManual, eliminarMovimientoInventario. El **modelo** Inventario expone `registrarMovimiento(connection, ...)` (usado por movimiento manual y reabastecimiento masivo) y `eliminarMovimientoInventario(connection, ...)`; solo ejecuta sentencias con la conexión recibida y **no** inicia transacciones. Para movimientos usa validación/actualización/inserción en lote (menos round-trips).
+  - **horarioService**: Obtiene conexión, inicia transacción, commit/rollback, libera en `finally`. Usado en crearReserva, actualizarReserva, eliminarReserva, cerrarHorario, cerrarHorarioConInsumos, reabrirHorario. El registro de actividad (`registrarActividadHorario`) se ejecuta **dentro** de la transacción (antes del commit) pasando `connection`. `registrarActividadHorario` recibe `connection` del service (no usa pool).
+  - **equipoService**: Obtiene conexión y transacción en **crearEquipo**, **actualizarEquipo**, **eliminarEquipo** e **importarMasiva**. En todos ellos el registro de actividad (`registrarActividadEquipo`) se ejecuta **dentro** de la transacción (antes del commit) pasando `connection`. `registrarActividadEquipo` recibe `connection` del service (no usa pool).
+  - **insumoService**: Obtiene conexión, beginTransaction, commit/rollback, libera en `finally`. Usado en eliminarInsumo e importacionMasiva. En el `catch` solo hace rollback y `throw error` (propaga el error).
+  - **inventarioService**: Obtiene conexión, inicia transacción, commit/rollback, libera en `finally`. Usado en ejecutarReabastecimientoMasivo, registrarMovimientoManual, eliminarMovimientoInventario. En el `catch` solo hace rollback y `throw error`. El **modelo** Inventario expone `registrarMovimiento(connection, ...)` y `eliminarMovimientoInventario(connection, ...)`; solo ejecuta sentencias con la conexión recibida.
+  - **laboratorioService**: **Módulo complejo** (Controller → Service → Model). Todas las operaciones de laboratorio pasan por laboratorioService; el controller no llama al modelo directamente. Solo **configurarInsumos** usa transacción: getConnection, beginTransaction, Laboratorio.configurarInsumos(..., connection), commit/rollback, release. El modelo `Laboratorio.configurarInsumos(laboratorio_id, insumo_ids, connection)` solo ejecuta DELETE/INSERT con la conexión recibida. Documentación: `documents/Laboratorio/FLUJO_LABORATORIO.md`, `documents/Laboratorio/REGLAS_NEGOCIO_LABORATORIO.md`.
+  - **shareService**: En **createShareLink** obtiene conexión, transacción, commit/rollback, libera en `finally`; llama a `ShareLink.createOrUpdate(connection, laboratorioId, userId, expiresInDays)` que solo ejecuta SELECT/UPDATE/INSERT con la conexión recibida y devuelve `shareId`; tras el commit el service llama a `ShareLink.getById(shareId)` para devolver el enlace completo.
 
 ---
 
@@ -38,7 +40,7 @@
 ### 1.2 Patrones en uso
 
 #### Patrón A: Service-Managed Connection (transacciones en Service)
-**Ubicación**: `server/services/horarioService.js`, `server/services/insumoService.js`, `server/services/equipoService.js` (solo en `importarMasiva`), `server/services/inventarioService.js` (ejecutarReabastecimientoMasivo, registrarMovimientoManual, eliminarMovimientoInventario)
+**Ubicación**: `server/services/horarioService.js`, `server/services/insumoService.js`, `server/services/equipoService.js` (crearEquipo, actualizarEquipo, eliminarEquipo, importarMasiva), `server/services/inventarioService.js`, `server/services/laboratorioService.js` (configurarInsumos), `server/services/shareService.js` (createShareLink)
 
 **Características**:
 - El **service** obtiene conexión con `pool.getConnection()`.
@@ -55,8 +57,8 @@ try {
   const reserva_id = await Horario.createHorario(..., connection)
   if (insumos?.length > 0) await Horario.createHorarioInsumos(reserva_id, insumos, connection)
   if (equipos?.length > 0) await Horario.createHorarioEquipos(reserva_id, equipos, connection)
+  await Horario.registrarActividadHorario({ accion, reserva_id, descripcion, usuario_id, ip_address }, connection)
   await connection.commit()
-  await Horario.registrarActividadHorario({ ... }) // usa pool, fuera de transacción
   return { reserva_id, ... }
 } catch (error) {
   await connection.rollback()
@@ -65,6 +67,7 @@ try {
   connection.release()
 }
 ```
+El registro de actividad forma parte de la transacción (mismo commit); si falla, se hace rollback de todo.
 
 #### Patrón B: Model con conexión opcional
 **Ubicación**: `server/models/Insumo.js`, `server/models/Equipo.js` (y otros)
@@ -90,11 +93,7 @@ create: async (data, connection) => {
 - Usado para lecturas, reportes y operaciones de una sola sentencia.
 
 #### Patrón D: Model autónomo (conexión y transacción en el modelo)
-**Ubicación**: `server/models/ShareLink.js` (`createOrUpdate`), `server/models/Laboratorio.js` (método con transacción interna)
-
-**Características**:
-- El modelo obtiene su propia conexión, inicia transacción, commit/rollback y libera en `finally`.
-- No reciben conexión desde fuera; usados en flujos independientes.
+**Ubicación**: Solo queda en modelos que por diseño no pasan por un service con transacción (casos puntuales). **Laboratorio.configurarInsumos** y **ShareLink.createOrUpdate** ya **no** manejan transacción en el modelo: la transacción está en **laboratorioService.configurarInsumos** y **shareService.createShareLink**; los modelos reciben `connection` y solo ejecutan sentencias.
 
 ### 1.3 Controllers
 
@@ -114,7 +113,7 @@ res.status(201).json({ success: true, message: '...', data: result })
 
 ### 2.1 Inconsistencia de patrones
 
-- **Equipo**: create/update/delete sin transacción en el service (una sola escritura o lecturas); solo la importación masiva usa transacción en el service.
+- ~~**Equipo**: create/update/delete sin transacción~~ **Actualizado**: crearEquipo, actualizarEquipo y eliminarEquipo usan transacción en el service e incluyen el registro de actividad con la misma conexión y en el mismo commit.
 
 ### 2.2 Otros
 
@@ -238,9 +237,8 @@ export const getResources = async (req, res, next) => {
 
 #### Patrón 4: Model Autónomo (Solo para Casos Específicos)
 **Cuándo usar**: 
-- Operaciones completamente independientes
-- No se reutiliza en transacciones
-- Ejemplo: `ShareLink.createOrUpdate()`
+- Operaciones completamente independientes que no pasan por un service
+- **Nota**: En este proyecto, `ShareLink.createOrUpdate` y `Laboratorio.configurarInsumos` ya **no** usan este patrón; la transacción está en shareService y laboratorioService, y los modelos reciben `connection`.
 
 **Estructura**:
 ```javascript
@@ -626,8 +624,8 @@ try {
   const reserva_id = await Horario.createHorario(..., connection)
   if (insumos?.length > 0) await Horario.createHorarioInsumos(reserva_id, insumos, connection)
   if (equipos?.length > 0) await Horario.createHorarioEquipos(reserva_id, equipos, connection)
+  await Horario.registrarActividadHorario({ accion: 'crear', reserva_id, descripcion, usuario_id, ip_address }, connection)
   await connection.commit()
-  await Horario.registrarActividadHorario({ accion: 'crear', ... }) // usa pool
   return { reserva_id, insumos_procesados, equipos_procesados }
 } catch (error) {
   await connection.rollback()
@@ -636,6 +634,7 @@ try {
   connection.release()
 }
 ```
+El registro de actividad se ejecuta **dentro** de la transacción (antes del commit) pasando `connection`; no se usa pool.
 
 El controller solo hace: `const result = await horarioService.crearReserva(...); res.status(201).json({ success: true, data: result })`.
 
@@ -699,11 +698,9 @@ export const Horario = {
     )
   },
 
-  // Operación simple (sin transacción)
-  registrarActividadHorario: async (data) => {
-    const { accion, reserva_id, descripcion, usuario_id, ip_address } = data
-    
-    await pool.execute(
+  // Se llama desde el service dentro de la transacción pasando connection (no usa pool)
+  registrarActividadHorario: async ({ accion, reserva_id, descripcion, usuario_id, ip_address }, connection) => {
+    await connection.execute(
       `INSERT INTO actividad_horarios 
        (accion, reserva_id, descripcion, usuario_id, ip_address, fecha_actividad) 
        VALUES (?, ?, ?, ?, ?, NOW())`,
@@ -715,20 +712,25 @@ export const Horario = {
 
 ### 8.2 Ejemplo: Eliminar Equipo
 
-En el sistema actual, **equipoService.eliminarEquipo** no usa transacción (una sola eliminación y registro de actividad). Si en el futuro se requieren varias operaciones atómicas, el patrón sería: **service** obtiene conexión, beginTransaction, operaciones, commit/rollback, release. Ejemplo de template (service con transacción):
+**equipoService.crearEquipo**, **actualizarEquipo** y **eliminarEquipo** usan transacción: el service obtiene conexión, inicia transacción, ejecuta la operación (create/update/delete) y el registro de actividad con la **misma** `connection`, y hace commit. `registrarActividadEquipo` recibe `connection` del service (no usa pool). Ejemplo (eliminarEquipo):
 
 ```javascript
-// Service con transacción (template)
-async eliminarEquipo(equipoId, userId, ip) {
+// Service (equipoService.eliminarEquipo) — estado actual
+async eliminarEquipo(equipoId, usuario_id, ip_address) {
+  // Validaciones fuera de la transacción: existsById, reservasActivas
+  const equipoInfo = await Equipo.getById(equipoId)
   const connection = await pool.getConnection()
   try {
     await connection.beginTransaction()
-    if (!(await Equipo.existsById(equipoId))) throw new AppError('Equipo no encontrado', 404)
-    if (await Equipo.reservasActivas(equipoId)) throw new AppError('Equipo en uso', 400)
-    const equipoInfo = await Equipo.getById(equipoId)
     await Equipo.delete(equipoId, connection)
+    await Equipo.registrarActividadEquipo({
+      accion: 'eliminar',
+      equipo_id: equipoInfo.id,
+      descripcion: `Equipo eliminado: ${equipoInfo.nombre}...`,
+      usuario_id,
+      ip_address
+    }, connection)
     await connection.commit()
-    await Equipo.registrarActividadEquipo({ accion: 'eliminar', ... })
   } catch (error) {
     await connection.rollback()
     throw error
@@ -737,8 +739,6 @@ async eliminarEquipo(equipoId, userId, ip) {
   }
 }
 ```
-
-Hoy `equipoService.eliminarEquipo` usa `Equipo.delete(equipoId)` sin conexión y luego `Equipo.registrarActividadEquipo` (pool); no hay transacción porque son operaciones secuenciales aceptables.
 
 ### 8.3 Ejemplo: Model con Conexión Opcional
 
@@ -807,6 +807,7 @@ export const Insumo = {
 3. **Los models nunca inician transacciones si reciben `connection`**
 4. **Operaciones simples usan `pool.execute()` directamente**
 5. **Operaciones complejas requieren transacción manejada por service**
+6. **`registrarActividadHorario` y `registrarActividadEquipo` reciben `connection`** del service (no usan pool); se llaman dentro de la transacción, antes del commit.
 
 ### ❌ Errores Comunes a Evitar
 
@@ -815,6 +816,7 @@ export const Insumo = {
 3. ❌ Olvidar `connection.release()` en `finally`
 4. ❌ Usar transacciones para operaciones simples
 5. ❌ Obtener conexión innecesariamente para operaciones simples
+6. ❌ Llamar `registrarActividadHorario` o `registrarActividadEquipo` sin pasar `connection` (el service debe pasar siempre la conexión de la transacción)
 
 ---
 
@@ -828,4 +830,4 @@ export const Insumo = {
 
 **Última actualización**: Febrero 2026  
 **Versión**: 1.1  
-**Estado**: Documento alineado con la arquitectura actual: Controller → Service → Model; transacciones y conexiones manejadas por **services** (horarioService, equipoService en importación, insumoService, inventarioService). El modelo Inventario ya no inicia transacciones; el service es dueño de beginTransaction/commit/rollback.
+**Estado**: Documento alineado con la arquitectura actual: Controller → Service → Model; transacciones y conexiones manejadas por **services** (horarioService, equipoService en crearEquipo/actualizarEquipo/eliminarEquipo/importarMasiva, insumoService, inventarioService, laboratorioService, shareService). **Laboratorio** es un módulo complejo: todas las operaciones pasan por laboratorioService; solo configurarInsumos usa transacción. En el `catch` de los services solo se hace rollback y `throw error`. **registrarActividadHorario** y **registrarActividadEquipo** reciben `connection` del service (no usan pool) y se ejecutan dentro de la transacción, antes del commit. Laboratorio.configurarInsumos y ShareLink.createOrUpdate reciben `connection` desde el service; ya no manejan transacción en el modelo.

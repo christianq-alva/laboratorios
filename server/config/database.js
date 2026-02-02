@@ -32,17 +32,14 @@ export const pool = mysql.createPool(dbConfig)
 
 // Test de conexión mejorado
 export const testConnection = async () => {
+  const connection = await pool.getConnection()
   try {
-    const connection = await pool.getConnection()
-    
-    // Probar una consulta simple
     const [rows] = await connection.execute('SELECT 1 as test')
     logger.info({
       host: dbConfig.host,
       database: dbConfig.database,
       test: rows[0]
     }, 'Conectado a MySQL')
-    connection.release()
   } catch (error) {
     logger.error({
       host: dbConfig.host,
@@ -53,5 +50,7 @@ export const testConnection = async () => {
       code: error.code,
       errno: error.errno
     }, 'Error conectando a MySQL')
+  } finally {
+    connection.release()
   }
 }

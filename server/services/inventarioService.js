@@ -34,7 +34,7 @@ export const inventarioService = {
       return movimientoId
     } catch (error) {
       await connection.rollback()
-      throw new AppError(error.message || 'Error al registrar el movimiento', error.statusCode || 400)
+      throw error
     } finally {
       connection.release()
     }
@@ -48,7 +48,7 @@ export const inventarioService = {
       await connection.commit()
     } catch (error) {
       await connection.rollback()
-      throw new AppError(error.message || 'Error al eliminar el movimiento de inventario', error.statusCode || 500)
+      throw error
     } finally {
       connection.release()
     }

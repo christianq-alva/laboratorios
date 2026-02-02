@@ -368,7 +368,7 @@ En el Model, dentro del `catch`: `throw handleDBError(error, 'Horario')`.
 - Múltiples modelos (Horario + Escuela + Ciclo + Docente; Inventario + Laboratorio + movimientos)
 - Transacciones (crear reserva + detalles; eliminar equipo + actividad)
 - Reglas de negocio: cruces de horario, fechas de mantenimiento, “no eliminar si tiene reservas”, saldo insuficiente en lote, permisos por laboratorio en incidencias
-- **Ejemplos en este sistema:** Horarios (`horarioService`), Equipos (`equipoService`), Inventario (`inventarioService`), Insumos (eliminación con relaciones), Incidencias (`incidenciaService` para permisos)
+- **Ejemplos en este sistema:** Horarios (`horarioService`), Equipos (`equipoService`), Inventario (`inventarioService`), Insumos (eliminación con relaciones), Incidencias (`incidenciaService` para permisos), Laboratorio (`laboratorioService` — módulo complejo con CRUD, cambio de estado, insumos y configurarInsumos)
 
 ---
 
