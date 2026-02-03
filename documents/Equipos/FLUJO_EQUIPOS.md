@@ -172,10 +172,10 @@ flowchart TB
    Ruta GET `/plantilla-importacion`. Middlewares: authenticateToken, authorize('create', 'Equipo').
 
 3. **Backend – equipoController.generarPlantillaImportacionEquipos**  
-   Llama equipoService.getDatosPlantillaEquipos() (laboratorios y tipos_equipo). Crea workbook XLSX: hoja "Plantilla Equipos" con columnas (CODIGO, NOMBRE, TIPO_EQUIPO_ID, DESCRIPCION, MARCA, MODELO, NUMERO_SERIE, ESTADO, FECHA_ULTIMO_MANTENIMIENTO, FECHA_PROXIMO_MANTENIMIENTO, COMENTARIOS, CONDICION, FECHA_ADQUISICION, LABORATORIO_CODIGO) y filas de ejemplo; hoja "INSTRUCCIONES" con instrucciones y listados de laboratorios y tipos. Escribe buffer y envía con headers de descarga.
+   Llama equipoService.getDatosPlantillaEquipos() (tipos_equipo). Crea workbook XLSX: hoja "Plantilla Equipos" con columnas (CODIGO, NOMBRE, TIPO_EQUIPO_ID, DESCRIPCION, MARCA, MODELO, NUMERO_SERIE, ESTADO, FECHA_ULTIMO_MANTENIMIENTO, FECHA_PROXIMO_MANTENIMIENTO, COMENTARIOS, CONDICION, FECHA_ADQUISICION) — **sin LABORATORIO_CODIGO** — y filas de ejemplo; hoja "INSTRUCCIONES" con instrucciones y listado de tipos de equipo (sin listado de laboratorios: el laboratorio se elige en la UI al importar). Escribe buffer y envía con headers de descarga.
 
 4. **Backend – equipoService.getDatosPlantillaEquipos**  
-   Laboratorio.getAll() y TipoEquipo.getAll(). Devuelve { laboratorios, tipos_equipo }.
+   TipoEquipo.getAll() (y laboratorios solo si se usan en otras partes). Devuelve { laboratorios, tipos_equipo }.
 
 5. **Backend – equipoController.generarPlantillaImportacionEquipos**  
    Responde con archivo binario (plantilla_equipos_YYYY-MM-DD.xlsx).
@@ -184,36 +184,38 @@ flowchart TB
 
 ## 8. Previsualizar importación masiva (Excel)
 
+El usuario selecciona un **laboratorio** en la UI; todos los equipos del Excel se previsualizan/importan en ese laboratorio. El Excel **no** incluye la columna LABORATORIO_CODIGO.
+
 1. **Frontend – equipoService.previsualizarImportacion**  
-   Envía POST `/equipos/previsualizar-importacion` con FormData (archivo_excel).
+   Envía POST `/equipos/previsualizar-importacion` con FormData: `archivo_excel` (file) y `laboratorio_id` (número del laboratorio seleccionado).
 
 2. **Backend – equipoRoutes**  
-   Ruta POST `/previsualizar-importacion`. Middlewares: authenticateToken, authorize('create', 'Equipo'), heavyOperationLimiter, upload.single('archivo_excel').
+   Ruta POST `/previsualizar-importacion`. Middlewares: authenticateToken, authorize('create', 'Equipo'), heavyOperationLimiter, upload.single('archivo_excel'), validate(previsualizarImportacionEquiposSchema) — valida `laboratorio_id` en req.body.
 
 3. **Backend – equipoController.previsualizarImportacionMasivaEquipos**  
-   Verifica req.file. Lee Excel (XLSX.read buffer, sheet_to_json). Si vacío responde 400. Llama equipoService.previsualizarImportacion(data).
+   Verifica req.file y lee laboratorio_id de req.body. Lee Excel (XLSX.read buffer, sheet_to_json). Si vacío responde 400. Llama equipoService.previsualizarImportacion(data, laboratorio_id).
 
 4. **Backend – equipoService.previsualizarImportacion**  
-   Llama getDatosPlantillaEquipos (laboratorios, tipos_equipo). Por cada fila: extrae y normaliza campos (CODIGO, NOMBRE, tipo_equipo_id, laboratorio_codigo, fechas, estado, condicion, etc.), valida obligatorios y valores (estados, condiciones, laboratorio y tipo válidos), arma errores por fila. Devuelve array de objetos { fila, codigo, nombre, ..., errores }.
+   Valida que laboratorio_id exista. Llama getDatosPlantillaEquipos (tipos_equipo). Ignora columna LABORATORIO_CODIGO si viene en el archivo. Por cada fila: extrae y normaliza campos (CODIGO, NOMBRE, tipo_equipo_id, fechas, estado, condicion, etc.), asigna laboratorio_id recibido a todas las filas, valida obligatorios y valores (estados, condiciones, tipo válido), arma errores por fila. Devuelve array de objetos { fila, codigo, nombre, ..., laboratorio_id, errores }.
 
 5. **Backend – equipoController.previsualizarImportacionMasivaEquipos**  
-   Responde 200 con `{ data: previewData, total_filas }`.
+   Responde 200 con `{ data: previewData, total_filas, errores_generales }`.
 
 ---
 
 ## 9. Ejecutar importación masiva de equipos
 
 1. **Frontend – equipoService.importacionMasiva**  
-   Envía POST `/equipos/importacion-masiva` con FormData (archivo_excel).
+   Envía POST `/equipos/importacion-masiva` con FormData: `archivo_excel` (file) y `laboratorio_id` (número del laboratorio seleccionado).
 
 2. **Backend – equipoRoutes**  
-   Ruta POST `/importacion-masiva`. Middlewares: authenticateToken, authorize('create', 'Equipo'), heavyOperationLimiter, upload.single('archivo_excel').
+   Ruta POST `/importacion-masiva`. Middlewares: authenticateToken, authorize('create', 'Equipo'), heavyOperationLimiter, upload.single('archivo_excel'), validate(importacionMasivaEquiposSchema) — valida `laboratorio_id` en req.body.
 
 3. **Backend – equipoController.importacionMasivaEquipos**  
-   Verifica req.file. Lee Excel y convierte a JSON. Si vacío responde 400. Llama equipoService.importarMasiva(data, userId, ip).
+   Verifica req.file y lee laboratorio_id de req.body. Lee Excel y convierte a JSON. Si vacío responde 400. Llama equipoService.importacionMasiva(data, laboratorioId, userId, ip).
 
-4. **Backend – equipoService.importarMasiva**  
-   Laboratorio.getAll() y TipoEquipo.getAll(). Obtiene conexión e inicia transacción. Por cada fila: valida NOMBRE, CODIGO, LABORATORIO_CODIGO, TIPO_EQUIPO_ID, fechas, estado, condicion; resuelve laboratorio_id por código; Equipo.create(equipoData, connection); Equipo.registrarActividadEquipo(accion: 'crear', ...). Acumula procesados, resultados y errores. Si hay solo errores y ningún procesado hace rollback y lanza AppError con errores. Commit. Libera conexión. Devuelve { procesados, errores, resultados }.
+4. **Backend – equipoService.importacionMasiva**  
+   Valida que laboratorioId exista. TipoEquipo.getAll(). Obtiene conexión e inicia transacción. Ignora columna LABORATORIO_CODIGO si viene en el archivo. Por cada fila: valida NOMBRE, CODIGO, TIPO_EQUIPO_ID, fechas, estado, condicion; asigna el laboratorio_id recibido a todos los equipos; Equipo.create(equipoData, connection); Equipo.registrarActividadEquipo(accion: 'crear', ...). Acumula procesados, resultados y errores. Si hay solo errores y ningún procesado hace rollback y lanza AppError con errores. Commit. Libera conexión. Devuelve { procesados, errores, resultados }.
 
 5. **Backend – equipoController.importacionMasivaEquipos**  
    Responde 200 con `{ success, message, procesados, errores, detalles_errores, resultados }`.

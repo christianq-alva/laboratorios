@@ -21,9 +21,12 @@ export const equipoService = {
     return await Equipo.getActividadEquipos(user_rol, user_laboratorio_ids, laboratorio_id, fecha_inicio, fecha_fin, tipo_actividad, usuario_id)
   },
 
-  async crearEquipo(datos, inventario_inicial, usuario_id, ip_address) {
+  async crearEquipo(datos, usuario_id, ip_address) {
     const existingCodigo = await Equipo.existsByCodigo(datos.codigo)
     if (existingCodigo) throw new AppError('Ya existe otro equipo con ese código', 400)
+
+    const lab = await Laboratorio.getLaboratorioById(datos.laboratorio_id)
+    if (!lab) throw new AppError('Laboratorio no encontrado', 404)
 
     const connection = await pool.getConnection()
     try {
@@ -47,7 +50,7 @@ export const equipoService = {
       await Equipo.registrarActividadEquipo({
         accion: 'crear',
         equipo_id,
-        descripcion: `Equipo creado: ${datos.nombre} (${datos.codigo}) - Marca: ${datos.marca || 'N/A'}, Modelo: ${datos.modelo || 'N/A'}, Estado: ${datos.estado || 'Operativo'}, Condición: ${datos.condicion || 'Bueno'}. Inventario inicial en ${inventario_inicial?.length || 0} laboratorio(s).`,
+        descripcion: `Equipo creado: ${datos.nombre} (${datos.codigo}) - Marca: ${datos.marca || 'N/A'}, Modelo: ${datos.modelo || 'N/A'}, Estado: ${datos.estado || 'Operativo'}, Condición: ${datos.condicion || 'Bueno'}. Laboratorio: ${lab.codigo}.`,
         usuario_id,
         ip_address
       }, connection)
@@ -140,8 +143,12 @@ export const equipoService = {
     }
   },
 
-  async importarMasiva(rows, usuario_id, ip_address) {
-    const laboratorios = await Laboratorio.getAll()
+  async importarMasiva(rows, usuario_id, ip_address, laboratorio_id) {
+    const existsLab = await Laboratorio.exists(laboratorio_id)
+    if (!existsLab) {
+      throw new AppError('Laboratorio no encontrado', 404)
+    }
+    const lab = await Laboratorio.getLaboratorioById(laboratorio_id)
     const tipos_equipo = await TipoEquipo.getAll()
     const connection = await pool.getConnection()
     let procesados = 0
@@ -166,7 +173,6 @@ export const equipoService = {
           const estado = row.ESTADO ? row.ESTADO.toString().trim() : 'Operativo'
           const comentarios = row.COMENTARIOS ? row.COMENTARIOS.toString().trim() : ''
           const condicion = row.CONDICION ? row.CONDICION.toString().trim() : 'Bueno'
-          const laboratorio_codigo = row.LABORATORIO_CODIGO ? row.LABORATORIO_CODIGO.toString().trim() : null
           const tipo_equipo_id = row.TIPO_EQUIPO_ID ? parseInt(row.TIPO_EQUIPO_ID) : null
 
           if (!codigo) {
@@ -213,16 +219,6 @@ export const equipoService = {
               }
             }
           }
-          if (!laboratorio_codigo) {
-            errores.push(`Fila ${rowNum}: LABORATORIO_CODIGO es obligatorio`)
-            continue
-          }
-          const lab = laboratorios.find(l => l.codigo === laboratorio_codigo)
-          if (!lab) {
-            errores.push(`Fila ${rowNum}: Laboratorio inválido: ${laboratorio_codigo}`)
-            continue
-          }
-          const laboratorio_id = lab.id
           if (!tipo_equipo_id || !tipos_equipo.some(te => te.id === tipo_equipo_id)) {
             errores.push(`Fila ${rowNum}: TIPO_EQUIPO_ID es obligatorio y debe ser válido`)
             continue
@@ -255,7 +251,7 @@ export const equipoService = {
           await Equipo.registrarActividadEquipo({
             accion: 'crear',
             equipo_id,
-            descripcion: `Equipo creado por importación masiva: ${nombre} (${codigo}) - Marca: ${marca || 'N/A'}, Modelo: ${modelo || 'N/A'}, Estado: ${estado}, Condición: ${condicion}. Inventario en laboratorio ${laboratorio_codigo}.`,
+            descripcion: `Equipo creado por importación masiva: ${nombre} (${codigo}) - Marca: ${marca || 'N/A'}, Modelo: ${modelo || 'N/A'}, Estado: ${estado}, Condición: ${condicion}. Laboratorio: ${lab?.codigo}.`,
             usuario_id,
             ip_address
           }, connection)
@@ -287,8 +283,12 @@ export const equipoService = {
     return { laboratorios, tipos_equipo }
   },
 
-  async previsualizarImportacion(data) {
-    const { laboratorios, tipos_equipo } = await this.getDatosPlantillaEquipos()
+  async previsualizarImportacion(data, laboratorio_id) {
+    const existsLab = await Laboratorio.exists(laboratorio_id)
+    if (!existsLab) {
+      throw new AppError('Laboratorio no encontrado', 404)
+    }
+    const { tipos_equipo } = await this.getDatosPlantillaEquipos()
     const previewData = []
     for (let i = 0; i < data.length; i++) {
       const row = data[i]
@@ -303,7 +303,6 @@ export const equipoService = {
       const estado = row.ESTADO ? row.ESTADO.toString().trim() : 'Operativo'
       const comentarios = row.COMENTARIOS ? row.COMENTARIOS.toString().trim() : ''
       const condicion = row.CONDICION ? row.CONDICION.toString().trim() : 'Bueno'
-      const laboratorio_codigo = row.LABORATORIO_CODIGO ? row.LABORATORIO_CODIGO.toString().trim() : null
       const tipo_equipo_id = row.TIPO_EQUIPO_ID ? parseInt(row.TIPO_EQUIPO_ID) : null
       if (!codigo) erroresFila.push('CODIGO es obligatorio')
       if (!nombre) erroresFila.push('NOMBRE es obligatorio')
@@ -321,8 +320,6 @@ export const equipoService = {
       }
       if (!estadosValidos.includes(estado)) erroresFila.push(`Estado inválido. Debe ser: ${estadosValidos.join(', ')}`)
       if (!condicionesValidas.includes(condicion)) erroresFila.push(`Condición inválida. Debe ser: ${condicionesValidas.join(', ')}`)
-      if (!laboratorio_codigo) erroresFila.push('LABORATORIO_CODIGO es obligatorio')
-      else if (!laboratorios.some(lab => lab.codigo === laboratorio_codigo)) erroresFila.push(`Laboratorio inválido: ${laboratorio_codigo}`)
       if (!tipo_equipo_id) erroresFila.push('TIPO_EQUIPO_ID es obligatorio')
       else if (!tipos_equipo.some(te => te.id === tipo_equipo_id)) erroresFila.push(`Tipo de equipo inválido: ${tipo_equipo_id}`)
       previewData.push({
@@ -336,7 +333,7 @@ export const equipoService = {
         estado,
         comentarios,
         condicion,
-        laboratorio_codigo,
+        laboratorio_id,
         tipo_equipo_id,
         errores: erroresFila
       })

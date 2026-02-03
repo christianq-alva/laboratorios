@@ -56,12 +56,13 @@ El módulo de **Equipos** gestiona los equipos de laboratorio: creación, actual
 
 ## 4. Importación Masiva (Excel)
 
-- Columnas obligatorias: CODIGO, NOMBRE, TIPO_EQUIPO_ID, FECHA_ADQUISICION, LABORATORIO_CODIGO.
-- **LABORATORIO_CODIGO** debe coincidir con un laboratorio existente.
+- **Laboratorio**: el usuario selecciona el laboratorio de destino en la UI antes de subir el archivo. El **laboratorio_id** se envía en el cuerpo de la petición (FormData); el Excel **no** incluye la columna LABORATORIO_CODIGO. Todos los equipos del archivo se importan en el laboratorio seleccionado.
+- Columnas obligatorias en el Excel: **CODIGO**, **NOMBRE**, **TIPO_EQUIPO_ID**, **FECHA_ADQUISICION**.
 - **TIPO_EQUIPO_ID** debe existir en `tipos_equipo`.
 - **ESTADO**: uno de Operativo, En Mantenimiento, Fuera de Servicio.
 - **CONDICION**: uno de Excelente, Bueno, Regular, Malo.
 - Fechas en formato YYYY-MM-DD.
+- El **laboratorio_id** enviado en la petición debe existir; si no existe se responde 404.
 - Si hay errores en todas las filas y ningún registro se procesa, se responde 400 con lista de errores; si al menos uno se procesa, se hace commit parcial y se devuelve resultado con detalle de procesados y errores.
 
 ---
@@ -78,7 +79,7 @@ El módulo de **Equipos** gestiona los equipos de laboratorio: creación, actual
 | Código | Situación |
 |--------|-----------|
 | 400 | Código duplicado; fechas de mantenimiento inválidas; equipo con reservas (no cambiar lab / no eliminar); ID inválido |
-| 404 | Equipo o tipo de equipo no encontrado |
+| 404 | Equipo o tipo de equipo no encontrado; laboratorio no encontrado (importación masiva) |
 | 500 | Error interno |
 
 ---

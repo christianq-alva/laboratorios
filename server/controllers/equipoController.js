@@ -175,7 +175,7 @@ export const getActividadEquipos = async (req, res, next) => {
 
 export const generarPlantillaImportacionEquipos = async (req, res, next) => {
   try {
-    const { laboratorios, tipos_equipo } = await equipoService.getDatosPlantillaEquipos()
+    const { tipos_equipo } = await equipoService.getDatosPlantillaEquipos()
     const wb = XLSX.utils.book_new()
     const plantillaData = [
       [
@@ -191,8 +191,7 @@ export const generarPlantillaImportacionEquipos = async (req, res, next) => {
         'FECHA_PROXIMO_MANTENIMIENTO',
         'COMENTARIOS',
         'CONDICION',
-        'FECHA_ADQUISICION',
-        'LABORATORIO_CODIGO'
+        'FECHA_ADQUISICION'
       ],
       [
         'EQP-0001',
@@ -207,8 +206,7 @@ export const generarPlantillaImportacionEquipos = async (req, res, next) => {
         '2024-07-15',
         'Requiere calibración semestral',
         'Excelente',
-        '2023-01-01',
-        'LAB-001'
+        '2023-01-01'
       ],
       [
         'EQP-0002',
@@ -223,36 +221,32 @@ export const generarPlantillaImportacionEquipos = async (req, res, next) => {
         '2024-09-20',
         'Limpiar lentes semanalmente',
         'Bueno',
-        '2024-01-01',
-        'LAB-002'
+        '2024-01-01'
       ]
     ]
     const wsPlantilla = XLSX.utils.aoa_to_sheet(plantillaData)
     wsPlantilla['!cols'] = [
       { width: 30 }, { width: 30 }, { width: 15 }, { width: 40 }, { width: 15 }, { width: 15 },
       { width: 20 }, { width: 15 }, { width: 25 }, { width: 25 }, { width: 35 }, { width: 12 },
-      { width: 15 }, { width: 15 }
+      { width: 15 }
     ]
     XLSX.utils.book_append_sheet(wb, wsPlantilla, 'Plantilla Equipos')
     const instruccionesData = [
       ['INSTRUCCIONES PARA IMPORTACIÓN MASIVA DE EQUIPOS'],
+      [''],
+      ['En la pantalla de importación debes seleccionar primero el laboratorio. Todos los equipos del archivo se registrarán en ese laboratorio.'],
       [''],
       ['COLUMNAS OBLIGATORIAS:'],
       ['• CODIGO: Código del equipo (Ej.: EQP-0001)'],
       ['• NOMBRE: Nombre del equipo (texto, máximo 255 caracteres)'],
       ['• TIPO_EQUIPO_ID: ID del tipo de equipo'],
       ['• FECHA_ADQUISICION: Fecha de compra (formato YYYY-MM-DD)'],
-      ['• LABORATORIO_CODIGO: Código del laboratorio'],
       [''],
       ['COLUMNAS OPCIONALES:'],
       ['• DESCRIPCION, MARCA, MODELO, NUMERO_SERIE'],
       ['• ESTADO: Operativo | En Mantenimiento | Fuera de Servicio'],
       ['• FECHA_ULTIMO_MANTENIMIENTO, FECHA_PROXIMO_MANTENIMIENTO (YYYY-MM-DD)'],
       ['• COMENTARIOS, CONDICION: Excelente | Bueno | Regular | Malo'],
-      [''],
-      ['LABORATORIOS DISPONIBLES:'],
-      ['CODIGO', 'NOMBRE'],
-      ...laboratorios.map(lab => [lab.codigo, lab.nombre]),
       [''],
       ['TIPOS DE EQUIPOS DISPONIBLES:'],
       ['ID', 'NOMBRE'],
@@ -280,6 +274,7 @@ export const previsualizarImportacionMasivaEquipos = async (req, res, next) => {
         message: 'No se ha proporcionado ningún archivo'
       })
     }
+    const { laboratorio_id } = req.body
     const workbook = XLSX.read(req.file.buffer, { type: 'buffer' })
     const sheetName = workbook.SheetNames[0]
     const worksheet = workbook.Sheets[sheetName]
@@ -290,7 +285,7 @@ export const previsualizarImportacionMasivaEquipos = async (req, res, next) => {
         message: 'El archivo Excel está vacío o no tiene el formato correcto'
       })
     }
-    const previewData = await equipoService.previsualizarImportacion(data)
+    const previewData = await equipoService.previsualizarImportacion(data, laboratorio_id)
     res.status(200).json({
       data: previewData,
       total_filas: previewData.length
@@ -308,6 +303,7 @@ export const importacionMasivaEquipos = async (req, res, next) => {
         message: 'No se ha proporcionado ningún archivo'
       })
     }
+    const { laboratorio_id } = req.body
     const workbook = XLSX.read(req.file.buffer, { type: 'buffer' })
     const sheetName = workbook.SheetNames[0]
     const worksheet = workbook.Sheets[sheetName]
@@ -321,7 +317,8 @@ export const importacionMasivaEquipos = async (req, res, next) => {
     const result = await equipoService.importarMasiva(
       data,
       req.user.userId,
-      req.ip || req.connection?.remoteAddress
+      req.ip || req.connection?.remoteAddress,
+      laboratorio_id
     )
     res.status(200).json({
       success: true,

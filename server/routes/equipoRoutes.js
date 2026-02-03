@@ -20,7 +20,9 @@ import {
   deleteEquipoSchema,
   getEquiposSchema,
   getEquipoByLaboratorioSchema,
-  getActividadEquiposSchema
+  getActividadEquiposSchema,
+  previsualizarImportacionEquiposSchema,
+  importacionMasivaEquiposSchema
 } from '../validations/index.js'
 import multer from 'multer'
 
@@ -83,19 +85,21 @@ router.delete('/:id',
   deleteEquipo
 )
 
-router.post('/previsualizar-importacion', 
+router.post('/previsualizar-importacion',
   authenticateToken,
   authorize('create', 'Equipo'),
   heavyOperationLimiter,
   upload.single('archivo_excel'),
+  validate(previsualizarImportacionEquiposSchema),
   previsualizarImportacionMasivaEquipos
 )
 
-router.post('/importacion-masiva', 
+router.post('/importacion-masiva',
   authenticateToken,
   authorize('create', 'Equipo'),
   heavyOperationLimiter,
   upload.single('archivo_excel'),
+  validate(importacionMasivaEquiposSchema),
   importacionMasivaEquipos
 )
 

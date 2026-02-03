@@ -267,3 +267,23 @@ export const getActividadEquiposSchema = z.object({
         path: ['fecha_inicio', 'fecha_fin']
     })
 })
+
+/**
+ * Schema para previsualizar importación masiva de equipos
+ * POST /equipos/previsualizar-importacion (body: laboratorio_id + archivo_excel)
+ */
+export const previsualizarImportacionEquiposSchema = z.object({
+    body: z.object({
+        laboratorio_id: z.coerce.number().int().positive('El laboratorio es obligatorio y debe ser un ID válido')
+    })
+})
+
+/**
+ * Schema para importación masiva de equipos
+ * POST /equipos/importacion-masiva (body: laboratorio_id + archivo_excel)
+ */
+export const importacionMasivaEquiposSchema = z.object({
+    body: z.object({
+        laboratorio_id: z.coerce.number().int().positive('El laboratorio es obligatorio y debe ser un ID válido')
+    })
+})

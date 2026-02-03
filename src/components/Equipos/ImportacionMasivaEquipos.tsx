@@ -209,7 +209,8 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
       setLoading(true)
       setError(null)
 
-      const previewData = await equipoService.previsualizarImportacion(file)
+      const laboratorioId = Number(filters.laboratorio_id)
+      const previewData = await equipoService.previsualizarImportacion(file, laboratorioId)
       setPreview(previewData)
 
     } catch (err: any) {
@@ -221,13 +222,14 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
   }
 
   const handleProcesarArchivo = async () => {
-    if (!selectedFile) return
+    if (!selectedFile || !filters.laboratorio_id) return
 
     try {
       setLoading(true)
       setError(null)
 
-      const resultado = await equipoService.importacionMasiva(selectedFile)
+      const laboratorioId = Number(filters.laboratorio_id)
+      const resultado = await equipoService.importacionMasiva(selectedFile, laboratorioId)
       setResultado(resultado)
       setCurrentStep('resultado')
 
@@ -267,7 +269,7 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
     const labels: Record<Step, string> = {
       subida: 'Subir Archivo',
       preview: 'Previsualizar Datos',
-      resultado: 'Confirmar Reabastecimiento'
+      resultado: 'Resultado'
     }
     return labels[step]
   }
@@ -436,6 +438,26 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
               </Typography>
             </Paper>
 
+            {(() => {
+              const listaErrores = preview.data.flatMap((item) =>
+                item.errores.map((msg) => `Fila ${item.fila}: ${msg}`)
+              )
+              return listaErrores.length > 0 ? (
+                <Alert severity="warning" sx={{ mb: 3 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Errores encontrados:
+                  </Typography>
+                  <ul style={{ margin: 0, paddingLeft: 20 }}>
+                    {listaErrores.map((error, index) => (
+                      <li key={index}>
+                        <Typography variant="body2">{error}</Typography>
+                      </li>
+                    ))}
+                  </ul>
+                </Alert>
+              ) : null
+            })()}
+
             <TableContainer sx={{ maxHeight: 400, mb: 3 }}>
               <Table size="small" stickyHeader>
                 <TableHead>
@@ -513,6 +535,21 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
                   />
                 )}
               </Box>
+
+              {resultado.detalles_errores && resultado.detalles_errores.length > 0 && (
+                <Alert severity="warning" sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Errores encontrados:
+                  </Typography>
+                  <ul style={{ margin: 0, paddingLeft: 20 }}>
+                    {resultado.detalles_errores.map((error, index) => (
+                      <li key={index}>
+                        <Typography variant="body2">{error}</Typography>
+                      </li>
+                    ))}
+                  </ul>
+                </Alert>
+              )}
             </Paper>
           </Box>
         )}

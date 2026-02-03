@@ -196,8 +196,8 @@ export const equipoService = {
     }
   },
 
-  // Previsualizar datos del Excel antes de importar equipos
-  previsualizarImportacion: async (archivo: File): Promise<{
+  // Previsualizar datos del Excel antes de importar equipos (todos los equipos se registrarán en laboratorioId)
+  previsualizarImportacion: async (archivo: File, laboratorioId: number): Promise<{
     success: boolean
     data: Array<{
       fila: number
@@ -223,6 +223,7 @@ export const equipoService = {
     try {
       const formData = new FormData()
       formData.append('archivo_excel', archivo)
+      formData.append('laboratorio_id', laboratorioId.toString())
 
       const response = await api.post('/equipos/previsualizar-importacion', formData, {
         headers: {
@@ -237,8 +238,8 @@ export const equipoService = {
     }
   },
 
-  // Importación masiva de equipos desde Excel
-  importacionMasiva: async (archivo: File): Promise<{
+  // Importación masiva de equipos desde Excel (todos los equipos se registran en laboratorioId)
+  importacionMasiva: async (archivo: File, laboratorioId: number): Promise<{
     success: boolean
     message: string
     procesados: number
@@ -257,6 +258,7 @@ export const equipoService = {
     try {
       const formData = new FormData()
       formData.append('archivo_excel', archivo)
+      formData.append('laboratorio_id', laboratorioId.toString())
 
       const response = await api.post('/equipos/importacion-masiva', formData, {
         headers: {
