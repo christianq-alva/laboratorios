@@ -73,43 +73,79 @@ interface EquipoSeleccionado {
   nombre: string
 }
 
-// Paleta de colores disponibles - 30 colores organizados en 5 filas x 6 columnas
+// Paleta de colores disponibles - 56 colores con buen contraste para texto blanco
+// Organizados en múltiples filas
 const COLOR_PALETTE = [
   // Fila 1
-  { color: '#ff7f7f', name: 'Coral' },
-  { color: '#f44336', name: 'Rojo' },
-  { color: '#ff9800', name: 'Naranja' },
-  { color: '#4ecdc4', name: 'Turquesa' },
-  { color: '#81d4fa', name: 'Azul Claro' },
-  { color: '#26a69a', name: 'Verde Azulado' },
+  { color: '#d32f2f', name: 'Rojo' }, // Rojo oscuro - buen contraste
+  { color: '#c62828', name: 'Rojo Oscuro' }, // Rojo muy oscuro
+  { color: '#e64a19', name: 'Naranja Rojo' }, // Naranja rojizo oscuro
+  { color: '#f57c00', name: 'Naranja' }, // Naranja oscuro
+  { color: '#f9a825', name: 'Ámbar' }, // Ámbar oscuro
+  { color: '#fbc02d', name: 'Amarillo Oscuro' }, // Amarillo oscuro
   // Fila 2
-  { color: '#ffb74d', name: 'Naranja Claro' },
-  { color: '#ff6e40', name: 'Naranja Rojo' },
-  { color: '#ba68c8', name: 'Púrpura' },
-  { color: '#7b1fa2', name: 'Púrpura Oscuro' },
-  { color: '#4db6ac', name: 'Verde Azulado Claro' },
-  { color: '#80deea', name: 'Turquesa Claro' },
+  { color: '#388e3c', name: 'Verde' }, // Verde oscuro - buen contraste
+  { color: '#2e7d32', name: 'Verde Oscuro' }, // Verde muy oscuro
+  { color: '#00796b', name: 'Verde Azulado' }, // Verde azulado oscuro
+  { color: '#00897b', name: 'Turquesa' }, // Turquesa oscuro
+  { color: '#0097a7', name: 'Cian' }, // Cian oscuro
+  { color: '#0277bd', name: 'Azul Claro' }, // Azul claro oscuro
   // Fila 3
-  { color: '#aed581', name: 'Verde Claro' },
-  { color: '#388e3c', name: 'Verde Oscuro' },
-  { color: '#64b5f6', name: 'Azul Claro' },
-  { color: '#1976d2', name: 'Azul Medio' },
-  { color: '#1565c0', name: 'Azul Oscuro' },
-  { color: '#ffeb3b', name: 'Amarillo' },
+  { color: '#1565c0', name: 'Azul' }, // Azul oscuro - buen contraste
+  { color: '#0d47a1', name: 'Azul Oscuro' }, // Azul muy oscuro
+  { color: '#283593', name: 'Índigo' }, // Índigo oscuro
+  { color: '#512da8', name: 'Púrpura Oscuro' }, // Púrpura oscuro
+  { color: '#6a1b9a', name: 'Púrpura' }, // Púrpura muy oscuro
+  { color: '#7b1fa2', name: 'Violeta' }, // Violeta oscuro
   // Fila 4
-  { color: '#fff176', name: 'Amarillo Claro' },
-  { color: '#ffa726', name: 'Naranja' },
-  { color: '#e53935', name: 'Rojo Oscuro' },
-  { color: '#f48fb1', name: 'Rosa' },
-  { color: '#c2185b', name: 'Rosa Oscuro' },
-  { color: '#0d47a1', name: 'Azul Muy Oscuro' },
+  { color: '#c2185b', name: 'Rosa' }, // Rosa oscuro - buen contraste
+  { color: '#ad1457', name: 'Rosa Oscuro' }, // Rosa muy oscuro
+  { color: '#880e4f', name: 'Rosa Profundo' }, // Rosa profundo
+  { color: '#b71c1c', name: 'Rojo Profundo' }, // Rojo profundo
+  { color: '#bf360c', name: 'Naranja Profundo' }, // Naranja profundo
+  { color: '#e65100', name: 'Naranja Intenso' }, // Naranja intenso
   // Fila 5
-  { color: '#ff6f00', name: 'Naranja Oscuro' },
-  { color: '#9e9e9e', name: 'Gris' },
-  { color: '#607d8b', name: 'Gris Azulado' },
-  { color: '#795548', name: 'Marrón' },
-  { color: '#5d4037', name: 'Marrón Oscuro' },
-  { color: '#424242', name: 'Gris Oscuro' }
+  { color: '#1b5e20', name: 'Verde Profundo' }, // Verde profundo - buen contraste
+  { color: '#004d40', name: 'Verde Azulado Profundo' }, // Verde azulado profundo
+  { color: '#006064', name: 'Cian Profundo' }, // Cian profundo
+  { color: '#01579b', name: 'Azul Profundo' }, // Azul profundo
+  { color: '#1a237e', name: 'Índigo Profundo' }, // Índigo profundo
+  { color: '#4a148c', name: 'Púrpura Profundo' }, // Púrpura profundo
+  // Fila 6
+  { color: '#424242', name: 'Gris Oscuro' }, // Gris oscuro - buen contraste
+  { color: '#212121', name: 'Gris Muy Oscuro' }, // Gris muy oscuro
+  { color: '#263238', name: 'Gris Azulado' }, // Gris azulado oscuro
+  { color: '#3e2723', name: 'Marrón' }, // Marrón oscuro
+  { color: '#5d4037', name: 'Marrón Oscuro' }, // Marrón muy oscuro
+  { color: '#6d4c41', name: 'Tierra' }, // Color tierra oscuro
+  // Fila 7 - Colores adicionales
+  { color: '#8b0000', name: 'Rojo Oscuro Intenso' }, // Rojo oscuro intenso
+  { color: '#a0522d', name: 'Sienna' }, // Sienna oscuro
+  { color: '#8b4513', name: 'Saddle Brown' }, // Marrón silla
+  { color: '#654321', name: 'Marrón Oscuro Intenso' }, // Marrón oscuro intenso
+  { color: '#2f4f4f', name: 'Gris Pizarra Oscuro' }, // Gris pizarra oscuro
+  { color: '#191970', name: 'Azul Medianoche' }, // Azul medianoche
+  // Fila 8
+  { color: '#800080', name: 'Púrpura' }, // Púrpura estándar
+  { color: '#4b0082', name: 'Índigo Oscuro' }, // Índigo oscuro
+  { color: '#8b008b', name: 'Magenta Oscuro' }, // Magenta oscuro
+  { color: '#9932cc', name: 'Orquídea Oscuro' }, // Orquídea oscuro
+  { color: '#8b008b', name: 'Violeta Oscuro' }, // Violeta oscuro
+  { color: '#6b0082', name: 'Púrpura Intenso' }, // Púrpura intenso
+  // Fila 9
+  { color: '#006400', name: 'Verde Oscuro' }, // Verde oscuro
+  { color: '#228b22', name: 'Verde Bosque' }, // Verde bosque
+  { color: '#2e8b57', name: 'Verde Mar' }, // Verde mar
+  { color: '#3cb371', name: 'Verde Medio' }, // Verde medio
+  { color: '#008b8b', name: 'Cian Oscuro' }, // Cian oscuro
+  { color: '#008080', name: 'Teal' }, // Teal oscuro
+  // Fila 10
+  { color: '#000080', name: 'Azul Marino' }, // Azul marino
+  { color: '#00008b', name: 'Azul Oscuro' }, // Azul oscuro
+  { color: '#0000cd', name: 'Azul Medio' }, // Azul medio
+  { color: '#1e90ff', name: 'Azul Dodger' }, // Azul dodger
+  { color: '#0066cc', name: 'Azul Real' }, // Azul real
+  { color: '#003366', name: 'Azul Noche' } // Azul noche
 ]
 
 export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, onSuccess, horario }) => {
