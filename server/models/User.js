@@ -38,20 +38,6 @@ export const User = {
     }
   },
 
-  getUserPermissions: async (rolId) => {
-    try {
-      const [rows] = await pool.execute(`
-        SELECT p.nombre, p.ruta
-        FROM permisos p
-        JOIN rol_permiso rp ON p.id = rp.permiso_id
-        WHERE rp.rol_id = ?
-      `, [rolId])
-      return rows
-    } catch (error) {
-      handleDBError(error, 'Usuario')
-    }
-  },
-
   // Obtener todos los usuarios
   getAll: async () => {
     try {

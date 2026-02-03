@@ -62,7 +62,7 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
     laboratorio_id: '',
     fecha_inicio: '',
     fecha_fin: '',
-    tipo_movimiento: '',
+    tipo_actividad: '',
     usuario_id: ''
   })
 
@@ -104,7 +104,7 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
     if (filters.laboratorio_id) filtersToSend.laboratorio_id = parseInt(filters.laboratorio_id)
     if (filters.fecha_inicio) filtersToSend.fecha_inicio = filters.fecha_inicio
     if (filters.fecha_fin) filtersToSend.fecha_fin = filters.fecha_fin
-    if (filters.tipo_movimiento) filtersToSend.tipo_movimiento = filters.tipo_movimiento
+    if (filters.tipo_actividad) filtersToSend.tipo_actividad = filters.tipo_actividad
     if (filters.usuario_id) filtersToSend.usuario_id = parseInt(filters.usuario_id)
     const result = await execute(() => equipoService.getActividad(filtersToSend))
 
@@ -132,7 +132,7 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
       laboratorio_id: '',
       fecha_inicio: '',
       fecha_fin: '',
-      tipo_movimiento: '',
+      tipo_actividad: '',
       usuario_id: ''
     })
   }
@@ -148,7 +148,7 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
   const getTipoActividadColor = (tipoActividad: string) => {
     switch (tipoActividad) {
       case 'crear': return 'success'
-      case 'actualizar': return 'info'
+      case 'editar': return 'info'
       case 'eliminar': return 'error'
       default: return 'default'
     }
@@ -157,7 +157,7 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
   const getTipoActividadIcon = (tipoActividad: string) => {
     switch (tipoActividad) {
       case 'crear': return <Add />
-      case 'actualizar': return <Edit />
+      case 'editar': return <Edit />
       case 'eliminar': return <Delete />
       default: return <History />
     }
@@ -183,9 +183,9 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
 
   const formatTipoActividad = (tipoActividad: string) => {
     switch (tipoActividad) {
-      case 'crear': return 'Creado'
-      case 'actualizar': return 'Actualizado'
-      case 'eliminar': return 'Eliminado'
+      case 'crear': return 'Crear'
+      case 'editar': return 'Editar'
+      case 'eliminar': return 'Eliminar'
       default: return tipoActividad
     }
   }
@@ -262,14 +262,14 @@ export const ActividadEquipos: React.FC<ActividadEquiposProps> = ({ open, onClos
             <FormControl size="small">
               <InputLabel>Tipo de actividad</InputLabel>
               <Select
-                value={filters.tipo_movimiento}
+                value={filters.tipo_actividad}
                 label="Tipo de actividad"
-                onChange={(e) => handleFilterChange('tipo_movimiento', e.target.value)}
+                onChange={(e) => handleFilterChange('tipo_actividad', e.target.value)}
               >
                 <MenuItem value="">Todos</MenuItem>
-                <MenuItem value="crear">Creación</MenuItem>
-                <MenuItem value="actualizar">Actualización</MenuItem>
-                <MenuItem value="eliminar">Eliminación</MenuItem>
+                <MenuItem value="crear">Crear</MenuItem>
+                <MenuItem value="editar">Editar</MenuItem>
+                <MenuItem value="eliminar">Eliminar</MenuItem>
               </Select>
             </FormControl>
             {user?.rol === 'Administrador' && (

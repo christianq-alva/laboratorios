@@ -7,7 +7,8 @@ const JWT_EXPIRES_IN = '12h'
 
 /**
  * Autenticar usuario y generar token.
- * Valida credenciales, estado activo y devuelve usuario, permisos y token.
+ * Valida credenciales, estado activo y devuelve usuario y token.
+ * La autorización es por rol (tabla roles); no se usan tablas permisos/rol_permiso.
  */
 export async function login(usuario, contrasena) {
   const user = await User.findByCredentials(usuario, contrasena)
@@ -19,8 +20,6 @@ export async function login(usuario, contrasena) {
   if (user.estado === 'I') {
     throw new AppError('Usuario inactivo. Contacte al administrador.', 401)
   }
-
-  const permisos = await User.getUserPermissions(user.rol_id)
 
   const token = jwt.sign(
     {
@@ -41,7 +40,6 @@ export async function login(usuario, contrasena) {
       rol: user.rol_nombre,
       laboratorio_ids: user.laboratorio_ids
     },
-    permisos,
     token
   }
 }

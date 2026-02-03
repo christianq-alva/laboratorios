@@ -52,8 +52,7 @@ export const createEquipo = async (req, res, next) => {
       condicion = 'Bueno',
       fecha_adquisicion,
       tipo_equipo_id,
-      laboratorio_id,
-      inventario_inicial = []
+      laboratorio_id
     } = req.body
     await equipoService.crearEquipo(
       {
@@ -72,7 +71,6 @@ export const createEquipo = async (req, res, next) => {
         tipo_equipo_id,
         laboratorio_id
       },
-      inventario_inicial,
       req.user.userId,
       req.ip || req.connection?.remoteAddress
     )

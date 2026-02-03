@@ -50,7 +50,7 @@ El módulo de **Equipos** gestiona los equipos de laboratorio: creación, actual
 - El equipo debe existir.
 - **No se puede eliminar** si tiene **reservas activas** (registros en `detalle_reserva_equipos`).  
   Mensaje: "No se puede eliminar. El equipo está siendo usado en el sistema." (400).
-- Tras eliminar se registra la actividad en `actividad_equipos`.
+- Tras eliminar se registra la actividad en `actividad_equipos`. Los tipos de actividad registrados son: **crear**, **editar**, **eliminar** (unificado con actividad_horarios).
 
 ---
 

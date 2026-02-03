@@ -305,7 +305,7 @@ export const Equipo = {
         params.push(fecha_fin)
       }
       if (tipo_actividad) {
-        query += ` AND a.tipo_actividad = ?`
+        query += ` AND a.accion = ?`
         params.push(tipo_actividad)
       }
 

@@ -183,7 +183,7 @@ server/
 - `Horario.js` - Reservas, cruces de horarios, actividad
 - `Insumo.js` - CRUD insumos, validación de relaciones
 - `Equipo.js` - Gestión de equipos, estados
-- `User.js` - Autenticación, permisos, laboratorios asignados
+- `User.js` - Autenticación, laboratorios asignados (autorización por rol, tabla `roles`)
 - `Laboratorio.js` - CRUD laboratorios, configuración de insumos
 
 #### 1.3.3 Módulos del Frontend
@@ -486,7 +486,7 @@ El sistema gestiona la administración integral de laboratorios universitarios, 
 - Gestión de equipos y su mantenimiento
 - Control de stock con sistema de lotes y fechas de vencimiento
 - Reportes de incidencias
-- Sistema de roles y permisos
+- Sistema de roles (autorización por rol; tablas `permisos` y `rol_permiso` eliminadas)
 - Enlaces compartidos para visualización pública de horarios
 
 ### 2.2 Actores o Roles Involucrados
@@ -1335,11 +1335,11 @@ El sistema gestiona la administración integral de laboratorios universitarios, 
 7. **Mantenimiento**: Se registran fechas de último y próximo mantenimiento
 8. **Auditoría**: Todas las acciones (crear, actualizar, eliminar) se registran en `actividad_equipos`
 
-#### 2.4.4 Reglas de Usuarios y Permisos
-1. **Roles jerárquicos**: Administrador tiene acceso completo, Jefe de Laboratorio tiene acceso limitado
-2. **Asignación de laboratorios**: Un Jefe de Laboratorio solo puede gestionar sus laboratorios asignados (almacenados en `laboratorio_ids` JSON)
-3. **Autenticación obligatoria**: Todas las rutas protegidas requieren JWT válido
-4. **Autorización por acción y recurso**: CASL verifica permisos antes de ejecutar operaciones
+#### 2.4.4 Reglas de Usuarios y Autorización
+1. **Roles jerárquicos**: Administrador tiene acceso completo, Jefe de Laboratorio tiene acceso limitado (tabla `roles`; no se usan tablas `permisos` ni `rol_permiso`).
+2. **Asignación de laboratorios**: Un Jefe de Laboratorio solo puede gestionar sus laboratorios asignados (almacenados en `laboratorio_ids` JSON).
+3. **Autenticación obligatoria**: Todas las rutas protegidas requieren JWT válido.
+4. **Autorización por acción y recurso**: CASL verifica permisos por rol antes de ejecutar operaciones.
 
 #### 2.4.5 Reglas de Enlaces Compartidos
 1. **Enlaces temporales**: Los enlaces compartidos tienen fecha de expiración (default 365 días, configurable)
@@ -1418,7 +1418,7 @@ Estado Inicial: Operativo
 
 1. **Módulo de Autenticación y Autorización**
    - Complejidad: Media
-   - Funcionalidades: Login, logout, gestión de usuarios, roles, permisos
+   - Funcionalidades: Login, logout, gestión de usuarios y roles (autorización por rol; tablas permisos/rol_permiso eliminadas)
    - Endpoints: ~8
    - Componentes Frontend: 1 (Login)
 

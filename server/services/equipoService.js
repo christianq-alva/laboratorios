@@ -100,7 +100,7 @@ export const equipoService = {
         throw new AppError('Equipo no encontrado', 404)
       }
       await Equipo.registrarActividadEquipo({
-        accion: 'actualizar',
+        accion: 'editar',
         equipo_id: equipoId,
         descripcion: `Equipo actualizado: ${datos.nombre?.trim()} - Marca: ${datos.marca?.trim() || 'N/A'}, Modelo: ${datos.modelo?.trim() || 'N/A'}, Estado: ${datos.estado || 'Operativo'}, Condición: ${datos.condicion || 'Bueno'}. Último mant.: ${datos.fecha_ultimo_mantenimiento || 'N/A'}, Próximo mant.: ${datos.fecha_proximo_mantenimiento || 'N/A'}.`,
         usuario_id,

@@ -147,7 +147,7 @@ Este documento agrupa las reglas de negocio de los módulos de **configuración*
 
 ## 8. Roles
 
-- Definidos en el sistema (por ejemplo Administrador, Jefe de Laboratorio). La asignación de **rol_id** a usuarios y la restricción de **laboratorio_ids** para Jefe de Laboratorio siguen las reglas de Usuarios y de permisos en el resto de módulos.
+- Definidos en el sistema (por ejemplo Administrador, Jefe de Laboratorio). La asignación de **rol_id** a usuarios y la restricción de **laboratorio_ids** para Jefe de Laboratorio siguen las reglas de Usuarios y la autorización por rol en el resto de módulos (tabla `roles`; no se usan tablas `permisos` ni `rol_permiso`).
 
 ---
 

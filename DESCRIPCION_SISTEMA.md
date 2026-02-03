@@ -6,7 +6,7 @@ INTRODUCCIÓN:
 En este documento, presentamos una descripción detallada del software de gestión de laboratorios académicos y la cotización del alquiler.
 
 SOFTWARE DE GESTIÓN DE LABORATORIOS ACADEMICOS:
-El sistema integra la reserva y programación de horarios, control de inventario de insumos con sistema de lotes y vencimientos, gestión de equipos, registro de incidencias, reportes de gestión, y un sistema robusto de roles y permisos. El sistema está basado en el manejo de dos roles (Administrador y Jefe de laboratorio) y proporciona una solución integral para la gestión eficiente de recursos de laboratorio. Está compuesto por los siguientes módulos:
+El sistema integra la reserva y programación de horarios, control de inventario de insumos con sistema de lotes y vencimientos, gestión de equipos, registro de incidencias, reportes de gestión, y un sistema de roles (Administrador y Jefe de laboratorio). La autorización es por rol; no se usan tablas de permisos granulares. Proporciona una solución integral para la gestión eficiente de recursos de laboratorio. Está compuesto por los siguientes módulos:
 
 1. Configuración
 Este módulo permite configurar la información necesaria para el funcionamiento del sistema y la gestión de usuarios:

@@ -115,7 +115,7 @@ flowchart TB
    Toma id de params y body; llama equipoService.actualizarEquipo(id, datos, userId, ip).
 
 4. **Backend – equipoService.actualizarEquipo**  
-   Equipo.existsById(equipoId); si no existe lanza 404. Equipo.existsByCodigo(codigo, equipoId); si otro equipo tiene el código lanza 400. Equipo.getById(equipoId). Equipo.reservasActivasByLaboratorioId(equipoId, laboratorio_actual); si tiene reservas y se cambia laboratorio_id lanza 400. Equipo.update(equipoId, datos). Equipo.registrarActividadEquipo(accion: 'actualizar', ...). Devuelve objeto con id y datos actualizados.
+   Equipo.existsById(equipoId); si no existe lanza 404. Equipo.existsByCodigo(codigo, equipoId); si otro equipo tiene el código lanza 400. Equipo.getById(equipoId). Equipo.reservasActivasByLaboratorioId(equipoId, laboratorio_actual); si tiene reservas y se cambia laboratorio_id lanza 400. Equipo.update(equipoId, datos). Equipo.registrarActividadEquipo(accion: 'editar', ...). Devuelve objeto con id y datos actualizados.
 
 5. **Backend – equipoController.updateEquipo**  
    Responde 200 con `{ success, message, data }`.
@@ -144,13 +144,13 @@ flowchart TB
 ## 6. Obtener actividad de equipos
 
 1. **Frontend – equipoService.getActividad**  
-   Llama GET `/equipos/actividad` con query (laboratorio_id, fecha_inicio, fecha_fin, tipo_movimiento).
+   Llama GET `/equipos/actividad` con query (laboratorio_id, fecha_inicio, fecha_fin, tipo_actividad).
 
 2. **Backend – equipoRoutes**  
    Ruta GET `/actividad`. Middlewares: authenticateToken, authorize('read', 'Equipo'), validate(getActividadEquiposSchema).
 
 3. **Backend – equipoController.getActividadEquipos**  
-   Lee query y llama equipoService.getActividadEquipos(rol, laboratorio_ids, laboratorio_id, fecha_inicio, fecha_fin, tipo_actividad, usuario_id).
+   Lee query (laboratorio_id, fecha_inicio, fecha_fin, tipo_actividad, usuario_id) y llama equipoService.getActividadEquipos(rol, laboratorio_ids, laboratorio_id, fecha_inicio, fecha_fin, tipo_actividad, usuario_id). Valores de tipo_actividad: crear, editar, eliminar.
 
 4. **Backend – equipoService.getActividadEquipos**  
    Delega en Equipo.getActividadEquipos con los mismos parámetros.

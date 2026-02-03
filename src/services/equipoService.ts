@@ -23,7 +23,7 @@ export interface Equipo {
 
 export interface ActividadEquipo {
   id: number
-  tipo_actividad: 'crear' | 'actualizar' | 'eliminar'
+  tipo_actividad: 'crear' | 'editar' | 'eliminar'
   fecha_actividad: string
   observaciones: string
   equipo_codigo: string
@@ -146,13 +146,13 @@ export const equipoService = {
     laboratorio_id?: number
     fecha_inicio?: string
     fecha_fin?: string
-    tipo_movimiento?: string
+    tipo_actividad?: string
   }): Promise<ActividadEquipoResponse> => {
     const params = new URLSearchParams()
     if (filters?.laboratorio_id) params.append('laboratorio_id', filters.laboratorio_id.toString())
     if (filters?.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio)
     if (filters?.fecha_fin) params.append('fecha_fin', filters.fecha_fin)
-    if (filters?.tipo_movimiento) params.append('tipo_movimiento', filters.tipo_movimiento)
+    if (filters?.tipo_actividad) params.append('tipo_actividad', filters.tipo_actividad)
 
     const response = await api.get(`/equipos/actividad?${params.toString()}`)
     return response.data
@@ -197,7 +197,7 @@ export const equipoService = {
   },
 
   // Previsualizar datos del Excel antes de importar equipos (todos los equipos se registrarán en laboratorioId)
-  previsualizarImportacion: async (archivo: File, laboratorioId: number): Promise<{
+  previsualizarImportacion: async (archivo: File, laboratorio_id: number): Promise<{
     success: boolean
     data: Array<{
       fila: number
@@ -223,7 +223,7 @@ export const equipoService = {
     try {
       const formData = new FormData()
       formData.append('archivo_excel', archivo)
-      formData.append('laboratorio_id', laboratorioId.toString())
+      formData.append('laboratorio_id', laboratorio_id.toString())
 
       const response = await api.post('/equipos/previsualizar-importacion', formData, {
         headers: {
@@ -239,7 +239,7 @@ export const equipoService = {
   },
 
   // Importación masiva de equipos desde Excel (todos los equipos se registran en laboratorioId)
-  importacionMasiva: async (archivo: File, laboratorioId: number): Promise<{
+  importacionMasiva: async (archivo: File, laboratorio_id: number): Promise<{
     success: boolean
     message: string
     procesados: number
@@ -258,7 +258,7 @@ export const equipoService = {
     try {
       const formData = new FormData()
       formData.append('archivo_excel', archivo)
-      formData.append('laboratorio_id', laboratorioId.toString())
+      formData.append('laboratorio_id', laboratorio_id.toString())
 
       const response = await api.post('/equipos/importacion-masiva', formData, {
         headers: {

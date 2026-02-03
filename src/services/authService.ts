@@ -14,7 +14,6 @@ export interface LoginResponse {
     rol: string
     laboratorio_ids?: number[]
   }
-  permisos?: any[]
   message?: string
   token?: string
 }

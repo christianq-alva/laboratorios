@@ -12,7 +12,7 @@ const estadosValidos = ['Operativo', 'En Mantenimiento', 'Fuera de Servicio']
 const condicionesValidas = ['Excelente', 'Bueno', 'Regular', 'Malo']
 
 
-const tipoMovimientosValidos = ['crear', 'actualizar', 'eliminar']
+const tipoActividadValidos = ['crear', 'editar', 'eliminar']
 /**
  * Schema para crear un equipo
  */
@@ -248,8 +248,8 @@ export const getActividadEquiposSchema = z.object({
         fecha_fin: z.string()
             .regex(/^\d{4}-\d{2}-\d{2}$/, 'La fecha debe estar en formato YYYY-MM-DD')
             .optional(),
-        tipo_movimiento: z.enum(tipoMovimientosValidos, {
-            errorMap: () => ({ message: `El tipo de movimiento debe ser uno de: ${tipoMovimientosValidos.join(', ')}` })
+        tipo_actividad: z.enum(tipoActividadValidos, {
+            errorMap: () => ({ message: `El tipo de actividad debe ser uno de: ${tipoActividadValidos.join(', ')}` })
         }).optional(),
         usuario_id: z.coerce.number()
             .int('El ID de usuario debe ser un número entero')
