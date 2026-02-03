@@ -11,7 +11,8 @@ import {
   Box,
   Typography,
   TablePagination,
-  TextField
+  TextField,
+  IconButton
 } from '@mui/material'
 import { LibraryBooks, Search, Clear } from '@mui/icons-material'
 import type { Insumo } from '../../../services/insumoService'

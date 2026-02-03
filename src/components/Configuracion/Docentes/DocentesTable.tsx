@@ -13,7 +13,6 @@ import {
   TablePagination,
 } from '@mui/material'
 import {
-  Edit,
   Email,
   School,
   Visibility,

@@ -10,7 +10,6 @@ import {
   CircularProgress,
   Alert,
   IconButton,
-  Typography,
 } from '@mui/material'
 import { Close } from '@mui/icons-material'
 import { escuelaService, type Escuela, type CreateEscuelaData } from '../../../services/escuelaService'

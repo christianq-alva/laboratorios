@@ -11,7 +11,7 @@ import {
   Alert,
   CircularProgress
 } from '@mui/material'
-import { Close, Straighten } from '@mui/icons-material'
+import { Close} from '@mui/icons-material'
 import { unidadService, type Unidad } from '../../../services/unidadService'
 import { useApi } from '../../../hooks/useApi'
 

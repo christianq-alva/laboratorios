@@ -14,7 +14,6 @@ import {
   FormControl,
   InputLabel,
   Select,
-  Typography,
 } from '@mui/material'
 import { Close } from '@mui/icons-material'
 import { laboratorioService } from '../../../services/laboratorioService'

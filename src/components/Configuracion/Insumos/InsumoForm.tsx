@@ -16,7 +16,7 @@ import {
   Alert,
   CircularProgress
 } from '@mui/material'
-import { Close, Inventory, Info } from '@mui/icons-material'
+import { Close} from '@mui/icons-material'
 import { insumoService, type Insumo } from '../../../services/insumoService'
 import { unidadService, type Unidad } from '../../../services/unidadService'
 import { useApi } from '../../../hooks/useApi'

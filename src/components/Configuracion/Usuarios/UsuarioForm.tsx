@@ -24,9 +24,6 @@ import {
   Close,
   Visibility,
   VisibilityOff,
-  Person,
-  Lock,
-  School,
   CheckCircle,
 } from '@mui/icons-material'
 import { usuarioService, type Usuario } from '../../../services/usuarioService'

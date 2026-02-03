@@ -9,7 +9,6 @@ import {
   Typography,
   Paper,
   Alert,
-  LinearProgress,
   Table,
   TableBody,
   TableCell,
@@ -18,7 +17,6 @@ import {
   TableRow,
   Chip,
   CircularProgress,
-  TextField,
   FormControl,
   InputLabel,
   Select,
@@ -31,8 +29,6 @@ import {
   CheckCircle,
   Error as ErrorIcon,
   Warning,
-  Download,
-  Upload,
   FileUpload,
   Refresh
 } from '@mui/icons-material'
