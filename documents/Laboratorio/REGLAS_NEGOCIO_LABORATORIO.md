@@ -35,8 +35,12 @@ El módulo de **Laboratorio** gestiona los laboratorios: creación, actualizaci�
 
 ## 4. Cambio de Estado
 
-- El laboratorio debe existir. Si no: "Laboratorio no encontrado" (404). Validación en laboratorioService.changeEstado (exists).
-- Se actualiza el campo **estado** del laboratorio según valores permitidos en el esquema.
+- El laboratorio debe existir. Si no: "Laboratorio no encontrado" (404). Validación en laboratorioService.changeEstado (getLaboratorioById).
+- **No se puede cambiar el estado** si el laboratorio está **Activo** y cumple alguna de estas condiciones:
+  - Tiene **reservas pendientes** (reservas con `estado = 'P'` y `fecha_inicio` en el futuro).
+  - Tiene **insumos con saldo** en su inventario (al menos un insumo con stock > 0 en ese laboratorio).
+  En ese caso: "No se puede cambiar el estado del laboratorio porque tiene reservas pendientes y/o insumos con saldo en su inventario. Cancele o reasigne las reservas y ajuste el inventario antes de cambiar el estado." (409). Validación en laboratorioService.changeEstado (Laboratorio.hasReservasPendientes, Inventario.tieneInsumosConSaldoPositivo).
+- Si no aplica la restricción anterior, se actualiza el campo **estado** del laboratorio según valores permitidos en el esquema.
 
 ---
 
@@ -61,8 +65,8 @@ El módulo de **Laboratorio** gestiona los laboratorios: creación, actualizaci�
 |--------|-----------|
 | 400 | Escuela no existe (crear/actualizar) |
 | 404 | Laboratorio no encontrado (actualizar, eliminar, cambiar estado, insumos, configurar insumos) |
-| 409 | No se puede eliminar por relaciones (equipos, reservas, inventario, incidencias) |
+| 409 | No se puede eliminar por relaciones (equipos, reservas, inventario, incidencias); no se puede cambiar estado si está Activo y tiene reservas pendientes y/o insumos con saldo en inventario |
 
 ---
 
-**Referencias en código**: `server/controllers/laboratorioController.js`, `server/services/laboratorioService.js`, `server/models/Laboratorio.js`, `server/validations/schemas/laboratorio.js`.
+**Referencias en código**: `server/controllers/laboratorioController.js`, `server/services/laboratorioService.js`, `server/models/Laboratorio.js`, `server/models/Inventario.js`, `server/validations/schemas/laboratorio.js`.

@@ -32,7 +32,6 @@ export function handleDBError(error, entityName = 'Registro') {
     throw new AppError('Error de conexión a base de datos', 500)
   }
 
-  // Error desconocido de base de datos
-  console.log(error)
-  throw new AppError('Error de base de datos', 500)
+  // Error desconocido de base de datos (el cause se loguea una sola vez en el middleware de errores)
+  throw new AppError('Error de base de datos', 500, { cause: error })
 }

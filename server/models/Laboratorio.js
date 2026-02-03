@@ -114,6 +114,23 @@ export const Laboratorio = {
     }
   },
 
+  /**
+   * Indica si el laboratorio tiene reservas pendientes (estado = 'P') con fecha_inicio en el futuro.
+   * @param {number} id - ID del laboratorio
+   * @returns {Promise<boolean>}
+   */
+  hasReservasPendientes: async (id) => {
+    try {
+      const [rows] = await pool.execute(
+        'SELECT 1 FROM reservas WHERE laboratorio_id = ? AND estado = ? AND fecha_inicio > NOW() LIMIT 1',
+        [id, 'P']
+      )
+      return rows.length > 0
+    } catch (error) {
+      handleDBError(error, 'Laboratorio')
+    }
+  },
+
   updateEstado: async (id, estado) => {
     try {
       const [result] = await pool.execute('UPDATE laboratorios SET estado = ? WHERE id = ?', [estado, id])

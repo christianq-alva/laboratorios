@@ -107,7 +107,7 @@ app.use((error, req, res, next) => {
   }
 
   if (statusCode >= 500) {
-    logger.fatal(context, '🚨 Error del servidor')
+    logger.fatal({ err: error, ...context }, '🚨 Error del servidor')
   } else if (statusCode === 401 || statusCode === 403) {
     logger.warn(context, '🔒 Acceso denegado')
   } else if (statusCode >= 400) {

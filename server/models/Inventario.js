@@ -102,6 +102,30 @@ export const Inventario = {
       handleDBError(error, 'Inventario')
     }
   },
+
+  /**
+   * Indica si el laboratorio tiene al menos un insumo con saldo (stock) mayor a cero.
+   * @param {number} laboratorio_id - ID del laboratorio
+   * @returns {Promise<boolean>}
+   */
+  tieneInsumosConSaldoPositivo: async (laboratorio_id) => {
+    try {
+      const [rows] = await pool.execute(
+        `SELECT 1
+         FROM movimientos_insumos mi
+         INNER JOIN movimiento_insumo_detalle mid ON mi.id = mid.movimiento_id
+         WHERE mi.laboratorio_id = ?
+         GROUP BY mid.insumo_id
+         HAVING SUM(CASE WHEN mi.tipo_movimiento = 'salida' THEN mid.cantidad * -1 ELSE mid.cantidad END) > 0
+         LIMIT 1`,
+        [laboratorio_id]
+      )
+      return rows.length > 0
+    } catch (error) {
+      handleDBError(error, 'Inventario')
+    }
+  },
+
   getLotesConSaldo: async (laboratorio_id, insumo_id) => {
     try {
       const [lotes] = await pool.execute(`

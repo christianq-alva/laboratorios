@@ -1,5 +1,6 @@
 import { pool } from '../config/database.js'
 import { Laboratorio } from '../models/Laboratorio.js'
+import { Inventario } from '../models/Inventario.js'
 import { AppError } from '../utils/errors.js'
 
 export const laboratorioService = {
@@ -34,9 +35,21 @@ export const laboratorioService = {
   },
 
   async changeEstado(laboratorioId, estado) {
-    const exists = await Laboratorio.exists(laboratorioId)
-    if (!exists) {
+    const laboratorio = await Laboratorio.getLaboratorioById(laboratorioId)
+    if (!laboratorio) {
       throw new AppError('Laboratorio no encontrado', 404)
+    }
+    if (laboratorio.estado === 'Activo') {
+      const [tieneReservasPendientes, tieneInventarioConSaldo] = await Promise.all([
+        Laboratorio.hasReservasPendientes(laboratorioId),
+        Inventario.tieneInsumosConSaldoPositivo(laboratorioId)
+      ])
+      if (tieneReservasPendientes || tieneInventarioConSaldo) {
+        throw new AppError(
+          'No se puede cambiar el estado del laboratorio porque tiene reservas pendientes y/o insumos con saldo en su inventario. Cancele o reasigne las reservas y ajuste el inventario antes de cambiar el estado.',
+          409
+        )
+      }
     }
     const affectedRows = await Laboratorio.updateEstado(laboratorioId, estado)
     if (affectedRows === 0) {

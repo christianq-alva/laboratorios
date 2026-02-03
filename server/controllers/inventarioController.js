@@ -133,7 +133,6 @@ export const generarPlantillaReabastecimiento = async (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename=plantilla_reabastecimiento.xlsx')
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     res.setHeader('Content-Length', buffer.length)
-    console.log('✅ Plantilla Excel generada exitosamente')
     res.send(buffer)
   } catch (error) {
     next(error)
@@ -203,8 +202,6 @@ export const procesarArchivoExcel = async (req, res) => {
         cantidad: cantidad
       })
     }
-    console.log(datosReabastecimiento);
-    console.log(laboratorio_id)
     if (datosReabastecimiento.length === 0) {
       return res.status(400).json({
         success: false,
