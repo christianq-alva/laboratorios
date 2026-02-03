@@ -19,7 +19,8 @@ import {
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
-  IconButton
+  IconButton,
+  Popover
 } from '@mui/material'
 import {
   Schedule,
@@ -60,6 +61,81 @@ interface CreationResult {
   horario_id?: number
 }
 
+// Paleta de colores disponibles - 56 colores con buen contraste para texto blanco
+// Organizados en múltiples filas
+const COLOR_PALETTE = [
+  // Fila 1
+  { color: '#d32f2f', name: 'Rojo' }, // Rojo oscuro - buen contraste
+  { color: '#c62828', name: 'Rojo Oscuro' }, // Rojo muy oscuro
+  { color: '#e64a19', name: 'Naranja Rojo' }, // Naranja rojizo oscuro
+  { color: '#f57c00', name: 'Naranja' }, // Naranja oscuro
+  { color: '#f9a825', name: 'Ámbar' }, // Ámbar oscuro
+  { color: '#fbc02d', name: 'Amarillo Oscuro' }, // Amarillo oscuro
+  // Fila 2
+  { color: '#388e3c', name: 'Verde' }, // Verde oscuro - buen contraste
+  { color: '#2e7d32', name: 'Verde Oscuro' }, // Verde muy oscuro
+  { color: '#00796b', name: 'Verde Azulado' }, // Verde azulado oscuro
+  { color: '#00897b', name: 'Turquesa' }, // Turquesa oscuro
+  { color: '#0097a7', name: 'Cian' }, // Cian oscuro
+  { color: '#0277bd', name: 'Azul Claro' }, // Azul claro oscuro
+  // Fila 3
+  { color: '#1565c0', name: 'Azul' }, // Azul oscuro - buen contraste
+  { color: '#0d47a1', name: 'Azul Oscuro' }, // Azul muy oscuro
+  { color: '#283593', name: 'Índigo' }, // Índigo oscuro
+  { color: '#512da8', name: 'Púrpura Oscuro' }, // Púrpura oscuro
+  { color: '#6a1b9a', name: 'Púrpura' }, // Púrpura muy oscuro
+  { color: '#7b1fa2', name: 'Violeta' }, // Violeta oscuro
+  // Fila 4
+  { color: '#c2185b', name: 'Rosa' }, // Rosa oscuro - buen contraste
+  { color: '#ad1457', name: 'Rosa Oscuro' }, // Rosa muy oscuro
+  { color: '#880e4f', name: 'Rosa Profundo' }, // Rosa profundo
+  { color: '#b71c1c', name: 'Rojo Profundo' }, // Rojo profundo
+  { color: '#bf360c', name: 'Naranja Profundo' }, // Naranja profundo
+  { color: '#e65100', name: 'Naranja Intenso' }, // Naranja intenso
+  // Fila 5
+  { color: '#1b5e20', name: 'Verde Profundo' }, // Verde profundo - buen contraste
+  { color: '#004d40', name: 'Verde Azulado Profundo' }, // Verde azulado profundo
+  { color: '#006064', name: 'Cian Profundo' }, // Cian profundo
+  { color: '#01579b', name: 'Azul Profundo' }, // Azul profundo
+  { color: '#1a237e', name: 'Índigo Profundo' }, // Índigo profundo
+  { color: '#4a148c', name: 'Púrpura Profundo' }, // Púrpura profundo
+  // Fila 6
+  { color: '#424242', name: 'Gris Oscuro' }, // Gris oscuro - buen contraste
+  { color: '#212121', name: 'Gris Muy Oscuro' }, // Gris muy oscuro
+  { color: '#263238', name: 'Gris Azulado' }, // Gris azulado oscuro
+  { color: '#3e2723', name: 'Marrón' }, // Marrón oscuro
+  { color: '#5d4037', name: 'Marrón Oscuro' }, // Marrón muy oscuro
+  { color: '#6d4c41', name: 'Tierra' }, // Color tierra oscuro
+  // Fila 7 - Colores adicionales
+  { color: '#8b0000', name: 'Rojo Oscuro Intenso' }, // Rojo oscuro intenso
+  { color: '#a0522d', name: 'Sienna' }, // Sienna oscuro
+  { color: '#8b4513', name: 'Saddle Brown' }, // Marrón silla
+  { color: '#654321', name: 'Marrón Oscuro Intenso' }, // Marrón oscuro intenso
+  { color: '#2f4f4f', name: 'Gris Pizarra Oscuro' }, // Gris pizarra oscuro
+  { color: '#191970', name: 'Azul Medianoche' }, // Azul medianoche
+  // Fila 8
+  { color: '#800080', name: 'Púrpura' }, // Púrpura estándar
+  { color: '#4b0082', name: 'Índigo Oscuro' }, // Índigo oscuro
+  { color: '#8b008b', name: 'Magenta Oscuro' }, // Magenta oscuro
+  { color: '#9932cc', name: 'Orquídea Oscuro' }, // Orquídea oscuro
+  { color: '#8b008b', name: 'Violeta Oscuro' }, // Violeta oscuro
+  { color: '#6b0082', name: 'Púrpura Intenso' }, // Púrpura intenso
+  // Fila 9
+  { color: '#006400', name: 'Verde Oscuro' }, // Verde oscuro
+  { color: '#228b22', name: 'Verde Bosque' }, // Verde bosque
+  { color: '#2e8b57', name: 'Verde Mar' }, // Verde mar
+  { color: '#3cb371', name: 'Verde Medio' }, // Verde medio
+  { color: '#008b8b', name: 'Cian Oscuro' }, // Cian oscuro
+  { color: '#008080', name: 'Teal' }, // Teal oscuro
+  // Fila 10
+  { color: '#000080', name: 'Azul Marino' }, // Azul marino
+  { color: '#00008b', name: 'Azul Oscuro' }, // Azul oscuro
+  { color: '#0000cd', name: 'Azul Medio' }, // Azul medio
+  { color: '#1e90ff', name: 'Azul Dodger' }, // Azul dodger
+  { color: '#0066cc', name: 'Azul Real' }, // Azul real
+  { color: '#003366', name: 'Azul Noche' } // Azul noche
+]
+
 export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
   open,
   onClose,
@@ -95,6 +171,10 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
   const [error, setError] = useState<string | null>(null)
   const [creationResults, setCreationResults] = useState<CreationResult[]>([])
   const [showResults, setShowResults] = useState(false)
+  
+  // Estado para el popover de colores
+  const [colorAnchorEl, setColorAnchorEl] = useState<HTMLButtonElement | null>(null)
+  const colorPopoverOpen = Boolean(colorAnchorEl)
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -531,14 +611,107 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
                   </Select>
                 </FormControl>
 
-                <TextField
-                  sx={{ minWidth: 120 }}
-                  type="color"
-                  label="Color"
-                  value={formData.color}
-                  onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
-                  helperText="Color del horario en el calendario"
-                />
+                {/* Selector de color */}
+                <Box sx={{ flex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box
+                      component="button"
+                      onClick={(e) => setColorAnchorEl(e.currentTarget)}
+                      sx={{
+                        width: 47,
+                        height: 47,
+                        backgroundColor: formData.color,
+                        borderRadius: '50%',
+                        border: '2px solid',
+                        borderColor: 'divider',
+                        boxShadow: 2,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s',
+                        '&:hover': {
+                          transform: 'scale(1.05)',
+                          boxShadow: 4,
+                          borderColor: 'primary.main',
+                        },
+                        '&:focus': {
+                          outline: 'none',
+                          borderColor: 'primary.main',
+                        }
+                      }}
+                    />
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      Seleccione un color
+                    </Typography>
+                  </Box>
+                  
+                  <Popover
+                    open={colorPopoverOpen}
+                    anchorEl={colorAnchorEl}
+                    onClose={() => setColorAnchorEl(null)}
+                    anchorOrigin={{
+                      vertical: 'bottom',
+                      horizontal: 'left',
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'left',
+                    }}
+                    PaperProps={{
+                      sx: {
+                        p: 2,
+                        mt: 1,
+                        minWidth: 280,
+                      }
+                    }}
+                  >
+                    <Box sx={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(6, 1fr)', 
+                      gap: 1,
+                    }}>
+                      {COLOR_PALETTE.map((colorOption) => (
+                        <Box
+                          key={colorOption.color}
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, color: colorOption.color }))
+                            setColorAnchorEl(null)
+                          }}
+                          sx={{
+                            width: 36,
+                            height: 36,
+                            backgroundColor: colorOption.color,
+                            borderRadius: '50%',
+                            cursor: 'pointer',
+                            border: formData.color === colorOption.color ? '3px solid #000' : '2px solid #ddd',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            '&:hover': {
+                              transform: 'scale(1.1)',
+                              boxShadow: 3
+                            }
+                          }}
+                          title={colorOption.name}
+                        >
+                          {formData.color === colorOption.color && (
+                            <Box
+                              sx={{
+                                width: 8,
+                                height: 8,
+                                backgroundColor: 'white',
+                                borderRadius: '50%',
+                                boxShadow: 1
+                              }}
+                            />
+                          )}
+                        </Box>
+                      ))}
+                    </Box>
+                  </Popover>
+                </Box>
               </Box>
             </Paper>
 
