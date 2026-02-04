@@ -396,7 +396,7 @@ export const Inventario = {
       params.push(tipo_movimiento)
     }
 
-    query += ` ORDER BY m.fecha_movimiento DESC LIMIT 100`
+    query += ` ORDER BY m.fecha_movimiento DESC`
 
     try {
       const [rows] = await pool.execute(query, params)
@@ -431,7 +431,7 @@ export const Inventario = {
       query += ` AND m.laboratorio_id = ${laboratorio_id}`
     }
 
-    query += ` ORDER BY m.fecha_movimiento DESC LIMIT 100`
+    query += ` ORDER BY m.fecha_movimiento DESC`
 
     try {
       const [rows] = await pool.execute(query)

@@ -23,7 +23,8 @@ import {
   Menu,
   MenuItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  TablePagination,
 } from '@mui/material'
 import {
   Visibility,
@@ -75,6 +76,10 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
   const [filtroReportadoPor, setFiltroReportadoPor] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
   const [mostrarFiltros, setMostrarFiltros] = useState(false)
+
+  // Paginación
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
 
   // Cargar datos
   const loadData = async () => {
@@ -184,7 +189,23 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
     }
 
     setFilteredIncidencias(filtered)
+    setPage(0)
   }, [incidencias, searchTerm, filtroFecha, filtroFechaInicio, filtroFechaFin, filtroLaboratorio, filtroDocente, filtroReportadoPor, filtroEstado])
+
+  // Funciones para manejar la paginación
+  const handleChangePage = (_event: unknown, newPage: number) => {
+    setPage(newPage)
+  }
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10))
+    setPage(0)
+  }
+
+  const paginatedIncidencias = filteredIncidencias.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  )
 
   // Función para limpiar todos los filtros
   const limpiarFiltros = () => {
@@ -202,6 +223,7 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
   // Función para limpiar búsqueda
   const handleClearSearch = () => {
     setSearchTerm('')
+    setPage(0)
   }
 
   // Función para formatear fecha
@@ -278,7 +300,10 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
           <TextField
             placeholder="Buscar incidencias por título, descripción, laboratorio, docente..."
             value={searchTerm}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              setSearchTerm(e.target.value)
+              setPage(0)
+            }}
             size="small"
             sx={{ flexGrow: 1 }}
             InputProps={{
@@ -468,7 +493,7 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
                 </TableCell>
               </TableRow>
             ) : (
-              filteredIncidencias.map((incidencia) => (
+              paginatedIncidencias.map((incidencia) => (
                 <TableRow key={incidencia.id} hover>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -553,6 +578,21 @@ export const IncidenciasTable: React.FC<IncidenciasTableProps> = ({
             )}
           </TableBody>
         </Table>
+        {filteredIncidencias.length > 0 && (
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25, 50]}
+            component="div"
+            count={filteredIncidencias.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            labelRowsPerPage="Filas por página:"
+            labelDisplayedRows={({ from, to, count }) =>
+              `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
+            }
+          />
+        )}
       </TableContainer>
 
       {/* Información adicional */}

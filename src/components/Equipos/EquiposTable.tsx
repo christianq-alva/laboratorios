@@ -18,7 +18,8 @@ import {
   Alert,
   IconButton,
   Tooltip,
-  TextField
+  TextField,
+  TablePagination,
 } from '@mui/material'
 import { Edit, Delete, Build, Info, Search, Clear } from '@mui/icons-material'
 import { equipoService, type Equipo } from '../../services/equipoService'
@@ -49,6 +50,10 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Paginación
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
   
   // Estados disponibles
   const estadosEquipo = [
@@ -61,6 +66,7 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
   const loadData = async () => {
     setLoading(true)
     setError(null)
+    setPage(0)
 
     // Cargar laboratorios para el filtro
     const laboratoriosResponse = await execute(() => laboratorioService.getAll())
@@ -135,6 +141,7 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
   useEffect(() => {
     // Evitar ejecución en la carga inicial
     if (laboratorios.length > 0 || tiposEquipo.length > 0) {
+      setPage(0)
       loadData()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -166,9 +173,25 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
     return true
   })
 
+  // Funciones para manejar la paginación
+  const handleChangePage = (_event: unknown, newPage: number) => {
+    setPage(newPage)
+  }
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10))
+    setPage(0)
+  }
+
+  const paginatedEquipos = filteredEquipos.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  )
+
   // Función para limpiar búsqueda
   const handleClearSearch = () => {
     setSearchTerm('')
+    setPage(0)
   }
 
   if (loading) {
@@ -278,7 +301,10 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
           <TextField
             placeholder="Buscar equipos por código, nombre, descripción, marca o modelo..."
             value={searchTerm}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              setSearchTerm(e.target.value)
+              setPage(0)
+            }}
             size="small"
             sx={{ flexGrow: 1 }}
             InputProps={{
@@ -343,7 +369,7 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
                 </TableCell>
               </TableRow>
             ) : (
-              filteredEquipos.map((equipo) => (
+              paginatedEquipos.map((equipo) => (
                 <TableRow key={equipo.id} hover>
                   <TableCell>
                     <Chip
@@ -474,6 +500,21 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
             )}
           </TableBody>
         </Table>
+        {filteredEquipos.length > 0 && (
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25, 50]}
+            component="div"
+            count={filteredEquipos.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            labelRowsPerPage="Filas por página:"
+            labelDisplayedRows={({ from, to, count }) =>
+              `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
+            }
+          />
+        )}
       </TableContainer>
 
       {/* Información adicional */}

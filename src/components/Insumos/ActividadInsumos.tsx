@@ -23,7 +23,8 @@ import {
   TextField,
   CircularProgress,
   Alert,
-  Tooltip
+  Tooltip,
+  TablePagination,
 } from '@mui/material'
 import {
   Close,
@@ -64,6 +65,10 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
     tipo_movimiento: ''
   })
 
+  // Paginación
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
+
   // Cargar datos iniciales
   useEffect(() => {
     if (open) {
@@ -85,6 +90,7 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
   const loadActividad = async () => {
     setLoading(true)
     setError(null)
+    setPage(0)
 
     const filtersToSend: any = {}
     if (filters.laboratorio_id) filtersToSend.laboratorio_id = parseInt(filters.laboratorio_id)
@@ -120,7 +126,22 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
       fecha_fin: '',
       tipo_movimiento: ''
     })
+    setPage(0)
   }
+
+  const handleChangePage = (_event: unknown, newPage: number) => {
+    setPage(newPage)
+  }
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10))
+    setPage(0)
+  }
+
+  const paginatedActividad = actividad.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  )
   
   const handleEliminarMovimiento = async (movimientoId: number) => {
     if (!window.confirm('¿Está seguro de que desea eliminar este movimiento de inventario? Esta acción no se puede deshacer.')) {
@@ -314,7 +335,7 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
                     </TableCell>
                   </TableRow>
                 ) : (
-                  actividad.map((movimiento) => (
+                  paginatedActividad.map((movimiento) => (
                     <TableRow key={movimiento.id} hover>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -398,6 +419,21 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
                 )}
               </TableBody>
             </Table>
+            {actividad.length > 0 && (
+              <TablePagination
+                rowsPerPageOptions={[5, 10, 25, 50]}
+                component="div"
+                count={actividad.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                labelRowsPerPage="Filas por página:"
+                labelDisplayedRows={({ from, to, count }) =>
+                  `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
+                }
+              />
+            )}
           </TableContainer>
         )}
 

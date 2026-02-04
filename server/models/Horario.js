@@ -535,7 +535,7 @@ export const Horario = {
       FROM reservas r
       JOIN laboratorios l ON r.laboratorio_id = l.id
       JOIN docentes d ON r.docente_id = d.id
-      WHERE r.fecha_inicio >= DATE_SUB(NOW(), INTERVAL 30 DAY)  -- Últimos 30 días
+      WHERE r.fecha_inicio >= DATE_SUB(NOW(), INTERVAL 30 DAY) and r.fecha_inicio <= DATE(NOW())
     `
         let params = []
 
@@ -551,7 +551,7 @@ export const Horario = {
             }
         }
 
-        query += ' ORDER BY r.fecha_inicio DESC LIMIT 100' // Últimos 100 horarios
+        query += ' ORDER BY r.fecha_inicio DESC'
 
         const [horarios] = await pool.execute(query, params)
 

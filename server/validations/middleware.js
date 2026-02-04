@@ -35,9 +35,12 @@ export const validate = (schema) => {
           code: err.code || 'unknown'
         }))
 
+        // Loguear errores de validación
+        logger.info({ validationErrors: errors }, 'Validation: errores de validación')
+
         return res.status(400).json({
           success: false,
-          message: 'Error de validación',
+          message: 'Error de validación. Revisar los campos enviados',
           errors: errors
         })
       }
