@@ -11,7 +11,6 @@ import {
   Alert,
   IconButton,
   Chip,
-  Paper,
   List,
   ListItem,
   ListItemIcon,
@@ -190,7 +189,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
         ) : horario ? (
           <Box>
             {/* Información principal del horario */}
-            <Paper sx={{ p: 3, mb: 3, bgcolor: 'primary.50', border: 1, borderColor: 'primary.200' }}>
+            <Box sx={{ p: 3, bgcolor: 'primary.50', border: 1, borderColor: 'primary.200' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                 <Schedule color="primary" sx={{ fontSize: 32 }} />
                 <Box>
@@ -206,27 +205,33 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
               <Typography variant="body1" sx={{ color: 'text.secondary', lineHeight: 1.6 }}>
                 {horario.descripcion}
               </Typography>
-            </Paper>
+            </Box>
 
             {/* Alerta de consumo de insumos */}
             {horario.estado === 'C' && horario.tiene_consumo_insumos === 1 && (
-              <Alert
-                severity="info"
-                icon={<Inventory />}
-                sx={{ mb: 3 }}
-              >
-                <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
-                  Este horario tiene un movimiento de inventario asociado
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Se registró el consumo real de insumos al cerrar este horario.
-                  Los saldos de inventario fueron actualizados según el consumo registrado.
-                </Typography>
-              </Alert>
+              <>
+                <Divider sx={{ my: 0 }} />
+                <Box sx={{ p: 3 }}>
+                  <Alert
+                    severity="info"
+                    icon={<Inventory />}
+                  >
+                    <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
+                      Este horario tiene un movimiento de inventario asociado
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Se registró el consumo real de insumos al cerrar este horario.
+                      Los saldos de inventario fueron actualizados según el consumo registrado.
+                    </Typography>
+                  </Alert>
+                </Box>
+              </>
             )}
 
+            <Divider sx={{ my: 0 }} />
+
             {/* Información de la clase */}
-            <Paper sx={{ p: 3, mb: 3 }}>
+            <Box sx={{ p: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <School color="primary" />
                 Información de la Clase
@@ -293,10 +298,12 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                   </Box>
                 </Box>
               </Box>
-            </Paper>
+            </Box>
+
+            <Divider sx={{ my: 0 }} />
 
             {/* Insumos requeridos y utilizados */}
-            <Paper sx={{ p: 3 }}>
+            <Box sx={{ p: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
                 Insumos
               </Typography>
@@ -372,10 +379,12 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                   )}
                 </Box>
               </Box>
-            </Paper>
+            </Box>
+
+            <Divider sx={{ my: 0 }} />
 
             {/* Equipos requeridos */}
-            <Paper sx={{ p: 3 }}>
+            <Box sx={{ p: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Build color="primary" />
                 Equipos Requeridos
@@ -432,15 +441,19 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                   ))}
                 </List>
               )}
-            </Paper>
+            </Box>
+
+            <Divider sx={{ my: 0 }} />
 
             {/* Información adicional */}
-            <Alert severity="info" sx={{ mt: 3 }}>
-              <Typography variant="body2">
-                <strong>ID de Horario:</strong> #{horario.id} |
-                <strong>Fecha de Creación:</strong> {formatFechaHora(horario.fecha_inicio)}
-              </Typography>
-            </Alert>
+            <Box sx={{ p: 3 }}>
+              <Alert severity="info">
+                <Typography variant="body2">
+                  <strong>ID de Horario:</strong> #{horario.id} |
+                  <strong>Fecha de Creación:</strong> {formatFechaHora(horario.fecha_inicio)}
+                </Typography>
+              </Alert>
+            </Box>
           </Box>
         ) : (
           <Box sx={{ textAlign: 'center', py: 4 }}>
