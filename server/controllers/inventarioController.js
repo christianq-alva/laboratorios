@@ -323,6 +323,19 @@ export const registrarMovimientoManual = async (req, res, next) => {
   }
 }
 
+export const getDetalleMovimiento = async (req, res, next) => {
+  try {
+    const { movimiento_id } = req.params
+    const result = await inventarioService.getDetalleMovimiento(movimiento_id, req.user.rol, req.user.laboratorio_ids)
+    res.status(200).json({
+      success: true,
+      data: result
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const eliminarMovimientoInventario = async (req, res) => {
   try {
     const { movimiento_id } = req.params

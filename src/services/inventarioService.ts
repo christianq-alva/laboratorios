@@ -258,5 +258,35 @@ export const inventarioService = {
         }
         const response = await api.get(`/inventario/actividad-detalle?${params.toString()}`)
         return response.data
+    },
+
+    /** Obtener cabecera y líneas (detalle) de un movimiento por ID */
+    getDetalleMovimiento: async (movimientoId: number): Promise<{
+        success: boolean
+        data: {
+            cabecera: {
+                id: number
+                fecha_movimiento: string
+                tipo_movimiento: 'entrada' | 'salida'
+                fecha_ingreso: string | null
+                observaciones: string | null
+                laboratorio_nombre: string
+                usuario_nombre: string
+                usuario_rol: string
+                reserva_descripcion: string | null
+            }
+            detalle: Array<{
+                insumo_id: number
+                insumo_codigo: string
+                insumo_nombre: string
+                unidad_simbolo: string
+                unidad_nombre: string
+                cantidad: number
+                lote: string | null
+            }>
+        }
+    }> => {
+        const response = await api.get(`/inventario/actividad/movimiento/${movimientoId}/detalle`)
+        return response.data
     }
 }

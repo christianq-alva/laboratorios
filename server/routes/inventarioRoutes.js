@@ -7,6 +7,7 @@ import {
     getInsumosWithStock, 
     getActividadInsumos, 
     getActividadDetalleInsumos,
+    getDetalleMovimiento,
     generarPlantillaReabastecimiento, 
     procesarArchivoExcel, 
     ejecutarReabastecimientoMasivo, 
@@ -21,6 +22,7 @@ import {
     getInsumosWithPositiveStockSchema,
     getActividadInsumosSchema,
     getActividadDetalleInsumosSchema,
+    getDetalleMovimientoSchema,
     procesarArchivoExcelSchema,
     ejecutarReabastecimientoMasivoSchema,
     getLotesConSaldoSchema,
@@ -70,6 +72,14 @@ router.get('/actividad-detalle',
     authorize('read', 'Inventario'),
     validate(getActividadDetalleInsumosSchema),
     getActividadDetalleInsumos
+)
+
+// Obtener detalle de un movimiento
+router.get('/actividad/movimiento/:movimiento_id/detalle',
+    authenticateToken,
+    authorize('read', 'Inventario'),
+    validate(getDetalleMovimientoSchema),
+    getDetalleMovimiento
 )
 
 // Generar plantilla excel para reabastecimiento masivo

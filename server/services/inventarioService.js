@@ -105,6 +105,19 @@ export const inventarioService = {
     return await Inventario.getActividadDetalleInsumos(user_rol, user_laboratorio_ids, laboratorio_id, insumo_id)
   },
 
+  async getDetalleMovimiento(movimiento_id, user_rol, user_laboratorio_ids) {
+    const result = await Inventario.getDetalleMovimiento(movimiento_id, user_rol, user_laboratorio_ids)
+    if (!result) {
+      throw new AppError('Movimiento no encontrado o sin permisos para verlo', 404)
+    }
+    const cabecera = {
+      ...result.cabecera,
+      fecha_ingreso: result.cabecera.fecha_ingreso ? new Date(result.cabecera.fecha_ingreso).toISOString() : null,
+      fecha_movimiento: result.cabecera.fecha_movimiento
+    }
+    return { cabecera, detalle: result.detalle }
+  },
+
   async getInsumosConfiguradosByLaboratorio(laboratorio_id) {
     return await Inventario.getInsumosConfiguradosByLaboratorio(laboratorio_id)
   }

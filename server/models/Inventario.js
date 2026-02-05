@@ -406,6 +406,63 @@ export const Inventario = {
     }
   },
 
+  /**
+   * Obtiene cabecera y detalle (líneas de insumos) de un movimiento.
+   * Verifica permisos: Jefe solo ve movimientos de sus laboratorios; Admin ve todos.
+   * @returns { cabecera, detalle } o null si no existe o sin permiso
+   */
+  getDetalleMovimiento: async (movimiento_id, user_rol, user_laboratorio_ids) => {
+    try {
+      let queryCabecera = `
+        SELECT
+          m.id,
+          m.fecha_movimiento,
+          m.tipo_movimiento,
+          m.fecha_ingreso,
+          m.observaciones,
+          l.nombre as laboratorio_nombre,
+          u.nombre_completo as usuario_nombre,
+          rol.nombre as usuario_rol,
+          r.descripcion as reserva_descripcion
+        FROM movimientos_insumos m
+        INNER JOIN laboratorios l ON m.laboratorio_id = l.id
+        INNER JOIN usuarios u ON m.usuario_id = u.id
+        INNER JOIN roles rol ON u.rol_id = rol.id
+        LEFT JOIN reservas r ON m.reserva_id = r.id
+        WHERE m.id = ?
+      `
+      const paramsCabecera = [movimiento_id]
+      if (user_rol === 'Jefe de Laboratorio' && Array.isArray(user_laboratorio_ids) && user_laboratorio_ids.length) {
+        queryCabecera += ` AND m.laboratorio_id IN (${user_laboratorio_ids.join(',')})`
+      }
+      const [cabeceraRows] = await pool.execute(queryCabecera, paramsCabecera)
+      if (!cabeceraRows || cabeceraRows.length === 0) {
+        return null
+      }
+      const cabecera = cabeceraRows[0]
+
+      const [detalleRows] = await pool.execute(`
+        SELECT
+          mid.insumo_id,
+          i.codigo as insumo_codigo,
+          i.nombre as insumo_nombre,
+          u.simbolo as unidad_simbolo,
+          u.nombre as unidad_nombre,
+          mid.cantidad,
+          mid.lote
+        FROM movimiento_insumo_detalle mid
+        INNER JOIN insumos i ON mid.insumo_id = i.id
+        INNER JOIN unidades u ON i.unidad_id = u.id
+        WHERE mid.movimiento_id = ?
+        ORDER BY mid.id
+      `, [movimiento_id])
+
+      return { cabecera, detalle: detalleRows || [] }
+    } catch (error) {
+      handleDBError(error, 'Inventario')
+    }
+  },
+
   getActividadDetalleInsumos: async (user_rol, user_laboratorio_ids, laboratorio_id, insumo_id) => {
     let query = `
       SELECT 
