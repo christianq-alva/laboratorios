@@ -41,12 +41,14 @@ interface HorarioDetalleProps {
   open: boolean
   onClose: () => void
   horarioId: number
+  onHorarioUpdated?: () => void
 }
 
 export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
   open,
   onClose,
-  horarioId
+  horarioId,
+  onHorarioUpdated
 }) => {
   const { execute } = useApi()
   const [horario, setHorario] = useState<HorarioFull | null>(null)
@@ -107,12 +109,14 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
       setError(response.error)
     } else {
       loadHorario() // Recargar datos
+      onHorarioUpdated?.()
     }
   }
   // Función para cerrar modal y recargar (maqueta)
   const handleRegistrarInsumosSuccess = () => {
     setRegistrarInsumosOpen(false)
     loadHorario() // Recargar datos
+    onHorarioUpdated?.()
   }
 
   // Función para verificar si tiene movimiento y mostrar modal de confirmación
@@ -137,6 +141,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
         await loadHorario()
         setConfirmarReabrirOpen(false)
         setTieneMovimiento(false)
+        onHorarioUpdated?.()
       }
     } catch (err) {
       setError('Error al reabrir el horario')

@@ -116,6 +116,11 @@ export const Horarios: React.FC = () => {
     setSelectedHorarioId(null)
   }
 
+  // Cuando en el detalle se cierra, reabre o registra insumos, refrescar lista y calendario
+  const handleHorarioUpdated = () => {
+    setRefresh(prev => !prev)
+  }
+
   // Función para abrir modal de actividad
   const handleActividad = () => {
     setActividadOpen(true)
@@ -328,6 +333,7 @@ export const Horarios: React.FC = () => {
         open={detalleOpen}
         onClose={handleDetalleClose}
         horarioId={selectedHorarioId || 0}
+        onHorarioUpdated={handleHorarioUpdated}
       />
 
       {/* Modal de actividad */}
