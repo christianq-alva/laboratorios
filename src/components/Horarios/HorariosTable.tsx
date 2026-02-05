@@ -180,12 +180,10 @@ export const HorariosTable: React.FC<HorariosTableProps> = ({
   }, [filters])
 
   useEffect(() => {
-    if (refresh) {
-      setPage(0)
-      fetchHorarios().then(() => {
-        onRefreshComplete()
-      })
-    }
+    setPage(0)
+    fetchHorarios().then(() => {
+      onRefreshComplete?.()
+    })
   }, [refresh])
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, horario: HorarioSimple) => {
