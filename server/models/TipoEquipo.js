@@ -54,9 +54,12 @@ export const TipoEquipo = {
         FROM tipos_equipo
         WHERE id = ?
       `, [id])
-
+      if (!rows[0]) {
+        throw new AppError('Tipo de equipo no encontrado', 404)
+      }
       return rows[0]
     } catch (error) {
+      if (error instanceof AppError) throw error
       handleDBError(error, 'Tipo de equipo')
     }
   },
@@ -87,11 +90,7 @@ export const TipoEquipo = {
   },
 
   update: async (id, data) => {
-
-    const tipo = await TipoEquipo.getById(id)
-    if (!tipo) {
-      throw new AppError('Tipo de equipo no encontrado', 404)
-    }
+    await TipoEquipo.getById(id) // lanza 404 si no existe
 
     // Verificar si existe otro tipo con el mismo nombre
     const [existing] = await pool.execute(
@@ -118,10 +117,7 @@ export const TipoEquipo = {
   },
 
   delete: async (id) => {
-    const tipo = await TipoEquipo.getById(id)
-    if (!tipo) {
-      throw new AppError('Tipo de equipo no encontrado', 404)
-    }
+    await TipoEquipo.getById(id) // lanza 404 si no existe
 
     // Verificar si hay equipos asociados
     const [equipos] = await pool.execute(

@@ -104,13 +104,12 @@ export const User = {
       `, [id])
 
       if (rows.length === 0) {
-        return null
+        throw new AppError('Usuario no encontrado', 404)
       }
 
-      const user = rows[0]
-
-      return user
+      return rows[0]
     } catch (error) {
+      if (error instanceof AppError) throw error
       handleDBError(error, 'Usuario')
     }
   },
@@ -159,10 +158,7 @@ export const User = {
   },
 
   update: async (id, data) => {
-    const usuarioExistente = await User.getById(id)
-    if (!usuarioExistente) {
-      throw new AppError('Usuario no encontrado', 404)
-    }
+    await User.getById(id) // lanza 404 si no existe
 
     // Verificar si existe otro usuario con el mismo nombre de usuario
     if (data.usuario) {
@@ -243,10 +239,7 @@ export const User = {
   },
 
   delete: async (id) => {
-    const usuario = await User.getById(id)
-    if (!usuario) {
-      throw new AppError('Usuario no encontrado', 404)
-    }
+    await User.getById(id) // lanza 404 si no existe
     try {
       const [result] = await pool.execute(
         'DELETE FROM usuarios WHERE id = ?',
@@ -265,8 +258,12 @@ export const User = {
         'UPDATE usuarios SET estado = ? WHERE id = ?',
         [estadoChar, id]
       )
-      return result.affectedRows > 0
+      if (result.affectedRows === 0) {
+        throw new AppError('Usuario no encontrado', 404)
+      }
+      return true
     } catch (error) {
+      if (error instanceof AppError) throw error
       handleDBError(error, 'Usuario')
     }
   },

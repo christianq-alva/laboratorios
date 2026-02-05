@@ -225,8 +225,7 @@ export const inventarioService = {
 
     // Eliminar movimiento de inventario por ID
     eliminarMovimiento: async (movimientoId: number): Promise<{ success: boolean; message: string }> => {
-        console.log('Eliminando movimiento con ID:', movimientoId)
-        const response = await api.post('/inventario/movimiento-manual/eliminar', { movimiento_id: movimientoId })
+        const response = await api.delete(`/inventario/movimiento-manual/eliminar/${movimientoId}`)
         return response.data
     },
 

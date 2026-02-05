@@ -273,13 +273,13 @@ flowchart TB
 ## 12. Eliminar movimiento de inventario
 
 1. **Frontend – inventarioService.eliminarMovimiento**  
-   Envía POST `/inventario/movimiento-manual/eliminar` con body `{ movimiento_id }`.
+   Envía DELETE `/inventario/movimiento-manual/eliminar/:movimiento_id` (el ID va en el path, p. ej. `/inventario/movimiento-manual/eliminar/18`).
 
 2. **Backend – inventarioRoutes**  
-   Ruta POST `/movimiento-manual/eliminar`. Middlewares: authenticateToken, authorize('delete', 'Inventario').
+   Ruta DELETE `/movimiento-manual/eliminar/:movimiento_id`. Middlewares: authenticateToken, authorize('delete', 'Inventario'), validate(eliminarMovimientoInventarioSchema).
 
 3. **Backend – inventarioController.eliminarMovimientoInventario**  
-   Toma movimiento_id del body y llama inventarioService.eliminarMovimientoInventario.
+   Toma movimiento_id de req.params y llama inventarioService.eliminarMovimientoInventario.
 
 4. **Backend – inventarioService.eliminarMovimientoInventario**  
    Obtiene conexión, inicia transacción (beginTransaction), llama Inventario.eliminarMovimientoInventario(connection, movimiento_id), hace commit, en caso de error rollback, libera conexión en finally.

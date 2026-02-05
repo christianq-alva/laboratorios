@@ -71,5 +71,41 @@ export const inventarioService = {
       }
     }
     return await Inventario.getLotesPorInsumo(insumo_id, user.rol, userLaboratorioIds)
+  },
+
+  async getAllInsumosWithStock(user_rol, user_laboratorio_ids) {
+    return await Inventario.getAllInsumosConSaldo(user_rol, user_laboratorio_ids)
+  },
+
+  async getInsumosWithStock(laboratorio_id) {
+    return await Inventario.getInsumosConSaldo(laboratorio_id)
+  },
+
+  async getInsumosWithPositiveStock(laboratorio_id) {
+    return await Inventario.getInsumosConSaldoPositivo(laboratorio_id)
+  },
+
+  async getActividadInsumos(user_rol, user_laboratorio_ids, laboratorio_id, fecha_inicio, fecha_fin, tipo_movimiento) {
+    const rows = await Inventario.getActividadInsumos(user_rol, user_laboratorio_ids, laboratorio_id, fecha_inicio, fecha_fin, tipo_movimiento)
+    // Convertir fechas al formato ISO para el frontend
+    return rows.map(row => ({
+      ...row,
+      fecha_ingreso: row.fecha_ingreso ? new Date(row.fecha_ingreso).toISOString() : null,
+      fecha_movimiento: row.fecha_movimiento,
+      reserva_fecha_inicio: row.reserva_fecha_inicio ? new Date(row.reserva_fecha_inicio).toISOString() : null,
+      reserva_fecha_fin: row.reserva_fecha_fin ? new Date(row.reserva_fecha_fin).toISOString() : null
+    }))
+  },
+
+  async getLotesConSaldo(laboratorio_id, insumo_id) {
+    return await Inventario.getLotesConSaldo(laboratorio_id, insumo_id)
+  },
+
+  async getActividadDetalleInsumos(user_rol, user_laboratorio_ids, laboratorio_id, insumo_id) {
+    return await Inventario.getActividadDetalleInsumos(user_rol, user_laboratorio_ids, laboratorio_id, insumo_id)
+  },
+
+  async getInsumosConfiguradosByLaboratorio(laboratorio_id) {
+    return await Inventario.getInsumosConfiguradosByLaboratorio(laboratorio_id)
   }
 }

@@ -75,7 +75,7 @@ export const Inventario = {
 
   getInsumosConSaldoPositivo: async (laboratorio_id) => {
     try {
-      const insumos = await pool.execute(`
+      const [insumos] = await pool.execute(`
           SELECT 
             i.id, 
             i.codigo, 

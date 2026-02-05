@@ -16,12 +16,6 @@ export const getDocente = async (req, res, next) => {
   try {
     const { id: docenteId } = req.params
     const docente = await Docente.getById(docenteId)
-    if (!docente) {
-      return res.status(404).json({
-        success: false,
-        message: 'Docente no encontrado'
-      })
-    }
     res.status(200).json({
       success: true,
       data: docente
@@ -49,7 +43,7 @@ export const updateDocente = async (req, res, next) => {
     const { id: docenteId } = req.params
     const { nombre, correo, escuela_id } = req.body
     const docenteActual = await Docente.getById(docenteId)
-    const nombreFinal = nombre !== undefined ? nombre : docenteActual?.nombre
+    const nombreFinal = nombre !== undefined ? nombre : docenteActual.nombre
     await Docente.update(docenteId, { nombre: nombreFinal, correo, escuela_id })
     res.status(200).json({
       success: true,

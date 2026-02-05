@@ -34,8 +34,12 @@ export const Docente = {
         LEFT JOIN escuelas e ON d.escuela_id = e.id
         WHERE d.id = ?
       `, [id])
-      return rows[0] || null
+      if (!rows[0]) {
+        throw new AppError('Docente no encontrado', 404)
+      }
+      return rows[0]
     } catch (error) {
+      if (error instanceof AppError) throw error
       handleDBError(error, 'Docente')
     }
   },

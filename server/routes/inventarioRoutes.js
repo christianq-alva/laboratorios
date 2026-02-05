@@ -25,7 +25,8 @@ import {
     ejecutarReabastecimientoMasivoSchema,
     getLotesConSaldoSchema,
     getLotesPorInsumoSchema,
-    registrarMovimientoManualSchema
+    registrarMovimientoManualSchema,
+    eliminarMovimientoInventarioSchema
 } from '../validations/index.js'
 import { upload } from '../controllers/insumoController.js'
 
@@ -118,9 +119,10 @@ router.post('/movimiento-manual',
 )
 
 // Eliminar movimiento
-router.post('/movimiento-manual/eliminar',
+router.delete('/movimiento-manual/eliminar/:movimiento_id',
     authenticateToken,
     authorize('delete', 'Inventario'),
+    validate(eliminarMovimientoInventarioSchema),
     eliminarMovimientoInventario
 )
 export default router
