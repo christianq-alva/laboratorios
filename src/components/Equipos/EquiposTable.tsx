@@ -26,6 +26,7 @@ import { equipoService, type Equipo } from '../../services/equipoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
 import { tipoEquipoService, type TipoEquipo } from '../../services/tipoEquipoService'
 import { useApi } from '../../hooks/useApi'
+import { ActionMenu } from '../Configuracion/Common/ActionMenu'
 
 interface EquiposTableProps {
   onEdit?: (equipo: Equipo) => void
@@ -470,30 +471,10 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
                     )}
                   </TableCell>
                   <TableCell align="center">
-                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                      {onEdit && (
-                        <Tooltip title="Editar equipo">
-                          <IconButton
-                            size="small"
-                            onClick={() => onEdit(equipo)}
-                            color="primary"
-                          >
-                            <Edit />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      {onDelete && (
-                        <Tooltip title="Eliminar equipo">
-                          <IconButton
-                            size="small"
-                            onClick={() => onDelete(equipo)}
-                            color="error"
-                          >
-                            <Delete />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                    </Box>
+                    <ActionMenu
+                      onEdit={onEdit ? () => onEdit(equipo) : () => {}}
+                      onDelete={onDelete ? () => onDelete(equipo) : () => {}}
+                    />
                   </TableCell>
                 </TableRow>
               ))
