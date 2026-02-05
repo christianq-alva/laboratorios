@@ -1,9 +1,8 @@
-import { Horario } from '../models/Horario.js'
-import { Incidencia } from '../models/Incidencia.js'
 import { incidenciaService } from '../services/incidenciaService.js'
+
 export const getIncidencias = async (req, res, next) => {
   try {
-    const incidencias = await Incidencia.getByUser(req.user)
+    const incidencias = await incidenciaService.getByUser(req.user)
     res.status(200).json({
       data: incidencias,
       total: incidencias.length
@@ -12,16 +11,11 @@ export const getIncidencias = async (req, res, next) => {
     next(error)
   }
 }
+
 export const getIncidencia = async (req, res, next) => {
   try {
     const { id } = req.params
-    const incidencia = await Incidencia.getById(id, req.user)
-    if (!incidencia) {
-      return res.status(404).json({
-        success: false,
-        message: 'Incidencia no encontrada o sin permisos para verla'
-      })
-    }
+    const incidencia = await incidenciaService.getById(id, req.user)
     res.status(200).json({
       data: incidencia
     })
@@ -29,6 +23,7 @@ export const getIncidencia = async (req, res, next) => {
     next(error)
   }
 }
+
 export const createIncidencia = async (req, res, next) => {
   try {
     const { reserva_id, titulo, descripcion } = req.body
@@ -42,10 +37,10 @@ export const createIncidencia = async (req, res, next) => {
     next(error)
   }
 }
-// Obtener horarios disponibles para reportar incidencias
+
 export const getHorariosParaIncidencias = async (req, res, next) => {
   try {
-    const horarios = await Horario.getHorarioLastMonth(req.user.rol, req.user.laboratorio_ids)
+    const horarios = await incidenciaService.getHorariosParaIncidencias(req.user)
     res.status(200).json({
       data: horarios
     })
@@ -54,7 +49,6 @@ export const getHorariosParaIncidencias = async (req, res, next) => {
   }
 }
 
-// Eliminar incidencia
 export const deleteIncidencia = async (req, res, next) => {
   try {
     const { id } = req.params

@@ -16,9 +16,10 @@ flowchart TB
 
     subgraph ConsultasActividad["Consultas de actividad"]
         A1[Actividad de movimientos]
-        A2[Detalle movimientos por insumo]
-        A3[Lotes con saldo]
-        A4[Lotes por insumo]
+        A2[Detalle movimientos de insumo]
+        A3[Detalle de un movimiento]
+        A4[Lotes con saldo]
+        A5[Lotes por insumo]
     end
 
     subgraph Movimientos["Movimientos"]
@@ -133,6 +134,8 @@ flowchart TB
 
 ## 5. Obtener detalle de movimientos de un insumo
 
+Listado de todos los movimientos que afectan a **un insumo** (historial por insumo). Frontend: modal **DetalleMovimientosInsumoModal**; título en UI: "Detalle de movimientos de insumo".
+
 1. **Frontend – inventarioService.getActividadDetalleInsumos**  
    Llama GET `/inventario/actividad-detalle?insumo_id=...&laboratorio_id=...` (laboratorio opcional).
 
@@ -147,6 +150,30 @@ flowchart TB
 
 5. **Backend – inventarioController.getActividadDetalleInsumos**  
    Responde 200 con `{ success, data: actividad }`.
+
+---
+
+## 5.5. Obtener detalle de un movimiento (cabecera y líneas de insumos)
+
+Cabecera del movimiento (fecha, tipo, laboratorio, usuario, observaciones, reserva) y **líneas** (insumos movidos: insumo, cantidad, lote, unidad). Se usa desde la pantalla de actividad para ver qué insumos tiene un movimiento antes de deshacerlo. Frontend: modal **DetalleMovimientoModal**; título en UI: "Detalle de un movimiento". Paginación de la tabla de líneas solo en frontend.
+
+1. **Frontend – inventarioService.getDetalleMovimiento**  
+   Llama GET `/inventario/actividad/movimiento/:movimiento_id/detalle` (movimiento_id en el path).
+
+2. **Backend – inventarioRoutes**  
+   Ruta GET `/actividad/movimiento/:movimiento_id/detalle`. Middlewares: authenticateToken, authorize('read', 'Inventario'), validate(getDetalleMovimientoSchema).
+
+3. **Backend – inventarioController.getDetalleMovimiento**  
+   Toma movimiento_id de req.params y llama inventarioService.getDetalleMovimiento(movimiento_id, rol, laboratorio_ids).
+
+4. **Backend – inventarioService.getDetalleMovimiento**  
+   Llama Inventario.getDetalleMovimiento(movimiento_id, rol, laboratorio_ids). Si el modelo devuelve null (movimiento no existe o usuario sin permiso), el **servicio** lanza `AppError('Movimiento no encontrado o sin permisos para verlo', 404)`. Si hay resultado, normaliza fechas de la cabecera y devuelve `{ cabecera, detalle }`.
+
+5. **Backend – Inventario.getDetalleMovimiento**  
+   Verifica permisos (Jefe de Laboratorio solo ve movimientos de sus laboratorio_ids; Administrador ve todos). Si no hay cabecera, devuelve null. Consulta cabecera del movimiento y filas de `movimiento_insumo_detalle` (insumo_id, insumo_codigo, insumo_nombre, unidad_simbolo, unidad_nombre, cantidad, lote). Devuelve `{ cabecera, detalle }` o null.
+
+6. **Backend – inventarioController.getDetalleMovimiento**  
+   Responde 200 con `{ success, data: { cabecera, detalle } }`. Los errores 404 se propagan desde el servicio vía middleware de errores.
 
 ---
 
@@ -273,13 +300,13 @@ flowchart TB
 ## 12. Eliminar movimiento de inventario
 
 1. **Frontend – inventarioService.eliminarMovimiento**  
-   Envía POST `/inventario/movimiento-manual/eliminar` con body `{ movimiento_id }`.
+   Envía DELETE `/inventario/movimiento-manual/eliminar/:movimiento_id` (el ID va en el path, p. ej. `/inventario/movimiento-manual/eliminar/18`).
 
 2. **Backend – inventarioRoutes**  
-   Ruta POST `/movimiento-manual/eliminar`. Middlewares: authenticateToken, authorize('delete', 'Inventario').
+   Ruta DELETE `/movimiento-manual/eliminar/:movimiento_id`. Middlewares: authenticateToken, authorize('delete', 'Inventario'), validate(eliminarMovimientoInventarioSchema).
 
 3. **Backend – inventarioController.eliminarMovimientoInventario**  
-   Toma movimiento_id del body y llama inventarioService.eliminarMovimientoInventario.
+   Toma movimiento_id de req.params y llama inventarioService.eliminarMovimientoInventario.
 
 4. **Backend – inventarioService.eliminarMovimientoInventario**  
    Obtiene conexión, inicia transacción (beginTransaction), llama Inventario.eliminarMovimientoInventario(connection, movimiento_id), hace commit, en caso de error rollback, libera conexión en finally.

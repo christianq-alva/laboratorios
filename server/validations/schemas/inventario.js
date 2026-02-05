@@ -230,3 +230,26 @@ export const registrarMovimientoManualSchema = z.object({
     })
 })
 
+/**
+ * Schema para obtener detalle de un movimiento (líneas de insumos)
+ */
+export const getDetalleMovimientoSchema = z.object({
+    params: z.object({
+        movimiento_id: z.coerce
+            .number()
+            .int('El ID de movimiento debe ser un número entero')
+            .positive('El ID de movimiento debe ser mayor a 0'),
+    })
+})
+
+/**
+ * Schema para eliminar movimiento manual
+ */
+export const eliminarMovimientoInventarioSchema = z.object({
+    params: z.object({
+        movimiento_id: z.coerce
+        .number()
+        .int('El ID de movimiento debe ser un número entero')
+        .positive('El ID de movimiento debe ser mayor a 0'),
+    })
+})

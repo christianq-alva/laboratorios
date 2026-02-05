@@ -71,5 +71,54 @@ export const inventarioService = {
       }
     }
     return await Inventario.getLotesPorInsumo(insumo_id, user.rol, userLaboratorioIds)
+  },
+
+  async getAllInsumosWithStock(user_rol, user_laboratorio_ids) {
+    return await Inventario.getAllInsumosConSaldo(user_rol, user_laboratorio_ids)
+  },
+
+  async getInsumosWithStock(laboratorio_id) {
+    return await Inventario.getInsumosConSaldo(laboratorio_id)
+  },
+
+  async getInsumosWithPositiveStock(laboratorio_id) {
+    return await Inventario.getInsumosConSaldoPositivo(laboratorio_id)
+  },
+
+  async getActividadInsumos(user_rol, user_laboratorio_ids, laboratorio_id, fecha_inicio, fecha_fin, tipo_movimiento) {
+    const rows = await Inventario.getActividadInsumos(user_rol, user_laboratorio_ids, laboratorio_id, fecha_inicio, fecha_fin, tipo_movimiento)
+    // Convertir fechas al formato ISO para el frontend
+    return rows.map(row => ({
+      ...row,
+      fecha_ingreso: row.fecha_ingreso ? new Date(row.fecha_ingreso).toISOString() : null,
+      fecha_movimiento: row.fecha_movimiento,
+      reserva_fecha_inicio: row.reserva_fecha_inicio ? new Date(row.reserva_fecha_inicio).toISOString() : null,
+      reserva_fecha_fin: row.reserva_fecha_fin ? new Date(row.reserva_fecha_fin).toISOString() : null
+    }))
+  },
+
+  async getLotesConSaldo(laboratorio_id, insumo_id) {
+    return await Inventario.getLotesConSaldo(laboratorio_id, insumo_id)
+  },
+
+  async getActividadDetalleInsumos(user_rol, user_laboratorio_ids, laboratorio_id, insumo_id) {
+    return await Inventario.getActividadDetalleInsumos(user_rol, user_laboratorio_ids, laboratorio_id, insumo_id)
+  },
+
+  async getDetalleMovimiento(movimiento_id, user_rol, user_laboratorio_ids) {
+    const result = await Inventario.getDetalleMovimiento(movimiento_id, user_rol, user_laboratorio_ids)
+    if (!result) {
+      throw new AppError('Movimiento no encontrado o sin permisos para verlo', 404)
+    }
+    const cabecera = {
+      ...result.cabecera,
+      fecha_ingreso: result.cabecera.fecha_ingreso ? new Date(result.cabecera.fecha_ingreso).toISOString() : null,
+      fecha_movimiento: result.cabecera.fecha_movimiento
+    }
+    return { cabecera, detalle: result.detalle }
+  },
+
+  async getInsumosConfiguradosByLaboratorio(laboratorio_id) {
+    return await Inventario.getInsumosConfiguradosByLaboratorio(laboratorio_id)
   }
 }

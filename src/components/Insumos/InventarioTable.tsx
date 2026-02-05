@@ -27,7 +27,7 @@ import {
 import { Inventory, Science, Search, Clear, Visibility, MoreVert, ListAlt } from '@mui/icons-material'
 import { inventarioService, type InsumoSaldo } from '../../services/inventarioService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
-import { DetalleMovimientosModal } from './DetalleMovimientosModal'
+import { DetalleMovimientosInsumoModal } from './DetalleMovimientosInsumoModal'
 import { DetalleLotesModal } from './DetalleLotesModal'
 
 interface InventarioTableProps {
@@ -488,8 +488,8 @@ export const InventarioTable: React.FC<InventarioTableProps> = ({
         {/* Aquí se pueden agregar más opciones en el futuro */}
       </Menu>
 
-      {/* Modal de detalle de movimientos */}
-      <DetalleMovimientosModal
+      {/* Modal de detalle de movimientos de insumo */}
+      <DetalleMovimientosInsumoModal
         open={detalleModalOpen}
         onClose={() => {
           setDetalleModalOpen(false)

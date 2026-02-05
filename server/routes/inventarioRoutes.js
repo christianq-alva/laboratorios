@@ -7,6 +7,7 @@ import {
     getInsumosWithStock, 
     getActividadInsumos, 
     getActividadDetalleInsumos,
+    getDetalleMovimiento,
     generarPlantillaReabastecimiento, 
     procesarArchivoExcel, 
     ejecutarReabastecimientoMasivo, 
@@ -21,11 +22,13 @@ import {
     getInsumosWithPositiveStockSchema,
     getActividadInsumosSchema,
     getActividadDetalleInsumosSchema,
+    getDetalleMovimientoSchema,
     procesarArchivoExcelSchema,
     ejecutarReabastecimientoMasivoSchema,
     getLotesConSaldoSchema,
     getLotesPorInsumoSchema,
-    registrarMovimientoManualSchema
+    registrarMovimientoManualSchema,
+    eliminarMovimientoInventarioSchema
 } from '../validations/index.js'
 import { upload } from '../controllers/insumoController.js'
 
@@ -69,6 +72,14 @@ router.get('/actividad-detalle',
     authorize('read', 'Inventario'),
     validate(getActividadDetalleInsumosSchema),
     getActividadDetalleInsumos
+)
+
+// Obtener detalle de un movimiento
+router.get('/actividad/movimiento/:movimiento_id/detalle',
+    authenticateToken,
+    authorize('read', 'Inventario'),
+    validate(getDetalleMovimientoSchema),
+    getDetalleMovimiento
 )
 
 // Generar plantilla excel para reabastecimiento masivo
@@ -118,9 +129,10 @@ router.post('/movimiento-manual',
 )
 
 // Eliminar movimiento
-router.post('/movimiento-manual/eliminar',
+router.delete('/movimiento-manual/eliminar/:movimiento_id',
     authenticateToken,
     authorize('delete', 'Inventario'),
+    validate(eliminarMovimientoInventarioSchema),
     eliminarMovimientoInventario
 )
 export default router

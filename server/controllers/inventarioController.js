@@ -1,12 +1,11 @@
 // Generar plantilla Excel para carga masiva
 import XLSX from 'xlsx'
-import { Inventario } from '../models/Inventario.js'
 import { Laboratorio } from '../models/Laboratorio.js'
 import { inventarioService } from '../services/inventarioService.js'
 //Obtener los insumos y su stock de todos los laboratorios
 export const getAllInsumosWithStock = async (req, res, next) => {
   try {
-    const insumos = await Inventario.getAllInsumosConSaldo(req.user.rol, req.user.laboratorio_ids)
+    const insumos = await inventarioService.getAllInsumosWithStock(req.user.rol, req.user.laboratorio_ids)
     res.status(200).json({
       success: true,
       data: insumos
@@ -20,7 +19,7 @@ export const getInsumosWithStock = async (req, res, next) => {
   try {
     // El laboratorio_id ya está validado y transformado por el middleware de validación
     const { laboratorio_id } = req.query
-    const insumos = await Inventario.getInsumosConSaldo(laboratorio_id)
+    const insumos = await inventarioService.getInsumosWithStock(laboratorio_id)
     res.status(200).json({
       success: true,
       data: insumos
@@ -34,7 +33,7 @@ export const getInsumosWithPositiveStock = async (req, res, next) => {
   try {
     // El laboratorio_id ya está validado y transformado por el middleware de validación
     const { laboratorio_id } = req.query
-    const insumos = await Inventario.getInsumosConSaldoPositivo(laboratorio_id)
+    const insumos = await inventarioService.getInsumosWithPositiveStock(laboratorio_id)
     res.status(200).json({
       success: true,
       data: insumos
@@ -48,19 +47,11 @@ export const getActividadInsumos = async (req, res, next) => {
   try {
     // Los parámetros ya están validados y transformados por el middleware de validación
     const { laboratorio_id, fecha_inicio, fecha_fin, tipo_movimiento } = req.query
-    const rows = await Inventario.getActividadInsumos(req.user.rol, req.user.laboratorio_ids, laboratorio_id, fecha_inicio, fecha_fin, tipo_movimiento)
-    // Convertir fechas al formato ISO para el frontend
-    const actividadConFechasISO = rows.map(row => ({
-      ...row,
-      fecha_ingreso: row.fecha_ingreso ? new Date(row.fecha_ingreso).toISOString() : null,
-      fecha_movimiento: row.fecha_movimiento,
-      reserva_fecha_inicio: row.reserva_fecha_inicio ? new Date(row.reserva_fecha_inicio).toISOString() : null,
-      reserva_fecha_fin: row.reserva_fecha_fin ? new Date(row.reserva_fecha_fin).toISOString() : null
-    }))
+    const actividadConFechasISO = await inventarioService.getActividadInsumos(req.user.rol, req.user.laboratorio_ids, laboratorio_id, fecha_inicio, fecha_fin, tipo_movimiento)
     res.status(200).json({
       success: true,
       data: actividadConFechasISO,
-      total_movimientos: rows.length,
+      total_movimientos: actividadConFechasISO.length,
       filtros_aplicados: {
         laboratorio_id: laboratorio_id || null,
         fecha_inicio: fecha_inicio || null,
@@ -210,7 +201,7 @@ export const procesarArchivoExcel = async (req, res) => {
       })
     }
     // Obtener todos los pares válidos de laboratorio-insumo
-    const inventario = await Inventario.getInsumosConfiguradosByLaboratorio(laboratorio_id);
+    const inventario = await inventarioService.getInsumosConfiguradosByLaboratorio(laboratorio_id);
     // Crear mapa rápido de validación: "LABCODE|INSCODE" → datos combinados
     const mapaInventario = new Map(
       inventario.map(item => [
@@ -278,7 +269,7 @@ export const getLotesConSaldo = async (req, res, next) => {
     // Los IDs ya están validados y transformados por el middleware de validación
     const { laboratorio_id, insumo_id } = req.query
 
-    const lotes = await Inventario.getLotesConSaldo(laboratorio_id, insumo_id)
+    const lotes = await inventarioService.getLotesConSaldo(laboratorio_id, insumo_id)
     res.status(200).json({
       success: true,
       data: lotes
@@ -306,7 +297,7 @@ export const getActividadDetalleInsumos = async (req, res, next) => {
   try {
     // Los IDs ya están validados y transformados por el middleware de validación
     const { insumo_id, laboratorio_id } = req.query
-    const actividad = await Inventario.getActividadDetalleInsumos(req.user.rol, req.user.laboratorio_ids, laboratorio_id, insumo_id)
+    const actividad = await inventarioService.getActividadDetalleInsumos(req.user.rol, req.user.laboratorio_ids, laboratorio_id, insumo_id)
     res.status(200).json({
       success: true,
       data: actividad
@@ -332,9 +323,22 @@ export const registrarMovimientoManual = async (req, res, next) => {
   }
 }
 
+export const getDetalleMovimiento = async (req, res, next) => {
+  try {
+    const { movimiento_id } = req.params
+    const result = await inventarioService.getDetalleMovimiento(movimiento_id, req.user.rol, req.user.laboratorio_ids)
+    res.status(200).json({
+      success: true,
+      data: result
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const eliminarMovimientoInventario = async (req, res) => {
   try {
-    const { movimiento_id } = req.body
+    const { movimiento_id } = req.params
     await inventarioService.eliminarMovimientoInventario(movimiento_id)
     res.status(200).json({
       success: true,

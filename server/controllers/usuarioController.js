@@ -17,12 +17,6 @@ export const getById = async (req, res, next) => {
   try {
     const { id: usuarioId } = req.params
     const usuario = await User.getById(usuarioId)
-    if (!usuario) {
-      return res.status(404).json({
-        success: false,
-        message: 'Usuario no encontrado'
-      })
-    }
     res.status(200).json({
       success: true,
       data: usuario
@@ -99,15 +93,8 @@ export const updateEstado = async (req, res, next) => {
       throw new AppError('No puedes cambiar tu propio estado', 403)
     }
 
-    const usuarioExistente = await User.getById(usuarioId)
-    if (!usuarioExistente) {
-      throw new AppError('Usuario no encontrado', 404)
-    }
-
-    const actualizado = await User.updateEstado(usuarioId, estado)
-    if (!actualizado) {
-      throw new AppError('No se pudo actualizar el estado del usuario', 404)
-    }
+    await User.getById(usuarioId) // lanza 404 si no existe
+    await User.updateEstado(usuarioId, estado) // lanza 404 si no se pudo actualizar
 
     const estadoNormalizado = estado === 'activo' || estado === 'A' ? 'A' : 'I'
     res.status(200).json({

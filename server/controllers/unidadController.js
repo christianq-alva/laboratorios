@@ -56,12 +56,6 @@ export const getUnidadById = async (req, res, next) => {
   try {
     const { id: unidadId } = req.params
     const unidad = await Unidad.getById(unidadId)
-    if (!unidad) {
-      return res.status(404).json({
-        success: false,
-        message: 'Unidad no encontrada'
-      })
-    }
     res.status(200).json({
       success: true,
       data: unidad

@@ -52,6 +52,8 @@ El módulo de **Inventario** gestiona el stock por laboratorio mediante movimien
 - **Insumos con stock**: Se filtran por rol. Jefe de Laboratorio solo ve insumos de sus `laboratorio_ids`.
 - **Lotes con saldo**: Por laboratorio e insumo; solo se consideran lotes con saldo > 0 cuando aplica.
 - **Actividad de insumos**: Filtrada por rol, laboratorio, rango de fechas y tipo de movimiento.
+- **Detalle de movimientos de un insumo** (GET `/actividad-detalle?insumo_id=...`): Listado de movimientos que afectan a un insumo. Mismos criterios de visibilidad que la actividad. Frontend: modal **DetalleMovimientosInsumoModal** ("Detalle de movimientos de insumo").
+- **Detalle de un movimiento** (GET `/actividad/movimiento/:movimiento_id/detalle`): Cabecera y líneas (insumos movidos) de un movimiento. Mismo criterio de permisos que la actividad: Jefe de Laboratorio solo ve movimientos de sus laboratorios; Administrador ve todos. Si el movimiento no existe o el usuario no tiene permiso, el **servicio** (`inventarioService.getDetalleMovimiento`) lanza `AppError('Movimiento no encontrado o sin permisos para verlo', 404)`. Frontend: modal **DetalleMovimientoModal** ("Detalle de un movimiento"); tabla de líneas con paginación solo en frontend.
 
 ---
 
@@ -68,7 +70,7 @@ El módulo de **Inventario** gestiona el stock por laboratorio mediante movimien
 | Código | Situación |
 |--------|-----------|
 | 400 | Datos incompletos; archivo Excel sin datos válidos; validación de esquema (Zod) |
-| 404 | Laboratorio o movimiento no encontrado |
+| 404 | Laboratorio o movimiento no encontrado; movimiento no encontrado o sin permisos para ver el detalle (lanzado por el servicio en getDetalleMovimiento) |
 | 409 | Horario ya cerrado (al cerrar con insumos) |
 | 500 | Saldo insuficiente en lote; error interno |
 

@@ -15,8 +15,12 @@ export const Escuela = {
   getById: async (id) => {
     try {
       const [rows] = await pool.execute('SELECT * FROM escuelas WHERE id = ?', [id])
+      if (!rows[0]) {
+        throw new AppError('Escuela no encontrada', 404)
+      }
       return rows[0]
     } catch (error) {
+      if (error instanceof AppError) throw error
       handleDBError(error, 'Escuela')
     }
   },

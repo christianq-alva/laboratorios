@@ -28,12 +28,6 @@ export const getById = async (req, res, next) => {
   try {
     const { id: tipoId } = req.params
     const tipo = await TipoEquipo.getById(tipoId)
-    if (!tipo) {
-      return res.status(404).json({
-        success: false,
-        message: 'Tipo de equipo no encontrado'
-      })
-    }
     res.status(200).json({
       success: true,
       data: tipo
@@ -60,8 +54,8 @@ export const updateTipoEquipo = async (req, res, next) => {
   try {
     const { id: tipoId } = req.params
     const { nombre, descripcion } = req.body
-    const actualizado = await TipoEquipo.update(tipoId, { nombre, descripcion })
-    const tipoActualizado = actualizado ? await TipoEquipo.getById(tipoId) : null
+    await TipoEquipo.update(tipoId, { nombre, descripcion })
+    const tipoActualizado = await TipoEquipo.getById(tipoId)
     res.status(200).json({
       success: true,
       message: 'Tipo de equipo actualizado exitosamente',

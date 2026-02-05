@@ -407,8 +407,7 @@ export const IncidenciaForm: React.FC<IncidenciaFormProps> = ({ open, onClose, o
         {/* Información adicional */}
         <Alert severity="info" sx={{ mt: 2 }}>
           <Typography variant="body2">
-            <strong>Importante:</strong> Las incidencias se reportan para clases que ya han terminado.
-            Esta información ayudará a mejorar el mantenimiento y la gestión de los laboratorios.
+            <strong>Importante:</strong> Solo puedes reportar incidencias para horarios de los últimos 30 días.
           </Typography>
         </Alert>
       </DialogContent>

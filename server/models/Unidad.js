@@ -44,10 +44,7 @@ export const Unidad = {
   },
 
   deleteById: async (id) => {
-    const unidad = await Unidad.getById(id)
-    if (!unidad) {
-      throw new AppError('Unidad no encontrada', 404)
-    }
+    const unidad = await Unidad.getById(id) // lanza 404 si no existe
     const relations = await Unidad.checkRelations(id)
     if (relations.total > 0) {
       const partes = relations.insumos > 0 ? [`Tiene ${relations.insumos} insumo(s) asociado(s)`] : []
@@ -73,8 +70,12 @@ export const Unidad = {
   getById: async (id) => {
     try {
       const [rows] = await pool.execute('SELECT id, simbolo, nombre, descripcion FROM unidades WHERE id = ?', [id])
-      return rows[0] || null
+      if (!rows[0]) {
+        throw new AppError('Unidad no encontrada', 404)
+      }
+      return rows[0]
     } catch (error) {
+      if (error instanceof AppError) throw error
       handleDBError(error, 'Unidad')
     }
   },

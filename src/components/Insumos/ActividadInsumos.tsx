@@ -36,13 +36,15 @@ import {
   Schedule,
   Person,
   LocationOn,
-  Undo
+  Undo,
+  Visibility
 } from '@mui/icons-material'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
 import { inventarioService, type ActividadInsumo } from '../../services/inventarioService'
 import { useApi } from '../../hooks/useApi'
 import { useAuth } from '../../hooks/useAuth'
 import dayjs from 'dayjs'
+import { DetalleMovimientoModal } from './DetalleMovimientoModal'
 
 interface ActividadInsumosProps {
   open: boolean
@@ -68,6 +70,10 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
   // Paginación
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
+
+  // Modal detalle de un movimiento
+  const [detalleMovimientoOpen, setDetalleMovimientoOpen] = useState(false)
+  const [movimientoSeleccionadoId, setMovimientoSeleccionadoId] = useState<number | null>(null)
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -142,7 +148,7 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   )
-  
+
   const handleEliminarMovimiento = async (movimientoId: number) => {
     if (!window.confirm('¿Está seguro de que desea eliminar este movimiento de inventario? Esta acción no se puede deshacer.')) {
       return
@@ -160,7 +166,7 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
       loadActividad()
     }
     setLoading(false)
-  } 
+  }
 
   const getTipoMovimientoColor = (tipo: string) => {
     return tipo === 'entrada' ? 'success' : 'error'
@@ -314,9 +320,8 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
                   <TableCell sx={{ fontWeight: 600 }}>Observaciones</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Usuario</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Fecha de Sistema</TableCell>
-                  {user?.rol === 'Administrador' && (
-                    <TableCell align="center" sx={{ fontWeight: 600 }}>Acciones</TableCell>
-                  )}
+                  <TableCell align="center" sx={{ fontWeight: 600 }}>Acciones</TableCell>
+
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -399,21 +404,37 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
                           </Typography>
                         </Box>
                       </TableCell>
-                      {user?.rol === 'Administrador' && (
-                        <TableCell align="center">
-                          <Tooltip title="Deshacer movimiento">
+
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                          <Tooltip title="Ver detalle del movimiento">
                             <IconButton
                               size="small"
-                              color="warning"
+                              color="default"
                               onClick={() => {
-                                  handleEliminarMovimiento(movimiento.id)
+                                setMovimientoSeleccionadoId(movimiento.id)
+                                setDetalleMovimientoOpen(true)
                               }}
                             >
-                              <Undo fontSize="small" />
+                              <Visibility fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                        </TableCell>
-                      )}
+                          {user?.rol === 'Administrador' && (
+                            <Tooltip title="Deshacer movimiento">
+                              <IconButton
+                                size="small"
+                                color="warning"
+                                onClick={() => {
+                                  handleEliminarMovimiento(movimiento.id)
+                                }}
+                              >
+                                <Undo fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Box>
+                      </TableCell>
+
                     </TableRow>
                   ))
                 )}
@@ -452,6 +473,15 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
           Cerrar
         </Button>
       </DialogActions>
+
+      <DetalleMovimientoModal
+        open={detalleMovimientoOpen}
+        onClose={() => {
+          setDetalleMovimientoOpen(false)
+          setMovimientoSeleccionadoId(null)
+        }}
+        movimientoId={movimientoSeleccionadoId}
+      />
     </Dialog>
   )
 } 

@@ -48,7 +48,7 @@ router.put('/:id',
 // Eliminar laboratorio
 router.delete('/:id',
   authenticateToken,
-  authorize('update', 'Laboratorio'),
+  authorize('delete', 'Laboratorio'),
   validate(deleteLaboratorioSchema),
   deleteLaboratorio
 )

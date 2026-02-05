@@ -35,14 +35,14 @@ interface Movimiento {
   fecha_ingreso: string | null
 }
 
-interface DetalleMovimientosModalProps {
+interface DetalleMovimientosInsumoModalProps {
   open: boolean
   onClose: () => void
   insumo: InsumoSaldo | null
   laboratorioId?: number
 }
 
-export const DetalleMovimientosModal: React.FC<DetalleMovimientosModalProps> = ({
+export const DetalleMovimientosInsumoModal: React.FC<DetalleMovimientosInsumoModalProps> = ({
   open,
   onClose,
   insumo,
@@ -92,7 +92,7 @@ export const DetalleMovimientosModal: React.FC<DetalleMovimientosModalProps> = (
   const totalEntradas = movimientos
     .filter(m => m.tipo_movimiento === 'entrada')
     .length
-  
+
   const totalSalidas = movimientos
     .filter(m => m.tipo_movimiento === 'salida')
     .length
@@ -128,7 +128,7 @@ export const DetalleMovimientosModal: React.FC<DetalleMovimientosModalProps> = (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Inventory color="primary" />
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              Detalle de Movimientos
+              Detalle de movimientos de insumo
             </Typography>
           </Box>
           <IconButton onClick={onClose} size="small">
@@ -149,18 +149,18 @@ export const DetalleMovimientosModal: React.FC<DetalleMovimientosModalProps> = (
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
                     <Chip label={insumo.codigo} size="small" variant="outlined" />
-                    <Chip 
-                      label={insumo.categoria} 
-                      size="small" 
-                      sx={{ 
-                        bgcolor: insumo.categoria === 'Reactivos' ? '#ff9800' : 
+                    <Chip
+                      label={insumo.categoria}
+                      size="small"
+                      sx={{
+                        bgcolor: insumo.categoria === 'Reactivos' ? '#ff9800' :
                                 insumo.categoria === 'Materiales' ? '#2196f3' : '#4caf50',
                         color: 'white'
                       }}
                     />
-                    <Chip 
-                      label={`${insumo.unidad_nombre}`} 
-                      size="small" 
+                    <Chip
+                      label={`${insumo.unidad_nombre}`}
+                      size="small"
                       variant="outlined"
                     />
                   </Box>
@@ -200,7 +200,7 @@ export const DetalleMovimientosModal: React.FC<DetalleMovimientosModalProps> = (
             <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
               Historial de Movimientos
             </Typography>
-            
+
             {loading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                 <CircularProgress />
@@ -254,9 +254,9 @@ export const DetalleMovimientosModal: React.FC<DetalleMovimientosModalProps> = (
                             />
                           </TableCell>
                           <TableCell align="right">
-                            <Typography 
-                              variant="body2" 
-                              sx={{ 
+                            <Typography
+                              variant="body2"
+                              sx={{
                                 fontWeight: 600,
                                 color: movimiento.tipo_movimiento === 'entrada' ? 'success.main' : 'error.main'
                               }}
@@ -319,4 +319,3 @@ export const DetalleMovimientosModal: React.FC<DetalleMovimientosModalProps> = (
     </Dialog>
   )
 }
-
