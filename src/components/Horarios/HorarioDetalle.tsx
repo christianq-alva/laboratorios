@@ -300,57 +300,83 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
               </Box>
             </Paper>
 
-            {/* Insumos requeridos */}
+            {/* Insumos requeridos y utilizados */}
             <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Inventory color="primary" />
-                Insumos Requeridos
-                {horario.insumos && horario.insumos.length > 0 && (
-                  <Chip
-                    label={horario.insumos.length}
-                    size="small"
-                    color="primary"
-                    variant="outlined"
-                  />
-                )}
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+                Insumos
               </Typography>
 
-              {!horario.insumos || horario.insumos.length === 0 ? (
-                <Alert severity="info">
-                  <Typography variant="body2">
-                    No se registraron insumos para este horario
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 4 }}>
+                {/* Columna 1: Insumos Requeridos */}
+                <Box sx={{ pr: { md: 3 }, borderRight: { md: 1 }, borderColor: { md: 'divider' } }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 500, mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
+                    <Inventory fontSize="small" />
+                    Requeridos
                   </Typography>
-                </Alert>
-              ) : (
-                <List>
-                  {horario.insumos.map((insumo, index) => (
-                    <React.Fragment key={insumo.id}>
-                      <ListItem sx={{ px: 0 }}>
-                        <ListItemIcon>
-                          <Inventory color="action" />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                {insumo.nombre}
-                              </Typography>
-                              <Chip
-                                label={`${insumo.cantidad_usada} ${insumo.unidad_nombre || 'unidades'}`}
-                                size="small"
-                                color="primary"
-                                variant="outlined"
-                              />
-                            </Box>
-                          }
-                          secondary={null}
-                        />
-                      </ListItem>
-                      {index < horario.insumos!.length - 1 && <Divider />}
-                    </React.Fragment>
-                  ))}
-                </List>
-              )}
+
+                  {!horario.insumos || horario.insumos.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                      No se registraron insumos requeridos
+                    </Typography>
+                  ) : (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                      {horario.insumos.map((insumo) => (
+                        <Box key={insumo.id}>
+                          <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
+                            {insumo.nombre}
+                          </Typography>
+                          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                            <Typography variant="caption" color="text.secondary">
+                              {insumo.codigo}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              •
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {insumo.cantidad_usada} {insumo.unidad_nombre || 'unidades'}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+                </Box>
+
+                {/* Columna 2: Insumos Consumidos */}
+                <Box sx={{ pl: { md: 3 } }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 500, mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: 'success.main' }}>
+                    <CheckCircle fontSize="small" />
+                    Consumidos
+                  </Typography>
+
+                  {!horario.insumos_consumidos || horario.insumos_consumidos.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                      No se registraron insumos consumidos
+                    </Typography>
+                  ) : (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                      {horario.insumos_consumidos.map((insumo) => (
+                        <Box key={insumo.id}>
+                          <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
+                            {insumo.nombre}
+                          </Typography>
+                          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                            <Typography variant="caption" color="text.secondary">
+                              {insumo.codigo}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              •
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {insumo.cantidad_consumida} {insumo.unidad_simbolo || insumo.unidad_nombre || 'unidades'}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+                </Box>
+              </Box>
             </Paper>
 
             {/* Equipos requeridos */}

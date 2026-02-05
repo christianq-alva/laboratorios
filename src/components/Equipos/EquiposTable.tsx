@@ -21,7 +21,7 @@ import {
   TextField,
   TablePagination,
 } from '@mui/material'
-import { Edit, Delete, Build, Info, Search, Clear } from '@mui/icons-material'
+import { Build, Info, Search, Clear } from '@mui/icons-material'
 import { equipoService, type Equipo } from '../../services/equipoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
 import { tipoEquipoService, type TipoEquipo } from '../../services/tipoEquipoService'
