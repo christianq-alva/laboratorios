@@ -509,6 +509,29 @@ export const Horario = {
             handleDBError(error, 'Horario')
         }
     },
+    
+    marcarTieneConsumoInsumos: async (reserva_id, connection) => {
+        try {
+            await connection.execute(
+                'UPDATE reservas SET tiene_consumo_insumos = 1 WHERE id = ?',
+                [reserva_id]
+            )
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
+    },
+    
+    desmarcarTieneConsumoInsumos: async (reserva_id, connection) => {
+        try {
+            await connection.execute(
+                'UPDATE reservas SET tiene_consumo_insumos = 0 WHERE id = ?',
+                [reserva_id]
+            )
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
+    },
+    
     getMovimientoByReservaId: async (reserva_id) => {
         try {
         const [result] = await pool.execute(`

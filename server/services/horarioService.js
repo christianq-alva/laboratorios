@@ -247,14 +247,8 @@ export const horarioService = {
     try {
       await connection.beginTransaction()
       await Horario.cerrarHorario(reserva_id, connection)
-      const movimientoId = await Inventario.insertarMovimiento(connection, usuario_id, fecha_movimiento, laboratorio_id, tipo_movimiento, reserva_id, observaciones)
-      await Inventario.procesarDetallesMovimiento(connection, movimientoId, tipo_movimiento, detalles)
-      
-      // Marcar que tiene consumo de insumos
-      await connection.execute(
-        'UPDATE reservas SET tiene_consumo_insumos = 1 WHERE id = ?',
-        [reserva_id]
-      )
+      const movimientoId = await Inventario.registrarMovimiento(connection, usuario_id, fecha_movimiento, laboratorio_id, tipo_movimiento, observaciones, reserva_id, detalles)
+      await Horario.marcarTieneConsumoInsumos(reserva_id, connection)
       await Horario.registrarActividadHorario({
         accion: 'cerrar',
         reserva_id: reserva_id,
@@ -291,11 +285,7 @@ export const horarioService = {
       // Si tiene movimiento, eliminarlo (esto revierte los saldos automáticamente)
       if (movimiento) {
         await Inventario.eliminarMovimientoInventario(connection, movimiento.id)
-        // Desmarcar que tiene consumo de insumos
-        await connection.execute(
-          'UPDATE reservas SET tiene_consumo_insumos = 0 WHERE id = ?',
-          [reserva_id]
-        )
+        await Horario.desmarcarTieneConsumoInsumos(reserva_id, connection)
       }
       
       await Horario.reabrirHorario(reserva_id, connection)

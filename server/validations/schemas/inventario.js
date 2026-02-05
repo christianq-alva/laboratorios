@@ -215,6 +215,7 @@ export const registrarMovimientoManualSchema = z.object({
                     .positive('El ID de detalle de entrada debe ser mayor a 0')
                     .optional()
                     .nullable()
+                    .transform((val) => val === undefined ? null : val)
             })
         ).min(1, 'Debe haber al menos un detalle en el movimiento')
     }).refine((data) => {

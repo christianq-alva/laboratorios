@@ -231,7 +231,7 @@ flowchart TB
    Extrae body y llama horarioService.cerrarHorarioConInsumos.
 
 4. **Backend – horarioService.cerrarHorarioConInsumos**  
-   Horario.exitsById. Horario.estadoHorario; si cerrado lanza 409. Horario.getHorarioById. Transacción: Horario.cerrarHorario(reserva_id). Inventario.insertarMovimiento (movimiento de inventario). Inventario.procesarDetallesMovimiento (detalles de insumos). UPDATE reservas SET tiene_consumo_insumos = 1. Commit. Horario.registrarActividadHorario (accion: 'cerrar'). Devuelve movimiento_id.
+   Horario.exitsById. Horario.estadoHorario; si cerrado lanza 409. Horario.getHorarioById. Transacción: Horario.cerrarHorario(reserva_id). Inventario.registrarMovimiento (movimiento de inventario con detalles). Horario.marcarTieneConsumoInsumos(reserva_id, connection). Commit. Horario.registrarActividadHorario (accion: 'cerrar'). Devuelve movimiento_id.
 
 5. **Backend – horarioController.cerrarHorarioConInsumos**  
    Responde 200 con `{ success, message, data: { movimiento_id } }`.
@@ -250,7 +250,7 @@ flowchart TB
    Toma id de params y llama horarioService.reabrirHorario.
 
 4. **Backend – horarioService.reabrirHorario**  
-   Horario.exitsById. Horario.estadoHorario; si no está cerrado lanza 409. Horario.getMovimientoByReservaId. Horario.getHorarioById. Transacción: si hay movimiento, Inventario.eliminarMovimientoInventario y UPDATE reservas SET tiene_consumo_insumos = 0. Horario.reabrirHorario(reserva_id). Commit. Horario.registrarActividadHorario (accion: 'reabrir'). Devuelve tiene_movimiento y movimiento_id.
+   Horario.exitsById. Horario.estadoHorario; si no está cerrado lanza 409. Horario.getMovimientoByReservaId. Horario.getHorarioById. Transacción: si hay movimiento, Inventario.eliminarMovimientoInventario y Horario.desmarcarTieneConsumoInsumos(reserva_id, connection). Horario.reabrirHorario(reserva_id). Commit. Horario.registrarActividadHorario (accion: 'reabrir'). Devuelve tiene_movimiento y movimiento_id.
 
 5. **Backend – horarioController.reabrirHorario**  
    Responde 200 con `{ success, message, data }`.

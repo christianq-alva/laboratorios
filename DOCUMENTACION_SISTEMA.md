@@ -959,9 +959,10 @@ El sistema gestiona la administración integral de laboratorios universitarios, 
 8. EJECUCIÓN DE REABASTECIMIENTO (ejecutarReabastecimientoMasivo):
    a) Usuario envía datos validados del preview
    b) Inicia transacción SQL
-   c) Por cada registro válido:
+   c) Llama a Inventario.registrarMovimiento que internamente:
+      - Valida detalles
       - Crea movimiento de entrada (insertarMovimiento)
-      - Crea detalle con lote y fecha de vencimiento (procesarDetallesMovimiento)
+      - Crea detalles con lote y fecha de vencimiento (insertarDetallesMovimientoBatch)
       - Saldo inicial = cantidad
    d) Commit transacción
    ↓
