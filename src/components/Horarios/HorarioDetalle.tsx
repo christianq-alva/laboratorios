@@ -30,12 +30,14 @@ import {
   People,
   CheckCircle,
   Refresh,
-  Warning
+  Warning,
+  Lock
 } from '@mui/icons-material'
 import { horarioService, type HorarioFull } from '../../services/horarioService'
 import { RegistrarInsumosUsadosModal } from './RegistrarInsumosUsadosModal'
 import dayjs from 'dayjs'
 import { useApi } from '../../hooks/useApi'
+import { useAuth } from '../../hooks/useAuth'
 interface HorarioDetalleProps {
   open: boolean
   onClose: () => void
@@ -55,7 +57,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
   const [confirmacionDialogOpen, setConfirmacionDialogOpen] = useState(false)
   const [confirmarReabrirOpen, setConfirmarReabrirOpen] = useState(false)
   const [tieneMovimiento, setTieneMovimiento] = useState(false)
-
+  const { user } = useAuth()
   // Cargar detalles del horario
   const loadHorario = async () => {
     if (!horarioId) return
@@ -128,7 +130,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
       setLoading(true)
       setError(null)
       const response = await execute(() => horarioService.reabrirHorario(horarioId))
-      
+
       if (response.error) {
         setError(response.error)
       } else {
@@ -208,8 +210,8 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
 
             {/* Alerta de consumo de insumos */}
             {horario.estado === 'C' && horario.tiene_consumo_insumos === 1 && (
-              <Alert 
-                severity="info" 
+              <Alert
+                severity="info"
                 icon={<Inventory />}
                 sx={{ mb: 3 }}
               >
@@ -217,7 +219,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                   Este horario tiene un movimiento de inventario asociado
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Se registró el consumo real de insumos al cerrar este horario. 
+                  Se registró el consumo real de insumos al cerrar este horario.
                   Los saldos de inventario fueron actualizados según el consumo registrado.
                 </Typography>
               </Alert>
@@ -441,7 +443,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
             Cerrar Horario
           </Button>
         )}
-        {horario && horario.estado === 'C' && (
+        {horario && horario.estado === 'C' && user?.rol === 'Administrador' && (
           <Button
             variant="contained"
             color="success"
@@ -450,6 +452,15 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
             disabled={loading}
           >
             Reabrir Horario
+          </Button>
+        )}
+        {horario && horario.estado === 'C' && user?.rol === 'Jefe de Laboratorio' && (
+          <Button
+            variant="contained"
+            startIcon={<Lock/>}
+            disabled={true}
+          >
+            Horario Cerrado
           </Button>
         )}
       </DialogActions>
@@ -484,7 +495,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
             Este horario no tiene insumos requeridos asignados.
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
-            ¿Deseas registrar los insumos consumidos durante la clase antes de cerrar el horario? 
+            ¿Deseas registrar los insumos consumidos durante la clase antes de cerrar el horario?
             Esto te permitirá documentar adecuadamente el consumo de inventario.
           </Typography>
         </DialogContent>
@@ -533,7 +544,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
           {tieneMovimiento && (
             <Alert severity="warning" sx={{ mb: 2 }}>
               <Typography variant="body2">
-                <strong>Advertencia:</strong> Este horario tiene un movimiento de inventario asociado 
+                <strong>Advertencia:</strong> Este horario tiene un movimiento de inventario asociado
                 que será eliminado al reabrir. Los saldos de los insumos serán revertidos automáticamente.
               </Typography>
             </Alert>
