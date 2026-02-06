@@ -1,9 +1,5 @@
 import mysql from 'mysql2/promise'
-import dotenv from 'dotenv'
 import logger from '../utils/logger.js'
-
-// Cargar variables de entorno
-dotenv.config()
 
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
@@ -15,8 +11,6 @@ const dbConfig = {
   connectionLimit: 10,
   queueLimit: 0,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  acquireTimeout: 60000,
-  timeout: 60000,
   timezone: '-05:00'
 }
 
