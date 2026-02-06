@@ -107,6 +107,8 @@ export const Horario = {
           r.cantidad_alumnos,
           r.estado,
           r.tiene_consumo_insumos,
+          r.created_at as fecha_creacion,
+          r.updated_at as fecha_actualizacion,
           l.nombre as laboratorio,
           d.nombre as docente,
           e.nombre as escuela,

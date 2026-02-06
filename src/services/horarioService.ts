@@ -38,6 +38,8 @@ export interface HorarioSimple {
   escuela?: string
   ciclo?: string
   estado: string
+  fecha_creacion: string
+  fecha_actualizacion: string
   insumos_requeridos?: number
 }
 

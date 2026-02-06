@@ -77,7 +77,7 @@ flowchart TB
    Toma `id` de params y llama al servicio.
 
 4. **Backend – horarioService.getHorarioById**  
-   Obtiene horario base, insumos requeridos, insumos consumidos y equipos; arma objeto completo.
+   Obtiene horario base, insumos requeridos, equipos; arma objeto completo. Solo carga insumos consumidos si el horario está cerrado (`estado === 'C'`) y tiene consumo (`tiene_consumo_insumos === 1`), evitando queries innecesarias.
 
 5. **Backend – Horario.getHorarioById**  
    Consulta reserva por ID.
@@ -86,7 +86,7 @@ flowchart TB
    Devuelve insumos asociados al horario.
 
 7. **Backend – Horario.getInsumosConsumidosByHorario**  
-   Devuelve insumos ya consumidos en ese horario.
+   Devuelve insumos ya consumidos en ese horario. **Solo se ejecuta si** `horario.estado === 'C'` y `horario.tiene_consumo_insumos === 1`. En caso contrario, se devuelve array vacío sin ejecutar la query.
 
 8. **Backend – Horario.getEquiposRequeridosByHorario**  
    Devuelve equipos asociados al horario.

@@ -119,13 +119,18 @@ En caso de conflicto se responde con **409 Conflict** e información del conflic
 
 - Retorna el horario completo con la siguiente información adicional:
   - **`insumos`**: Array de insumos requeridos/planificados (de `detalle_reserva_insumos`), con `cantidad_usada` (cantidad planificada).
-  - **`insumos_consumidos`**: Array de insumos realmente consumidos (de `movimiento_insumo_detalle` cuando existe movimiento de salida asociado), con `cantidad_consumida` (suma de cantidades del movimiento). Solo aparece si el horario tiene `tiene_consumo_insumos = 1`.
+  - **`insumos_consumidos`**: Array de insumos realmente consumidos (de `movimiento_insumo_detalle` cuando existe movimiento de salida asociado), con `cantidad_consumida` (suma de cantidades del movimiento). 
+    - **Optimización**: La query para obtener `insumos_consumidos` **solo se ejecuta** cuando el horario está cerrado (`estado === 'C'`) **y** tiene consumo (`tiene_consumo_insumos === 1`). 
+    - En caso contrario, se devuelve un array vacío `[]` sin ejecutar la query, evitando consultas innecesarias a la base de datos.
+    - En el frontend, la visualización de la columna "Insumos Consumidos" también está condicionada a estas mismas condiciones.
   - **`tiene_consumo_insumos`**: Campo booleano (0/1) que indica si el horario tiene un movimiento de consumo de insumos asociado. Permite identificar rápidamente horarios con consumo registrado sin necesidad de consultas adicionales.
   - **`equipos`**: Array de equipos requeridos.
 
 **Nota**: El campo `tiene_consumo_insumos` se mantiene automáticamente sincronizado:
 - Se establece en `1` cuando se cierra un horario con consumo de insumos.
 - Se establece en `0` cuando se reabre un horario que tenía movimiento asociado.
+
+**Optimización de rendimiento**: La carga condicional de `insumos_consumidos` reduce significativamente las queries innecesarias, especialmente en listados y detalles de horarios abiertos o cerrados sin consumo de insumos.
 
 ---
 

@@ -323,7 +323,8 @@ export const horarioService = {
     const horario = await Horario.getHorarioById(horarioId)
     if (!horario) throw new AppError('Horario no encontrado o sin permisos para verlo', 404)
     const insumos = await Horario.getInsumosRequeridosByHorario(horarioId)
-    const insumosConsumidos = await Horario.getInsumosConsumidosByHorario(horarioId)
+    const cerradoConConsumo = horario.estado === 'C' && horario.tiene_consumo_insumos === 1
+    const insumosConsumidos = cerradoConConsumo ? await Horario.getInsumosConsumidosByHorario(horarioId) : []
     const equipos = await Horario.getEquiposRequeridosByHorario(horarioId)
     return {
       ...horario,

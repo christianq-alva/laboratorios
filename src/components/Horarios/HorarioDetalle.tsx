@@ -30,7 +30,8 @@ import {
   CheckCircle,
   Refresh,
   Warning,
-  Lock
+  Lock,
+  AssignmentOutlined
 } from '@mui/icons-material'
 import { horarioService, type HorarioFull } from '../../services/horarioService'
 import { RegistrarInsumosUsadosModal } from './RegistrarInsumosUsadosModal'
@@ -309,7 +310,8 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
 
             {/* Insumos requeridos y utilizados */}
             <Box sx={{ p: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Inventory fontSize="small" />
                 Insumos
               </Typography>
 
@@ -317,7 +319,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                 {/* Columna 1: Insumos Requeridos */}
                 <Box sx={{ pr: { md: 3 }, borderRight: { md: 1 }, borderColor: { md: 'divider' } }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 500, mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
-                    <Inventory fontSize="small" />
+                  <AssignmentOutlined fontSize="small" />
                     Requeridos
                   </Typography>
 
@@ -350,39 +352,41 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                 </Box>
 
                 {/* Columna 2: Insumos Consumidos */}
-                <Box sx={{ pl: { md: 3 } }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 500, mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: 'success.main' }}>
-                    <CheckCircle fontSize="small" />
-                    Consumidos
-                  </Typography>
-
-                  {!horario.insumos_consumidos || horario.insumos_consumidos.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                      No se registraron insumos consumidos
+                {horario.estado === 'C' && horario.tiene_consumo_insumos === 1 && (
+                  <Box sx={{ pl: { md: 3 } }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 500, mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: 'success.main' }}>
+                      <CheckCircle fontSize="small" />
+                      Consumidos
                     </Typography>
-                  ) : (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                      {horario.insumos_consumidos.map((insumo) => (
-                        <Box key={insumo.id}>
-                          <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
-                            {insumo.nombre}
-                          </Typography>
-                          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                            <Typography variant="caption" color="text.secondary">
-                              {insumo.codigo}
+
+                    {!horario.insumos_consumidos || horario.insumos_consumidos.length === 0 ? (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                        No se registraron insumos consumidos
+                      </Typography>
+                    ) : (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                        {horario.insumos_consumidos.map((insumo) => (
+                          <Box key={insumo.id}>
+                            <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
+                              {insumo.nombre}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              •
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {insumo.cantidad_consumida} {insumo.unidad_simbolo || insumo.unidad_nombre || 'unidades'}
-                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                              <Typography variant="caption" color="text.secondary">
+                                {insumo.codigo}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                •
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {insumo.cantidad_consumida} {insumo.unidad_simbolo || insumo.unidad_nombre || 'unidades'}
+                              </Typography>
+                            </Box>
                           </Box>
-                        </Box>
-                      ))}
-                    </Box>
-                  )}
-                </Box>
+                        ))}
+                      </Box>
+                    )}
+                  </Box>
+                )}
               </Box>
             </Box>
 
@@ -455,7 +459,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
               <Alert severity="info">
                 <Typography variant="body2">
                   <strong>ID de Horario:</strong> #{horario.id} |
-                  <strong>Fecha de Creación:</strong> {formatFechaHora(horario.fecha_inicio)}
+                  <strong>Fecha de Creación:</strong> {formatFechaHora(horario.fecha_creacion)}
                 </Typography>
               </Alert>
             </Box>
@@ -501,7 +505,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
         {horario && horario.estado === 'C' && user?.rol === 'Jefe de Laboratorio' && (
           <Button
             variant="contained"
-            startIcon={<Lock/>}
+            startIcon={<Lock />}
             disabled={true}
           >
             Horario Cerrado
