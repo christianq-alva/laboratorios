@@ -124,7 +124,6 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
           return parsed.startOf('isoWeek')
         }
       } catch (e) {
-        console.error('Error al leer semana guardada:', e)
       }
     }
     return dayjs().startOf('isoWeek')
@@ -178,7 +177,6 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
       const savedWeek = localStorage.getItem('calendario_semana_actual')
       if (!savedWeek) {
         const semanaActual = dayjs().startOf('isoWeek')
-        console.log('🎯 Inicializando calendario simple con la semana actual:', semanaActual.format('YYYY-MM-DD'))
         setCurrentWeek(semanaActual)
         localStorage.setItem('calendario_semana_actual', semanaActual.format('YYYY-MM-DD'))
       }
@@ -323,12 +321,10 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
         // Verificar que la navegación sea reciente (últimos 5 segundos)
         if (Date.now() - navData.timestamp < 5000) {
           setSelectedLaboratorio(navData.laboratorioId)
-          console.log('🎯 Navegación desde dashboard - Laboratorio seleccionado:', navData.laboratorioId)
         }
         // Limpiar la navegación
         localStorage.removeItem('dashboard_navigation')
       } catch (err) {
-        console.error('Error al procesar navegación desde dashboard:', err)
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

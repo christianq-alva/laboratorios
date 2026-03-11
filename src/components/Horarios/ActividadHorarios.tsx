@@ -212,7 +212,6 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
         hour12: false
       }).replace(',', '')
     } catch (error) {
-      console.error('Error al formatear fecha:', fecha, error)
       return 'Error en fecha'
     }
   }
@@ -235,7 +234,6 @@ export const ActividadHorarios: React.FC<ActividadHorariosProps> = ({ open, onCl
         hour12: false
       }).replace(',', '')
     } catch (error) {
-      console.error('Error al formatear fecha horario:', fecha, error)
       return 'Error en fecha'
     }
   }

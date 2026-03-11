@@ -70,7 +70,6 @@ export const DetalleMovimientosInsumoModal: React.FC<DetalleMovimientosInsumoMod
       setMovimientos(response.data || [])
     } catch (err: any) {
       setError(err.message || 'Error al cargar los movimientos')
-      console.error('Error al cargar movimientos:', err)
     } finally {
       setLoading(false)
     }

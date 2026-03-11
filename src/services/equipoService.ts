@@ -191,7 +191,6 @@ export const equipoService = {
       window.URL.revokeObjectURL(url)
 
     } catch (error: any) {
-      console.error('Error al descargar plantilla de equipos:', error)
       throw new Error(error.response?.data?.message || 'Error al descargar la plantilla de equipos')
     }
   },
@@ -233,7 +232,6 @@ export const equipoService = {
 
       return response.data
     } catch (error: any) {
-      console.error('Error en previsualización de equipos:', error)
       throw new Error(error.response?.data?.message || 'Error al previsualizar el archivo de equipos')
     }
   },
@@ -268,7 +266,6 @@ export const equipoService = {
 
       return response.data
     } catch (error: any) {
-      console.error('Error en importación masiva de equipos:', error)
       throw new Error(error.response?.data?.message || 'Error en la importación masiva de equipos')
     }
   }

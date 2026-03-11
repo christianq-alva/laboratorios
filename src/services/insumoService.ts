@@ -83,7 +83,6 @@ export const insumoService = {
       window.URL.revokeObjectURL(url)
 
     } catch (error: any) {
-      console.error('Error al descargar plantilla:', error)
       throw new Error(error.response?.data?.message || 'Error al descargar la plantilla')
     }
   },
@@ -116,7 +115,6 @@ export const insumoService = {
 
       return response.data
     } catch (error: any) {
-      console.error('Error en previsualización:', error)
       throw new Error(error.response?.data?.message || 'Error al previsualizar el archivo')
     }
   },
@@ -148,7 +146,6 @@ export const insumoService = {
 
       return response.data
     } catch (error: any) {
-      console.error('Error en importación masiva:', error)
       throw new Error(error.response?.data?.message || 'Error en la importación masiva')
     }
   },

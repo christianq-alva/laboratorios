@@ -127,23 +127,18 @@ export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
   // Cargar horarios
   const fetchHorarios = useCallback(async () => {
     try {
-      console.log('🚀 Iniciando fetchHorarios...')
       setLoading(true)
       setError(null)
       
       const result = await horarioService.getAll()
-      console.log('📡 Resultado de horarioService.getAll():', result)
       
       if (result.success) {
-        console.log('✅ Datos recibidos exitosamente:', result.data?.length, 'horarios')
         setHorarios(result.data || [])
         procesarHorariosParaCalendario(result.data || [])
       } else {
-        console.error('❌ Error en la respuesta:', result.message)
         setError(result.message || 'Error al cargar horarios')
       }
     } catch (err: any) {
-      console.error('❌ Error al cargar horarios:', err)
       setError('Error de conexión al cargar horarios')
     } finally {
       setLoading(false)
@@ -154,12 +149,9 @@ export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
   const procesarHorariosParaCalendario = useCallback((horariosData: Horario[]) => {
     const horariosProcesados: HorarioCalendario[] = []
     
-    console.log('🔍 Procesando horarios para calendario:', horariosData.length)
-    
     horariosData.forEach(horario => {
       // Validar que el horario tenga los datos mínimos necesarios
       if (!horario.id || !horario.fecha_inicio || !horario.fecha_fin) {
-        console.warn('Horario con datos incompletos:', horario)
         return
       }
       
@@ -170,26 +162,10 @@ export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
       
       // Verificar que las fechas sean válidas
       if (isNaN(fechaInicio.getTime()) || isNaN(fechaFin.getTime())) {
-        console.warn('⚠️ Fecha inválida para horario:', horario.id, {
-          fecha_inicio: horario.fecha_inicio,
-          fecha_fin: horario.fecha_fin
-        })
         return
       }
       
-      // Log de depuración para verificar las fechas
-      console.log('📅 Procesando horario:', {
-        id: horario.id,
-        fecha_inicio_original: horario.fecha_inicio,
-        fecha_fin_original: horario.fecha_fin,
-        fecha_inicio_procesada: fechaInicio.toISOString(),
-        fecha_fin_procesada: fechaFin.toISOString(),
-        fecha_inicio_local: fechaInicio.toLocaleString(),
-        fecha_fin_local: fechaFin.toLocaleString(),
-        es_fecha_valida: !isNaN(fechaInicio.getTime())
-      })
-      
-      // Crear título para el evento
+      // Log de depuración el evento
       const title = `${horario.laboratorio || 'Laboratorio'} - ${horario.docente || 'Docente'}`
       
       const horarioProcesado: HorarioCalendario = {
@@ -210,17 +186,14 @@ export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
           })) || []
         }
         
-        console.log('✅ Horario procesado:', horarioProcesado)
         horariosProcesados.push(horarioProcesado)
     })
     
-    console.log('📊 Total horarios procesados:', horariosProcesados.length)
     setHorariosCalendario(horariosProcesados)
     
     // Inicializar con la fecha actual
     if (!initialDateSet) {
       const fechaActual = new Date()
-      console.log('🎯 Inicializando calendario con la fecha actual:', fechaActual.toLocaleString())
       setCurrentDate(fechaActual)
       setInitialDateSet(true)
     }
@@ -286,13 +259,11 @@ export const CalendarioSemanal: React.FC<CalendarioSemanalProps> = ({
 
   // Manejar navegación del calendario
   const handleNavigate = (newDate: Date) => {
-    console.log('Navegando a:', newDate)
     setCurrentDate(newDate)
   }
 
   // Manejar cambio de vista
   const handleViewChange = (newView: any) => {
-    console.log('Cambiando vista a:', newView)
     if (newView === 'week' || newView === 'day') {
       setCurrentView(newView)
     }

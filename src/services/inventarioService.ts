@@ -78,7 +78,6 @@ export const inventarioService = {
     //Obtener los insumos y su stock de todos los laboratorios
     getAllWithStock: async (): Promise<ApiDataResponse<InsumoSaldo[]>> => {
         const response = await api.get('/inventario/all-con-saldo')
-        console.log(response.data)
         return response.data
     },
 
@@ -122,7 +121,6 @@ export const inventarioService = {
             })
             return { data: response.data }
         } catch (error: any) {
-            console.error('Error al descargar plantilla Excel:', error)
             throw new Error(error.response?.data?.message || 'Error al descargar plantilla Excel')
         }
     },
@@ -152,7 +150,6 @@ export const inventarioService = {
             })
             return response.data
         } catch (error: any) {
-            console.error('Error al procesar archivo Excel:', error)
             throw new Error(error.response?.data?.message || 'Error al procesar archivo Excel')
         }
     },
@@ -190,7 +187,6 @@ export const inventarioService = {
             const response = await api.post('/inventario/reabastecimiento-masivo', data)
             return response.data
         } catch (error: any) {
-            console.error('Error al ejecutar reabastecimiento masivo:', error)
             throw new Error(error.response?.data?.message || 'Error al ejecutar reabastecimiento masivo')
         }
     },

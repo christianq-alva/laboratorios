@@ -20,8 +20,6 @@ export const exportService = {
         throw new Error('Elemento no encontrado')
       }
 
-      console.log('📸 Capturando calendario como imagen...')
-
       // Configurar opciones de captura
       const canvas = await html2canvas(element, {
         background: '#ffffff',
@@ -48,11 +46,9 @@ export const exportService = {
       link.click()
       document.body.removeChild(link)
 
-      console.log('✅ Imagen descargada:', filename)
       return { success: true, filename }
 
     } catch (error) {
-      console.error('❌ Error al exportar imagen:', error)
       throw new Error('Error al generar imagen del calendario')
     }
   },
@@ -64,8 +60,6 @@ export const exportService = {
       if (!element) {
         throw new Error('Elemento no encontrado')
       }
-
-      console.log('📄 Generando PDF del calendario...')
 
       // Capturar como canvas primero
       const canvas = await html2canvas(element, {
@@ -131,11 +125,9 @@ export const exportService = {
       // Descargar PDF
       pdf.save(filename)
 
-      console.log('✅ PDF descargado:', filename)
       return { success: true, filename }
 
     } catch (error) {
-      console.error('❌ Error al exportar PDF:', error)
       throw new Error('Error al generar PDF del calendario')
     }
   },
@@ -193,7 +185,6 @@ export const exportService = {
 
       return canvas.toDataURL('image/png')
     } catch (error) {
-      console.error('Error al generar preview:', error)
       throw error
     }
   }

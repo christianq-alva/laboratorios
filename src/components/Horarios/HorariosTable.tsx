@@ -143,7 +143,6 @@ export const HorariosTable: React.FC<HorariosTableProps> = ({
         setCiclos(cicResult.data.data)
       }
     } catch (err) {
-      console.error('Error loading select options:', err)
     }
   }
 

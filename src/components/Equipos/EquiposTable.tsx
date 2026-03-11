@@ -81,7 +81,6 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
     // Cargar tipos de equipo para el filtro
     const tiposEquipoResponse = await execute(() => tipoEquipoService.getActivos())
     if (tiposEquipoResponse.error) {
-      console.error('Error al cargar tipos de equipo:', tiposEquipoResponse.error)
     } else if (tiposEquipoResponse.data) {
       const sortedTipos = [...(tiposEquipoResponse.data.data || [])].sort((a, b) => a.nombre.localeCompare(b.nombre))
       setTiposEquipo(sortedTipos)

@@ -86,7 +86,6 @@ export const shareService = {
   // Obtener horarios públicos (sin autenticación)
   getPublicHorarios: async (laboratorioId: number, token: string): Promise<PublicData> => {
     try {
-      console.log('🌐 Obteniendo horarios públicos:', { laboratorioId, token: token.substring(0, 20) + '...' })
 
       // Hacer petición directa sin el interceptor de autenticación
       const baseUrl = config.isDevelopment ? 'http://localhost:3000' : config.baseUrl
@@ -110,7 +109,6 @@ export const shareService = {
 
       return data.data
     } catch (error: any) {
-      console.error('❌ Error al obtener horarios públicos:', error)
       throw error
     }
   },

@@ -17,10 +17,4 @@ export const config = {
   version: '1.0.0'
 }
 
-// Log de configuración
-console.log('🔧 Configuración de entorno:', {
-  apiUrl: config.apiUrl,
-  baseUrl: config.baseUrl,
-  environment: config.isDevelopment ? 'development' : 'production',
-  hostname: window.location.hostname
-})
+

@@ -102,7 +102,6 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
   }
 
   const handleCerrarHorario = async () => {
-    console.log('Cerrando horario sin insumos: ', horarioId)
 
     setConfirmacionDialogOpen(false)
     const response = await execute(() => horarioService.cerrarHorario(horarioId))

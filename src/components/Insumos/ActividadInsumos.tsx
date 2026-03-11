@@ -189,7 +189,6 @@ export const ActividadInsumos: React.FC<ActividadInsumosProps> = ({ open, onClos
         hour12: false
       })
     } catch (error) {
-      console.warn('Error al formatear fecha:', fecha, error)
       return 'Fecha inválida'
     }
   }

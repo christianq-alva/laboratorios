@@ -117,24 +117,8 @@ export const HorarioPublico: React.FC = () => {
         
         const data = await shareService.getPublicHorarios(parseInt(laboratorio_id), token)
         
-        // 🕐 DEBUG: Diagnóstico de fechas recibidas
-        if (data.horarios && data.horarios.length > 0) {
-          console.log('🕐 Diagnóstico horarios públicos recibidos:', {
-            total: data.horarios.length,
-            primer_horario: {
-              id: data.horarios[0].id,
-              fecha_inicio_raw: data.horarios[0].fecha_inicio,
-              fecha_fin_raw: data.horarios[0].fecha_fin,
-              fecha_inicio_dayjs: dayjs(data.horarios[0].fecha_inicio).format('YYYY-MM-DD HH:mm:ss'),
-              fecha_fin_dayjs: dayjs(data.horarios[0].fecha_fin).format('YYYY-MM-DD HH:mm:ss'),
-              timezone_offset: new Date().getTimezoneOffset()
-            }
-          })
-        }
-        
         setPublicData(data)
       } catch (err: unknown) {
-        console.error('Error al cargar datos públicos:', err)
         setError(err instanceof Error ? err.message : 'Error al cargar horarios públicos')
       } finally {
         setLoading(false)
@@ -190,14 +174,6 @@ export const HorarioPublico: React.FC = () => {
       if (diaIndex >= 0 && diaIndex < 7) { // Todos los días de la semana
         const horaInicio = fechaInicio.format('HH:mm')
         const horaFin = fechaFin.format('HH:mm')
-        
-        // Debug: Log para verificar que los datos se están procesando
-        console.log(`🔍 Procesando evento ${horario.id}:`, {
-          horaInicio,
-          horaFin,
-          descripcion: horario.descripcion,
-          docente: horario.docente
-        })
         
         // Encontrar el slot de tiempo correspondiente
         TIME_BLOCKS.forEach(block => {

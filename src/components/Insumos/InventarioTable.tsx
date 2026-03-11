@@ -75,7 +75,6 @@ export const InventarioTable: React.FC<InventarioTableProps> = ({
       setInsumos(insumosResponse.data)
     } catch (err: any) {
       setError(err.message)
-      console.error('Error al cargar datos:', err)
     } finally {
       setLoading(false)
     }

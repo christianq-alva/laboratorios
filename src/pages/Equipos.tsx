@@ -116,7 +116,6 @@ export const Equipos: React.FC = () => {
     if (!selectedEquipo) return
 
     setDeleteLoading(true)
-    console.log('🗑️ Intentando eliminar equipo:', selectedEquipo.id)
     const result = await execute(() => equipoService.delete(selectedEquipo.id))
 
     if (result.error) {

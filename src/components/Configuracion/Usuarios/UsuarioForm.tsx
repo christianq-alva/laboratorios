@@ -71,7 +71,6 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
     setLoadingLaboratorios(true)
     const response = await execute(() => laboratorioService.getAll())
     if (response.error) {
-      console.error('Error al cargar laboratorios:', response.error)
     } else if (response.data) {
       const sortedLaboratorios = [...response.data.data].sort((a, b) => a.nombre.localeCompare(b.nombre))
       setLaboratorios(sortedLaboratorios)
@@ -83,7 +82,6 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
     setLoadingRoles(true)
     const response = await execute(() => rolService.getAll())
     if (response.error) {
-      console.error('Error al cargar roles:', response.error)
     } else if (response.data) {
       const sortedRoles = [...response.data.data].sort((a, b) => a.nombre.localeCompare(b.nombre))
       setRoles(sortedRoles)

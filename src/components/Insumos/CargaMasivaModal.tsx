@@ -90,7 +90,6 @@ export const CargaMasivaModal: React.FC<CargaMasivaModalProps> = ({
       setLaboratorios(sortedLaboratorios)
     } catch (error) {
       setError('Error al cargar laboratorios')
-      console.error('Error:', error)
     }
   }
 

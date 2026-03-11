@@ -80,7 +80,6 @@ export const ConfigurarInsumosModal: React.FC<ConfigurarInsumosModalProps> = ({
     
     if (response.error) {
       setError('Error al cargar los insumos disponibles')
-      console.error('Error al cargar insumos:', response.error)
     } else if (response.data) {
       const sortedInsumos = [...(response.data.data || [])].sort((a, b) => a.nombre.localeCompare(b.nombre))
       setInsumos(sortedInsumos)
@@ -96,7 +95,6 @@ export const ConfigurarInsumosModal: React.FC<ConfigurarInsumosModalProps> = ({
     const response = await execute(() => laboratorioService.getInsumos(laboratorio.id))
     
     if (response.error) {
-      console.error('Error al cargar insumos configurados:', response.error)
     } else if (response.data) {
       const insumosConfigurados = response.data.data || []
       setSelectedInsumos(insumosConfigurados.map((ins: Insumo) => ins.id))

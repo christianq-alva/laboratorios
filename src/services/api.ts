@@ -41,15 +41,6 @@ api.interceptors.response.use(
   (error: AxiosError) => {
     const apiError = error as ApiError
     const errorData = error.response?.data as any
-    // Logging
-    console.error('🚨 Error en API:', {
-      status: error.response?.status,
-      message: errorData?.message,
-      endpoint: `${error.config?.method?.toUpperCase()} ${error.config?.url}`,
-      timestamp: new Date().toISOString(),
-      errors: errorData?.errors
-    })
-
     // Enriquecer error con flags útiles
     if (error.response) {
       // Error del backend (status 400-599)
@@ -68,8 +59,6 @@ api.interceptors.response.use(
         apiError.retryAfter = retryAfterHeader 
           ? parseInt(retryAfterHeader, 10) 
           : retryAfterData || 900
-        
-        console.warn('🚫 Rate limit alcanzado. Reintentar después de:', apiError.retryAfter, 'segundos')
       }
 
       // Extraer errores de validación si existen

@@ -18,7 +18,6 @@ export const copyToClipboard = async (url: string): Promise<boolean> => {
             return success
         }
     } catch (error) {
-        console.error('Error al copiar al portapapeles:', error)
         return false
     }
 }

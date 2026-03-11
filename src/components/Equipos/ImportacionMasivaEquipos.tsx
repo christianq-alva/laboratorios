@@ -128,7 +128,6 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
         setLaboratorios(sortedLabs)
       }
     } catch (err) {
-      console.error('Error al cargar laboratorios:', err)
     } finally {
       setLoadingLabs(false)
     }

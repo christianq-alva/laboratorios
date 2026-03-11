@@ -228,7 +228,6 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
       setCiclos(ciclosRes.data || [])
     } catch (error: any) {
       setError('Error al cargar datos iniciales')
-      console.error('Error:', error)
     } finally {
       setLoadingData(false)
     }
@@ -305,7 +304,6 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
             insumos: [] // Sin insumos por defecto en horarios recurrentes
           }
 
-          console.log(`📅 Creando horario para ${dateStr}:`, horarioData)
           const result = await horarioService.create(horarioData)
           
           results.push({
@@ -314,7 +312,6 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
             horario_id: result.id
           })
         } catch (error: any) {
-          console.error(`❌ Error creando horario para ${dateStr}:`, error)
           results.push({
             date: dateStr,
             success: false,

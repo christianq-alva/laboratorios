@@ -49,7 +49,6 @@ export const useApi = () => {
                 }
 
                 // Es un token expirado/inválido en una petición autenticada
-                console.log('❌ Token expirado o no autorizado, limpiando sesión')
 
                 setTimeout(() => {
                     logout()

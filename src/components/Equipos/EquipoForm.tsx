@@ -101,7 +101,6 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
       try {
         return new Date(date).toISOString().split('T')[0]
       } catch (error) {
-        console.warn('Error al formatear fecha:', date, error)
         return ''
       }
     }

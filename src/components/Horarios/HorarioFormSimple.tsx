@@ -301,8 +301,6 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       ])
     }
 
-    // Cargar insumos seleccionados
-    console.log('horarioData.insumos', horarioData.insumos)
     if (horarioData.insumos && horarioData.insumos.length > 0) {
       const insumosSeleccionados = horarioData.insumos.map(i => ({
 
@@ -317,7 +315,6 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     }
 
     // Cargar equipos seleccionados
-    console.log('horarioData.equipos', horarioData.equipos)
     if (horarioData.equipos && horarioData.equipos.length > 0) {
       const equiposSeleccionadosData = horarioData.equipos.map(e => ({
         equipo_id: e.id,
@@ -536,9 +533,6 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       }))
     }
 
-    console.log('📤 Enviando datos al backend:', finalData)
-    console.log('🎨 Color seleccionado en formulario:', formData.color)
-
     let result
     if (isEditing && horario) {
       result = await execute(() => horarioService.update(horario.id, finalData))
@@ -577,23 +571,6 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       formData.color &&
       conflictos.length === 0
     )
-
-    console.log('🔍 Validación formulario:', {
-      laboratorio_id: formData.laboratorio_id > 0,
-      docente_id: formData.docente_id > 0,
-      escuela_id: formData.escuela_id > 0,
-      ciclo_id: formData.ciclo_id > 0,
-      descripcion: !!formData.descripcion.trim(),
-      cantidad_alumnos: !!(formData.cantidad_alumnos && formData.cantidad_alumnos > 0),
-      selectedDate: !!selectedDate,
-      startBlockId: !!startBlockId,
-      endBlockId: !!endBlockId,
-      fecha_inicio: !!formData.fecha_inicio,
-      fecha_fin: !!formData.fecha_fin,
-      color: !!formData.color,
-      conflictos: conflictos.length === 0,
-      canSubmit: isValid
-    })
 
     return isValid
   }

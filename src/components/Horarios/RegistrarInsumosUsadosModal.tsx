@@ -124,7 +124,6 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error inesperado al cargar lotes'
       setError(errorMessage)
-      console.error('Excepción al cargar lotes:', error)
       return []
     }
   }
@@ -153,25 +152,16 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
     }
 
     const lotesDisponibles = await loadLotesDisponibles(insumo.id)
-    console.log('🔍 Lotes cargados para insumo:', insumo.nombre, lotesDisponibles)
 
     if (lotesDisponibles.length === 0) {
-      console.warn('⚠️ No hay lotes disponibles para:', insumo.nombre)
       return
     }
 
     // Validar que el primer lote tenga detalle_id válido
     const primerLote = lotesDisponibles[0]
     if (!primerLote || !primerLote.detalle_id) {
-      console.error('❌ Primer lote inválido:', primerLote)
       return
     }
-
-    console.log('✅ Creando insumo con lotes:', {
-      insumo: insumo.nombre,
-      cantidadLotes: lotesDisponibles.length,
-      primerLoteId: primerLote.detalle_id
-    })
 
     const nuevoInsumo: InsumoUsado = {
       id: insumo.id,
@@ -188,8 +178,6 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
       lotesDisponibles: lotesDisponibles
     }
 
-    console.log('✅ Insumo creado:', nuevoInsumo)
-    console.log('✅ Lotes disponibles en insumo:', nuevoInsumo.lotesDisponibles)
 
     setInsumosUsados([...insumosUsados, nuevoInsumo])
   }
