@@ -465,7 +465,7 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
                     label="Cantidad"
                     value={cantidadInput}
                     onChange={(e) => setCantidadInput(Number(e.target.value))}
-                    inputProps={{ min: 1 }}
+                    inputProps={{ min: 0.01, step: 0.01 }}
                     required
                   />
 

@@ -885,7 +885,7 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
                                       </Typography>
                                     )
                                   }}
-                                  inputProps={{ min: 0 }}
+                                  inputProps={{ min: 0, step: 0.01 }}
                                 />
                               </Box>
 

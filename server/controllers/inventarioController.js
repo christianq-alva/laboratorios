@@ -175,14 +175,14 @@ export const procesarArchivoExcel = async (req, res) => {
       const codigoInsumo = fila[0]?.toString().trim()
       const lote = fila[1].toString().trim()
       const fecha_vencimiento = fila[2].toString().trim()
-      const cantidad = parseInt(fila[3])
+      const cantidad = parseFloat(fila[3])
       // Validar datos básicos
       if (!codigoInsumo || !cantidad) {
         errores.push(`Fila ${i + 1}: Datos incompletos`)
         continue
       }
       if (isNaN(cantidad) || cantidad <= 0) {
-        errores.push(`Fila ${i + 1}: La cantidad debe ser un número entero positivo`)
+        errores.push(`Fila ${i + 1}: La cantidad debe ser un número positivo mayor a 0`)
         continue
       }
       datosReabastecimiento.push({
