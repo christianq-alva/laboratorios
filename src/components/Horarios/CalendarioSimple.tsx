@@ -668,29 +668,15 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                           }}
                         >
                           <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
-                            {/* Hora */}
-                            <Typography
-                              variant="caption"
-                              sx={{
-                                fontWeight: 'bold',
-                                display: 'block',
-                                fontSize: '0.7rem',
-                                lineHeight: 1.1,
-                                mb: 0.3
-                              }}
-                            >
-                              {evento.horaInicio} - {evento.horaFin}
-                            </Typography>
-
                             {/* Nombre del curso/descripción */}
                             <Typography
                               variant="caption"
                               sx={{
-                                fontWeight: 600,
+                                fontWeight: 700,
                                 display: 'block',
-                                fontSize: '0.65rem',
-                                lineHeight: 1.1,
-                                mb: 0.2,
+                                fontSize: '0.7rem',
+                                lineHeight: 1.2,
+                                mb: 0.3,
                                 opacity: 0.95
                               }}
                             >
@@ -702,25 +688,25 @@ export const CalendarioSimple: React.FC<CalendarioSimpleProps> = ({
                               variant="caption"
                               sx={{
                                 display: 'block',
-                                fontSize: '0.6rem',
+                                fontSize: '0.65rem',
                                 opacity: 0.9,
-                                lineHeight: 1.1
+                                lineHeight: 1.2
                               }}
                             >
                               {evento.docente}
                             </Typography>
 
-                            {/* Ciclo y Laboratorio en la misma línea */}
+                            {/* Ciclo */}
                             <Typography
                               variant="caption"
                               sx={{
                                 display: 'block',
                                 fontSize: '0.6rem',
                                 opacity: 0.85,
-                                lineHeight: 1.1
+                                lineHeight: 1.2
                               }}
                             >
-                              {evento.ciclo} • {evento.laboratorio}
+                              {evento.ciclo}
                             </Typography>
                           </CardContent>
                         </Card>
