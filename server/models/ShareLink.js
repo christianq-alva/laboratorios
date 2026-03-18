@@ -13,21 +13,7 @@ const generateShareToken = (laboratorioId, userId) => {
 }
 
 const buildPublicUrl = (laboratorioId, token) => {
-  const isProduction = process.env.RAILWAY_ENVIRONMENT ||
-    process.env.NODE_ENV === 'production' ||
-    process.env.RAILWAY_PROJECT_ID ||
-    process.env.PORT
-
-  let baseUrl
-  if (isProduction) {
-    baseUrl = process.env.FRONTEND_URL ||
-      process.env.VITE_BASE_URL ||
-      (process.env.RAILWAY_STATIC_URL ? `https://${process.env.RAILWAY_STATIC_URL}` : null) ||
-      'https://beneficial-wholeness-production-9cd6.up.railway.app'
-  } else {
-    baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
-  }
-
+  const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
   return `${baseUrl}/horarios/publico/${laboratorioId}?token=${token}`
 }
 

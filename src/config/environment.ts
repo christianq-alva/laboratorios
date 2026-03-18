@@ -6,7 +6,7 @@ export const config = {
   
   // URL base del frontend
   baseUrl: import.meta.env.VITE_BASE_URL || 
-           (window.location.hostname === 'localhost' ? 'http://localhost:5173' : 'https://beneficial-wholeness-production-9cd6.up.railway.app'),
+           (window.location.hostname === 'localhost' ? 'http://localhost:5173' : window.location.origin),
   
   // Entorno
   isDevelopment: window.location.hostname === 'localhost',
