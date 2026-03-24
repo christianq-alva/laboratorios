@@ -1,5 +1,6 @@
 import { api } from './api'
 import type { ApiDataResponse, ApiMessageResponse } from './types'
+import { toStrictNumber } from '../utils/numeric'
 
 // Interfaces para horarios
 export interface Horario {
@@ -187,7 +188,14 @@ export const horarioService = {
 
   getInsumosRequeridosById: async (id: number): Promise<ApiDataResponse<InsumoHorario[]>> => {
     const response = await api.get(`/horarios/${id}/insumos-requeridos`)
-    return response.data
+    const raw: ApiDataResponse<InsumoHorario[]> = response.data
+    return {
+      ...raw,
+      data: raw.data.map(insumo => ({
+        ...insumo,
+        cantidad_usada: toStrictNumber(insumo.cantidad_usada, 'cantidad_usada'),
+      })),
+    }
   },
 
   create: async (data: CreateHorarioData) => {

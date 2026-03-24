@@ -1,5 +1,6 @@
 import type { ApiDataResponse } from "./types"
 import { api } from "./api"
+import { toStrictNumber } from "../utils/numeric"
 
 
 export interface DatoValidado {
@@ -197,7 +198,15 @@ export const inventarioService = {
         params.append('laboratorio_id', laboratorioId.toString())
         if (insumoId) params.append('insumo_id', insumoId.toString())
         const response = await api.get(`/inventario/lotes-con-saldo?${params.toString()}`)
-        return response.data
+        const raw: ApiDataResponse<LoteInsumo[]> = response.data
+        return {
+            ...raw,
+            data: raw.data.map(lote => ({
+                ...lote,
+                cantidad_original: toStrictNumber(lote.cantidad_original, 'cantidad_original'),
+                saldo: toStrictNumber(lote.saldo, 'saldo'),
+            })),
+        }
     },
 
     // Registrar movimiento manual (entrada o salida)
@@ -233,7 +242,15 @@ export const inventarioService = {
             params.append('laboratorio_id', laboratorioId.toString())
         }
         const response = await api.get(`/inventario/lotes-por-insumo?${params.toString()}`)
-        return response.data
+        const raw: ApiDataResponse<Lote[]> = response.data
+        return {
+            ...raw,
+            data: raw.data.map(lote => ({
+                ...lote,
+                cantidad_original: toStrictNumber(lote.cantidad_original, 'cantidad_original'),
+                saldo: toStrictNumber(lote.saldo, 'saldo'),
+            })),
+        }
     },
 
     // Obtener detalle de movimientos de un insumo específico

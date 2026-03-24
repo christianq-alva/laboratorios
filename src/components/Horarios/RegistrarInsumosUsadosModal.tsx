@@ -270,7 +270,7 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
   const calcularTotalUsado = (insumoId: number): number => {
     const insumo = insumosUsados.find(i => i.id === insumoId)
     if (!insumo) return 0
-    return insumo.registrosLotes.reduce((sum, r) => sum + r.cantidad, 0)
+    return insumo.registrosLotes.reduce((sum, r) => sum + Number(r.cantidad), 0)
   }
 
   const handleAgregarInsumoAdicional = async (insumo: InsumoSaldo) => {

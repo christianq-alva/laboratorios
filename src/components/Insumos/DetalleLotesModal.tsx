@@ -99,7 +99,7 @@ export const DetalleLotesModal: React.FC<DetalleLotesModalProps> = ({
   // Calcular totales
   const totalLotes = lotes.length
   const totalStock = lotes.reduce((sum, lote) => sum + Number(lote.saldo), 0)
-  const totalCantidadOriginal = lotes.reduce((sum, lote) => sum + lote.cantidad_original, 0)
+  const totalCantidadOriginal = lotes.reduce((sum, lote) => sum + Number(lote.cantidad_original), 0)
 
   // Formatear fecha
   const formatFecha = (fecha: string | null) => {
