@@ -301,27 +301,23 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       ])
     }
 
-    if (horarioData.insumos && horarioData.insumos.length > 0) {
-      const insumosSeleccionados = horarioData.insumos.map(i => ({
-
+    setInsumosSeleccionados(
+      (horarioData.insumos ?? []).map(i => ({
         insumo_id: i.id,
         nombre: i.nombre,
         cantidad: i.cantidad_usada,
         codigo: i.codigo || '',
         unidad_nombre: i.unidad_nombre || ''
-      })
-      )
-      setInsumosSeleccionados(insumosSeleccionados)
-    }
+      }))
+    )
 
     // Cargar equipos seleccionados
-    if (horarioData.equipos && horarioData.equipos.length > 0) {
-      const equiposSeleccionadosData = horarioData.equipos.map(e => ({
+    setEquiposSeleccionados(
+      (horarioData.equipos ?? []).map(e => ({
         equipo_id: e.id,
         nombre: e.nombre
       }))
-      setEquiposSeleccionados(equiposSeleccionadosData)
-    }
+    )
   }
 
   const resetForm = () => {
