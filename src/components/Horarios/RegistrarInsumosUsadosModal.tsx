@@ -750,7 +750,7 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
                           color="primary"
                         />
                         <Chip
-                          label={`Total: ${totalUsado} ${insumoUsado.unidad_nombre}`}
+                          label={`Total: ${parseFloat(totalUsado.toFixed(2))} ${insumoUsado.unidad_nombre}`}
                           size="small"
                           color={totalUsado === insumoUsado.cantidad_usada ? 'success' : 'warning'}
                         />
@@ -866,18 +866,21 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
                                   Cantidad Usada
                                 </Typography>
                                 <TextField
+                                  key={`${registro.id}-${registro.cantidad}`}
                                   type="number"
                                   size="small"
                                   fullWidth
-                                  value={registro.cantidad}
-                                  onChange={(e) => {
-                                    handleCambiarCantidad(
-                                      insumoUsado.id,
-                                      registro.id,
-                                      Number(e.target.value) || 0
-                                    )
-                                  }
-                                  }
+                                  defaultValue={registro.cantidad}
+                                  onBlur={(e) => {
+                                    const val = parseFloat(e.target.value)
+                                    if (!isNaN(val)) {
+                                      handleCambiarCantidad(
+                                        insumoUsado.id,
+                                        registro.id,
+                                        val
+                                      )
+                                    }
+                                  }}
                                   InputProps={{
                                     endAdornment: (
                                       <Typography variant="body2" color="text.secondary">
