@@ -95,8 +95,8 @@ export const createHorarioSchema = z.object({
                     .int('El ID de insumo debe ser un número entero')
                     .positive('El ID de insumo debe ser mayor a 0'),
                 cantidad: z.number()
-                    .int('La cantidad debe ser un número entero')
                     .positive('La cantidad debe ser mayor a 0')
+                    .multipleOf(0.01, 'La cantidad permite máximo 2 decimales')
             })
         ).optional().default([]),
         equipos: z.array(
@@ -162,8 +162,8 @@ export const updateHorarioSchema = z.object({
                     .int('El ID de insumo debe ser un número entero')
                     .positive('El ID de insumo debe ser mayor a 0'),
                 cantidad: z.number()
-                    .int('La cantidad debe ser un número entero')
                     .positive('La cantidad debe ser mayor a 0')
+                    .multipleOf(0.01, 'La cantidad permite máximo 2 decimales')
             })
         ).optional().default([]),
         equipos: z.array(

@@ -305,7 +305,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       (horarioData.insumos ?? []).map(i => ({
         insumo_id: i.id,
         nombre: i.nombre,
-        cantidad: i.cantidad_usada,
+        cantidad: parseFloat(Number(i.cantidad_usada).toFixed(2)),
         codigo: i.codigo || '',
         unidad_nombre: i.unidad_nombre || ''
       }))
@@ -468,12 +468,13 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     const insumo = insumosSeleccionados.find(i => i.insumo_id === insumo_id)
     if (!insumo) return
 
+    const rounded = parseFloat(cantidad.toFixed(2))
     // Validar límites
-    if (cantidad <= 0) {
+    if (rounded <= 0) {
       eliminarInsumo(insumo_id)
     } else {
       setInsumosSeleccionados(prev =>
-        prev.map(i => i.insumo_id === insumo_id ? { ...i, cantidad } : i)
+        prev.map(i => i.insumo_id === insumo_id ? { ...i, cantidad: rounded } : i)
       )
     }
   }
@@ -1315,9 +1316,23 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                                   >
                                     <Remove />
                                   </IconButton>
-                                  <Typography variant="body2" sx={{ minWidth: 30, textAlign: 'center', fontWeight: 500 }}>
-                                    {insumo.cantidad}
-                                  </Typography>
+                                  <TextField
+                                    key={insumo.cantidad}
+                                    type="number"
+                                    size="small"
+                                    defaultValue={insumo.cantidad}
+                                    onBlur={(e) => {
+                                      const val = parseFloat(e.target.value)
+                                      if (!isNaN(val) && val > 0) {
+                                        const rounded = parseFloat(val.toFixed(2))
+                                        setInsumosSeleccionados(prev =>
+                                          prev.map(i => i.insumo_id === insumo.insumo_id ? { ...i, cantidad: rounded } : i)
+                                        )
+                                      }
+                                    }}
+                                    inputProps={{ min: 0.01, step: 0.01, style: { textAlign: 'center' } }}
+                                    sx={{ width: '80px' }}
+                                  />
                                   <IconButton
                                     size="small"
                                     onClick={() => actualizarCantidadInsumo(insumo.insumo_id, insumo.cantidad + 1)}

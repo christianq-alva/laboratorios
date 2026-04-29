@@ -252,14 +252,14 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
   }
 
   const handleCambiarCantidad = (insumoId: number, registroId: number, cantidad: number) => {
-
+    const rounded = parseFloat(cantidad.toFixed(2))
     setInsumosUsados(prev =>
       prev.map(insumo =>
         insumo.id === insumoId
           ? {
             ...insumo,
             registrosLotes: insumo.registrosLotes.map(r =>
-              r.id === registroId ? { ...r, cantidad: Math.max(0, cantidad) } : r
+              r.id === registroId ? { ...r, cantidad: Math.max(0, rounded) } : r
             )
           }
           : insumo
