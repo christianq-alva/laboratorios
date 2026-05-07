@@ -330,9 +330,27 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                       {horario.insumos.map((insumo) => (
                         <Box key={insumo.id}>
-                          <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
-                            {insumo.nombre}
-                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              {insumo.nombre}
+                            </Typography>
+                            {insumo.categoria && (
+                              <Chip
+                                label={insumo.categoria}
+                                size="small"
+                                sx={{
+                                  bgcolor:
+                                    insumo.categoria === 'Reactivos' ? '#ff9800' :
+                                    insumo.categoria === 'Materiales' ? '#2196f3' :
+                                    insumo.categoria === 'Material Biológico' ? '#4caf50' : '#757575',
+                                  color: 'white',
+                                  fontWeight: 600,
+                                  fontSize: '0.65rem',
+                                  height: 18
+                                }}
+                              />
+                            )}
+                          </Box>
                           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                             <Typography variant="caption" color="text.secondary">
                               {insumo.codigo}
@@ -340,7 +358,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                             <Typography variant="caption" color="text.secondary">
                               •
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>
                               {insumo.cantidad_usada} {insumo.unidad_nombre || 'unidades'}
                             </Typography>
                           </Box>
@@ -366,9 +384,27 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                         {horario.insumos_consumidos.map((insumo) => (
                           <Box key={insumo.id}>
-                            <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
-                              {insumo.nombre}
-                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                {insumo.nombre}
+                              </Typography>
+                              {insumo.categoria && (
+                                <Chip
+                                  label={insumo.categoria}
+                                  size="small"
+                                  sx={{
+                                    bgcolor:
+                                      insumo.categoria === 'Reactivos' ? '#ff9800' :
+                                      insumo.categoria === 'Materiales' ? '#2196f3' :
+                                      insumo.categoria === 'Material Biológico' ? '#4caf50' : '#757575',
+                                    color: 'white',
+                                    fontWeight: 600,
+                                    fontSize: '0.65rem',
+                                    height: 18
+                                  }}
+                                />
+                              )}
+                            </Box>
                             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                               <Typography variant="caption" color="text.secondary">
                                 {insumo.codigo}
@@ -376,7 +412,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                               <Typography variant="caption" color="text.secondary">
                                 •
                               </Typography>
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>
                                 {insumo.cantidad_consumida} {insumo.unidad_simbolo || insumo.unidad_nombre || 'unidades'}
                               </Typography>
                             </Box>
