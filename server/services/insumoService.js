@@ -1,5 +1,6 @@
 import { pool } from '../config/database.js'
 import { Insumo } from '../models/Insumo.js'
+import { Laboratorio } from '../models/Laboratorio.js'
 import { Unidad } from '../models/Unidad.js'
 import { AppError } from '../utils/errors.js'
 import XLSX from 'xlsx'
@@ -67,6 +68,7 @@ export const insumoService = {
     let procesados = 0
     const errores = []
     const resultados = []
+    const labAsignaciones = [] // { laboratorio_id, insumo_id }[]
     const connection = await pool.getConnection()
     try {
       await connection.beginTransaction()
@@ -96,13 +98,28 @@ export const insumoService = {
             errores.push(`Fila ${rowNum}: Categoría inválida. Debe ser: ${categoriasValidas.join(', ')}`)
             continue
           }
+          // Validar LABORATORIO_CODIGO si se proporcionó
+          let laboratorio_id = null
+          if (row.LABORATORIO_CODIGO) {
+            const labCodigo = row.LABORATORIO_CODIGO.toString().trim()
+            const lab = await Laboratorio.findByCodigo(labCodigo, connection)
+            if (!lab) {
+              errores.push(`Fila ${rowNum}: LABORATORIO_CODIGO inválido: ${labCodigo}`)
+              continue
+            }
+            laboratorio_id = lab.id
+          }
           const { insumo_id, codigo } = await Insumo.create(nombre, descripcion || '', unidad_medida.id, categoria, presentacion || '', connection)
+          if (laboratorio_id !== null) {
+            labAsignaciones.push({ laboratorio_id, insumo_id })
+          }
           resultados.push({
             fila: rowNum,
             codigo,
             nombre,
             unidad_medida: unidad_medida.nombre,
-            categoria
+            categoria,
+            laboratorio_codigo: laboratorio_id !== null ? row.LABORATORIO_CODIGO.toString().trim() : null
           })
           procesados++
         } catch (error) {
@@ -115,6 +132,7 @@ export const insumoService = {
         err.errores = errores
         throw err
       }
+      await Laboratorio.asignarInsumosNuevos(labAsignaciones, connection)
       await connection.commit()
       return { procesados, errores, resultados }
     } catch (error) {

@@ -215,5 +215,34 @@ export const Laboratorio = {
     } catch (error) {
       handleDBError(error, 'Laboratorio')
     }
+  },
+
+  findByCodigo: async (codigo, connection) => {
+    const conn = connection || pool
+    try {
+      const [rows] = await conn.execute(
+        'SELECT id, codigo, nombre FROM laboratorios WHERE codigo = ?',
+        [codigo]
+      )
+      return rows[0] || null
+    } catch (error) {
+      handleDBError(error, 'Laboratorio')
+    }
+  },
+
+  // Agrega insumos a un laboratorio sin borrar los existentes (usado en importación masiva)
+  asignarInsumosNuevos: async (asignaciones, connection) => {
+    const conn = connection || pool
+    if (!asignaciones || asignaciones.length === 0) return
+    try {
+      const values = asignaciones.map(a => [a.laboratorio_id, a.insumo_id])
+      const placeholders = values.map(() => '(?, ?)').join(', ')
+      await conn.execute(
+        `INSERT IGNORE INTO inventario_insumos (laboratorio_id, insumo_id) VALUES ${placeholders}`,
+        values.flat()
+      )
+    } catch (error) {
+      handleDBError(error, 'Laboratorio')
+    }
   }
 }

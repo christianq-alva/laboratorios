@@ -57,6 +57,7 @@ interface PreviewData {
   unidad_nombre: string
   categoria: string
   presentacion: string
+  laboratorio_codigo: string
   errores: string[]
 }
 
@@ -78,6 +79,7 @@ interface ResultadoImportacion {
     codigo: string
     nombre: string
     categoria: string
+    laboratorio_codigo: string | null
   }>
 }
 
@@ -418,6 +420,7 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                       <TableCell>Nombre</TableCell>
                       <TableCell>Unidad</TableCell>
                       <TableCell>Categoría</TableCell>
+                      <TableCell>Laboratorio</TableCell>
                       <TableCell>Estado</TableCell>
                     </TableRow>
                   </TableHead>
@@ -448,6 +451,12 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                             color={getCategoriaColor(item.categoria)}
                             variant="outlined"
                           />
+                        </TableCell>
+                        <TableCell>
+                          {item.laboratorio_codigo
+                            ? <Chip label={item.laboratorio_codigo} size="small" variant="outlined" />
+                            : <Typography variant="caption" color="text.secondary">—</Typography>
+                          }
                         </TableCell>
                         <TableCell>
                           {item.errores.length > 0 ? (
@@ -566,6 +575,7 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                           <TableCell>Código</TableCell>
                           <TableCell>Nombre</TableCell>
                           <TableCell>Categoría</TableCell>
+                          <TableCell>Laboratorio</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -593,6 +603,12 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                                 color={getCategoriaColor(item.categoria)}
                                 variant="outlined"
                               />
+                            </TableCell>
+                            <TableCell>
+                              {item.laboratorio_codigo
+                                ? <Chip label={item.laboratorio_codigo} size="small" variant="outlined" />
+                                : <Typography variant="caption" color="text.secondary">—</Typography>
+                              }
                             </TableCell>
                           </TableRow>
                         ))}

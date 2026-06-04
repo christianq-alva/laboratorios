@@ -1,4 +1,5 @@
 import { Insumo } from '../models/Insumo.js'
+import { Laboratorio } from '../models/Laboratorio.js'
 import { insumoService } from '../services/insumoService.js'
 import multer from 'multer'
 import XLSX from 'xlsx'
@@ -98,7 +99,8 @@ export const generarPlantillaImportacion = async (req, res, next) => {
         'DESCRIPCION',
         'UNIDAD_MEDIDA',
         'CATEGORIA',
-        'PRESENTACION'
+        'PRESENTACION',
+        'LABORATORIO_CODIGO'
       ],
       [
         'Alcohol etílico 70%',
@@ -106,6 +108,7 @@ export const generarPlantillaImportacion = async (req, res, next) => {
         '1',
         'Reactivos',
         'Frasco 1L',
+        'LAB-001',
       ],
       [
         'Jeringas desechables 10ml',
@@ -113,6 +116,7 @@ export const generarPlantillaImportacion = async (req, res, next) => {
         '2',
         'Materiales',
         'Caja x 100 unidades',
+        'LAB-002',
       ],
       [
         'Cultivo bacteriano E.coli',
@@ -120,6 +124,7 @@ export const generarPlantillaImportacion = async (req, res, next) => {
         '3',
         'Material_Biologico',
         'Placa Petri',
+        '',
       ]
     ]
     const wsPlantilla = XLSX.utils.aoa_to_sheet(plantillaData)
@@ -130,6 +135,7 @@ export const generarPlantillaImportacion = async (req, res, next) => {
       { width: 15 }, // UNIDAD_MEDIDA
       { width: 18 }, // CATEGORIA
       { width: 20 }, // PRESENTACION
+      { width: 20 }, // LABORATORIO_CODIGO
     ]
     XLSX.utils.book_append_sheet(wb, wsPlantilla, 'Plantilla Insumos')
     // Hoja 2: Instrucciones y validaciones
@@ -144,6 +150,7 @@ export const generarPlantillaImportacion = async (req, res, next) => {
       ['COLUMNAS OPCIONALES:'],
       ['• DESCRIPCION: Descripción detallada del insumo'],
       ['• PRESENTACION: Formato de presentación (Ej.: Frasco 500ml, Caja x 100)'],
+      ['• LABORATORIO_CODIGO: Código del laboratorio al que se asignará el insumo (Ej.: LAB-001)'],
       [''],
       [''],
       ['NOTAS IMPORTANTES:'],
@@ -212,8 +219,7 @@ export const previsualizarImportacionMasiva = async (req, res, next) => {
       const unidad_id = row.UNIDAD_MEDIDA ? parseInt(row.UNIDAD_MEDIDA) : null
       const categoria = row.CATEGORIA ? row.CATEGORIA.toString().trim() : ''
       const presentacion = row.PRESENTACION ? row.PRESENTACION.toString().trim() : ''
-
-
+      const laboratorio_codigo = row.LABORATORIO_CODIGO ? row.LABORATORIO_CODIGO.toString().trim() : ''
 
       // Validar campos obligatorios
       if (!nombre) {
@@ -239,7 +245,13 @@ export const previsualizarImportacionMasiva = async (req, res, next) => {
         erroresFila.push(`Categoría inválida. Debe ser: ${categoriasValidas.join(', ')}`)
       }
 
-
+      // Validar LABORATORIO_CODIGO si se proporcionó
+      if (laboratorio_codigo) {
+        const lab = await Laboratorio.findByCodigo(laboratorio_codigo)
+        if (!lab) {
+          erroresFila.push(`LABORATORIO_CODIGO inválido: ${laboratorio_codigo}`)
+        }
+      }
 
       previewData.push({
         fila: rowNum,
@@ -249,6 +261,7 @@ export const previsualizarImportacionMasiva = async (req, res, next) => {
         unidad_simbolo,
         categoria,
         presentacion,
+        laboratorio_codigo,
         errores: erroresFila
       })
     }
