@@ -15,7 +15,8 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  Divider
+  Divider,
+  TextField
 } from '@mui/material'
 import {
   Close,
@@ -55,6 +56,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [registrarInsumosOpen, setRegistrarInsumosOpen] = useState(false)
+  const [grupos, setGrupos] = useState(1)
   const [confirmacionDialogOpen, setConfirmacionDialogOpen] = useState(false)
   const [confirmarReabrirOpen, setConfirmarReabrirOpen] = useState(false)
   const [tieneMovimiento, setTieneMovimiento] = useState(false)
@@ -312,10 +314,24 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
 
                 {/* Columna 1: Insumos Requeridos agrupados por categoría */}
                 <Box sx={{ pr: { md: 3 }, borderRight: { md: 1 }, borderColor: { md: 'divider' } }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Inventory fontSize="small" />
-                    Insumos Requeridos
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Inventory fontSize="small" />
+                      Insumos Requeridos
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <People fontSize="small" color="action" />
+                      <TextField
+                        label="Grupos"
+                        type="number"
+                        size="small"
+                        value={grupos}
+                        onChange={(e) => setGrupos(Math.max(1, parseInt(e.target.value) || 1))}
+                        inputProps={{ min: 1, max: 99 }}
+                        sx={{ width: 85 }}
+                      />
+                    </Box>
+                  </Box>
                   {(() => {
                     const items = horario.insumos ?? []
                     if (items.length === 0) {
@@ -376,8 +392,13 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                                       •
                                     </Typography>
                                     <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                                      {insumo.cantidad_usada} {insumo.unidad_nombre || 'unidades'}
+                                      {insumo.cantidad_usada * grupos} {insumo.unidad_nombre || 'unidades'}
                                     </Typography>
+                                    {grupos > 1 && (
+                                      <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                                        ({insumo.cantidad_usada} × {grupos})
+                                      </Typography>
+                                    )}
                                   </Box>
                                 </Box>
                               ))}
