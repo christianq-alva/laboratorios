@@ -57,7 +57,7 @@ interface PreviewData {
   unidad_nombre: string
   categoria: string
   presentacion: string
-  laboratorio_codigo: string
+  laboratorio_codigo?: string
   errores: string[]
 }
 
@@ -79,7 +79,7 @@ interface ResultadoImportacion {
     codigo: string
     nombre: string
     categoria: string
-    laboratorio_codigo: string | null
+    laboratorio_codigo?: string | null
   }>
 }
 
