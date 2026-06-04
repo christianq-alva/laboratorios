@@ -9,7 +9,7 @@ export interface Insumo {
   unidad_id: number
   unidad_simbolo?: string
   unidad_nombre?: string
-  categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico'
+  categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico' | 'Farmacos'
   presentacion: string
 }
 
@@ -19,7 +19,7 @@ export const insumoService = {
     nombre: string
     descripcion: string
     unidad_id: number
-    categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico'
+    categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico' | 'Farmacos'
     presentacion?: string
   }): Promise<ApiCreateUpdateResponse<{ id: number }>> => {
     const response = await api.post('/insumos', insumoData)
@@ -31,7 +31,7 @@ export const insumoService = {
     nombre: string
     descripcion: string
     unidad_id: number
-    categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico'
+    categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico' | 'Farmacos'
     presentacion?: string
   }): Promise<ApiCreateUpdateResponse<Insumo>> => {
     const response = await api.put(`/insumos/${id}`, insumoData)

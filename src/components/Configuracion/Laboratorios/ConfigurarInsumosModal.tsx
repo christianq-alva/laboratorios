@@ -175,6 +175,8 @@ export const ConfigurarInsumosModal: React.FC<ConfigurarInsumosModalProps> = ({
         return 'primary'
       case 'Material_Biologico':
         return 'success'
+      case 'Farmacos':
+        return 'secondary'
       default:
         return 'default'
     }

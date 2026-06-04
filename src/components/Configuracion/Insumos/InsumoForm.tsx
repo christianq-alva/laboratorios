@@ -40,7 +40,7 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
     nombre: '',
     descripcion: '',
     unidad_id: 0,
-    categoria: 'Materiales' as 'Reactivos' | 'Materiales' | 'Material_Biologico',
+    categoria: 'Materiales' as 'Reactivos' | 'Materiales' | 'Material_Biologico' | 'Farmacos',
     presentacion: ''
   })
   const [unidades, setUnidades] = useState<Unidad[]>([])
@@ -232,6 +232,12 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#4caf50' }} />
                   <Typography>Material Biológico</Typography>
+                </Box>
+              </MenuItem>
+              <MenuItem value="Farmacos">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#9c27b0' }} />
+                  <Typography>Fármacos</Typography>
                 </Box>
               </MenuItem>
             </Select>

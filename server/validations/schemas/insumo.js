@@ -4,7 +4,7 @@ import { idParamSchema } from './common.js'
 /**
  * Categorías válidas para un insumo
  */
-const categoriasValidas = ['Reactivos', 'Materiales', 'Material_Biologico']
+const categoriasValidas = ['Reactivos', 'Materiales', 'Material_Biologico', 'Farmacos']
 
 /**
  * Schema para crear un insumo

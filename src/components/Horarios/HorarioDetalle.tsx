@@ -325,11 +325,16 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                         </Typography>
                       )
                     }
-                    const CATEGORY_ORDER = ['Reactivos', 'Materiales', 'Material Biológico']
+                    const CATEGORY_ORDER = ['Reactivos', 'Materiales', 'Material_Biologico', 'Farmacos']
                     const CATEGORY_COLOR: Record<string, string> = {
                       Reactivos: '#ff9800',
                       Materiales: '#2196f3',
-                      'Material Biológico': '#4caf50',
+                      Material_Biologico: '#4caf50',
+                      Farmacos: '#9c27b0',
+                    }
+                    const CATEGORY_LABEL: Record<string, string> = {
+                      Material_Biologico: 'Material Biológico',
+                      Farmacos: 'Fármacos',
                     }
                     const grouped: Record<string, typeof items> = {}
                     for (const insumo of items) {
@@ -346,7 +351,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                         {sortedCats.map(cat => (
                           <Box key={cat}>
                             <Chip
-                              label={cat}
+                              label={CATEGORY_LABEL[cat] || cat}
                               size="small"
                               sx={{
                                 bgcolor: CATEGORY_COLOR[cat] || '#757575',
@@ -450,11 +455,16 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
             {horario.estado === 'C' && horario.tiene_consumo_insumos === 1 && (() => {
               const items = horario.insumos_consumidos ?? []
               if (items.length === 0) return null
-              const CATEGORY_ORDER = ['Reactivos', 'Materiales', 'Material Biológico']
+              const CATEGORY_ORDER = ['Reactivos', 'Materiales', 'Material_Biologico', 'Farmacos']
               const CATEGORY_COLOR: Record<string, string> = {
                 Reactivos: '#ff9800',
                 Materiales: '#2196f3',
-                'Material Biológico': '#4caf50',
+                Material_Biologico: '#4caf50',
+                Farmacos: '#9c27b0',
+              }
+              const CATEGORY_LABEL: Record<string, string> = {
+                Material_Biologico: 'Material Biológico',
+                Farmacos: 'Fármacos',
               }
               const grouped: Record<string, typeof items> = {}
               for (const insumo of items) {
@@ -477,7 +487,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                       {sortedCats.map(cat => (
                         <Box key={cat}>
                           <Chip
-                            label={cat}
+                            label={CATEGORY_LABEL[cat] || cat}
                             size="small"
                             sx={{
                               bgcolor: CATEGORY_COLOR[cat] || '#757575',

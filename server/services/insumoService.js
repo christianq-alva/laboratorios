@@ -6,7 +6,7 @@ import { Unidad } from '../models/Unidad.js'
 import { AppError } from '../utils/errors.js'
 import XLSX from 'xlsx'
 
-const categoriasValidas = ['Reactivos', 'Materiales', 'Material_Biologico']
+const categoriasValidas = ['Reactivos', 'Materiales', 'Material_Biologico', 'Farmacos']
 
 export const insumoService = {
 

@@ -130,6 +130,8 @@ export const InventarioTable: React.FC<InventarioTableProps> = ({
         return '#2196f3'
       case 'Material_Biologico':
         return '#4caf50'
+      case 'Farmacos':
+        return '#9c27b0'
       default:
         return '#757575'
     }
@@ -144,6 +146,8 @@ export const InventarioTable: React.FC<InventarioTableProps> = ({
         return 'Materiales'
       case 'Material_Biologico':
         return 'Material Biológico'
+      case 'Farmacos':
+        return 'Fármacos'
       default:
         return categoria
     }
@@ -269,6 +273,12 @@ export const InventarioTable: React.FC<InventarioTableProps> = ({
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#4caf50' }} />
                     <Typography>Material Biológico</Typography>
+                  </Box>
+                </MenuItem>
+                <MenuItem value="Farmacos">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#9c27b0' }} />
+                    <Typography>Fármacos</Typography>
                   </Box>
                 </MenuItem>
               </Select>
