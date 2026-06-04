@@ -30,8 +30,7 @@ import {
   CheckCircle,
   Refresh,
   Warning,
-  Lock,
-  AssignmentOutlined
+  Lock
 } from '@mui/icons-material'
 import { horarioService, type HorarioFull } from '../../services/horarioService'
 import { RegistrarInsumosUsadosModal } from './RegistrarInsumosUsadosModal'
@@ -307,187 +306,216 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
 
             <Divider sx={{ my: 0 }} />
 
-            {/* Insumos requeridos y utilizados */}
+            {/* Insumos Requeridos + Equipos en grid de dos columnas */}
             <Box sx={{ p: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Inventory fontSize="small" />
-                Insumos
-              </Typography>
-
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 4 }}>
-                {/* Columna 1: Insumos Requeridos */}
+
+                {/* Columna 1: Insumos Requeridos agrupados por categoría */}
                 <Box sx={{ pr: { md: 3 }, borderRight: { md: 1 }, borderColor: { md: 'divider' } }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 500, mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
-                  <AssignmentOutlined fontSize="small" />
-                    Requeridos
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Inventory fontSize="small" />
+                    Insumos Requeridos
                   </Typography>
-
-                  {!horario.insumos || horario.insumos.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                      No se registraron insumos requeridos
-                    </Typography>
-                  ) : (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                      {horario.insumos.map((insumo) => (
-                        <Box key={insumo.id}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              {insumo.nombre}
-                            </Typography>
-                            {insumo.categoria && (
-                              <Chip
-                                label={insumo.categoria}
-                                size="small"
-                                sx={{
-                                  bgcolor:
-                                    insumo.categoria === 'Reactivos' ? '#ff9800' :
-                                    insumo.categoria === 'Materiales' ? '#2196f3' :
-                                    insumo.categoria === 'Material Biológico' ? '#4caf50' : '#757575',
-                                  color: 'white',
-                                  fontWeight: 600,
-                                  fontSize: '0.65rem',
-                                  height: 18
-                                }}
-                              />
-                            )}
-                          </Box>
-                          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                            <Typography variant="caption" color="text.secondary">
-                              {insumo.codigo}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              •
-                            </Typography>
-                            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                              {insumo.cantidad_usada} {insumo.unidad_nombre || 'unidades'}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      ))}
-                    </Box>
-                  )}
-                </Box>
-
-                {/* Columna 2: Insumos Consumidos */}
-                {horario.estado === 'C' && horario.tiene_consumo_insumos === 1 && (
-                  <Box sx={{ pl: { md: 3 } }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 500, mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: 'success.main' }}>
-                      <CheckCircle fontSize="small" />
-                      Consumidos
-                    </Typography>
-
-                    {!horario.insumos_consumidos || horario.insumos_consumidos.length === 0 ? (
-                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                        No se registraron insumos consumidos
-                      </Typography>
-                    ) : (
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                        {horario.insumos_consumidos.map((insumo) => (
-                          <Box key={insumo.id}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                {insumo.nombre}
-                              </Typography>
-                              {insumo.categoria && (
-                                <Chip
-                                  label={insumo.categoria}
-                                  size="small"
-                                  sx={{
-                                    bgcolor:
-                                      insumo.categoria === 'Reactivos' ? '#ff9800' :
-                                      insumo.categoria === 'Materiales' ? '#2196f3' :
-                                      insumo.categoria === 'Material Biológico' ? '#4caf50' : '#757575',
-                                    color: 'white',
-                                    fontWeight: 600,
-                                    fontSize: '0.65rem',
-                                    height: 18
-                                  }}
-                                />
-                              )}
-                            </Box>
-                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                              <Typography variant="caption" color="text.secondary">
-                                {insumo.codigo}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                •
-                              </Typography>
-                              <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                                {insumo.cantidad_consumida} {insumo.unidad_simbolo || insumo.unidad_nombre || 'unidades'}
-                              </Typography>
+                  {(() => {
+                    const items = horario.insumos ?? []
+                    if (items.length === 0) {
+                      return (
+                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                          No se registraron insumos requeridos
+                        </Typography>
+                      )
+                    }
+                    const CATEGORY_ORDER = ['Reactivos', 'Materiales', 'Material Biológico']
+                    const CATEGORY_COLOR: Record<string, string> = {
+                      Reactivos: '#ff9800',
+                      Materiales: '#2196f3',
+                      'Material Biológico': '#4caf50',
+                    }
+                    const grouped: Record<string, typeof items> = {}
+                    for (const insumo of items) {
+                      const cat = insumo.categoria || 'Otros'
+                      if (!grouped[cat]) grouped[cat] = []
+                      grouped[cat].push(insumo)
+                    }
+                    const sortedCats = [
+                      ...CATEGORY_ORDER.filter(c => grouped[c]),
+                      ...Object.keys(grouped).filter(c => !CATEGORY_ORDER.includes(c)).sort(),
+                    ]
+                    return (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {sortedCats.map(cat => (
+                          <Box key={cat}>
+                            <Chip
+                              label={cat}
+                              size="small"
+                              sx={{
+                                bgcolor: CATEGORY_COLOR[cat] || '#757575',
+                                color: 'white',
+                                fontWeight: 600,
+                                fontSize: '0.65rem',
+                                height: 18,
+                                mb: 1,
+                              }}
+                            />
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, pl: 1 }}>
+                              {[...grouped[cat]].sort((a, b) => a.nombre.localeCompare(b.nombre)).map(insumo => (
+                                <Box key={insumo.id}>
+                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                    {insumo.nombre}
+                                  </Typography>
+                                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {insumo.codigo}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      •
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                                      {insumo.cantidad_usada} {insumo.unidad_nombre || 'unidades'}
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              ))}
                             </Box>
                           </Box>
                         ))}
                       </Box>
+                    )
+                  })()}
+                </Box>
+
+                {/* Columna 2: Equipos Requeridos */}
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Build color="primary" fontSize="small" />
+                    Equipos Requeridos
+                    {horario.equipos && horario.equipos.length > 0 && (
+                      <Chip
+                        label={horario.equipos.length}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                      />
                     )}
-                  </Box>
-                )}
+                  </Typography>
+
+                  {!horario.equipos || horario.equipos.length === 0 ? (
+                    <Alert severity="info">
+                      <Typography variant="body2">
+                        No se registraron equipos para este horario
+                      </Typography>
+                    </Alert>
+                  ) : (
+                    <List disablePadding>
+                      {horario.equipos.map((equipo, index) => (
+                        <React.Fragment key={equipo.id}>
+                          <ListItem sx={{ px: 0, py: 0.5 }}>
+                            <ListItemIcon sx={{ minWidth: 32 }}>
+                              <Build color="action" fontSize="small" />
+                            </ListItemIcon>
+                            <ListItemText
+                              primary={
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                  {equipo.nombre}
+                                </Typography>
+                              }
+                              secondary={
+                                <Box>
+                                  {equipo.marca && equipo.modelo && (
+                                    <Typography variant="caption" color="text.secondary" display="block">
+                                      {equipo.marca} {equipo.modelo}
+                                    </Typography>
+                                  )}
+                                  {equipo.codigo && (
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                                      {equipo.codigo}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              }
+                            />
+                          </ListItem>
+                          {index < horario.equipos!.length - 1 && <Divider />}
+                        </React.Fragment>
+                      ))}
+                    </List>
+                  )}
+                </Box>
               </Box>
             </Box>
 
             <Divider sx={{ my: 0 }} />
 
-            {/* Equipos requeridos */}
-            <Box sx={{ p: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Build color="primary" />
-                Equipos Requeridos
-                {horario.equipos && horario.equipos.length > 0 && (
-                  <Chip
-                    label={horario.equipos.length}
-                    size="small"
-                    color="primary"
-                    variant="outlined"
-                  />
-                )}
-              </Typography>
-
-              {!horario.equipos || horario.equipos.length === 0 ? (
-                <Alert severity="info">
-                  <Typography variant="body2">
-                    No se registraron equipos para este horario
-                  </Typography>
-                </Alert>
-              ) : (
-                <List>
-                  {horario.equipos.map((equipo, index) => (
-                    <React.Fragment key={equipo.id}>
-                      <ListItem sx={{ px: 0 }}>
-                        <ListItemIcon>
-                          <Build color="action" />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                {equipo.nombre}
-                              </Typography>
-                            </Box>
-                          }
-                          secondary={
-                            <Box>
-                              {equipo.marca && equipo.modelo && (
-                                <Typography variant="body2" color="text.secondary">
-                                  {equipo.marca} {equipo.modelo}
+            {/* Insumos Consumidos agrupados por categoría (solo horarios cerrados con movimiento) */}
+            {horario.estado === 'C' && horario.tiene_consumo_insumos === 1 && (() => {
+              const items = horario.insumos_consumidos ?? []
+              if (items.length === 0) return null
+              const CATEGORY_ORDER = ['Reactivos', 'Materiales', 'Material Biológico']
+              const CATEGORY_COLOR: Record<string, string> = {
+                Reactivos: '#ff9800',
+                Materiales: '#2196f3',
+                'Material Biológico': '#4caf50',
+              }
+              const grouped: Record<string, typeof items> = {}
+              for (const insumo of items) {
+                const cat = insumo.categoria || 'Otros'
+                if (!grouped[cat]) grouped[cat] = []
+                grouped[cat].push(insumo)
+              }
+              const sortedCats = [
+                ...CATEGORY_ORDER.filter(c => grouped[c]),
+                ...Object.keys(grouped).filter(c => !CATEGORY_ORDER.includes(c)).sort(),
+              ]
+              return (
+                <>
+                  <Box sx={{ p: 3 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CheckCircle fontSize="small" color="success" />
+                      Insumos Consumidos
+                    </Typography>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(auto-fill, minmax(200px, 1fr))' }, gap: 3 }}>
+                      {sortedCats.map(cat => (
+                        <Box key={cat}>
+                          <Chip
+                            label={cat}
+                            size="small"
+                            sx={{
+                              bgcolor: CATEGORY_COLOR[cat] || '#757575',
+                              color: 'white',
+                              fontWeight: 600,
+                              fontSize: '0.65rem',
+                              height: 18,
+                              mb: 1,
+                            }}
+                          />
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, pl: 1 }}>
+                            {[...grouped[cat]].sort((a, b) => a.nombre.localeCompare(b.nombre)).map(insumo => (
+                              <Box key={insumo.id}>
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                  {insumo.nombre}
                                 </Typography>
-                              )}
-                              {equipo.codigo && (
-                                <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                                  Código: {equipo.codigo}
-                                </Typography>
-                              )}
-                            </Box>
-                          }
-                        />
-                      </ListItem>
-                      {index < horario.equipos!.length - 1 && <Divider />}
-                    </React.Fragment>
-                  ))}
-                </List>
-              )}
-            </Box>
-
-            <Divider sx={{ my: 0 }} />
+                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {insumo.codigo}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    •
+                                  </Typography>
+                                  <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                                    {insumo.cantidad_consumida} {insumo.unidad_simbolo || insumo.unidad_nombre || 'unidades'}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            ))}
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+                  </Box>
+                  <Divider sx={{ my: 0 }} />
+                </>
+              )
+            })()}
 
             {/* Información adicional */}
             <Box sx={{ p: 3 }}>

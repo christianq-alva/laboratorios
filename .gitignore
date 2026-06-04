@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 .env
 .env.test
+
+# Claude Code agents, skills and local config
+.agents/
+.claude/
+skills-lock.json
