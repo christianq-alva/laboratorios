@@ -1,6 +1,7 @@
 import { pool } from '../config/database.js'
 import { Insumo } from '../models/Insumo.js'
 import { Laboratorio } from '../models/Laboratorio.js'
+import { Inventario } from '../models/Inventario.js'
 import { Unidad } from '../models/Unidad.js'
 import { AppError } from '../utils/errors.js'
 import XLSX from 'xlsx'
@@ -68,7 +69,8 @@ export const insumoService = {
     let procesados = 0
     const errores = []
     const resultados = []
-    const labAsignaciones = [] // { laboratorio_id, insumo_id }[]
+    const labAsignaciones = []
+    const stockPorLab = new Map() // Map<laboratorio_id, [{insumo_id, cantidad, lote, fecha_vencimiento}]>
     const connection = await pool.getConnection()
     try {
       await connection.beginTransaction()
@@ -109,9 +111,42 @@ export const insumoService = {
             }
             laboratorio_id = lab.id
           }
+          // Parsear y validar campos de stock
+          const cantidad = row.CANTIDAD ? parseFloat(row.CANTIDAD.toString()) : 0
+          if (row.CANTIDAD && (isNaN(cantidad) || cantidad <= 0)) {
+            errores.push(`Fila ${rowNum}: CANTIDAD debe ser un número positivo`)
+            continue
+          }
+          const lote = row.LOTE ? row.LOTE.toString().trim() : null
+          if (lote && !cantidad) {
+            errores.push(`Fila ${rowNum}: LOTE requiere CANTIDAD`)
+            continue
+          }
+          if (cantidad > 0 && !laboratorio_id) {
+            errores.push(`Fila ${rowNum}: CANTIDAD requiere LABORATORIO_CODIGO`)
+            continue
+          }
+          // Parsear FECHA_VENCIMIENTO — acepta Date (celda Excel) o texto YYYY-MM-DD
+          let fecha_vencimiento = null
+          if (row.FECHA_VENCIMIENTO) {
+            const raw = row.FECHA_VENCIMIENTO
+            if (raw instanceof Date) {
+              fecha_vencimiento = raw.toISOString().slice(0, 10)
+            } else {
+              fecha_vencimiento = raw.toString().trim()
+              if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha_vencimiento)) {
+                errores.push(`Fila ${rowNum}: FECHA_VENCIMIENTO debe tener formato YYYY-MM-DD`)
+                continue
+              }
+            }
+          }
           const { insumo_id, codigo } = await Insumo.create(nombre, descripcion || '', unidad_medida.id, categoria, presentacion || '', connection)
           if (laboratorio_id !== null) {
             labAsignaciones.push({ laboratorio_id, insumo_id })
+          }
+          if (cantidad > 0 && laboratorio_id !== null) {
+            if (!stockPorLab.has(laboratorio_id)) stockPorLab.set(laboratorio_id, [])
+            stockPorLab.get(laboratorio_id).push({ insumo_id, cantidad, lote, fecha_vencimiento })
           }
           resultados.push({
             fila: rowNum,
@@ -119,7 +154,9 @@ export const insumoService = {
             nombre,
             unidad_medida: unidad_medida.nombre,
             categoria,
-            laboratorio_codigo: laboratorio_id !== null ? row.LABORATORIO_CODIGO.toString().trim() : null
+            laboratorio_codigo: laboratorio_id !== null ? row.LABORATORIO_CODIGO.toString().trim() : null,
+            lote,
+            cantidad: cantidad || null
           })
           procesados++
         } catch (error) {
@@ -133,6 +170,19 @@ export const insumoService = {
         throw err
       }
       await Laboratorio.asignarInsumosNuevos(labAsignaciones, connection)
+      const hoy = new Date().toISOString().slice(0, 10)
+      for (const [laboratorio_id, detalles] of stockPorLab.entries()) {
+        await Inventario.registrarMovimiento(
+          connection,
+          user.userId,
+          hoy,
+          laboratorio_id,
+          'entrada',
+          'Importación masiva de insumos',
+          null,
+          detalles
+        )
+      }
       await connection.commit()
       return { procesados, errores, resultados }
     } catch (error) {

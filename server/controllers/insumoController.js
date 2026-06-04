@@ -100,7 +100,10 @@ export const generarPlantillaImportacion = async (req, res, next) => {
         'UNIDAD_MEDIDA',
         'CATEGORIA',
         'PRESENTACION',
-        'LABORATORIO_CODIGO'
+        'LABORATORIO_CODIGO',
+        'LOTE',
+        'CANTIDAD',
+        'FECHA_VENCIMIENTO'
       ],
       [
         'Alcohol etílico 70%',
@@ -109,6 +112,9 @@ export const generarPlantillaImportacion = async (req, res, next) => {
         'Reactivos',
         'Frasco 1L',
         'LAB-001',
+        'L-2026-001',
+        '10',
+        '2026-12-31',
       ],
       [
         'Jeringas desechables 10ml',
@@ -117,6 +123,9 @@ export const generarPlantillaImportacion = async (req, res, next) => {
         'Materiales',
         'Caja x 100 unidades',
         'LAB-002',
+        '',
+        '50',
+        '',
       ],
       [
         'Cultivo bacteriano E.coli',
@@ -124,6 +133,9 @@ export const generarPlantillaImportacion = async (req, res, next) => {
         '3',
         'Material_Biologico',
         'Placa Petri',
+        '',
+        '',
+        '',
         '',
       ]
     ]
@@ -136,6 +148,9 @@ export const generarPlantillaImportacion = async (req, res, next) => {
       { width: 18 }, // CATEGORIA
       { width: 20 }, // PRESENTACION
       { width: 20 }, // LABORATORIO_CODIGO
+      { width: 15 }, // LOTE
+      { width: 12 }, // CANTIDAD
+      { width: 20 }, // FECHA_VENCIMIENTO
     ]
     XLSX.utils.book_append_sheet(wb, wsPlantilla, 'Plantilla Insumos')
     // Hoja 2: Instrucciones y validaciones
@@ -151,6 +166,9 @@ export const generarPlantillaImportacion = async (req, res, next) => {
       ['• DESCRIPCION: Descripción detallada del insumo'],
       ['• PRESENTACION: Formato de presentación (Ej.: Frasco 500ml, Caja x 100)'],
       ['• LABORATORIO_CODIGO: Código del laboratorio al que se asignará el insumo (Ej.: LAB-001)'],
+      ['• LOTE: Número o código de lote (Ej.: L-2026-001). Requiere CANTIDAD si se especifica'],
+      ['• CANTIDAD: Cantidad de stock a registrar. Requiere LABORATORIO_CODIGO si se especifica'],
+      ['• FECHA_VENCIMIENTO: Fecha de vencimiento del lote en formato YYYY-MM-DD (Ej.: 2026-12-31)'],
       [''],
       [''],
       ['NOTAS IMPORTANTES:'],
@@ -220,6 +238,17 @@ export const previsualizarImportacionMasiva = async (req, res, next) => {
       const categoria = row.CATEGORIA ? row.CATEGORIA.toString().trim() : ''
       const presentacion = row.PRESENTACION ? row.PRESENTACION.toString().trim() : ''
       const laboratorio_codigo = row.LABORATORIO_CODIGO ? row.LABORATORIO_CODIGO.toString().trim() : ''
+      const lote = row.LOTE ? row.LOTE.toString().trim() : ''
+      const cantidad = row.CANTIDAD ? parseFloat(row.CANTIDAD.toString()) : 0
+      const fecha_vencimiento_raw = row.FECHA_VENCIMIENTO
+      let fecha_vencimiento = ''
+      if (fecha_vencimiento_raw) {
+        if (fecha_vencimiento_raw instanceof Date) {
+          fecha_vencimiento = fecha_vencimiento_raw.toISOString().slice(0, 10)
+        } else {
+          fecha_vencimiento = fecha_vencimiento_raw.toString().trim()
+        }
+      }
 
       // Validar campos obligatorios
       if (!nombre) {
@@ -253,6 +282,20 @@ export const previsualizarImportacionMasiva = async (req, res, next) => {
         }
       }
 
+      // Validar campos de stock
+      if (row.CANTIDAD && (isNaN(cantidad) || cantidad <= 0)) {
+        erroresFila.push('CANTIDAD debe ser un número positivo')
+      }
+      if (lote && !cantidad) {
+        erroresFila.push('LOTE requiere CANTIDAD')
+      }
+      if (cantidad > 0 && !laboratorio_codigo) {
+        erroresFila.push('CANTIDAD requiere LABORATORIO_CODIGO')
+      }
+      if (fecha_vencimiento && !/^\d{4}-\d{2}-\d{2}$/.test(fecha_vencimiento)) {
+        erroresFila.push('FECHA_VENCIMIENTO debe tener formato YYYY-MM-DD')
+      }
+
       previewData.push({
         fila: rowNum,
         nombre,
@@ -262,6 +305,9 @@ export const previsualizarImportacionMasiva = async (req, res, next) => {
         categoria,
         presentacion,
         laboratorio_codigo,
+        lote,
+        cantidad: cantidad || null,
+        fecha_vencimiento,
         errores: erroresFila
       })
     }

@@ -58,6 +58,9 @@ interface PreviewData {
   categoria: string
   presentacion: string
   laboratorio_codigo?: string
+  lote?: string
+  cantidad?: number | null
+  fecha_vencimiento?: string
   errores: string[]
 }
 
@@ -80,6 +83,8 @@ interface ResultadoImportacion {
     nombre: string
     categoria: string
     laboratorio_codigo?: string | null
+    lote?: string | null
+    cantidad?: number | null
   }>
 }
 
@@ -421,6 +426,9 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                       <TableCell>Unidad</TableCell>
                       <TableCell>Categoría</TableCell>
                       <TableCell>Laboratorio</TableCell>
+                      <TableCell>Lote</TableCell>
+                      <TableCell>Cantidad</TableCell>
+                      <TableCell>Vencimiento</TableCell>
                       <TableCell>Estado</TableCell>
                     </TableRow>
                   </TableHead>
@@ -457,6 +465,15 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                             ? <Chip label={item.laboratorio_codigo} size="small" variant="outlined" />
                             : <Typography variant="caption" color="text.secondary">—</Typography>
                           }
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="caption">{item.lote || '—'}</Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="caption">{item.cantidad ?? '—'}</Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="caption">{item.fecha_vencimiento || '—'}</Typography>
                         </TableCell>
                         <TableCell>
                           {item.errores.length > 0 ? (
@@ -576,6 +593,8 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                           <TableCell>Nombre</TableCell>
                           <TableCell>Categoría</TableCell>
                           <TableCell>Laboratorio</TableCell>
+                          <TableCell>Lote</TableCell>
+                          <TableCell>Cantidad</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -609,6 +628,12 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                                 ? <Chip label={item.laboratorio_codigo} size="small" variant="outlined" />
                                 : <Typography variant="caption" color="text.secondary">—</Typography>
                               }
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="caption">{item.lote || '—'}</Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="caption">{item.cantidad ?? '—'}</Typography>
                             </TableCell>
                           </TableRow>
                         ))}
