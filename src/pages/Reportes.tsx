@@ -19,7 +19,6 @@ import {
   InputLabel,
   Button,
   Grid,
-  Divider,
   TextField,
   Dialog,
   DialogTitle,
@@ -402,182 +401,187 @@ export const Reportes: React.FC = () => {
         </Paper>
       </Box>
 
-      {/* Tabla */}
-      <Paper sx={{ borderRadius: 2, mb: 4 }}>
-        <Box sx={{ px: 2.5, pt: 2, pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Science fontSize="small" color="primary" />
-            Detalle de Horarios
-          </Typography>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<Download fontSize="small" />}
-            onClick={openExportDialog}
-            disabled={loading}
-            sx={{ textTransform: 'none' }}
-          >
-            Exportar Excel
-          </Button>
-        </Box>
-        <TableContainer>
-          <Table size="small" sx={{ tableLayout: 'fixed' }}>
-            <TableHead>
-              <TableRow sx={{ bgcolor: 'primary.main' }}>
-                <TableCell sx={{ color: 'white', fontWeight: 600, width: 140 }}>Laboratorio</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 600, width: 96 }}>Fecha</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 600, width: 76 }}>H. inicio</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 600, width: 72 }}>H. fin</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 600 }}>Descripción</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 600, width: 130, textAlign: 'right' }}>Costo insumos</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
+      {/* Tabla + Gráficas lado a lado */}
+      <Grid container spacing={3} alignItems="flex-start">
+
+        {/* ── Tabla ── columna izquierda */}
+        <Grid size={{ xs: 12, lg: 8 }}>
+          <Paper sx={{ borderRadius: 2 }}>
+            <Box sx={{ px: 2.5, pt: 2, pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Science fontSize="small" color="primary" />
+                Detalle de Horarios
+              </Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<Download fontSize="small" />}
+                onClick={openExportDialog}
+                disabled={loading}
+                sx={{ textTransform: 'none' }}
+              >
+                Exportar Excel
+              </Button>
+            </Box>
+            <TableContainer>
+              <Table size="small" sx={{ tableLayout: 'fixed' }}>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: 'primary.main' }}>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, width: 140 }}>Laboratorio</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, width: 96 }}>Fecha</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, width: 76 }}>H. inicio</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, width: 72 }}>H. fin</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600 }}>Descripción</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, width: 130, textAlign: 'right' }}>Costo insumos</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                        <CircularProgress size={28} />
+                      </TableCell>
+                    </TableRow>
+                  ) : paginatedHorarios.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                        No se encontraron horarios con los filtros seleccionados
+                      </TableCell>
+                    </TableRow>
+                  ) : paginatedHorarios.map((h) => (
+                    <TableRow key={h.id} sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
+                      <TableCell sx={{ width: 140 }}>
+                        <Typography variant="body2" noWrap title={h.laboratorio}>{h.laboratorio}</Typography>
+                      </TableCell>
+                      <TableCell sx={{ whiteSpace: 'nowrap', width: 96 }}>{formatFecha(h.fecha_inicio)}</TableCell>
+                      <TableCell sx={{ whiteSpace: 'nowrap', width: 76 }}>{formatHora(h.fecha_inicio)}</TableCell>
+                      <TableCell sx={{ whiteSpace: 'nowrap', width: 72 }}>{formatHora(h.fecha_fin)}</TableCell>
+                      <TableCell>
+                        <Typography variant="body2" noWrap title={h.descripcion}>{h.descripcion}</Typography>
+                        <Typography variant="caption" color="text.secondary" noWrap>{h.docente} · {h.escuela}</Typography>
+                      </TableCell>
+                      <TableCell sx={{ whiteSpace: 'nowrap', width: 130, textAlign: 'right' }}>
+                        {Number(h.costo_total_insumos) > 0
+                          ? <Chip label={formatS(h.costo_total_insumos)} size="small" color="success" variant="outlined" sx={{ fontWeight: 700 }} />
+                          : <Typography variant="caption" color="text.secondary">—</Typography>
+                        }
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              rowsPerPageOptions={[10, 25, 50]}
+              component="div"
+              count={horarios.length}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={(_, p) => setPage(p)}
+              onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0) }}
+              labelRowsPerPage="Filas:"
+              labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+            />
+          </Paper>
+        </Grid>
+
+        {/* ── Gráficas ── columna derecha apiladas */}
+        <Grid size={{ xs: 12, lg: 4 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+
+            {/* Gráfica 1: Costo por escuela */}
+            <Paper sx={{ p: 2, borderRadius: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                <AttachMoney color="success" fontSize="small" />
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Costo por Escuela</Typography>
+              </Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                {mesInicio && mesFin ? `${mesInicio} → ${mesFin}` : 'Todos los períodos'}
+              </Typography>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                    <CircularProgress size={28} />
-                  </TableCell>
-                </TableRow>
-              ) : paginatedHorarios.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                    No se encontraron horarios con los filtros seleccionados
-                  </TableCell>
-                </TableRow>
-              ) : paginatedHorarios.map((h) => (
-                <TableRow key={h.id} sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
-                  <TableCell sx={{ width: 140 }}>
-                    <Typography variant="body2" noWrap title={h.laboratorio}>{h.laboratorio}</Typography>
-                  </TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap', width: 96 }}>{formatFecha(h.fecha_inicio)}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap', width: 76 }}>{formatHora(h.fecha_inicio)}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap', width: 72 }}>{formatHora(h.fecha_fin)}</TableCell>
-                  <TableCell>
-                    <Typography variant="body2" noWrap title={h.descripcion}>{h.descripcion}</Typography>
-                    <Typography variant="caption" color="text.secondary" noWrap>{h.docente} · {h.escuela}</Typography>
-                  </TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap', width: 130, textAlign: 'right' }}>
-                    {Number(h.costo_total_insumos) > 0
-                      ? <Chip label={formatS(h.costo_total_insumos)} size="small" color="success" variant="outlined" sx={{ fontWeight: 700 }} />
-                      : <Typography variant="caption" color="text.secondary">—</Typography>
-                    }
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-          rowsPerPageOptions={[10, 25, 50]}
-          component="div"
-          count={horarios.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={(_, p) => setPage(p)}
-          onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0) }}
-          labelRowsPerPage="Filas:"
-          labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
-        />
-      </Paper>
+                <Box sx={{ display: 'flex', justifyContent: 'center', pt: 4 }}><CircularProgress size={24} /></Box>
+              ) : chartCostos.length === 0 ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', pt: 4 }}>
+                  <Typography color="text.secondary" variant="body2">Sin datos</Typography>
+                </Box>
+              ) : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart
+                    layout="vertical"
+                    data={chartCostos}
+                    margin={{ left: 0, right: 28, top: 4, bottom: 4 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis
+                      type="number"
+                      tickFormatter={(v) => `S/.${Number(v).toFixed(0)}`}
+                      tick={{ fontSize: 10 }}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="escuela"
+                      width={90}
+                      tick={{ fontSize: 10 }}
+                    />
+                    <Tooltip
+                      formatter={(value: number) => [formatS(value), 'Costo total']}
+                      labelFormatter={(label) => `Escuela: ${label}`}
+                    />
+                    <Bar dataKey="costo_total" radius={[0, 4, 4, 0]}>
+                      {chartCostos.map((_, i) => (
+                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </Paper>
 
-      <Divider sx={{ mb: 4 }} />
-
-      {/* Gráficas */}
-      <Grid container spacing={3}>
-        {/* Gráfica 1: Costo por escuela */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Paper sx={{ p: 2.5, borderRadius: 2, height: 420 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <AttachMoney color="success" />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>Costo por Escuela</Typography>
-            </Box>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
-              {mesInicio && mesFin ? `${mesInicio} → ${mesFin}` : 'Todos los períodos'}
-            </Typography>
-            {loading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', pt: 6 }}><CircularProgress /></Box>
-            ) : chartCostos.length === 0 ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', pt: 6 }}>
-                <Typography color="text.secondary" variant="body2">Sin datos para el período seleccionado</Typography>
+            {/* Gráfica 2: Horarios por laboratorio */}
+            <Paper sx={{ p: 2, borderRadius: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                <Science color="primary" fontSize="small" />
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Horarios por Laboratorio</Typography>
               </Box>
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart
-                  layout="vertical"
-                  data={chartCostos}
-                  margin={{ left: 10, right: 30, top: 5, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis
-                    type="number"
-                    tickFormatter={(v) => `S/.${Number(v).toFixed(0)}`}
-                    tick={{ fontSize: 11 }}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="escuela"
-                    width={130}
-                    tick={{ fontSize: 11 }}
-                  />
-                  <Tooltip
-                    formatter={(value: number) => [formatS(value), 'Costo total']}
-                    labelFormatter={(label) => `Escuela: ${label}`}
-                  />
-                  <Bar dataKey="costo_total" radius={[0, 4, 4, 0]}>
-                    {chartCostos.map((_, i) => (
-                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </Paper>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                {escuelaId
+                  ? `${escuelas.find((e) => e.id === escuelaId)?.nombre ?? 'Escuela seleccionada'} · `
+                  : 'Todas las escuelas · '}
+                {mesInicio && mesFin ? `${mesInicio} → ${mesFin}` : 'Todos los períodos'}
+              </Typography>
+              {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', pt: 4 }}><CircularProgress size={24} /></Box>
+              ) : chartLabs.length === 0 ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', pt: 4 }}>
+                  <Typography color="text.secondary" variant="body2">Sin datos</Typography>
+                </Box>
+              ) : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart
+                    data={chartLabs}
+                    margin={{ left: 0, right: 10, top: 4, bottom: 45 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis
+                      dataKey="laboratorio"
+                      tick={{ fontSize: 9 }}
+                      angle={-30}
+                      textAnchor="end"
+                      interval={0}
+                    />
+                    <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+                    <Tooltip />
+                    <Legend verticalAlign="top" wrapperStyle={{ fontSize: 11 }} />
+                    <Bar dataKey="Programados" stackId="a" fill="#F57C00" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="Cerrados" stackId="a" fill="#1565C0" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </Paper>
+
+          </Box>
         </Grid>
 
-        {/* Gráfica 2: Horarios por laboratorio */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Paper sx={{ p: 2.5, borderRadius: 2, height: 420 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-              <Science color="primary" />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>Horarios por Laboratorio</Typography>
-            </Box>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
-              {escuelaId
-                ? `${escuelas.find((e) => e.id === escuelaId)?.nombre ?? 'Escuela seleccionada'} · `
-                : 'Todas las escuelas · '}
-              {mesInicio && mesFin ? `${mesInicio} → ${mesFin}` : 'Todos los períodos'}
-            </Typography>
-            {loading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', pt: 6 }}><CircularProgress /></Box>
-            ) : chartLabs.length === 0 ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', pt: 6 }}>
-                <Typography color="text.secondary" variant="body2">Sin datos para el período seleccionado</Typography>
-              </Box>
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart
-                  layout="vertical"
-                  data={chartLabs}
-                  margin={{ left: 10, right: 50, top: 5, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
-                  <YAxis
-                    type="category"
-                    dataKey="laboratorio"
-                    width={120}
-                    tick={{ fontSize: 11 }}
-                  />
-                  <Tooltip />
-                  <Legend verticalAlign="top" />
-                  <Bar dataKey="Programados" stackId="a" fill="#F57C00" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="Cerrados" stackId="a" fill="#1565C0" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </Paper>
-        </Grid>
       </Grid>
 
       {/* ── Diálogo Exportar Excel ── */}
