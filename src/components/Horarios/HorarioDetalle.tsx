@@ -341,10 +341,10 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                       toCents(precio) * cantidad * g
                     const formatS = (cents: number) => `S/. ${(cents / 100).toFixed(2)}`
 
-                    const hayPrecios = items.some(i => i.precio_unitario && i.precio_unitario > 0)
+                    const hayPrecios = items.some(i => Number(i.precio_unitario) > 0)
                     const totalCentsGeneral = hayPrecios
                       ? items.reduce((acc, i) =>
-                          acc + (i.precio_unitario ? calcCostoCents(i.precio_unitario, i.cantidad_usada, grupos) : 0)
+                          acc + calcCostoCents(Number(i.precio_unitario ?? 0), i.cantidad_usada, grupos)
                         , 0)
                       : 0
 
@@ -373,7 +373,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         {sortedCats.map(cat => {
                           const catItems = grouped[cat]
-                          const catTienePrecios = catItems.some(i => i.precio_unitario && i.precio_unitario > 0)
+                          const catTienePrecios = catItems.some(i => Number(i.precio_unitario) > 0)
                           return (
                             <Box key={cat}>
                               <Chip
@@ -414,7 +414,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                                   </Box>
                                 )}
                                 {[...catItems].sort((a, b) => a.nombre.localeCompare(b.nombre)).map(insumo => {
-                                  const precio = insumo.precio_unitario ?? 0
+                                  const precio = Number(insumo.precio_unitario ?? 0)
                                   const costoCents = precio > 0
                                     ? calcCostoCents(precio, insumo.cantidad_usada, grupos)
                                     : 0
