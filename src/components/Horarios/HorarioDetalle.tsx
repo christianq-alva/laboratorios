@@ -377,6 +377,17 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                               }}
                             />
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, pl: 1 }}>
+                              {grupos > 1 && (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                  <Typography variant="caption" sx={{ flex: 2 }} />
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, flex: 1 }}>
+                                    Por Grupo
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, flex: 1 }}>
+                                    Total
+                                  </Typography>
+                                </Box>
+                              )}
                               {[...grouped[cat]].sort((a, b) => a.nombre.localeCompare(b.nombre)).map(insumo => (
                                 <Box key={insumo.id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                   <Typography variant="body2" sx={{ fontWeight: 500, flex: 2 }}>
@@ -384,11 +395,10 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                                   </Typography>
                                   <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.primary', flex: 1 }}>
                                     {insumo.cantidad_usada} {insumo.unidad_nombre || 'u.'}
-                                    {grupos > 1 && <Typography component="span" variant="caption" color="text.secondary">/grupo</Typography>}
                                   </Typography>
                                   {grupos > 1 && (
                                     <Typography variant="caption" sx={{ fontWeight: 700, color: 'primary.main', flex: 1 }}>
-                                      {insumo.cantidad_usada * grupos} {insumo.unidad_nombre || 'u.'} total
+                                      {insumo.cantidad_usada * grupos} {insumo.unidad_nombre || 'u.'}
                                     </Typography>
                                   )}
                                 </Box>
