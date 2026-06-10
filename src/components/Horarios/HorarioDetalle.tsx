@@ -15,8 +15,7 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  Divider,
-  TextField
+  Divider
 } from '@mui/material'
 import {
   Close,
@@ -321,17 +320,11 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                       <Inventory fontSize="small" />
                       Insumos Requeridos
                     </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <People fontSize="small" color="action" />
-                      <TextField
-                        label="Grupos"
-                        type="number"
-                        size="small"
-                        value={grupos}
-                        onChange={(e) => setGrupos(Math.max(1, parseInt(e.target.value) || 1))}
-                        inputProps={{ min: 1, max: 99 }}
-                        sx={{ width: 85 }}
-                      />
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {grupos} {grupos === 1 ? 'grupo' : 'grupos'}
+                      </Typography>
                     </Box>
                   </Box>
                   {(() => {
