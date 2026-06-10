@@ -67,10 +67,11 @@ export const reporteService = {
     return response.data
   },
 
-  getHorariosConCosto: async (filtros: { escuela_id?: number; laboratorio_id?: number; mes_inicio?: string; mes_fin?: string }) => {
+  getHorariosConCosto: async (filtros: { escuela_id?: number; laboratorio_id?: number; ciclo_id?: number; mes_inicio?: string; mes_fin?: string }) => {
     const params = new URLSearchParams()
     if (filtros.escuela_id) params.append('escuela_id', filtros.escuela_id.toString())
     if (filtros.laboratorio_id) params.append('laboratorio_id', filtros.laboratorio_id.toString())
+    if (filtros.ciclo_id) params.append('ciclo_id', filtros.ciclo_id.toString())
     if (filtros.mes_inicio) params.append('mes_inicio', filtros.mes_inicio)
     if (filtros.mes_fin) params.append('mes_fin', filtros.mes_fin)
     const response = await api.get(`/reportes/horarios-costo?${params.toString()}`)

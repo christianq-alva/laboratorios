@@ -53,6 +53,8 @@ import { escuelaService } from '../services/escuelaService'
 import type { Escuela } from '../services/escuelaService'
 import { laboratorioService } from '../services/laboratorioService'
 import type { Laboratorio } from '../services/laboratorioService'
+import { cicloService } from '../services/cicloService'
+import type { Ciclo } from '../services/cicloService'
 import dayjs from 'dayjs'
 
 const CHART_COLORS = [
@@ -73,12 +75,14 @@ export const Reportes: React.FC = () => {
   // ── Filtros ──
   const [escuelaId, setEscuelaId] = useState<number | ''>('')
   const [laboratorioId, setLaboratorioId] = useState<number | ''>('')
+  const [cicloId, setCicloId] = useState<number | ''>('')
   const [mesInicio, setMesInicio] = useState(firstMonthOfYear())
   const [mesFin, setMesFin] = useState(currentMonth())
 
   // ── Data ──
   const [escuelas, setEscuelas] = useState<Escuela[]>([])
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
+  const [ciclos, setCiclos] = useState<Ciclo[]>([])
   const [horarios, setHorarios] = useState<HorarioCosto[]>([])
   const [costosPorEscuela, setCostosPorEscuela] = useState<CostoPorEscuela[]>([])
   const [horariosPorLab, setHorariosPorLab] = useState<HorariosPorLaboratorio[]>([])
@@ -101,6 +105,7 @@ export const Reportes: React.FC = () => {
   const activeFiltersCount = [
     escuelaId !== '',
     laboratorioId !== '',
+    cicloId !== '',
     mesInicio !== firstMonthOfYear(),
     mesFin !== currentMonth(),
   ].filter(Boolean).length
@@ -108,6 +113,7 @@ export const Reportes: React.FC = () => {
   const handleClearFilters = () => {
     setEscuelaId('')
     setLaboratorioId('')
+    setCicloId('')
     setMesInicio(firstMonthOfYear())
     setMesFin(currentMonth())
   }
@@ -196,6 +202,7 @@ export const Reportes: React.FC = () => {
   useEffect(() => {
     escuelaService.getAll().then((res) => setEscuelas(res.data ?? []))
     laboratorioService.getAll().then((res) => setLaboratorios(res.data ?? []))
+    cicloService.getAll().then((res) => setCiclos(res.data ?? []))
   }, [])
 
   const fetchData = useCallback(async () => {
@@ -208,7 +215,7 @@ export const Reportes: React.FC = () => {
         mes_fin: mesFin || undefined,
       }
       const [tablaRes, escuelaRes, labRes] = await Promise.all([
-        reporteService.getHorariosConCosto({ ...filtros, escuela_id: escuelaId || undefined }),
+        reporteService.getHorariosConCosto({ ...filtros, escuela_id: escuelaId || undefined, ciclo_id: cicloId || undefined }),
         reporteService.getCostoPorEscuela(filtros),
         reporteService.getHorariosPorLaboratorio({ ...filtros, escuela_id: escuelaId || undefined }),
       ])
@@ -286,7 +293,7 @@ export const Reportes: React.FC = () => {
 
         <Grid container spacing={1.5} alignItems="flex-end">
           {/* Laboratorio */}
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid size={{ xs: 12, sm: 4, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Laboratorio</InputLabel>
               <Select
@@ -303,7 +310,7 @@ export const Reportes: React.FC = () => {
           </Grid>
 
           {/* Escuela */}
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid size={{ xs: 12, sm: 4, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Escuela</InputLabel>
               <Select
@@ -314,6 +321,23 @@ export const Reportes: React.FC = () => {
                 <MenuItem value=""><em>Todas</em></MenuItem>
                 {escuelas.map((e) => (
                   <MenuItem key={e.id} value={e.id}>{e.nombre}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          {/* Ciclo */}
+          <Grid size={{ xs: 12, sm: 4, md: 2 }}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Ciclo</InputLabel>
+              <Select
+                value={cicloId}
+                label="Ciclo"
+                onChange={(e) => setCicloId(e.target.value as number | '')}
+              >
+                <MenuItem value=""><em>Todos</em></MenuItem>
+                {ciclos.map((c) => (
+                  <MenuItem key={c.id} value={c.id}>{c.nombre}</MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -397,52 +421,43 @@ export const Reportes: React.FC = () => {
           </Button>
         </Box>
         <TableContainer>
-          <Table size="small">
+          <Table size="small" sx={{ tableLayout: 'fixed' }}>
             <TableHead>
               <TableRow sx={{ bgcolor: 'primary.main' }}>
-                {['Escuela', 'Laboratorio', 'Fecha', 'Hora inicio', 'Hora fin', 'Descripción', 'Estado', 'Costo insumos'].map((h) => (
-                  <TableCell key={h} sx={{ color: 'white', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</TableCell>
-                ))}
+                <TableCell sx={{ color: 'white', fontWeight: 600, width: 140 }}>Laboratorio</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 600, width: 96 }}>Fecha</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 600, width: 76 }}>H. inicio</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 600, width: 72 }}>H. fin</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 600 }}>Descripción</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 600, width: 130, textAlign: 'right' }}>Costo insumos</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                     <CircularProgress size={28} />
                   </TableCell>
                 </TableRow>
               ) : paginatedHorarios.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                     No se encontraron horarios con los filtros seleccionados
                   </TableCell>
                 </TableRow>
               ) : paginatedHorarios.map((h) => (
                 <TableRow key={h.id} sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
-                  <TableCell>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>{h.escuela}</Typography>
-                    <Typography variant="caption" color="text.secondary">{h.ciclo}</Typography>
+                  <TableCell sx={{ width: 140 }}>
+                    <Typography variant="body2" noWrap title={h.laboratorio}>{h.laboratorio}</Typography>
                   </TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap', width: 96 }}>{formatFecha(h.fecha_inicio)}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap', width: 76 }}>{formatHora(h.fecha_inicio)}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap', width: 72 }}>{formatHora(h.fecha_fin)}</TableCell>
                   <TableCell>
-                    <Typography variant="body2">{h.laboratorio}</Typography>
-                  </TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatFecha(h.fecha_inicio)}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatHora(h.fecha_inicio)}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatHora(h.fecha_fin)}</TableCell>
-                  <TableCell sx={{ maxWidth: 260 }}>
                     <Typography variant="body2" noWrap title={h.descripcion}>{h.descripcion}</Typography>
-                    <Typography variant="caption" color="text.secondary">{h.docente}</Typography>
+                    <Typography variant="caption" color="text.secondary" noWrap>{h.docente} · {h.escuela}</Typography>
                   </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={h.estado === 'C' ? 'Cerrado' : 'Programado'}
-                      size="small"
-                      color={h.estado === 'C' ? 'success' : 'warning'}
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                  <TableCell sx={{ whiteSpace: 'nowrap', width: 130, textAlign: 'right' }}>
                     {Number(h.costo_total_insumos) > 0
                       ? <Chip label={formatS(h.costo_total_insumos)} size="small" color="success" variant="outlined" sx={{ fontWeight: 700 }} />
                       : <Typography variant="caption" color="text.secondary">—</Typography>
@@ -471,7 +486,7 @@ export const Reportes: React.FC = () => {
       {/* Gráficas */}
       <Grid container spacing={3}>
         {/* Gráfica 1: Costo por escuela */}
-        <Grid size={{ xs: 12, lg: 6 }}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 2.5, borderRadius: 2, height: 420 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <AttachMoney color="success" />
@@ -521,7 +536,7 @@ export const Reportes: React.FC = () => {
         </Grid>
 
         {/* Gráfica 2: Horarios por laboratorio */}
-        <Grid size={{ xs: 12, lg: 6 }}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 2.5, borderRadius: 2, height: 420 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
               <Science color="primary" />
@@ -542,22 +557,22 @@ export const Reportes: React.FC = () => {
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart
+                  layout="vertical"
                   data={chartLabs}
-                  margin={{ left: 0, right: 20, top: 5, bottom: 40 }}
+                  margin={{ left: 10, right: 50, top: 5, bottom: 5 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+                  <YAxis
+                    type="category"
                     dataKey="laboratorio"
-                    tick={{ fontSize: 10 }}
-                    angle={-30}
-                    textAnchor="end"
-                    interval={0}
+                    width={120}
+                    tick={{ fontSize: 11 }}
                   />
-                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                   <Tooltip />
                   <Legend verticalAlign="top" />
                   <Bar dataKey="Programados" stackId="a" fill="#F57C00" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="Cerrados" stackId="a" fill="#1565C0" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Cerrados" stackId="a" fill="#1565C0" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}

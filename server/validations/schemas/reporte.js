@@ -15,6 +15,7 @@ export const getHorariosConCostoSchema = z.object({
   query: z.object({
     escuela_id: entidadIdSchema('escuela'),
     laboratorio_id: entidadIdSchema('laboratorio'),
+    ciclo_id: entidadIdSchema('ciclo'),
     mes_inicio: mesSchema,
     mes_fin: mesSchema,
   })
