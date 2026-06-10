@@ -1,5 +1,38 @@
 import { z } from 'zod'
 
+const mesSchema = z.string()
+  .regex(/^\d{4}-\d{2}$/, 'El mes debe estar en formato YYYY-MM')
+  .optional()
+
+const escuelaIdSchema = z.string()
+  .regex(/^\d+$/, 'ID de escuela debe ser un número')
+  .transform((val) => parseInt(val, 10))
+  .refine((val) => val > 0, 'ID de escuela debe ser mayor a 0')
+  .optional()
+
+export const getHorariosConCostoSchema = z.object({
+  query: z.object({
+    escuela_id: escuelaIdSchema,
+    mes_inicio: mesSchema,
+    mes_fin: mesSchema,
+  })
+})
+
+export const getCostoPorEscuelaSchema = z.object({
+  query: z.object({
+    mes_inicio: mesSchema,
+    mes_fin: mesSchema,
+  })
+})
+
+export const getHorariosPorLaboratorioSchema = z.object({
+  query: z.object({
+    mes_inicio: mesSchema,
+    mes_fin: mesSchema,
+  })
+})
+
+
 /**
  * Schema para query de reporte requerido vs consumido
  * GET /api/reportes/requerido-vs-consumido

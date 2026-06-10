@@ -166,5 +166,138 @@ export const Reporte = {
     } catch (error) {
       handleDBError(error, 'Reporte')
     }
+  },
+
+  getHorariosConCosto: async (params, labFilter = '') => {
+    const { escuela_id, fecha_desde, fecha_hasta } = params
+    try {
+      let query = `
+        SELECT
+          r.id,
+          r.descripcion,
+          r.fecha_inicio,
+          r.fecha_fin,
+          r.estado,
+          r.num_grupos,
+          r.cantidad_alumnos,
+          e.id   AS escuela_id,
+          e.nombre AS escuela,
+          d.nombre AS docente,
+          l.nombre AS laboratorio,
+          c.nombre AS ciclo,
+          CAST(
+            COALESCE(SUM(dri.cantidad_usada * COALESCE(ip.precio, 0)) * r.num_grupos, 0)
+            AS DECIMAL(10,2)
+          ) AS costo_total_insumos,
+          COUNT(DISTINCT dri.id) AS num_insumos
+        FROM reservas r
+        JOIN escuelas    e ON r.escuela_id    = e.id
+        JOIN docentes    d ON r.docente_id    = d.id
+        JOIN laboratorios l ON r.laboratorio_id = l.id
+        JOIN ciclos      c ON r.ciclo_id      = c.id
+        LEFT JOIN detalle_reserva_insumos dri ON dri.reserva_id = r.id
+        LEFT JOIN insumos_precios ip
+          ON ip.insumo_id = dri.insumo_id AND ip.vigente_hasta IS NULL
+        WHERE 1=1
+      `
+      const queryParams = []
+
+      if (escuela_id) {
+        query += ' AND r.escuela_id = ?'
+        queryParams.push(escuela_id)
+      }
+      if (fecha_desde) {
+        query += ' AND DATE(r.fecha_inicio) >= ?'
+        queryParams.push(fecha_desde)
+      }
+      if (fecha_hasta) {
+        query += ' AND DATE(r.fecha_inicio) <= ?'
+        queryParams.push(fecha_hasta)
+      }
+      query += `${labFilter}
+        GROUP BY r.id, r.descripcion, r.fecha_inicio, r.fecha_fin, r.estado,
+                 r.num_grupos, r.cantidad_alumnos, e.id, e.nombre, d.nombre, l.nombre, c.nombre
+        ORDER BY r.fecha_inicio DESC
+      `
+      const [rows] = await pool.execute(query, queryParams)
+      return { data: rows, total_registros: rows.length }
+    } catch (error) {
+      handleDBError(error, 'Reporte')
+    }
+  },
+
+  getCostoPorEscuela: async (params, labFilter = '') => {
+    const { fecha_desde, fecha_hasta } = params
+    try {
+      let query = `
+        SELECT
+          e.id   AS escuela_id,
+          e.nombre AS escuela,
+          COUNT(DISTINCT r.id) AS total_horarios,
+          CAST(
+            COALESCE(SUM(dri.cantidad_usada * COALESCE(ip.precio, 0) * r.num_grupos), 0)
+            AS DECIMAL(10,2)
+          ) AS costo_total
+        FROM reservas r
+        JOIN escuelas e ON r.escuela_id = e.id
+        LEFT JOIN detalle_reserva_insumos dri ON dri.reserva_id = r.id
+        LEFT JOIN insumos_precios ip
+          ON ip.insumo_id = dri.insumo_id AND ip.vigente_hasta IS NULL
+        WHERE 1=1
+      `
+      const queryParams = []
+
+      if (fecha_desde) {
+        query += ' AND DATE(r.fecha_inicio) >= ?'
+        queryParams.push(fecha_desde)
+      }
+      if (fecha_hasta) {
+        query += ' AND DATE(r.fecha_inicio) <= ?'
+        queryParams.push(fecha_hasta)
+      }
+      query += `${labFilter}
+        GROUP BY e.id, e.nombre
+        ORDER BY costo_total DESC
+      `
+      const [rows] = await pool.execute(query, queryParams)
+      return { data: rows, total_registros: rows.length }
+    } catch (error) {
+      handleDBError(error, 'Reporte')
+    }
+  },
+
+  getHorariosPorLaboratorio: async (params, labFilter = '') => {
+    const { fecha_desde, fecha_hasta } = params
+    try {
+      let query = `
+        SELECT
+          l.id   AS laboratorio_id,
+          l.nombre AS laboratorio,
+          COUNT(DISTINCT r.id) AS total_horarios,
+          COUNT(DISTINCT CASE WHEN r.estado = 'C' THEN r.id END) AS horarios_cerrados,
+          COUNT(DISTINCT CASE WHEN r.estado = 'P' THEN r.id END) AS horarios_programados
+        FROM reservas r
+        JOIN laboratorios l ON r.laboratorio_id = l.id
+        WHERE 1=1
+      `
+      const queryParams = []
+
+      if (fecha_desde) {
+        query += ' AND DATE(r.fecha_inicio) >= ?'
+        queryParams.push(fecha_desde)
+      }
+      if (fecha_hasta) {
+        query += ' AND DATE(r.fecha_inicio) <= ?'
+        queryParams.push(fecha_hasta)
+      }
+      query += `${labFilter}
+        GROUP BY l.id, l.nombre
+        ORDER BY total_horarios DESC
+      `
+      const [rows] = await pool.execute(query, queryParams)
+      return { data: rows, total_registros: rows.length }
+    } catch (error) {
+      handleDBError(error, 'Reporte')
+    }
   }
 }

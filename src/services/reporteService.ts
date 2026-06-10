@@ -58,12 +58,69 @@ export const reporteService = {
   // Obtener comparación de stock vs requerido
   getStockVsRequerido: async (filtros: FiltrosComparacion): Promise<ReporteResponse<StockVsRequerido[]>> => {
     const params = new URLSearchParams()
-    
+
     if (filtros.laboratorio_id) params.append('laboratorio_id', filtros.laboratorio_id.toString())
     if (filtros.fecha_inicio) params.append('fecha_inicio', filtros.fecha_inicio)
     if (filtros.fecha_fin) params.append('fecha_fin', filtros.fecha_fin)
 
     const response = await api.get(`/reportes/stock-vs-requerido?${params.toString()}`)
     return response.data
+  },
+
+  getHorariosConCosto: async (filtros: { escuela_id?: number; mes_inicio?: string; mes_fin?: string }) => {
+    const params = new URLSearchParams()
+    if (filtros.escuela_id) params.append('escuela_id', filtros.escuela_id.toString())
+    if (filtros.mes_inicio) params.append('mes_inicio', filtros.mes_inicio)
+    if (filtros.mes_fin) params.append('mes_fin', filtros.mes_fin)
+    const response = await api.get(`/reportes/horarios-costo?${params.toString()}`)
+    return response.data as ReporteResponse<HorarioCosto[]>
+  },
+
+  getCostoPorEscuela: async (filtros: { mes_inicio?: string; mes_fin?: string }) => {
+    const params = new URLSearchParams()
+    if (filtros.mes_inicio) params.append('mes_inicio', filtros.mes_inicio)
+    if (filtros.mes_fin) params.append('mes_fin', filtros.mes_fin)
+    const response = await api.get(`/reportes/costo-por-escuela?${params.toString()}`)
+    return response.data as ReporteResponse<CostoPorEscuela[]>
+  },
+
+  getHorariosPorLaboratorio: async (filtros: { mes_inicio?: string; mes_fin?: string }) => {
+    const params = new URLSearchParams()
+    if (filtros.mes_inicio) params.append('mes_inicio', filtros.mes_inicio)
+    if (filtros.mes_fin) params.append('mes_fin', filtros.mes_fin)
+    const response = await api.get(`/reportes/horarios-por-laboratorio?${params.toString()}`)
+    return response.data as ReporteResponse<HorariosPorLaboratorio[]>
   }
+}
+
+export interface HorarioCosto {
+  id: number
+  descripcion: string
+  fecha_inicio: string
+  fecha_fin: string
+  estado: string
+  num_grupos: number
+  cantidad_alumnos: number
+  escuela_id: number
+  escuela: string
+  docente: string
+  laboratorio: string
+  ciclo: string
+  costo_total_insumos: number | string
+  num_insumos: number
+}
+
+export interface CostoPorEscuela {
+  escuela_id: number
+  escuela: string
+  total_horarios: number
+  costo_total: number | string
+}
+
+export interface HorariosPorLaboratorio {
+  laboratorio_id: number
+  laboratorio: string
+  total_horarios: number
+  horarios_cerrados: number
+  horarios_programados: number
 }

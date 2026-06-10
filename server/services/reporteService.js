@@ -1,5 +1,13 @@
 import { Reporte, buildLabFilter } from '../models/Reporte.js'
 
+function firstDayOfMonth(mesYYYYMM) {
+  return `${mesYYYYMM}-01`
+}
+function lastDayOfMonth(mesYYYYMM) {
+  const [year, month] = mesYYYYMM.split('-').map(Number)
+  return new Date(year, month, 0).toISOString().split('T')[0]
+}
+
 /**
  * Determina si el usuario tiene restricción por laboratorios (Jefe de Laboratorio con laboratorios asignados).
  */
@@ -58,4 +66,49 @@ export async function getStockVsRequerido(params, user) {
     },
     total_registros
   }
+}
+
+export async function getHorariosConCosto(params, user) {
+  const { escuela_id, mes_inicio, mes_fin } = params
+  const labFilter = tieneRestriccionLaboratorio(user)
+    ? buildLabFilter(user.laboratorio_ids)
+    : ''
+  const fecha_desde = mes_inicio ? firstDayOfMonth(mes_inicio) : null
+  const fecha_hasta = mes_fin ? lastDayOfMonth(mes_fin) : null
+
+  const { data, total_registros } = await Reporte.getHorariosConCosto(
+    { escuela_id, fecha_desde, fecha_hasta },
+    labFilter
+  )
+  return { data, filtros: { escuela_id: escuela_id || null, mes_inicio: mes_inicio || null, mes_fin: mes_fin || null }, total_registros }
+}
+
+export async function getCostoPorEscuela(params, user) {
+  const { mes_inicio, mes_fin } = params
+  const labFilter = tieneRestriccionLaboratorio(user)
+    ? buildLabFilter(user.laboratorio_ids)
+    : ''
+  const fecha_desde = mes_inicio ? firstDayOfMonth(mes_inicio) : null
+  const fecha_hasta = mes_fin ? lastDayOfMonth(mes_fin) : null
+
+  const { data, total_registros } = await Reporte.getCostoPorEscuela(
+    { fecha_desde, fecha_hasta },
+    labFilter
+  )
+  return { data, filtros: { mes_inicio: mes_inicio || null, mes_fin: mes_fin || null }, total_registros }
+}
+
+export async function getHorariosPorLaboratorio(params, user) {
+  const { mes_inicio, mes_fin } = params
+  const labFilter = tieneRestriccionLaboratorio(user)
+    ? buildLabFilter(user.laboratorio_ids)
+    : ''
+  const fecha_desde = mes_inicio ? firstDayOfMonth(mes_inicio) : null
+  const fecha_hasta = mes_fin ? lastDayOfMonth(mes_fin) : null
+
+  const { data, total_registros } = await Reporte.getHorariosPorLaboratorio(
+    { fecha_desde, fecha_hasta },
+    labFilter
+  )
+  return { data, filtros: { mes_inicio: mes_inicio || null, mes_fin: mes_fin || null }, total_registros }
 }

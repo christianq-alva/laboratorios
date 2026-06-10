@@ -1,5 +1,32 @@
 import * as reporteService from '../services/reporteService.js'
 
+export const getHorariosConCosto = async (req, res, next) => {
+  try {
+    const payload = await reporteService.getHorariosConCosto(req.query, req.user)
+    res.status(200).json(payload)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const getCostoPorEscuela = async (req, res, next) => {
+  try {
+    const payload = await reporteService.getCostoPorEscuela(req.query, req.user)
+    res.status(200).json(payload)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const getHorariosPorLaboratorio = async (req, res, next) => {
+  try {
+    const payload = await reporteService.getHorariosPorLaboratorio(req.query, req.user)
+    res.status(200).json(payload)
+  } catch (error) {
+    next(error)
+  }
+}
+
 /**
  * Patrón: router → controller → service → model.
  * El controlador solo delega en el servicio y pasa errores con next(error).
