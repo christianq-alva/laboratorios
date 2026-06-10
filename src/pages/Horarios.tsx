@@ -15,7 +15,7 @@ import {
   ToggleButtonGroup,
   ToggleButton
 } from '@mui/material'
-import { Add, Schedule, Warning, ViewList, CalendarMonth, Repeat, History } from '@mui/icons-material'
+import { Add, Schedule, Warning, ViewList, CalendarMonth, Repeat, History, TableChart } from '@mui/icons-material'
 import { HorariosTable } from '../components/Horarios/HorariosTable'
 import { CalendarioSimple } from '../components/Horarios/CalendarioSimple'
 import { HorarioFormSimple as HorarioForm } from '../components/Horarios/HorarioFormSimple'
@@ -24,6 +24,7 @@ import { HorarioDetalle } from '../components/Horarios/HorarioDetalle'
 import { ActividadHorarios } from '../components/Horarios/ActividadHorarios'
 import { ShareModal } from '../components/Share/ShareModal'
 import { ExportModal } from '../components/Export/ExportModal'
+import { ExportExcelModal } from '../components/Horarios/ExportExcelModal'
 import { horarioService } from '../services/horarioService'
 import type { HorarioSimple } from '../services/horarioService'
 import { useApi } from '../hooks/useApi'
@@ -38,6 +39,7 @@ export const Horarios: React.FC = () => {
   const [actividadOpen, setActividadOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const [excelExportOpen, setExcelExportOpen] = useState(false)
   const [selectedHorario, setSelectedHorario] = useState<HorarioSimple | null>(null)
   const [selectedHorarioId, setSelectedHorarioId] = useState<number | null>(null)
   const [selectedLaboratorioId, setSelectedLaboratorioId] = useState<number | undefined>()
@@ -284,6 +286,16 @@ export const Horarios: React.FC = () => {
           >
             Actividad
           </Button>
+
+          <Button
+            variant="outlined"
+            startIcon={<TableChart />}
+            onClick={() => setExcelExportOpen(true)}
+            size="small"
+            color="success"
+          >
+            Excel
+          </Button>
         </Box>
       </Box>
 
@@ -349,13 +361,19 @@ export const Horarios: React.FC = () => {
         selectedLaboratorioId={selectedLaboratorioId}
       />
 
-      {/* Modal de exportar */}
+      {/* Modal de exportar (PDF/PNG) */}
       <ExportModal
         open={exportOpen}
         onClose={handleExportClose}
         elementId="calendario-exportable"
         laboratorioNombre={currentLaboratorioName || 'Horarios Semanales'}
         semanaInicio={currentWeek}
+      />
+
+      {/* Modal de exportar Excel */}
+      <ExportExcelModal
+        open={excelExportOpen}
+        onClose={() => setExcelExportOpen(false)}
       />
 
       {/* Diálogo de eliminación */}
