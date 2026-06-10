@@ -321,8 +321,11 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                       Insumos Requeridos
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <People fontSize="small" color="action" />
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {grupos === 1
+                        ? <Person fontSize="small" color="action" />
+                        : <People fontSize="small" color="primary" />
+                      }
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: grupos === 1 ? 'text.secondary' : 'primary.main' }}>
                         {grupos} {grupos === 1 ? 'grupo' : 'grupos'}
                       </Typography>
                     </Box>
@@ -373,28 +376,21 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                                 mb: 1,
                               }}
                             />
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, pl: 1 }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, pl: 1 }}>
                               {[...grouped[cat]].sort((a, b) => a.nombre.localeCompare(b.nombre)).map(insumo => (
-                                <Box key={insumo.id}>
-                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                <Box key={insumo.id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Typography variant="body2" sx={{ fontWeight: 500, flex: 2 }}>
                                     {insumo.nombre}
                                   </Typography>
-                                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                                    <Typography variant="caption" color="text.secondary">
-                                      {insumo.codigo}
+                                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.primary', flex: 1 }}>
+                                    {insumo.cantidad_usada} {insumo.unidad_nombre || 'u.'}
+                                    {grupos > 1 && <Typography component="span" variant="caption" color="text.secondary">/grupo</Typography>}
+                                  </Typography>
+                                  {grupos > 1 && (
+                                    <Typography variant="caption" sx={{ fontWeight: 700, color: 'primary.main', flex: 1 }}>
+                                      {insumo.cantidad_usada * grupos} {insumo.unidad_nombre || 'u.'} total
                                     </Typography>
-                                    <Typography variant="caption" color="text.secondary">
-                                      •
-                                    </Typography>
-                                    <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                                      {insumo.cantidad_usada * grupos} {insumo.unidad_nombre || 'unidades'}
-                                    </Typography>
-                                    {grupos > 1 && (
-                                      <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                                        ({insumo.cantidad_usada} × {grupos})
-                                      </Typography>
-                                    )}
-                                  </Box>
+                                  )}
                                 </Box>
                               ))}
                             </Box>
