@@ -11,10 +11,6 @@ import {
   Alert,
   IconButton,
   Chip,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
   Divider
 } from '@mui/material'
 import {
@@ -311,7 +307,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
 
             {/* Insumos Requeridos + Equipos en grid de dos columnas */}
             <Box sx={{ p: 3 }}>
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 4 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 3 }}>
 
                 {/* Columna 1: Insumos Requeridos agrupados por categoría */}
                 <Box sx={{ pr: { md: 3 }, borderRight: { md: 1 }, borderColor: { md: 'divider' } }}>
@@ -407,6 +403,11 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                                     )}
                                     {catTienePrecios && (
                                       <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, flex: 1 }}>
+                                        P. Unit.
+                                      </Typography>
+                                    )}
+                                    {catTienePrecios && (
+                                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, flex: 1 }}>
                                         Costo
                                       </Typography>
                                     )}
@@ -428,6 +429,11 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                                       {grupos > 1 && (
                                         <Typography variant="caption" sx={{ fontWeight: 700, color: 'primary.main', flex: 1 }}>
                                           {insumo.cantidad_usada * grupos} {insumo.unidad_nombre || 'u.'}
+                                        </Typography>
+                                      )}
+                                      {catTienePrecios && (
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', flex: 1 }}>
+                                          {precio > 0 ? `S/. ${precio.toFixed(2)}` : '—'}
                                         </Typography>
                                       )}
                                       {catTienePrecios && (
@@ -458,61 +464,46 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                   })()}
                 </Box>
 
-                {/* Columna 2: Equipos Requeridos */}
+                {/* Columna 2: Equipos Requeridos (compacto) */}
                 <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Build color="primary" fontSize="small" />
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5, display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                    <Build color="primary" sx={{ fontSize: 16 }} />
                     Equipos Requeridos
                     {horario.equipos && horario.equipos.length > 0 && (
-                      <Chip
-                        label={horario.equipos.length}
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                      />
+                      <Chip label={horario.equipos.length} size="small" color="primary" variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
                     )}
                   </Typography>
 
                   {!horario.equipos || horario.equipos.length === 0 ? (
-                    <Alert severity="info">
-                      <Typography variant="body2">
-                        No se registraron equipos para este horario
-                      </Typography>
-                    </Alert>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                      No se registraron equipos
+                    </Typography>
                   ) : (
-                    <List disablePadding>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                       {horario.equipos.map((equipo, index) => (
                         <React.Fragment key={equipo.id}>
-                          <ListItem sx={{ px: 0, py: 0.5 }}>
-                            <ListItemIcon sx={{ minWidth: 32 }}>
-                              <Build color="action" fontSize="small" />
-                            </ListItemIcon>
-                            <ListItemText
-                              primary={
-                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                  {equipo.nombre}
+                          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75, py: 0.25 }}>
+                            <Build color="action" sx={{ fontSize: 14, mt: 0.25, flexShrink: 0 }} />
+                            <Box>
+                              <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', lineHeight: 1.3 }}>
+                                {equipo.nombre}
+                              </Typography>
+                              {(equipo.marca || equipo.modelo) && (
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+                                  {[equipo.marca, equipo.modelo].filter(Boolean).join(' ')}
                                 </Typography>
-                              }
-                              secondary={
-                                <Box>
-                                  {equipo.marca && equipo.modelo && (
-                                    <Typography variant="caption" color="text.secondary" display="block">
-                                      {equipo.marca} {equipo.modelo}
-                                    </Typography>
-                                  )}
-                                  {equipo.codigo && (
-                                    <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                                      {equipo.codigo}
-                                    </Typography>
-                                  )}
-                                </Box>
-                              }
-                            />
-                          </ListItem>
-                          {index < horario.equipos!.length - 1 && <Divider />}
+                              )}
+                              {equipo.codigo && (
+                                <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', fontSize: '0.65rem', display: 'block' }}>
+                                  {equipo.codigo}
+                                </Typography>
+                              )}
+                            </Box>
+                          </Box>
+                          {index < horario.equipos!.length - 1 && <Divider sx={{ my: 0.25 }} />}
                         </React.Fragment>
                       ))}
-                    </List>
+                    </Box>
                   )}
                 </Box>
               </Box>
