@@ -58,13 +58,13 @@ const formatFecha = (f: string) => dayjs(f).format('DD/MM/YYYY')
 const formatHora = (f: string) => dayjs(f).format('HH:mm')
 
 const currentMonth = () => dayjs().format('YYYY-MM')
-const threeMonthsAgo = () => dayjs().subtract(2, 'month').format('YYYY-MM')
+const firstMonthOfYear = () => `${dayjs().year()}-01`
 
 export const Reportes: React.FC = () => {
   // ── Filtros ──
   const [escuelaId, setEscuelaId] = useState<number | ''>('')
   const [laboratorioId, setLaboratorioId] = useState<number | ''>('')
-  const [mesInicio, setMesInicio] = useState(threeMonthsAgo())
+  const [mesInicio, setMesInicio] = useState(firstMonthOfYear())
   const [mesFin, setMesFin] = useState(currentMonth())
 
   // ── Data ──
