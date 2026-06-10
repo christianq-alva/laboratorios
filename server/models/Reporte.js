@@ -275,7 +275,7 @@ export const Reporte = {
   },
 
   getHorariosPorLaboratorio: async (params, labFilter = '') => {
-    const { laboratorio_id, fecha_desde, fecha_hasta } = params
+    const { laboratorio_id, escuela_id, fecha_desde, fecha_hasta } = params
     try {
       let query = `
         SELECT
@@ -293,6 +293,10 @@ export const Reporte = {
       if (laboratorio_id) {
         query += ' AND r.laboratorio_id = ?'
         queryParams.push(laboratorio_id)
+      }
+      if (escuela_id) {
+        query += ' AND r.escuela_id = ?'
+        queryParams.push(escuela_id)
       }
       if (fecha_desde) {
         query += ' AND DATE(r.fecha_inicio) >= ?'

@@ -31,6 +31,7 @@ export const getCostoPorEscuelaSchema = z.object({
 export const getHorariosPorLaboratorioSchema = z.object({
   query: z.object({
     laboratorio_id: entidadIdSchema('laboratorio'),
+    escuela_id: entidadIdSchema('escuela'),
     mes_inicio: mesSchema,
     mes_fin: mesSchema,
   })

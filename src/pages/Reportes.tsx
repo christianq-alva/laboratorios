@@ -210,7 +210,7 @@ export const Reportes: React.FC = () => {
       const [tablaRes, escuelaRes, labRes] = await Promise.all([
         reporteService.getHorariosConCosto({ ...filtros, escuela_id: escuelaId || undefined }),
         reporteService.getCostoPorEscuela(filtros),
-        reporteService.getHorariosPorLaboratorio(filtros),
+        reporteService.getHorariosPorLaboratorio({ ...filtros, escuela_id: escuelaId || undefined }),
       ])
       setHorarios(tablaRes.data ?? [])
       setCostosPorEscuela(escuelaRes.data ?? [])
@@ -523,11 +523,14 @@ export const Reportes: React.FC = () => {
         {/* Gráfica 2: Horarios por laboratorio */}
         <Grid size={{ xs: 12, lg: 6 }}>
           <Paper sx={{ p: 2.5, borderRadius: 2, height: 420 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
               <Science color="primary" />
               <Typography variant="h6" sx={{ fontWeight: 600 }}>Horarios por Laboratorio</Typography>
             </Box>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+              {escuelaId
+                ? `${escuelas.find((e) => e.id === escuelaId)?.nombre ?? 'Escuela seleccionada'} · `
+                : 'Todas las escuelas · '}
               {mesInicio && mesFin ? `${mesInicio} → ${mesFin}` : 'Todos los períodos'}
             </Typography>
             {loading ? (

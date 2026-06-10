@@ -99,7 +99,7 @@ export async function getCostoPorEscuela(params, user) {
 }
 
 export async function getHorariosPorLaboratorio(params, user) {
-  const { laboratorio_id, mes_inicio, mes_fin } = params
+  const { laboratorio_id, escuela_id, mes_inicio, mes_fin } = params
   const labFilter = tieneRestriccionLaboratorio(user)
     ? buildLabFilter(user.laboratorio_ids)
     : ''
@@ -107,8 +107,8 @@ export async function getHorariosPorLaboratorio(params, user) {
   const fecha_hasta = mes_fin ? lastDayOfMonth(mes_fin) : null
 
   const { data, total_registros } = await Reporte.getHorariosPorLaboratorio(
-    { laboratorio_id, fecha_desde, fecha_hasta },
+    { laboratorio_id, escuela_id, fecha_desde, fecha_hasta },
     labFilter
   )
-  return { data, filtros: { laboratorio_id: laboratorio_id || null, mes_inicio: mes_inicio || null, mes_fin: mes_fin || null }, total_registros }
+  return { data, filtros: { laboratorio_id: laboratorio_id || null, escuela_id: escuela_id || null, mes_inicio: mes_inicio || null, mes_fin: mes_fin || null }, total_registros }
 }
