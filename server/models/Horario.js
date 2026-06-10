@@ -142,17 +142,19 @@ export const Horario = {
     getInsumosRequeridosByHorario: async (reserva_id) => {
         try {
         const [insumos] = await pool.execute(`
-            SELECT 
+            SELECT
               i.id,
               i.codigo,
               i.nombre,
               i.categoria,
               u.nombre as unidad_nombre,
               u.simbolo as unidad_simbolo,
-              dri.cantidad_usada
+              dri.cantidad_usada,
+              CAST(COALESCE(ip.precio, 0) AS DECIMAL(10,2)) as precio_unitario
             FROM detalle_reserva_insumos dri
             JOIN insumos i ON dri.insumo_id = i.id
             JOIN unidades u ON i.unidad_id = u.id
+            LEFT JOIN insumos_precios ip ON ip.insumo_id = i.id AND ip.vigente_hasta IS NULL
             WHERE dri.reserva_id = ?
             ORDER BY i.nombre
         `, [reserva_id])

@@ -339,6 +339,19 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                         </Typography>
                       )
                     }
+                    // Cálculo en centavos para evitar errores de punto flotante
+                    const toCents = (precio: number) => Math.round(precio * 100)
+                    const calcCostoCents = (precio: number, cantidad: number, g: number) =>
+                      toCents(precio) * cantidad * g
+                    const formatS = (cents: number) => `S/. ${(cents / 100).toFixed(2)}`
+
+                    const hayPrecios = items.some(i => i.precio_unitario && i.precio_unitario > 0)
+                    const totalCentsGeneral = hayPrecios
+                      ? items.reduce((acc, i) =>
+                          acc + (i.precio_unitario ? calcCostoCents(i.precio_unitario, i.cantidad_usada, grupos) : 0)
+                        , 0)
+                      : 0
+
                     const CATEGORY_ORDER = ['Reactivos', 'Materiales', 'Material_Biologico', 'Farmacos']
                     const CATEGORY_COLOR: Record<string, string> = {
                       Reactivos: '#ff9800',
@@ -362,50 +375,84 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                     ]
                     return (
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        {sortedCats.map(cat => (
-                          <Box key={cat}>
-                            <Chip
-                              label={CATEGORY_LABEL[cat] || cat}
-                              size="small"
-                              sx={{
-                                bgcolor: CATEGORY_COLOR[cat] || '#757575',
-                                color: 'white',
-                                fontWeight: 600,
-                                fontSize: '0.65rem',
-                                height: 18,
-                                mb: 1,
-                              }}
-                            />
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, pl: 1 }}>
-                              {grupos > 1 && (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                  <Typography variant="caption" sx={{ flex: 2 }} />
-                                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, flex: 1 }}>
-                                    Por Grupo
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, flex: 1 }}>
-                                    Total
-                                  </Typography>
-                                </Box>
-                              )}
-                              {[...grouped[cat]].sort((a, b) => a.nombre.localeCompare(b.nombre)).map(insumo => (
-                                <Box key={insumo.id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <Typography variant="body2" sx={{ fontWeight: 500, flex: 2 }}>
-                                    {insumo.nombre}
-                                  </Typography>
-                                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.primary', flex: 1 }}>
-                                    {insumo.cantidad_usada} {insumo.unidad_nombre || 'u.'}
-                                  </Typography>
-                                  {grupos > 1 && (
-                                    <Typography variant="caption" sx={{ fontWeight: 700, color: 'primary.main', flex: 1 }}>
-                                      {insumo.cantidad_usada * grupos} {insumo.unidad_nombre || 'u.'}
+                        {sortedCats.map(cat => {
+                          const catItems = grouped[cat]
+                          const catTienePrecios = catItems.some(i => i.precio_unitario && i.precio_unitario > 0)
+                          return (
+                            <Box key={cat}>
+                              <Chip
+                                label={CATEGORY_LABEL[cat] || cat}
+                                size="small"
+                                sx={{
+                                  bgcolor: CATEGORY_COLOR[cat] || '#757575',
+                                  color: 'white',
+                                  fontWeight: 600,
+                                  fontSize: '0.65rem',
+                                  height: 18,
+                                  mb: 1,
+                                }}
+                              />
+                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, pl: 1 }}>
+                                {/* Cabecera de columnas */}
+                                {(grupos > 1 || catTienePrecios) && (
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                    <Typography variant="caption" sx={{ flex: 2 }} />
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, flex: 1 }}>
+                                      {grupos > 1 ? 'Por Grupo' : 'Cantidad'}
                                     </Typography>
-                                  )}
-                                </Box>
-                              ))}
+                                    {grupos > 1 && (
+                                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, flex: 1 }}>
+                                        Total
+                                      </Typography>
+                                    )}
+                                    {catTienePrecios && (
+                                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, flex: 1 }}>
+                                        Costo
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                )}
+                                {[...catItems].sort((a, b) => a.nombre.localeCompare(b.nombre)).map(insumo => {
+                                  const precio = insumo.precio_unitario ?? 0
+                                  const costoCents = precio > 0
+                                    ? calcCostoCents(precio, insumo.cantidad_usada, grupos)
+                                    : 0
+                                  return (
+                                    <Box key={insumo.id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      <Typography variant="body2" sx={{ fontWeight: 500, flex: 2 }}>
+                                        {insumo.nombre}
+                                      </Typography>
+                                      <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.primary', flex: 1 }}>
+                                        {insumo.cantidad_usada} {insumo.unidad_nombre || 'u.'}
+                                      </Typography>
+                                      {grupos > 1 && (
+                                        <Typography variant="caption" sx={{ fontWeight: 700, color: 'primary.main', flex: 1 }}>
+                                          {insumo.cantidad_usada * grupos} {insumo.unidad_nombre || 'u.'}
+                                        </Typography>
+                                      )}
+                                      {catTienePrecios && (
+                                        <Typography variant="caption" sx={{ fontWeight: 700, color: 'success.main', flex: 1 }}>
+                                          {precio > 0 ? formatS(costoCents) : '—'}
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  )
+                                })}
+                              </Box>
                             </Box>
+                          )
+                        })}
+                        {/* Total general estimado */}
+                        {hayPrecios && (
+                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 1, borderTop: '1px dashed', borderColor: 'divider' }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>
+                              Costo estimado{grupos > 1 ? ` (${grupos} grupos)` : ''}:
+                            </Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 700, color: 'success.main' }}>
+                              {formatS(totalCentsGeneral)}
+                            </Typography>
                           </Box>
-                        ))}
+                        )}
                       </Box>
                     )
                   })()}

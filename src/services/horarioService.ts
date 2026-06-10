@@ -59,6 +59,7 @@ export interface InsumoHorario {
   categoria: string
   unidad_nombre: string
   cantidad_usada: number
+  precio_unitario?: number
 }
 
 export interface InsumoConsumido {

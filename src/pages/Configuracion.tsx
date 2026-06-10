@@ -20,6 +20,7 @@ import { DocenteForm } from '../components/Configuracion/Docentes/DocenteForm'
 import { CatalogoInsumosTable } from '../components/Configuracion/Insumos/CatalogoInsumosTable'
 import { InsumoForm } from '../components/Configuracion/Insumos/InsumoForm'
 import { ImportacionMasiva } from '../components/Configuracion/Insumos/ImportacionMasiva'
+import { PrecioInsumoModal } from '../components/Configuracion/Insumos/PrecioInsumoModal'
 import { LaboratoriosTable } from '../components/Configuracion/Laboratorios/LaboratoriosTable'
 import { LaboratorioForm } from '../components/Configuracion/Laboratorios/LaboratorioForm'
 import { UsuariosTable } from '../components/Configuracion/Usuarios/UsuariosTable'
@@ -95,6 +96,10 @@ export const Configuracion: React.FC = () => {
 
   //Importación masiva
   const [importacionMasivaOpen, setImportacionMasivaOpen] = useState(false)
+
+  // Precio de insumo
+  const [precioModalOpen, setPrecioModalOpen] = useState(false)
+  const [insumoParaPrecio, setInsumoParaPrecio] = useState<Insumo | null>(null)
 
 
   // Estado para Laboratorios
@@ -458,6 +463,16 @@ export const Configuracion: React.FC = () => {
       message: message || (editingInsumo ? 'Insumo actualizado exitosamente' : 'Insumo creado exitosamente'),
       severity: 'success'
     })
+  }
+
+  const handleSetPrecioInsumo = (insumo: Insumo) => {
+    setInsumoParaPrecio(insumo)
+    setPrecioModalOpen(true)
+  }
+
+  const handlePrecioSuccess = () => {
+    loadCatalogoInsumos()
+    setSnackbar({ open: true, message: 'Precio actualizado exitosamente', severity: 'success' })
   }
 
   const handleDeleteInsumoClick = (insumo: Insumo) => {
@@ -944,6 +959,7 @@ export const Configuracion: React.FC = () => {
                 insumos={insumos}
                 onEdit={handleEditInsumo}
                 onDelete={handleDeleteInsumoClick}
+                onSetPrecio={handleSetPrecioInsumo}
               />
             )}
           </Box>
@@ -1183,6 +1199,14 @@ export const Configuracion: React.FC = () => {
         itemName={insumoToDelete?.nombre || ''}
         itemType="el insumo"
         warningMessage="Esta acción no se puede deshacer. El insumo será eliminado permanentemente del catálogo."
+      />
+
+      {/* Modal de precio de insumo */}
+      <PrecioInsumoModal
+        open={precioModalOpen}
+        onClose={() => { setPrecioModalOpen(false); setInsumoParaPrecio(null) }}
+        onSuccess={handlePrecioSuccess}
+        insumo={insumoParaPrecio}
       />
 
       {/* Diálogo de confirmación de eliminación - Escuela */}

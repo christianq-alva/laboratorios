@@ -7,6 +7,8 @@ import {
   updateInsumo,
   deleteInsumo,
   getAllInsumos,
+  getPrecioInsumo,
+  setPrecioInsumo,
   generarPlantillaImportacion,
   previsualizarImportacionMasiva,
   importacionMasiva,
@@ -50,6 +52,20 @@ router.get('/list',
   authenticateToken,
   authorize('read', 'Insumo'),
   getAllInsumos
+)
+
+// Obtener precio e historial de un insumo
+router.get('/:id/precio',
+  authenticateToken,
+  authorize('read', 'Insumo'),
+  getPrecioInsumo
+)
+
+// Establecer nuevo precio de un insumo
+router.put('/:id/precio',
+  authenticateToken,
+  authorize('update', 'Insumo'),
+  setPrecioInsumo
 )
 
 //Generar plantilla Excel para importación masiva de insumos

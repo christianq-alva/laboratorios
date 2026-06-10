@@ -75,11 +75,61 @@ export const Insumo = {
     const conn = connection || pool
     try {
       const [rows] = await conn.execute(`
-        SELECT i.id, i.codigo, i.nombre, i.descripcion, i.categoria, i.presentacion, i.unidad_id, u.simbolo as unidad_simbolo, u.nombre as unidad_nombre
+        SELECT i.id, i.codigo, i.nombre, i.descripcion, i.categoria, i.presentacion, i.unidad_id,
+               u.simbolo as unidad_simbolo, u.nombre as unidad_nombre,
+               ip.precio as precio_unitario
         FROM insumos i
         LEFT JOIN unidades u ON i.unidad_id = u.id
+        LEFT JOIN insumos_precios ip ON ip.insumo_id = i.id AND ip.vigente_hasta IS NULL
         ORDER BY i.nombre
       `)
+      return rows
+    } catch (error) {
+      handleDBError(error, 'Insumo')
+    }
+  },
+
+  getPrecioActual: async (insumo_id, connection) => {
+    const conn = connection || pool
+    try {
+      const [rows] = await conn.execute(
+        'SELECT precio FROM insumos_precios WHERE insumo_id = ? AND vigente_hasta IS NULL LIMIT 1',
+        [insumo_id]
+      )
+      return rows[0] ? parseFloat(rows[0].precio) : null
+    } catch (error) {
+      handleDBError(error, 'Insumo')
+    }
+  },
+
+  setPrecio: async (insumo_id, precio, usuario_id, connection) => {
+    const conn = connection || pool
+    try {
+      await conn.execute(
+        'UPDATE insumos_precios SET vigente_hasta = NOW() WHERE insumo_id = ? AND vigente_hasta IS NULL',
+        [insumo_id]
+      )
+      await conn.execute(
+        'INSERT INTO insumos_precios (insumo_id, precio, usuario_id) VALUES (?, ?, ?)',
+        [insumo_id, precio, usuario_id || null]
+      )
+      return true
+    } catch (error) {
+      handleDBError(error, 'Insumo')
+    }
+  },
+
+  getHistorialPrecios: async (insumo_id, connection) => {
+    const conn = connection || pool
+    try {
+      const [rows] = await conn.execute(`
+        SELECT ip.id, ip.precio, ip.vigente_desde, ip.vigente_hasta, ip.created_at,
+               u.nombre as usuario_nombre
+        FROM insumos_precios ip
+        LEFT JOIN usuarios u ON ip.usuario_id = u.id
+        WHERE ip.insumo_id = ?
+        ORDER BY ip.vigente_desde DESC
+      `, [insumo_id])
       return rows
     } catch (error) {
       handleDBError(error, 'Insumo')

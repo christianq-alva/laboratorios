@@ -58,6 +58,47 @@ export const deleteInsumo = async (req, res, next) => {
     next(error)
   }
 }
+// Obtener precio e historial de un insumo
+export const getPrecioInsumo = async (req, res, next) => {
+  try {
+    const { id: insumoId } = req.params
+    const exists = await Insumo.existsById(insumoId)
+    if (!exists) throw new AppError('Insumo no encontrado', 404)
+
+    const historial = await Insumo.getHistorialPrecios(insumoId)
+    const precioActual = historial.find(h => h.vigente_hasta === null)?.precio ?? null
+
+    res.status(200).json({
+      success: true,
+      data: { precio_actual: precioActual !== null ? parseFloat(precioActual) : null, historial }
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+// Establecer nuevo precio para un insumo
+export const setPrecioInsumo = async (req, res, next) => {
+  try {
+    const { id: insumoId } = req.params
+    const { precio } = req.body
+
+    const precioNum = Number(precio)
+    if (precio === undefined || precio === null || isNaN(precioNum) || precioNum < 0) {
+      throw new AppError('El precio debe ser un número mayor o igual a 0', 400)
+    }
+
+    const exists = await Insumo.existsById(insumoId)
+    if (!exists) throw new AppError('Insumo no encontrado', 404)
+
+    await Insumo.setPrecio(insumoId, precioNum.toFixed(2), req.user.userId)
+
+    res.status(200).json({ success: true, message: 'Precio actualizado exitosamente' })
+  } catch (error) {
+    next(error)
+  }
+}
+
 // Obtener todos los insumos
 export const getAllInsumos = async (req, res, next) => {
   try {

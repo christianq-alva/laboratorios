@@ -14,7 +14,8 @@ import {
   TextField,
   IconButton
 } from '@mui/material'
-import { LibraryBooks, Search, Clear } from '@mui/icons-material'
+
+import { LibraryBooks, Search, Clear, AttachMoney } from '@mui/icons-material'
 import type { Insumo } from '../../../services/insumoService'
 import { ActionMenu } from '../Common/ActionMenu'
 
@@ -22,12 +23,14 @@ interface CatalogoInsumosTableProps {
   insumos: Insumo[]
   onEdit: (insumo: Insumo) => void
   onDelete: (insumo: Insumo) => void
+  onSetPrecio: (insumo: Insumo) => void
 }
 
 export const CatalogoInsumosTable: React.FC<CatalogoInsumosTableProps> = ({
   insumos,
   onEdit,
-  onDelete
+  onDelete,
+  onSetPrecio
 }) => {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
@@ -146,6 +149,7 @@ export const CatalogoInsumosTable: React.FC<CatalogoInsumosTableProps> = ({
             <TableCell sx={{ color: 'white', fontWeight: 600 }}>Categoría</TableCell>
             <TableCell sx={{ color: 'white', fontWeight: 600 }}>Unidad</TableCell>
             <TableCell sx={{ color: 'white', fontWeight: 600 }}>Presentación</TableCell>
+            <TableCell sx={{ color: 'white', fontWeight: 600 }}>Precio</TableCell>
             <TableCell sx={{ color: 'white', fontWeight: 600 }} align="center">
               Acciones
             </TableCell>
@@ -210,10 +214,31 @@ export const CatalogoInsumosTable: React.FC<CatalogoInsumosTableProps> = ({
               </TableCell>
               <TableCell>{`${insumo.unidad_nombre} (${insumo.unidad_simbolo})` || '-'}</TableCell>
               <TableCell>{insumo.presentacion || '-'}</TableCell>
+              <TableCell>
+                {insumo.precio_unitario != null
+                  ? <Chip
+                      label={`S/. ${Number(insumo.precio_unitario).toFixed(2)}`}
+                      size="small"
+                      color="success"
+                      variant="outlined"
+                      sx={{ fontWeight: 600 }}
+                    />
+                  : <Typography variant="caption" color="text.secondary">—</Typography>
+                }
+              </TableCell>
               <TableCell align="center">
                 <ActionMenu
                   onEdit={() => onEdit(insumo)}
                   onDelete={() => onDelete(insumo)}
+                  sections={[{
+                    label: 'Precio',
+                    items: [{
+                      label: 'Configurar precio',
+                      icon: <AttachMoney fontSize="small" />,
+                      onClick: () => onSetPrecio(insumo),
+                      color: 'success'
+                    }]
+                  }]}
                 />
               </TableCell>
             </TableRow>

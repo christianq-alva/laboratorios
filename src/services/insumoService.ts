@@ -11,6 +11,16 @@ export interface Insumo {
   unidad_nombre?: string
   categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico' | 'Farmacos'
   presentacion: string
+  precio_unitario?: number | null
+}
+
+export interface PrecioHistorial {
+  id: number
+  precio: number
+  vigente_desde: string
+  vigente_hasta: string | null
+  created_at: string
+  usuario_nombre: string | null
 }
 
 export const insumoService = {
@@ -47,6 +57,18 @@ export const insumoService = {
   //Obtener listado de insumos 
   getAllInsumos: async (): Promise<ApiDataResponse<Insumo[]>> => {
     const response = await api.get('/insumos/list')
+    return response.data
+  },
+
+  // Obtener precio actual e historial de un insumo
+  getPrecio: async (id: number): Promise<{ precio_actual: number | null; historial: PrecioHistorial[] }> => {
+    const response = await api.get(`/insumos/${id}/precio`)
+    return response.data.data
+  },
+
+  // Establecer nuevo precio para un insumo
+  setPrecio: async (id: number, precio: number): Promise<ApiMessageResponse> => {
+    const response = await api.put(`/insumos/${id}/precio`, { precio })
     return response.data
   },
 
