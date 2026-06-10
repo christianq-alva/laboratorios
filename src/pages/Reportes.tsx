@@ -143,7 +143,7 @@ export const Reportes: React.FC = () => {
       {/* Filtros */}
       <Paper sx={{ p: 2.5, mb: 3, borderRadius: 2 }}>
         <Grid container spacing={2} alignItems="flex-end">
-          <Grid item xs={12} sm={4} md={3}>
+          <Grid size={{ xs: 12, sm: 4, md: 3 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Escuela</InputLabel>
               <Select
@@ -158,7 +158,7 @@ export const Reportes: React.FC = () => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={6} sm={3} md={2}>
+          <Grid size={{ xs: 6, sm: 3, md: 2 }}>
             <TextField
               label="Mes inicio"
               type="month"
@@ -169,7 +169,7 @@ export const Reportes: React.FC = () => {
               InputLabelProps={{ shrink: true }}
             />
           </Grid>
-          <Grid item xs={6} sm={3} md={2}>
+          <Grid size={{ xs: 6, sm: 3, md: 2 }}>
             <TextField
               label="Mes fin"
               type="month"
@@ -180,7 +180,7 @@ export const Reportes: React.FC = () => {
               InputLabelProps={{ shrink: true }}
             />
           </Grid>
-          <Grid item xs={12} sm={2} md={2}>
+          <Grid size={{ xs: 12, sm: 2, md: 2 }}>
             <Button
               variant="contained"
               fullWidth
@@ -296,7 +296,7 @@ export const Reportes: React.FC = () => {
       {/* Gráficas */}
       <Grid container spacing={3}>
         {/* Gráfica 1: Costo por escuela */}
-        <Grid item xs={12} lg={6}>
+        <Grid size={{ xs: 12, lg: 6 }}>
           <Paper sx={{ p: 2.5, borderRadius: 2, height: 420 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <AttachMoney color="success" />
@@ -346,7 +346,7 @@ export const Reportes: React.FC = () => {
         </Grid>
 
         {/* Gráfica 2: Horarios por laboratorio */}
-        <Grid item xs={12} lg={6}>
+        <Grid size={{ xs: 12, lg: 6 }}>
           <Paper sx={{ p: 2.5, borderRadius: 2, height: 420 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <Science color="primary" />
