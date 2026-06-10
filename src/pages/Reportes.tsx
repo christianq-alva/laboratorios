@@ -30,7 +30,7 @@ import {
   Checkbox,
   LinearProgress,
 } from '@mui/material'
-import { Search, Assessment, AttachMoney, Science, Download } from '@mui/icons-material'
+import { Search, Assessment, AttachMoney, Science, Download, FilterList, Clear } from '@mui/icons-material'
 import * as XLSX from 'xlsx'
 import {
   BarChart,
@@ -96,6 +96,21 @@ export const Reportes: React.FC = () => {
   const [exportEscuelas, setExportEscuelas] = useState<number[]>([])
   const [exportLoading, setExportLoading] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
+
+  // Número de filtros activos (sin contar defaults de mes)
+  const activeFiltersCount = [
+    escuelaId !== '',
+    laboratorioId !== '',
+    mesInicio !== firstMonthOfYear(),
+    mesFin !== currentMonth(),
+  ].filter(Boolean).length
+
+  const handleClearFilters = () => {
+    setEscuelaId('')
+    setLaboratorioId('')
+    setMesInicio(firstMonthOfYear())
+    setMesFin(currentMonth())
+  }
 
   const openExportDialog = () => {
     setExportMesInicio(mesInicio || firstMonthOfYear())
@@ -245,9 +260,33 @@ export const Reportes: React.FC = () => {
       </Box>
 
       {/* Filtros */}
-      <Paper sx={{ p: 2.5, mb: 3, borderRadius: 2 }}>
-        <Grid container spacing={2} alignItems="flex-end">
-          <Grid size={{ xs: 12, sm: 4, md: 3 }}>
+      <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }}>
+        {/* Cabecera de filtros */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            <FilterList fontSize="small" sx={{ color: 'text.secondary' }} />
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+              Filtros
+            </Typography>
+            {activeFiltersCount > 0 && (
+              <Chip label={activeFiltersCount} size="small" color="primary" sx={{ height: 18, fontSize: 11, '.MuiChip-label': { px: 0.75 } }} />
+            )}
+          </Box>
+          {activeFiltersCount > 0 && (
+            <Button
+              size="small"
+              startIcon={<Clear sx={{ fontSize: '14px !important' }} />}
+              onClick={handleClearFilters}
+              sx={{ color: 'text.secondary', fontSize: 12, py: 0, minWidth: 0, textTransform: 'none' }}
+            >
+              Limpiar
+            </Button>
+          )}
+        </Box>
+
+        <Grid container spacing={1.5} alignItems="flex-end">
+          {/* Laboratorio */}
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Laboratorio</InputLabel>
               <Select
@@ -255,14 +294,16 @@ export const Reportes: React.FC = () => {
                 label="Laboratorio"
                 onChange={(e) => setLaboratorioId(e.target.value as number | '')}
               >
-                <MenuItem value=""><em>Todos los laboratorios</em></MenuItem>
+                <MenuItem value=""><em>Todos</em></MenuItem>
                 {laboratorios.map((l) => (
                   <MenuItem key={l.id} value={l.id}>{l.nombre}</MenuItem>
                 ))}
               </Select>
             </FormControl>
           </Grid>
-          <Grid size={{ xs: 12, sm: 4, md: 3 }}>
+
+          {/* Escuela */}
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Escuela</InputLabel>
               <Select
@@ -270,57 +311,50 @@ export const Reportes: React.FC = () => {
                 label="Escuela"
                 onChange={(e) => setEscuelaId(e.target.value as number | '')}
               >
-                <MenuItem value=""><em>Todas las escuelas</em></MenuItem>
+                <MenuItem value=""><em>Todas</em></MenuItem>
                 {escuelas.map((e) => (
                   <MenuItem key={e.id} value={e.id}>{e.nombre}</MenuItem>
                 ))}
               </Select>
             </FormControl>
           </Grid>
-          <Grid size={{ xs: 6, sm: 3, md: 2 }}>
-            <TextField
-              label="Mes inicio"
-              type="month"
-              size="small"
-              fullWidth
-              value={mesInicio}
-              onChange={(e) => setMesInicio(e.target.value)}
-              slotProps={{ inputLabel: { shrink: true } }}
-            />
+
+          {/* Rango de meses agrupado */}
+          <Grid size={{ xs: 12, sm: 8, md: 4 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <TextField
+                label="Desde"
+                type="month"
+                size="small"
+                fullWidth
+                value={mesInicio}
+                onChange={(e) => setMesInicio(e.target.value)}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+              <Typography variant="body2" color="text.disabled" sx={{ flexShrink: 0, userSelect: 'none' }}>—</Typography>
+              <TextField
+                label="Hasta"
+                type="month"
+                size="small"
+                fullWidth
+                value={mesFin}
+                onChange={(e) => setMesFin(e.target.value)}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+            </Box>
           </Grid>
-          <Grid size={{ xs: 6, sm: 3, md: 2 }}>
-            <TextField
-              label="Mes fin"
-              type="month"
-              size="small"
-              fullWidth
-              value={mesFin}
-              onChange={(e) => setMesFin(e.target.value)}
-              slotProps={{ inputLabel: { shrink: true } }}
-            />
-          </Grid>
-          <Grid size={{ xs: 6, sm: 2, md: 2 }}>
+
+          {/* Buscar */}
+          <Grid size={{ xs: 12, sm: 4, md: 2 }}>
             <Button
               variant="contained"
               fullWidth
-              startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <Search />}
+              startIcon={loading ? <CircularProgress size={15} color="inherit" /> : <Search />}
               onClick={fetchData}
               disabled={loading}
               sx={{ height: 40 }}
             >
-              {loading ? 'Cargando...' : 'Buscar'}
-            </Button>
-          </Grid>
-          <Grid size={{ xs: 6, sm: 2, md: 2 }}>
-            <Button
-              variant="outlined"
-              fullWidth
-              startIcon={<Download />}
-              onClick={openExportDialog}
-              disabled={loading}
-              sx={{ height: 40 }}
-            >
-              Exportar
+              {loading ? 'Buscando…' : 'Buscar'}
             </Button>
           </Grid>
         </Grid>
@@ -346,11 +380,21 @@ export const Reportes: React.FC = () => {
 
       {/* Tabla */}
       <Paper sx={{ borderRadius: 2, mb: 4 }}>
-        <Box sx={{ px: 2.5, pt: 2, pb: 1 }}>
+        <Box sx={{ px: 2.5, pt: 2, pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
             <Science fontSize="small" color="primary" />
             Detalle de Horarios
           </Typography>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<Download fontSize="small" />}
+            onClick={openExportDialog}
+            disabled={loading}
+            sx={{ textTransform: 'none' }}
+          >
+            Exportar Excel
+          </Button>
         </Box>
         <TableContainer>
           <Table size="small">
