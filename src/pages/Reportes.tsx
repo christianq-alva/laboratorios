@@ -42,6 +42,8 @@ import {
 } from '../services/reporteService'
 import { escuelaService } from '../services/escuelaService'
 import type { Escuela } from '../services/escuelaService'
+import { laboratorioService } from '../services/laboratorioService'
+import type { Laboratorio } from '../services/laboratorioService'
 import dayjs from 'dayjs'
 
 const CHART_COLORS = [
@@ -61,11 +63,13 @@ const threeMonthsAgo = () => dayjs().subtract(2, 'month').format('YYYY-MM')
 export const Reportes: React.FC = () => {
   // ── Filtros ──
   const [escuelaId, setEscuelaId] = useState<number | ''>('')
+  const [laboratorioId, setLaboratorioId] = useState<number | ''>('')
   const [mesInicio, setMesInicio] = useState(threeMonthsAgo())
   const [mesFin, setMesFin] = useState(currentMonth())
 
   // ── Data ──
   const [escuelas, setEscuelas] = useState<Escuela[]>([])
+  const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
   const [horarios, setHorarios] = useState<HorarioCosto[]>([])
   const [costosPorEscuela, setCostosPorEscuela] = useState<CostoPorEscuela[]>([])
   const [horariosPorLab, setHorariosPorLab] = useState<HorariosPorLaboratorio[]>([])
@@ -78,6 +82,7 @@ export const Reportes: React.FC = () => {
 
   useEffect(() => {
     escuelaService.getAll().then((res) => setEscuelas(res.data ?? []))
+    laboratorioService.getAll().then((res) => setLaboratorios(res.data ?? []))
   }, [])
 
   const fetchData = useCallback(async () => {
@@ -85,6 +90,7 @@ export const Reportes: React.FC = () => {
     setError(null)
     try {
       const filtros = {
+        laboratorio_id: laboratorioId || undefined,
         mes_inicio: mesInicio || undefined,
         mes_fin: mesFin || undefined,
       }
@@ -101,7 +107,7 @@ export const Reportes: React.FC = () => {
       setError('Error al cargar los reportes. Verifica la conexión al servidor.')
     }
     setLoading(false)
-  }, [escuelaId, mesInicio, mesFin])
+  }, [escuelaId, laboratorioId, mesInicio, mesFin])
 
   useEffect(() => {
     fetchData()
@@ -145,6 +151,21 @@ export const Reportes: React.FC = () => {
         <Grid container spacing={2} alignItems="flex-end">
           <Grid size={{ xs: 12, sm: 4, md: 3 }}>
             <FormControl fullWidth size="small">
+              <InputLabel>Laboratorio</InputLabel>
+              <Select
+                value={laboratorioId}
+                label="Laboratorio"
+                onChange={(e) => setLaboratorioId(e.target.value as number | '')}
+              >
+                <MenuItem value=""><em>Todos los laboratorios</em></MenuItem>
+                {laboratorios.map((l) => (
+                  <MenuItem key={l.id} value={l.id}>{l.nombre}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4, md: 3 }}>
+            <FormControl fullWidth size="small">
               <InputLabel>Escuela</InputLabel>
               <Select
                 value={escuelaId}
@@ -166,7 +187,7 @@ export const Reportes: React.FC = () => {
               fullWidth
               value={mesInicio}
               onChange={(e) => setMesInicio(e.target.value)}
-              InputLabelProps={{ shrink: true }}
+              slotProps={{ inputLabel: { shrink: true } }}
             />
           </Grid>
           <Grid size={{ xs: 6, sm: 3, md: 2 }}>
@@ -177,7 +198,7 @@ export const Reportes: React.FC = () => {
               fullWidth
               value={mesFin}
               onChange={(e) => setMesFin(e.target.value)}
-              InputLabelProps={{ shrink: true }}
+              slotProps={{ inputLabel: { shrink: true } }}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 2, md: 2 }}>

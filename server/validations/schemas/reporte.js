@@ -4,15 +4,17 @@ const mesSchema = z.string()
   .regex(/^\d{4}-\d{2}$/, 'El mes debe estar en formato YYYY-MM')
   .optional()
 
-const escuelaIdSchema = z.string()
-  .regex(/^\d+$/, 'ID de escuela debe ser un número')
-  .transform((val) => parseInt(val, 10))
-  .refine((val) => val > 0, 'ID de escuela debe ser mayor a 0')
-  .optional()
+const entidadIdSchema = (nombre) =>
+  z.string()
+    .regex(/^\d+$/, `ID de ${nombre} debe ser un número`)
+    .transform((val) => parseInt(val, 10))
+    .refine((val) => val > 0, `ID de ${nombre} debe ser mayor a 0`)
+    .optional()
 
 export const getHorariosConCostoSchema = z.object({
   query: z.object({
-    escuela_id: escuelaIdSchema,
+    escuela_id: entidadIdSchema('escuela'),
+    laboratorio_id: entidadIdSchema('laboratorio'),
     mes_inicio: mesSchema,
     mes_fin: mesSchema,
   })
@@ -20,6 +22,7 @@ export const getHorariosConCostoSchema = z.object({
 
 export const getCostoPorEscuelaSchema = z.object({
   query: z.object({
+    laboratorio_id: entidadIdSchema('laboratorio'),
     mes_inicio: mesSchema,
     mes_fin: mesSchema,
   })
@@ -27,6 +30,7 @@ export const getCostoPorEscuelaSchema = z.object({
 
 export const getHorariosPorLaboratorioSchema = z.object({
   query: z.object({
+    laboratorio_id: entidadIdSchema('laboratorio'),
     mes_inicio: mesSchema,
     mes_fin: mesSchema,
   })

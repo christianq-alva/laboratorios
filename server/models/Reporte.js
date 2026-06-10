@@ -169,7 +169,7 @@ export const Reporte = {
   },
 
   getHorariosConCosto: async (params, labFilter = '') => {
-    const { escuela_id, fecha_desde, fecha_hasta } = params
+    const { escuela_id, laboratorio_id, fecha_desde, fecha_hasta } = params
     try {
       let query = `
         SELECT
@@ -206,6 +206,10 @@ export const Reporte = {
         query += ' AND r.escuela_id = ?'
         queryParams.push(escuela_id)
       }
+      if (laboratorio_id) {
+        query += ' AND r.laboratorio_id = ?'
+        queryParams.push(laboratorio_id)
+      }
       if (fecha_desde) {
         query += ' AND DATE(r.fecha_inicio) >= ?'
         queryParams.push(fecha_desde)
@@ -227,7 +231,7 @@ export const Reporte = {
   },
 
   getCostoPorEscuela: async (params, labFilter = '') => {
-    const { fecha_desde, fecha_hasta } = params
+    const { laboratorio_id, fecha_desde, fecha_hasta } = params
     try {
       let query = `
         SELECT
@@ -247,6 +251,10 @@ export const Reporte = {
       `
       const queryParams = []
 
+      if (laboratorio_id) {
+        query += ' AND r.laboratorio_id = ?'
+        queryParams.push(laboratorio_id)
+      }
       if (fecha_desde) {
         query += ' AND DATE(r.fecha_inicio) >= ?'
         queryParams.push(fecha_desde)
@@ -267,7 +275,7 @@ export const Reporte = {
   },
 
   getHorariosPorLaboratorio: async (params, labFilter = '') => {
-    const { fecha_desde, fecha_hasta } = params
+    const { laboratorio_id, fecha_desde, fecha_hasta } = params
     try {
       let query = `
         SELECT
@@ -282,6 +290,10 @@ export const Reporte = {
       `
       const queryParams = []
 
+      if (laboratorio_id) {
+        query += ' AND r.laboratorio_id = ?'
+        queryParams.push(laboratorio_id)
+      }
       if (fecha_desde) {
         query += ' AND DATE(r.fecha_inicio) >= ?'
         queryParams.push(fecha_desde)
