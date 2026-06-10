@@ -43,9 +43,9 @@ export const PrecioInsumoModal: React.FC<PrecioInsumoModalProps> = ({
 
   useEffect(() => {
     if (open && insumo) {
-      loadPrecio()
       setNuevoPrecio('')
       setError(null)
+      loadPrecio()
     }
   }, [open, insumo])
 

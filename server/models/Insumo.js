@@ -124,7 +124,7 @@ export const Insumo = {
     try {
       const [rows] = await conn.execute(`
         SELECT ip.id, ip.precio, ip.vigente_desde, ip.vigente_hasta, ip.created_at,
-               u.nombre as usuario_nombre
+               u.nombre_completo as usuario_nombre
         FROM insumos_precios ip
         LEFT JOIN usuarios u ON ip.usuario_id = u.id
         WHERE ip.insumo_id = ?
