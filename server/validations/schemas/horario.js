@@ -89,6 +89,10 @@ export const createHorarioSchema = z.object({
         color: z.string()
             .regex(/^#[0-9A-Fa-f]{6}$/, 'El color debe estar en formato hexadecimal (#RRGGBB)')
             .default('#4ecdc4'),
+        num_grupos: z.number()
+            .int('El número de grupos debe ser un entero')
+            .min(1, 'El número de grupos debe ser al menos 1')
+            .default(1),
         insumos: z.array(
             z.object({
                 insumo_id: z.number()
@@ -155,6 +159,11 @@ export const updateHorarioSchema = z.object({
             .regex(/^#[0-9A-Fa-f]{6}$/, 'El color debe estar en formato hexadecimal (#RRGGBB)')
             .optional()
             .default('#4ecdc4'),
+        num_grupos: z.number()
+            .int('El número de grupos debe ser un entero')
+            .min(1, 'El número de grupos debe ser al menos 1')
+            .optional()
+            .default(1),
         insumos: z.array(
             z.object({
                 insumo_id: z.number()

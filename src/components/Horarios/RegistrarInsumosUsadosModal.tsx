@@ -50,6 +50,7 @@ interface RegistrarInsumosUsadosModalProps {
   horarioId: number
   laboratorioId: number
   fecha: string
+  numGrupos?: number
 }
 
 // Tabs
@@ -78,7 +79,8 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
   onSuccess,
   horarioId,
   laboratorioId,
-  fecha
+  fecha,
+  numGrupos = 1
 }) => {
   const { execute } = useApi()
   const [tabValue, setTabValue] = useState(0)
@@ -163,17 +165,18 @@ export const RegistrarInsumosUsadosModal: React.FC<RegistrarInsumosUsadosModalPr
       return
     }
 
+    const cantidadTotal = insumo.cantidad_usada * numGrupos
     const nuevoInsumo: InsumoUsado = {
       id: insumo.id,
       nombre: insumo.nombre,
       codigo: insumo.codigo,
       categoria: insumo.categoria,
       unidad_nombre: insumo.unidad_nombre,
-      cantidad_usada: insumo.cantidad_usada,
+      cantidad_usada: cantidadTotal,
       stock_disponible: insumoDisponible.stock_disponible,
       registrosLotes: [{
         id: primerLote.detalle_id,
-        cantidad: insumo.cantidad_usada
+        cantidad: cantidadTotal
       }],
       lotesDisponibles: lotesDisponibles
     }

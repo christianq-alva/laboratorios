@@ -33,6 +33,7 @@ export interface HorarioSimple {
   fecha_inicio: string
   fecha_fin: string
   cantidad_alumnos?: number
+  num_grupos: number
   color?: string
   laboratorio?: string
   docente?: string
@@ -106,6 +107,7 @@ export interface CreateHorarioData {
   fecha_inicio: string
   fecha_fin: string
   cantidad_alumnos?: number
+  num_grupos?: number
   color?: string
   insumos?: Array<{
     insumo_id: number

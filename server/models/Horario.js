@@ -105,6 +105,7 @@ export const Horario = {
           r.fecha_inicio,
           r.fecha_fin,
           r.cantidad_alumnos,
+          r.num_grupos,
           r.estado,
           r.tiene_consumo_insumos,
           r.created_at as fecha_creacion,
@@ -345,12 +346,12 @@ export const Horario = {
         }
     },
 
-    createHorario: async (laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, connection) => {
+    createHorario: async (laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, num_grupos, connection) => {
         try {
         const [result] = await connection.execute(`
-        INSERT INTO reservas (laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos, color) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color])
+        INSERT INTO reservas (laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos, color, num_grupos)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, num_grupos])
 
         return result.insertId;
         } catch (error) {
@@ -378,13 +379,13 @@ export const Horario = {
             handleDBError(error, 'Horario')
         }
     },
-    updateHorario: async (laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, reserva_id, connection) => {
+    updateHorario: async (laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, num_grupos, reserva_id, connection) => {
         try {
         await connection.execute(`
-        UPDATE reservas 
-        SET laboratorio_id = ?, docente_id = ?, escuela_id = ?, ciclo_id = ?, descripcion = ?, fecha_inicio = ?, fecha_fin = ?, cantidad_alumnos = ?, color = ?
+        UPDATE reservas
+        SET laboratorio_id = ?, docente_id = ?, escuela_id = ?, ciclo_id = ?, descripcion = ?, fecha_inicio = ?, fecha_fin = ?, cantidad_alumnos = ?, color = ?, num_grupos = ?
         WHERE id = ?
-      `, [laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, reserva_id])
+      `, [laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, num_grupos, reserva_id])
         } catch (error) {
             handleDBError(error, 'Horario')
         }

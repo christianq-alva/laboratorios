@@ -178,6 +178,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
   const [insumosSeleccionados, setInsumosSeleccionados] = useState<InsumoSeleccionado[]>([])
   const [equiposDisponibles, setEquiposDisponibles] = useState<Equipo[]>([])
   const [equiposSeleccionados, setEquiposSeleccionados] = useState<EquipoSeleccionado[]>([])
+  const [numGrupos, setNumGrupos] = useState(1)
 
   // Estados de carga y errores
   const [loading, setLoading] = useState(false)
@@ -292,6 +293,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       cantidad_alumnos: horarioData.cantidad_alumnos || 1,
       color: horarioData.color || '#4ecdc4',
     })
+    setNumGrupos(horarioData.num_grupos || 1)
 
     // Cargar insumos y equipos del laboratorio si ya está seleccionado
     if (horarioData.laboratorio_id) {
@@ -338,6 +340,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     setEndBlockId('')
     setInsumosSeleccionados([])
     setEquiposSeleccionados([])
+    setNumGrupos(1)
     setConflictos([])
     setError(null)
 
@@ -519,8 +522,9 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       descripcion: formData.descripcion.trim(),
       fecha_inicio: fechaInicio,
       fecha_fin: fechaFin,
-      cantidad_alumnos: formData.cantidad_alumnos || 1, // Asegurar valor por defecto
-      color: formData.color || '#4ecdc4', // Incluir color seleccionado
+      cantidad_alumnos: formData.cantidad_alumnos || 1,
+      color: formData.color || '#4ecdc4',
+      num_grupos: numGrupos,
       insumos: insumosSeleccionados.map(i => ({
         insumo_id: i.insumo_id,
         cantidad: i.cantidad
@@ -747,7 +751,7 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                     disabled={loading}
                   />
 
-                  {/* Fila con cantidad de alumnos y color */}
+                  {/* Fila con cantidad de alumnos, grupos y color */}
                   <Box sx={{ display: 'flex', gap: 2 }}>
                     <TextField
                       type="number"
@@ -757,6 +761,16 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                       disabled={loading}
                       inputProps={{ min: 1, max: 100 }}
                       helperText="Número estimado de estudiantes"
+                      sx={{ flex: 1 }}
+                    />
+                    <TextField
+                      type="number"
+                      label="Grupos"
+                      value={numGrupos}
+                      onChange={(e) => setNumGrupos(Math.max(1, parseInt(e.target.value) || 1))}
+                      disabled={loading}
+                      inputProps={{ min: 1, max: 50 }}
+                      helperText="Grupos para calcular insumos"
                       sx={{ flex: 1 }}
                     />
 
@@ -1280,10 +1294,15 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                     flexDirection: 'column',
                     overflow: 'hidden'
                   }}>
-                    <Box sx={{ p: 2, backgroundColor: '#f0fff4', borderBottom: '1px solid #e0e0e0' }}>
+                    <Box sx={{ p: 2, backgroundColor: '#f0fff4', borderBottom: '1px solid #e0e0e0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'success.main' }}>
                         Seleccionados ({insumosSeleccionados.length})
                       </Typography>
+                      {numGrupos > 1 && (
+                        <Typography variant="caption" color="text.secondary">
+                          Cantidad ingresada = por grupo × {numGrupos}
+                        </Typography>
+                      )}
                     </Box>
                     <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
                       <List dense>

@@ -65,7 +65,7 @@ export const horarioService = {
   },
 
   async crearReserva(datos, insumos, equipos, usuario_id, ip_address) {
-    const { laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos, color } = datos
+    const { laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos, color, num_grupos = 1 } = datos
     const escuelaInfo = await Escuela.getById(escuela_id)
     if (!escuelaInfo) throw new AppError('La escuela seleccionada no existe', 404)
     const cicloInfo = await Ciclo.getById(ciclo_id)
@@ -87,7 +87,7 @@ export const horarioService = {
       await connection.beginTransaction()
       const reserva_id = await Horario.createHorario(
         laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion,
-        fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, connection
+        fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, num_grupos, connection
       )
       if (insumos && insumos.length > 0) {
         await Horario.createHorarioInsumos(reserva_id, insumos, connection)
@@ -114,7 +114,7 @@ export const horarioService = {
   },
 
   async actualizarReserva(horarioId, datos, insumos, equipos, usuario_id, ip_address) {
-    const { laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos = 1, color = '#4ecdc4' } = datos
+    const { laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos = 1, color = '#4ecdc4', num_grupos = 1 } = datos
     const escuelaInfo = await Escuela.getById(escuela_id)
     if (!escuelaInfo) throw new AppError('La escuela seleccionada no existe', 404)
     const cicloInfo = await Ciclo.getById(ciclo_id)
@@ -142,7 +142,7 @@ export const horarioService = {
       await Horario.deleteHorarioEquipos(horarioId, connection)
       await Horario.updateHorario(
         laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion,
-        fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, horarioId, connection
+        fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, num_grupos, horarioId, connection
       )
       if (insumos && insumos.length > 0) {
         await Horario.createHorarioInsumos(horarioId, insumos, connection)

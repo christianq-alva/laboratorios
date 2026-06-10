@@ -61,11 +61,12 @@ export const createHorario = async (req, res, next) => {
       fecha_fin,
       cantidad_alumnos,
       color = '#4ecdc4',
+      num_grupos = 1,
       insumos = [],
       equipos = []
     } = req.body
     const result = await horarioService.crearReserva(
-      { laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos, color },
+      { laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos, color, num_grupos },
       insumos,
       equipos,
       req.user.userId,
@@ -98,12 +99,13 @@ export const updateHorario = async (req, res, next) => {
       fecha_fin,
       cantidad_alumnos = 1,
       color = '#4ecdc4',
+      num_grupos = 1,
       insumos = [],
       equipos = []
     } = req.body
     const result = await horarioService.actualizarReserva(
       horarioId,
-      { laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos, color },
+      { laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos, color, num_grupos },
       insumos,
       equipos,
       req.user.userId,
