@@ -21,8 +21,17 @@ import {
   Grid,
   Divider,
   TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
+  LinearProgress,
 } from '@mui/material'
-import { Search, Assessment, AttachMoney, Science } from '@mui/icons-material'
+import { Search, Assessment, AttachMoney, Science, Download } from '@mui/icons-material'
+import * as XLSX from 'xlsx'
 import {
   BarChart,
   Bar,
@@ -79,6 +88,95 @@ export const Reportes: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
+
+  // ── Export dialog state ──
+  const [exportOpen, setExportOpen] = useState(false)
+  const [exportMesInicio, setExportMesInicio] = useState(firstMonthOfYear())
+  const [exportMesFin, setExportMesFin] = useState(currentMonth())
+  const [exportEscuelas, setExportEscuelas] = useState<number[]>([])
+  const [exportLoading, setExportLoading] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
+
+  const openExportDialog = () => {
+    setExportMesInicio(mesInicio || firstMonthOfYear())
+    setExportMesFin(mesFin || currentMonth())
+    setExportEscuelas(escuelas.map((e) => e.id))
+    setExportError(null)
+    setExportOpen(true)
+  }
+
+  const toggleEscuela = (id: number) => {
+    setExportEscuelas((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    )
+  }
+
+  const handleExport = async () => {
+    if (exportEscuelas.length === 0) {
+      setExportError('Selecciona al menos una escuela.')
+      return
+    }
+    setExportLoading(true)
+    setExportError(null)
+    try {
+      const wb = XLSX.utils.book_new()
+      const selectedEscuelas = escuelas.filter((e) => exportEscuelas.includes(e.id))
+
+      for (const esc of selectedEscuelas) {
+        const res = await reporteService.getHorariosConCosto({
+          escuela_id: esc.id,
+          mes_inicio: exportMesInicio || undefined,
+          mes_fin: exportMesFin || undefined,
+        })
+        const rows = res.data ?? []
+
+        const wsData: (string | number)[][] = [
+          ['Reporte de Gasto de Insumos'],
+          [`Escuela: ${esc.nombre}`],
+          [`Período: ${exportMesInicio} – ${exportMesFin}`],
+          [],
+          ['Escuela', 'Laboratorio', 'Fecha', 'Hora inicio', 'Hora fin', 'Descripción', 'Docente', 'Ciclo', 'Estado', 'N° Grupos', 'Alumnos', 'N° Insumos', 'Costo Total (S/.)'],
+          ...rows.map((h) => [
+            h.escuela,
+            h.laboratorio,
+            dayjs(h.fecha_inicio).format('DD/MM/YYYY'),
+            dayjs(h.fecha_inicio).format('HH:mm'),
+            dayjs(h.fecha_fin).format('HH:mm'),
+            h.descripcion,
+            h.docente,
+            h.ciclo,
+            h.estado === 'C' ? 'Cerrado' : 'Programado',
+            h.num_grupos,
+            h.cantidad_alumnos,
+            h.num_insumos,
+            Number(h.costo_total_insumos),
+          ]),
+        ]
+
+        const ws = XLSX.utils.aoa_to_sheet(wsData)
+
+        // Column widths
+        ws['!cols'] = [20, 20, 14, 12, 12, 40, 22, 16, 14, 10, 10, 12, 18].map((w) => ({ wch: w }))
+
+        // Merge title row across columns
+        ws['!merges'] = [
+          { s: { r: 0, c: 0 }, e: { r: 0, c: 12 } },
+          { s: { r: 1, c: 0 }, e: { r: 1, c: 12 } },
+          { s: { r: 2, c: 0 }, e: { r: 2, c: 12 } },
+        ]
+
+        const sheetName = esc.nombre.slice(0, 31).replace(/[\\/:*?[\]]/g, '_')
+        XLSX.utils.book_append_sheet(wb, ws, sheetName)
+      }
+
+      const fileName = `Reporte_Insumos_${exportMesInicio}_${exportMesFin}.xlsx`
+      XLSX.writeFile(wb, fileName)
+      setExportOpen(false)
+    } catch {
+      setExportError('Error al generar el archivo. Verifica la conexión.')
+    }
+    setExportLoading(false)
+  }
 
   useEffect(() => {
     escuelaService.getAll().then((res) => setEscuelas(res.data ?? []))
@@ -201,7 +299,7 @@ export const Reportes: React.FC = () => {
               slotProps={{ inputLabel: { shrink: true } }}
             />
           </Grid>
-          <Grid size={{ xs: 12, sm: 2, md: 2 }}>
+          <Grid size={{ xs: 6, sm: 2, md: 2 }}>
             <Button
               variant="contained"
               fullWidth
@@ -211,6 +309,18 @@ export const Reportes: React.FC = () => {
               sx={{ height: 40 }}
             >
               {loading ? 'Cargando...' : 'Buscar'}
+            </Button>
+          </Grid>
+          <Grid size={{ xs: 6, sm: 2, md: 2 }}>
+            <Button
+              variant="outlined"
+              fullWidth
+              startIcon={<Download />}
+              onClick={openExportDialog}
+              disabled={loading}
+              sx={{ height: 40 }}
+            >
+              Exportar
             </Button>
           </Grid>
         </Grid>
@@ -407,6 +517,92 @@ export const Reportes: React.FC = () => {
           </Paper>
         </Grid>
       </Grid>
+
+      {/* ── Diálogo Exportar Excel ── */}
+      <Dialog open={exportOpen} onClose={() => !exportLoading && setExportOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Download fontSize="small" />
+          Exportar a Excel
+        </DialogTitle>
+
+        {exportLoading && <LinearProgress />}
+
+        <DialogContent dividers>
+          {/* Rango de meses */}
+          <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>Rango de meses</Typography>
+          <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+            <TextField
+              label="Mes inicio"
+              type="month"
+              size="small"
+              fullWidth
+              value={exportMesInicio}
+              onChange={(e) => setExportMesInicio(e.target.value)}
+              slotProps={{ inputLabel: { shrink: true } }}
+              disabled={exportLoading}
+            />
+            <TextField
+              label="Mes fin"
+              type="month"
+              size="small"
+              fullWidth
+              value={exportMesFin}
+              onChange={(e) => setExportMesFin(e.target.value)}
+              slotProps={{ inputLabel: { shrink: true } }}
+              disabled={exportLoading}
+            />
+          </Box>
+
+          {/* Selección de escuelas */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+              Escuelas a incluir ({exportEscuelas.length}/{escuelas.length})
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button size="small" onClick={() => setExportEscuelas(escuelas.map((e) => e.id))} disabled={exportLoading}>
+                Todas
+              </Button>
+              <Button size="small" onClick={() => setExportEscuelas([])} disabled={exportLoading}>
+                Ninguna
+              </Button>
+            </Box>
+          </Box>
+          <Paper variant="outlined" sx={{ p: 1.5, maxHeight: 260, overflowY: 'auto' }}>
+            <FormGroup>
+              {escuelas.map((esc) => (
+                <FormControlLabel
+                  key={esc.id}
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={exportEscuelas.includes(esc.id)}
+                      onChange={() => toggleEscuela(esc.id)}
+                      disabled={exportLoading}
+                    />
+                  }
+                  label={<Typography variant="body2">{esc.nombre}</Typography>}
+                />
+              ))}
+            </FormGroup>
+          </Paper>
+
+          {exportError && <Alert severity="error" sx={{ mt: 2 }}>{exportError}</Alert>}
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setExportOpen(false)} disabled={exportLoading}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={exportLoading ? <CircularProgress size={16} color="inherit" /> : <Download />}
+            onClick={handleExport}
+            disabled={exportLoading || exportEscuelas.length === 0}
+          >
+            {exportLoading ? 'Generando...' : 'Descargar Excel'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }
