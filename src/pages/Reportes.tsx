@@ -405,7 +405,7 @@ export const Reportes: React.FC = () => {
       <Grid container spacing={3} alignItems="flex-start">
 
         {/* ── Tabla ── columna izquierda */}
-        <Grid size={{ xs: 12, lg: 8 }}>
+        <Grid size={{ xs: 12, lg: 7 }}>
           <Paper sx={{ borderRadius: 2 }}>
             <Box sx={{ px: 2.5, pt: 2, pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -431,7 +431,7 @@ export const Reportes: React.FC = () => {
                     <TableCell sx={{ color: 'white', fontWeight: 600, width: 96 }}>Fecha</TableCell>
                     <TableCell sx={{ color: 'white', fontWeight: 600, width: 76 }}>H. inicio</TableCell>
                     <TableCell sx={{ color: 'white', fontWeight: 600, width: 72 }}>H. fin</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 600 }}>Descripción</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, width: 170, maxWidth: 170 }}>Descripción</TableCell>
                     <TableCell sx={{ color: 'white', fontWeight: 600, width: 130, textAlign: 'right' }}>Costo insumos</TableCell>
                   </TableRow>
                 </TableHead>
@@ -456,9 +456,9 @@ export const Reportes: React.FC = () => {
                       <TableCell sx={{ whiteSpace: 'nowrap', width: 96 }}>{formatFecha(h.fecha_inicio)}</TableCell>
                       <TableCell sx={{ whiteSpace: 'nowrap', width: 76 }}>{formatHora(h.fecha_inicio)}</TableCell>
                       <TableCell sx={{ whiteSpace: 'nowrap', width: 72 }}>{formatHora(h.fecha_fin)}</TableCell>
-                      <TableCell>
+                      <TableCell sx={{ width: 170, maxWidth: 170, overflow: 'hidden' }}>
                         <Typography variant="body2" noWrap title={h.descripcion}>{h.descripcion}</Typography>
-                        <Typography variant="caption" color="text.secondary" noWrap>{h.docente} · {h.escuela}</Typography>
+                        <Typography variant="caption" color="text.secondary" noWrap title={`${h.docente} · ${h.escuela}`}>{h.docente} · {h.escuela}</Typography>
                       </TableCell>
                       <TableCell sx={{ whiteSpace: 'nowrap', width: 130, textAlign: 'right' }}>
                         {Number(h.costo_total_insumos) > 0
@@ -486,7 +486,7 @@ export const Reportes: React.FC = () => {
         </Grid>
 
         {/* ── Gráficas ── columna derecha apiladas */}
-        <Grid size={{ xs: 12, lg: 4 }}>
+        <Grid size={{ xs: 12, lg: 5 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
 
             {/* Gráfica 1: Costo por escuela */}
@@ -505,35 +505,38 @@ export const Reportes: React.FC = () => {
                   <Typography color="text.secondary" variant="body2">Sin datos</Typography>
                 </Box>
               ) : (
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart
-                    layout="vertical"
-                    data={chartCostos}
-                    margin={{ left: 0, right: 28, top: 4, bottom: 4 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                    <XAxis
-                      type="number"
-                      tickFormatter={(v) => `S/.${Number(v).toFixed(0)}`}
-                      tick={{ fontSize: 10 }}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="escuela"
-                      width={90}
-                      tick={{ fontSize: 10 }}
-                    />
-                    <Tooltip
-                      formatter={(value: number) => [formatS(value), 'Costo total']}
-                      labelFormatter={(label) => `Escuela: ${label}`}
-                    />
-                    <Bar dataKey="costo_total" radius={[0, 4, 4, 0]}>
-                      {chartCostos.map((_, i) => (
-                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <Box sx={{ overflowY: 'auto', maxHeight: 420 }}>
+                  <ResponsiveContainer width="100%" height={Math.max(160, chartCostos.length * 44)}>
+                    <BarChart
+                      layout="vertical"
+                      data={chartCostos}
+                      margin={{ left: 4, right: 32, top: 4, bottom: 4 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                      <XAxis
+                        type="number"
+                        tickFormatter={(v) => `S/.${Number(v).toFixed(0)}`}
+                        tick={{ fontSize: 10 }}
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="escuela"
+                        width={110}
+                        tick={{ fontSize: 11 }}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        formatter={(value: number) => [formatS(value), 'Costo total']}
+                        labelFormatter={(label) => `Escuela: ${label}`}
+                      />
+                      <Bar dataKey="costo_total" radius={[0, 4, 4, 0]} barSize={22}>
+                        {chartCostos.map((_, i) => (
+                          <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Box>
               )}
             </Paper>
 
