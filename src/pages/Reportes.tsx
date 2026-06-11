@@ -90,7 +90,7 @@ export const Reportes: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
-  const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [rowsPerPage, setRowsPerPage] = useState(25)
 
   // ── Export dialog state ──
   const [exportOpen, setExportOpen] = useState(false)
@@ -506,8 +506,8 @@ export const Reportes: React.FC = () => {
                   <Typography color="text.secondary" variant="body2">Sin datos</Typography>
                 </Box>
               ) : (
-                <Box sx={{ overflowY: 'auto', maxHeight: 420 }}>
-                  <ResponsiveContainer width="100%" height={Math.max(160, chartCostos.length * 44)}>
+                <Box sx={{ overflowY: 'auto', maxHeight: 600 }}>
+                  <ResponsiveContainer width="100%" height={Math.max(200, chartCostos.length * 56)}>
                     <BarChart
                       layout="vertical"
                       data={chartCostos}
@@ -530,7 +530,7 @@ export const Reportes: React.FC = () => {
                         formatter={(value: number) => [formatS(value), 'Costo total']}
                         labelFormatter={(label) => `Escuela: ${label}`}
                       />
-                      <Bar dataKey="costo_total" radius={[0, 4, 4, 0]} barSize={22}>
+                      <Bar dataKey="costo_total" radius={[0, 4, 4, 0]} barSize={28}>
                         {chartCostos.map((_, i) => (
                           <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                         ))}
