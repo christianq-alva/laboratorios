@@ -385,43 +385,44 @@ export const Reportes: React.FC = () => {
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      {/* KPIs */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-        <Paper sx={{ px: 2.5, py: 1.5, borderRadius: 2, minWidth: 160 }}>
-          <Typography variant="caption" color="text.secondary">Total horarios</Typography>
-          <Typography variant="h5" sx={{ fontWeight: 700 }}>{totalHorarios}</Typography>
-        </Paper>
-        <Paper sx={{ px: 2.5, py: 1.5, borderRadius: 2, minWidth: 200 }}>
-          <Typography variant="caption" color="text.secondary">Costo total estimado</Typography>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: 'success.main' }}>{formatS(costoTotal)}</Typography>
-        </Paper>
-        <Paper sx={{ px: 2.5, py: 1.5, borderRadius: 2, minWidth: 200 }}>
-          <Typography variant="caption" color="text.secondary">Promedio por clase</Typography>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.main' }}>{formatS(promedioCosto)}</Typography>
-        </Paper>
-      </Box>
-
       {/* Tabla + Gráficas lado a lado */}
       <Grid container spacing={3} alignItems="flex-start">
 
         {/* ── Tabla ── columna izquierda */}
         <Grid size={{ xs: 12, lg: 7 }}>
           <Paper sx={{ borderRadius: 2 }}>
-            <Box sx={{ px: 2.5, pt: 2, pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Science fontSize="small" color="primary" />
-                Detalle de Horarios
-              </Typography>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<Download fontSize="small" />}
-                onClick={openExportDialog}
-                disabled={loading}
-                sx={{ textTransform: 'none' }}
-              >
-                Exportar Excel
-              </Button>
+            {/* Encabezado con KPIs inline */}
+            <Box sx={{ px: 2.5, pt: 2, pb: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Science fontSize="small" color="primary" />
+                  Detalle de Horarios
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<Download fontSize="small" />}
+                  onClick={openExportDialog}
+                  disabled={loading}
+                  sx={{ textTransform: 'none' }}
+                >
+                  Exportar Excel
+                </Button>
+              </Box>
+              {/* KPIs compactos bajo el título */}
+              <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
+                <Typography variant="caption" color="text.secondary">
+                  <Box component="span" sx={{ fontWeight: 700, color: 'text.primary' }}>{totalHorarios}</Box> horarios
+                </Typography>
+                <Typography variant="caption" color="text.disabled">·</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  <Box component="span" sx={{ fontWeight: 700, color: 'success.main' }}>{formatS(costoTotal)}</Box> costo total
+                </Typography>
+                <Typography variant="caption" color="text.disabled">·</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  <Box component="span" sx={{ fontWeight: 700, color: 'primary.main' }}>{formatS(promedioCosto)}</Box> promedio/clase
+                </Typography>
+              </Box>
             </Box>
             <TableContainer>
               <Table size="small" sx={{ tableLayout: 'fixed' }}>
