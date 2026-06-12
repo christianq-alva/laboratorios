@@ -258,7 +258,10 @@ export const equipoService = {
           resultados.push({ fila: rowNum, codigo, nombre, marca: marca || 'N/A', modelo: modelo || 'N/A', estado, laboratorio_id, tipo_equipo_id })
           procesados++
         } catch (error) {
-          errores.push(`Fila ${rowNum}: ${error.message}`)
+          const cause = error.cause
+          const detail = cause ? ` [${cause.code || ''}${cause.sqlMessage ? ': ' + cause.sqlMessage : ''}]` : ''
+          console.error(`[importarMasiva] Fila ${rowNum}:`, error.message, cause || '')
+          errores.push(`Fila ${rowNum}: ${error.message}${detail}`)
         }
       }
       if (errores.length > 0 && procesados === 0) {
