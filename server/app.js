@@ -123,7 +123,6 @@ app.use((error, req, res, next) => {
   res.status(statusCode).json({
     success: false,
     message: error.message,
-    ...(error.errores && { errores: error.errores }),
     ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
   })
 })

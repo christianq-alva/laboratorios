@@ -233,19 +233,7 @@ export const ImportacionMasivaEquipos: React.FC<ImportacionMasivaEquiposProps> =
       }
 
     } catch (err: any) {
-      if (err.errores && err.errores.length > 0) {
-        setResultado({
-          success: false,
-          message: err.message,
-          procesados: 0,
-          errores: err.errores.length,
-          detalles_errores: err.errores,
-          resultados: []
-        })
-        setCurrentStep('resultado')
-      } else {
-        setError(err.message)
-      }
+      setError(err.message)
     } finally {
       setLoading(false)
     }

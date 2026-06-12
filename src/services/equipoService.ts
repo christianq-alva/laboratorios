@@ -266,9 +266,7 @@ export const equipoService = {
 
       return response.data
     } catch (error: any) {
-      const err = new Error(error.response?.data?.message || 'Error en la importación masiva de equipos') as any
-      err.errores = error.response?.data?.errores || []
-      throw err
+      throw new Error(error.response?.data?.message || 'Error en la importación masiva de equipos')
     }
   }
 }
