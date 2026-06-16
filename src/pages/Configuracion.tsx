@@ -10,7 +10,7 @@ import {
   Alert,
   Snackbar
 } from '@mui/material'
-import { Add, Category, Person, LibraryBooks, School, AccountBalance, FileUpload, Group, Straighten } from '@mui/icons-material'
+import { Add, Category, Person, LibraryBooks, School, AccountBalance, FileUpload, FileDownload, Group, Straighten } from '@mui/icons-material'
 import { TiposEquipoTable } from '../components/Configuracion/TipoEquipo/TiposEquipoTable'
 import { TipoEquipoForm } from '../components/Configuracion/TipoEquipo/TipoEquipoForm'
 import { EscuelasTable } from '../components/Configuracion/Escuela/EscuelasTable'
@@ -21,6 +21,7 @@ import { CatalogoInsumosTable } from '../components/Configuracion/Insumos/Catalo
 import { InsumoForm } from '../components/Configuracion/Insumos/InsumoForm'
 import { ImportacionMasiva } from '../components/Configuracion/Insumos/ImportacionMasiva'
 import { PrecioInsumoModal } from '../components/Configuracion/Insumos/PrecioInsumoModal'
+import { exportCatalogoInsumosToExcel } from '../components/Configuracion/Insumos/exportCatalogoInsumos'
 import { LaboratoriosTable } from '../components/Configuracion/Laboratorios/LaboratoriosTable'
 import { LaboratorioForm } from '../components/Configuracion/Laboratorios/LaboratorioForm'
 import { UsuariosTable } from '../components/Configuracion/Usuarios/UsuariosTable'
@@ -35,6 +36,7 @@ import { insumoService, type Insumo } from '../services/insumoService'
 import { laboratorioService, type Laboratorio } from '../services/laboratorioService'
 import { usuarioService, type Usuario } from '../services/usuarioService'
 import { useApi } from '../hooks/useApi'
+import { useAuth } from '../hooks/useAuth'
 import { DeleteDialog } from '../components/Common/DeleteDialog'
 
 
@@ -60,6 +62,8 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => {
 
 export const Configuracion: React.FC = () => {
   const { execute } = useApi()
+  const { user } = useAuth()
+  const isAdmin = user?.rol === 'Administrador'
   const [tabValue, setTabValue] = useState(0)
 
   // Estado para Tipos de Equipo
@@ -727,6 +731,24 @@ export const Configuracion: React.FC = () => {
     })
   }
 
+  // Exportar catálogo de insumos a Excel
+  const handleExportarCatalogoInsumos = () => {
+    try {
+      exportCatalogoInsumosToExcel(insumos)
+      setSnackbar({
+        open: true,
+        message: `Catálogo exportado: ${insumos.length} insumo${insumos.length !== 1 ? 's' : ''}`,
+        severity: 'success'
+      })
+    } catch {
+      setSnackbar({
+        open: true,
+        message: 'Error al exportar el catálogo',
+        severity: 'error'
+      })
+    }
+  }
+
   return (
     <Box>
       {/* Encabezado */}
@@ -945,6 +967,19 @@ export const Configuracion: React.FC = () => {
                 >
                   Importar Excel
                 </Button>
+
+                {isAdmin && (
+                  <Button
+                    variant="outlined"
+                    startIcon={<FileDownload />}
+                    onClick={handleExportarCatalogoInsumos}
+                    disabled={loadingInsumos || insumos.length === 0}
+                    sx={{ borderRadius: 2, px: 3 }}
+                    color="success"
+                  >
+                    Exportar Excel
+                  </Button>
+                )}
               </Box>
             </Box>
 
