@@ -362,6 +362,30 @@ export const previsualizarImportacionMasiva = async (req, res, next) => {
     next(error)
   }
 }
+// Actualización masiva de precios desde Excel
+export const actualizarPreciosMasivo = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No se ha proporcionado ningún archivo'
+      })
+    }
+    const result = await insumoService.actualizarPreciosMasivo(req.file.buffer, req.user)
+    res.status(200).json({
+      success: true,
+      message: `Procesamiento completo: ${result.actualizados} actualizados, ${result.omitidos} sin cambio, ${result.errores} con errores`,
+      actualizados: result.actualizados,
+      omitidos: result.omitidos,
+      errores: result.errores,
+      detalles_errores: result.detalles_errores,
+      detalles_omitidos: result.detalles_omitidos,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 //Ejecutar importación masiva de insumos
 export const importacionMasiva = async (req, res, next) => {
   try {

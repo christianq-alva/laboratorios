@@ -56,6 +56,19 @@ export const Insumo = {
     }
   },
 
+  findByCodigo: async (codigo, connection) => {
+    const conn = connection || pool
+    try {
+      const [rows] = await conn.execute(
+        'SELECT id, codigo, nombre FROM insumos WHERE codigo = ? LIMIT 1',
+        [codigo]
+      )
+      return rows[0] || null
+    } catch (error) {
+      handleDBError(error, 'Insumo')
+    }
+  },
+
   getById: async (id, connection) => {
     const conn = connection || pool
     try {

@@ -191,5 +191,135 @@ export const insumoService = {
     } finally {
       connection.release()
     }
+  },
+
+  async actualizarPreciosMasivo(fileBuffer, user) {
+    const workbook = XLSX.read(fileBuffer, { type: 'buffer' })
+    const sheetName = workbook.SheetNames[0]
+    if (!sheetName) {
+      throw new AppError('El archivo Excel está vacío', 400)
+    }
+    const worksheet = workbook.Sheets[sheetName]
+
+    // Validar headers estrictamente: CODIGO y PRECIO deben existir tal cual
+    const headerRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, range: 0, blankrows: false })
+    const headers = (headerRows[0] || []).map((h) => (h == null ? '' : h.toString().trim()))
+    if (!headers.includes('CODIGO') || !headers.includes('PRECIO')) {
+      throw new AppError(
+        'El archivo no tiene los encabezados esperados. Debe contener las columnas exactas: CODIGO y PRECIO (no modifiques los nombres del Excel exportado).',
+        400
+      )
+    }
+
+    const rows = XLSX.utils.sheet_to_json(worksheet, { defval: null })
+    if (!rows || rows.length === 0) {
+      throw new AppError('El archivo no contiene filas para procesar', 400)
+    }
+
+    const errores = []
+    const round2 = (n) => Math.round(n * 100) / 100
+
+    // Primera pasada: validar cada fila y detectar duplicados de CODIGO con precios distintos
+    const filasValidas = []   // { rowNum, codigo, precio }
+    const codigoBuckets = new Map() // codigo -> Set de precios redondeados a 2 decimales
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]
+      const rowNum = i + 2
+
+      const codigoRaw = row.CODIGO
+      const precioRaw = row.PRECIO
+
+      if (codigoRaw == null || codigoRaw.toString().trim() === '') {
+        errores.push(`Fila ${rowNum}: CODIGO es obligatorio`)
+        continue
+      }
+      if (precioRaw == null || precioRaw.toString().trim() === '') {
+        errores.push(`Fila ${rowNum}: PRECIO es obligatorio`)
+        continue
+      }
+
+      const codigo = codigoRaw.toString().trim()
+      const precio = parseFloat(precioRaw.toString().trim())
+
+      if (isNaN(precio) || precio < 0) {
+        errores.push(`Fila ${rowNum}: PRECIO debe ser un número mayor o igual a 0`)
+        continue
+      }
+
+      const precioRedondeado = round2(precio)
+      if (!codigoBuckets.has(codigo)) codigoBuckets.set(codigo, new Set())
+      codigoBuckets.get(codigo).add(precioRedondeado)
+
+      filasValidas.push({ rowNum, codigo, precio: precioRedondeado })
+    }
+
+    // Detectar códigos duplicados con precios distintos → marcar como error y excluir
+    const codigosConflictivos = new Set()
+    for (const [codigo, precios] of codigoBuckets.entries()) {
+      if (precios.size > 1) {
+        codigosConflictivos.add(codigo)
+        errores.push(`CODIGO '${codigo}' aparece en varias filas con precios distintos. No se actualizará.`)
+      }
+    }
+
+    // Dedupe: para los códigos válidos sin conflicto, quedarse con una sola entrada (la primera)
+    const codigosProcesados = new Set()
+    const filasAProcesar = []
+    for (const fila of filasValidas) {
+      if (codigosConflictivos.has(fila.codigo)) continue
+      if (codigosProcesados.has(fila.codigo)) continue
+      codigosProcesados.add(fila.codigo)
+      filasAProcesar.push(fila)
+    }
+
+    if (filasAProcesar.length === 0) {
+      const err = new AppError('No hay filas válidas para procesar', 400)
+      err.errores = errores
+      throw err
+    }
+
+    // Segunda pasada: actualizar precios en transacción
+    let actualizados = 0
+    let omitidos = 0
+    const omitidosDetalle = []
+    const connection = await pool.getConnection()
+    try {
+      await connection.beginTransaction()
+
+      for (const fila of filasAProcesar) {
+        const insumo = await Insumo.findByCodigo(fila.codigo, connection)
+        if (!insumo) {
+          errores.push(`Fila ${fila.rowNum}: CODIGO '${fila.codigo}' no encontrado en el catálogo`)
+          continue
+        }
+
+        const precioActual = await Insumo.getPrecioActual(insumo.id, connection)
+        const precioActualRedondeado = precioActual != null ? round2(precioActual) : null
+
+        if (precioActualRedondeado === fila.precio) {
+          omitidos++
+          omitidosDetalle.push(`Fila ${fila.rowNum}: ${fila.codigo} ya tiene el precio S/. ${fila.precio.toFixed(2)} (sin cambio)`)
+          continue
+        }
+
+        await Insumo.setPrecio(insumo.id, fila.precio, user.userId, connection)
+        actualizados++
+      }
+
+      await connection.commit()
+      return {
+        actualizados,
+        omitidos,
+        errores: errores.length,
+        detalles_errores: errores,
+        detalles_omitidos: omitidosDetalle,
+      }
+    } catch (error) {
+      await connection.rollback()
+      throw error
+    } finally {
+      connection.release()
+    }
   }
 }

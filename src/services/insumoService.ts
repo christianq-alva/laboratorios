@@ -171,4 +171,33 @@ export const insumoService = {
       throw new Error(error.response?.data?.message || 'Error en la importación masiva')
     }
   },
-} 
+
+  // Actualización masiva de precios desde Excel
+  actualizarPreciosMasivo: async (archivo: File): Promise<{
+    success: boolean
+    message: string
+    actualizados: number
+    omitidos: number
+    errores: number
+    detalles_errores: string[]
+    detalles_omitidos: string[]
+  }> => {
+    try {
+      const formData = new FormData()
+      formData.append('archivo_excel', archivo)
+
+      const response = await api.post('/insumos/actualizar-precios-masivo', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+
+      return response.data
+    } catch (error: unknown) {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message
+        || 'Error al actualizar precios masivamente'
+      throw new Error(message)
+    }
+  },
+}

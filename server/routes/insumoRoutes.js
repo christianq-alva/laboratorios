@@ -12,6 +12,7 @@ import {
   generarPlantillaImportacion,
   previsualizarImportacionMasiva,
   importacionMasiva,
+  actualizarPreciosMasivo,
   upload
 } from '../controllers/insumoController.js'
 import {
@@ -90,6 +91,15 @@ router.post('/importacion-masiva',
   heavyOperationLimiter,
   upload.single('archivo_excel'),
   importacionMasiva
+)
+
+// Actualización masiva de precios desde Excel
+router.post('/actualizar-precios-masivo',
+  authenticateToken,
+  authorize('update', 'Insumo'),
+  heavyOperationLimiter,
+  upload.single('archivo_excel'),
+  actualizarPreciosMasivo
 )
 
 export default router

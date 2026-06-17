@@ -10,7 +10,7 @@ import {
   Alert,
   Snackbar
 } from '@mui/material'
-import { Add, Category, Person, LibraryBooks, School, AccountBalance, FileUpload, FileDownload, Group, Straighten } from '@mui/icons-material'
+import { Add, Category, Person, LibraryBooks, School, AccountBalance, FileUpload, FileDownload, Group, Straighten, PriceChange } from '@mui/icons-material'
 import { TiposEquipoTable } from '../components/Configuracion/TipoEquipo/TiposEquipoTable'
 import { TipoEquipoForm } from '../components/Configuracion/TipoEquipo/TipoEquipoForm'
 import { EscuelasTable } from '../components/Configuracion/Escuela/EscuelasTable'
@@ -21,6 +21,7 @@ import { CatalogoInsumosTable } from '../components/Configuracion/Insumos/Catalo
 import { InsumoForm } from '../components/Configuracion/Insumos/InsumoForm'
 import { ImportacionMasiva } from '../components/Configuracion/Insumos/ImportacionMasiva'
 import { PrecioInsumoModal } from '../components/Configuracion/Insumos/PrecioInsumoModal'
+import { ActualizarPreciosMasivoModal } from '../components/Configuracion/Insumos/ActualizarPreciosMasivoModal'
 import { exportCatalogoInsumosToExcel } from '../components/Configuracion/Insumos/exportCatalogoInsumos'
 import { LaboratoriosTable } from '../components/Configuracion/Laboratorios/LaboratoriosTable'
 import { LaboratorioForm } from '../components/Configuracion/Laboratorios/LaboratorioForm'
@@ -100,6 +101,9 @@ export const Configuracion: React.FC = () => {
 
   //Importación masiva
   const [importacionMasivaOpen, setImportacionMasivaOpen] = useState(false)
+
+  // Importar precios masivamente
+  const [importarPreciosOpen, setImportarPreciosOpen] = useState(false)
 
   // Precio de insumo
   const [precioModalOpen, setPrecioModalOpen] = useState(false)
@@ -749,6 +753,18 @@ export const Configuracion: React.FC = () => {
     }
   }
 
+  // Importación masiva de precios
+  const handleImportarPreciosOpen = () => setImportarPreciosOpen(true)
+  const handleImportarPreciosClose = () => setImportarPreciosOpen(false)
+  const handleImportarPreciosSuccess = (message?: string) => {
+    loadCatalogoInsumos()
+    setSnackbar({
+      open: true,
+      message: message || 'Precios actualizados correctamente',
+      severity: 'success'
+    })
+  }
+
   return (
     <Box>
       {/* Encabezado */}
@@ -980,6 +996,18 @@ export const Configuracion: React.FC = () => {
                     Exportar Excel
                   </Button>
                 )}
+
+                {isAdmin && (
+                  <Button
+                    variant="outlined"
+                    startIcon={<PriceChange />}
+                    onClick={handleImportarPreciosOpen}
+                    sx={{ borderRadius: 2, px: 3 }}
+                    color="warning"
+                  >
+                    Importar Precios
+                  </Button>
+                )}
               </Box>
             </Box>
 
@@ -1180,6 +1208,13 @@ export const Configuracion: React.FC = () => {
         open={importacionMasivaOpen}
         onClose={handleImportacionMasivaClose}
         onSuccess={handleImportacionMasivaSuccess}
+      />
+
+      {/* Importar precios masivamente */}
+      <ActualizarPreciosMasivoModal
+        open={importarPreciosOpen}
+        onClose={handleImportarPreciosClose}
+        onSuccess={handleImportarPreciosSuccess}
       />
 
       {/* Diálogo de confirmación de eliminación - Tipo de Equipo */}
