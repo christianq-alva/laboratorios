@@ -20,7 +20,10 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   IconButton,
-  Popover
+  Popover,
+  ToggleButton,
+  ToggleButtonGroup,
+  Chip
 } from '@mui/material'
 import {
   Schedule,
@@ -29,7 +32,10 @@ import {
   CheckCircle,
   Add,
   Repeat,
-  Close
+  Close,
+  CalendarMonth,
+  Event,
+  AutoAwesome
 } from '@mui/icons-material'
 
 import { horarioService, type CreateHorarioData } from '../../services/horarioService'
@@ -165,6 +171,14 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
   const [newDate, setNewDate] = useState<string>('')
   const [selectedDates, setSelectedDates] = useState<string[]>([])
 
+  // Modo de selección: manual (fecha por fecha) o patrón semanal
+  const [modoSeleccion, setModoSeleccion] = useState<'manual' | 'patron'>('manual')
+  const [diasSemana, setDiasSemana] = useState<number[]>([])
+  const [rangoDesde, setRangoDesde] = useState<string>('')
+  const [rangoHasta, setRangoHasta] = useState<string>('')
+  const [patronInfo, setPatronInfo] = useState<string | null>(null)
+  const [patronError, setPatronError] = useState<string | null>(null)
+
   // Estados de carga y errores
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(false)
@@ -201,6 +215,12 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
     setError(null)
     setCreationResults([])
     setShowResults(false)
+    setModoSeleccion('manual')
+    setDiasSemana([])
+    setRangoDesde('')
+    setRangoHasta('')
+    setPatronInfo(null)
+    setPatronError(null)
   }
 
   const loadInitialData = async () => {
@@ -255,6 +275,82 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
   const removeDate = (dateToRemove: string) => {
     const newDates = selectedDates.filter(date => date !== dateToRemove)
     setSelectedDates(newDates)
+  }
+
+  // Toggle de día de la semana (0=Dom, 1=Lun, ..., 6=Sáb)
+  const toggleDiaSemana = (dia: number) => {
+    setDiasSemana(prev =>
+      prev.includes(dia) ? prev.filter(d => d !== dia) : [...prev, dia].sort()
+    )
+    setPatronInfo(null)
+    setPatronError(null)
+  }
+
+  // Generar fechas a partir del patrón semanal
+  const generarFechasPorPatron = () => {
+    setPatronInfo(null)
+    setPatronError(null)
+
+    if (diasSemana.length === 0) {
+      setPatronError('Seleccioná al menos un día de la semana')
+      return
+    }
+    if (!rangoDesde || !rangoHasta) {
+      setPatronError('Definí fecha "Desde" y "Hasta"')
+      return
+    }
+
+    const desde = new Date(rangoDesde + 'T00:00:00')
+    const hasta = new Date(rangoHasta + 'T00:00:00')
+
+    if (isNaN(desde.getTime()) || isNaN(hasta.getTime())) {
+      setPatronError('Las fechas ingresadas no son válidas')
+      return
+    }
+    if (desde > hasta) {
+      setPatronError('La fecha "Desde" debe ser menor o igual a la fecha "Hasta"')
+      return
+    }
+
+    const diffDias = Math.floor((hasta.getTime() - desde.getTime()) / (1000 * 60 * 60 * 24))
+    if (diffDias > 365) {
+      setPatronError('El rango máximo permitido es de 365 días')
+      return
+    }
+
+    const generadas: string[] = []
+    const cursor = new Date(desde)
+    while (cursor <= hasta) {
+      if (diasSemana.includes(cursor.getDay())) {
+        const yyyy = cursor.getFullYear()
+        const mm = String(cursor.getMonth() + 1).padStart(2, '0')
+        const dd = String(cursor.getDate()).padStart(2, '0')
+        generadas.push(`${yyyy}-${mm}-${dd}`)
+      }
+      cursor.setDate(cursor.getDate() + 1)
+    }
+
+    if (generadas.length === 0) {
+      setPatronError('No se encontraron fechas que coincidan con los días seleccionados en ese rango')
+      return
+    }
+
+    const nuevasFechas = generadas.filter(f => !selectedDates.includes(f))
+    if (nuevasFechas.length === 0) {
+      setPatronInfo('Todas las fechas generadas ya están en la lista')
+      return
+    }
+
+    const totalProyectado = selectedDates.length + nuevasFechas.length
+    if (totalProyectado > 30) {
+      const confirmar = window.confirm(
+        `Vas a agregar ${nuevasFechas.length} fechas (total: ${totalProyectado}). ¿Continuar?`
+      )
+      if (!confirmar) return
+    }
+
+    setSelectedDates([...selectedDates, ...nuevasFechas].sort())
+    setPatronInfo(`Se agregaron ${nuevasFechas.length} fecha${nuevasFechas.length !== 1 ? 's' : ''} a la lista`)
   }
 
   // Validación del formulario
@@ -714,37 +810,150 @@ export const HorarioRecurrente: React.FC<HorarioRecurrenteProps> = ({
 
             {/* Selección de fechas */}
             <Paper elevation={0} sx={{ p: 3, bgcolor: 'grey.50', borderRadius: 2 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 3 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
                 Seleccionar Fechas
               </Typography>
-            
-            <Alert severity="info" sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Info fontSize="small" />
-                Selecciona una fecha y haz clic en "Agregar" para añadirla a la lista.
-              </Box>
-            </Alert>
 
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 3 }}>
-              <TextField
-                type="date"
-                label="Nueva Fecha"
-                value={newDate}
-                onChange={(e) => setNewDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                inputProps={{ min: getMinDate() }}
-                sx={{ minWidth: 200 }}
-              />
-
-              <Button
-                variant="outlined"
-                startIcon={<Add />}
-                onClick={addDate}
-                disabled={!newDate || selectedDates.includes(newDate)}
+              {/* Toggle de modo */}
+              <ToggleButtonGroup
+                value={modoSeleccion}
+                exclusive
+                onChange={(_e, val) => {
+                  if (val) {
+                    setModoSeleccion(val)
+                    setPatronInfo(null)
+                    setPatronError(null)
+                  }
+                }}
+                size="small"
+                sx={{ mb: 3 }}
+                color="primary"
               >
-                Agregar Fecha
-              </Button>
-            </Box>
+                <ToggleButton value="manual" sx={{ textTransform: 'none', px: 2 }}>
+                  <Event fontSize="small" sx={{ mr: 1 }} />
+                  Fecha por fecha
+                </ToggleButton>
+                <ToggleButton value="patron" sx={{ textTransform: 'none', px: 2 }}>
+                  <CalendarMonth fontSize="small" sx={{ mr: 1 }} />
+                  Patrón semanal
+                </ToggleButton>
+              </ToggleButtonGroup>
+
+            {modoSeleccion === 'manual' && (
+              <>
+                <Alert severity="info" sx={{ mb: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Info fontSize="small" />
+                    Selecciona una fecha y haz clic en "Agregar" para añadirla a la lista.
+                  </Box>
+                </Alert>
+
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 3 }}>
+                  <TextField
+                    type="date"
+                    label="Nueva Fecha"
+                    value={newDate}
+                    onChange={(e) => setNewDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ min: getMinDate() }}
+                    sx={{ minWidth: 200 }}
+                  />
+
+                  <Button
+                    variant="outlined"
+                    startIcon={<Add />}
+                    onClick={addDate}
+                    disabled={!newDate || selectedDates.includes(newDate)}
+                  >
+                    Agregar Fecha
+                  </Button>
+                </Box>
+              </>
+            )}
+
+            {modoSeleccion === 'patron' && (
+              <Box sx={{ mb: 3 }}>
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Info fontSize="small" />
+                    Elegí los días de la semana y un rango. Las fechas generadas se agregan a la lista; podés eliminar feriados manualmente con el botón ❌.
+                  </Box>
+                </Alert>
+
+                <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+                  Días de la semana
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                  {[
+                    { d: 1, label: 'Lun' },
+                    { d: 2, label: 'Mar' },
+                    { d: 3, label: 'Mié' },
+                    { d: 4, label: 'Jue' },
+                    { d: 5, label: 'Vie' },
+                    { d: 6, label: 'Sáb' },
+                    { d: 0, label: 'Dom' },
+                  ].map(({ d, label }) => {
+                    const selected = diasSemana.includes(d)
+                    return (
+                      <Chip
+                        key={d}
+                        label={label}
+                        clickable
+                        onClick={() => toggleDiaSemana(d)}
+                        color={selected ? 'primary' : 'default'}
+                        variant={selected ? 'filled' : 'outlined'}
+                        sx={{ minWidth: 60, fontWeight: 500 }}
+                      />
+                    )
+                  })}
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+                  <TextField
+                    type="date"
+                    label="Desde"
+                    value={rangoDesde}
+                    onChange={(e) => {
+                      setRangoDesde(e.target.value)
+                      setPatronInfo(null)
+                      setPatronError(null)
+                    }}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ min: getMinDate() }}
+                    sx={{ minWidth: 180 }}
+                  />
+                  <TextField
+                    type="date"
+                    label="Hasta"
+                    value={rangoHasta}
+                    onChange={(e) => {
+                      setRangoHasta(e.target.value)
+                      setPatronInfo(null)
+                      setPatronError(null)
+                    }}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ min: rangoDesde || getMinDate() }}
+                    sx={{ minWidth: 180 }}
+                  />
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<AutoAwesome />}
+                    onClick={generarFechasPorPatron}
+                    disabled={diasSemana.length === 0 || !rangoDesde || !rangoHasta}
+                  >
+                    Generar fechas
+                  </Button>
+                </Box>
+
+                {patronError && (
+                  <Alert severity="error" sx={{ mb: 1 }}>{patronError}</Alert>
+                )}
+                {patronInfo && (
+                  <Alert severity="success" sx={{ mb: 1 }}>{patronInfo}</Alert>
+                )}
+              </Box>
+            )}
 
             <Paper variant="outlined" sx={{ p: 2.5, minHeight: 200, maxHeight: 300, overflowY: 'auto', bgcolor: 'background.paper' }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
