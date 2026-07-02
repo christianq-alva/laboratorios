@@ -59,6 +59,9 @@ export interface InsumoHorario {
   categoria: string
   unidad_nombre: string
   cantidad_usada: number
+  presentacion?: string | null
+  cantidad_por_presentacion?: number
+  precio_presentacion?: number
   precio_unitario?: number
 }
 

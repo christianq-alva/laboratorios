@@ -216,13 +216,27 @@ export const CatalogoInsumosTable: React.FC<CatalogoInsumosTableProps> = ({
               <TableCell>{insumo.presentacion || '-'}</TableCell>
               <TableCell>
                 {insumo.precio_unitario != null
-                  ? <Chip
-                      label={`S/. ${Number(insumo.precio_unitario).toFixed(2)}`}
-                      size="small"
-                      color="success"
-                      variant="outlined"
-                      sx={{ fontWeight: 600 }}
-                    />
+                  ? (() => {
+                      const precio = Number(insumo.precio_unitario)
+                      const cantidad = Number(insumo.cantidad_por_presentacion) || 1
+                      const unitario = precio / cantidad
+                      return (
+                        <Box>
+                          <Chip
+                            label={`S/. ${precio.toFixed(2)}`}
+                            size="small"
+                            color="success"
+                            variant="outlined"
+                            sx={{ fontWeight: 600 }}
+                          />
+                          {cantidad !== 1 && (
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              {`S/. ${unitario.toFixed(unitario < 0.01 ? 4 : 2)} por ${insumo.unidad_simbolo || 'unidad'}`}
+                            </Typography>
+                          )}
+                        </Box>
+                      )
+                    })()
                   : <Typography variant="caption" color="text.secondary">—</Typography>
                 }
               </TableCell>

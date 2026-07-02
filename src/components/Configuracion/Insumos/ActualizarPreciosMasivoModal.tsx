@@ -134,11 +134,13 @@ export const ActualizarPreciosMasivoModal: React.FC<ActualizarPreciosMasivoModal
           <Box>
             <Alert severity="info" icon={<Info />} sx={{ mb: 3 }}>
               <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
-                Usa el mismo Excel que descargaste con "Exportar Excel" y edita la columna PRECIO.
+                Usa el mismo Excel que descargaste con "Exportar Excel" y edita las columnas PRECIO y CANTIDAD_POR_PRESENTACION.
               </Typography>
               <Typography variant="caption" component="div">
-                • No modifiques los encabezados (CODIGO, NOMBRE, PRECIO).<br />
-                • Solo se actualizan precios de insumos existentes (no crea nuevos).<br />
+                • No modifiques los encabezados (CODIGO, NOMBRE, PRECIO, CANTIDAD_POR_PRESENTACION).<br />
+                • PRECIO es el precio de la presentación completa (frasco, caja, botella…).<br />
+                • CANTIDAD_POR_PRESENTACION es el contenido en la unidad del insumo (Ej.: 1000 para un frasco de 1000 ml). Si la dejas vacía, el insumo conserva su valor actual.<br />
+                • Solo se actualizan insumos existentes (no crea nuevos).<br />
                 • Las filas sin cambio se omiten automáticamente.
               </Typography>
             </Alert>

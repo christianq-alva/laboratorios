@@ -150,7 +150,10 @@ export const Horario = {
               u.nombre as unidad_nombre,
               u.simbolo as unidad_simbolo,
               dri.cantidad_usada,
-              CAST(COALESCE(ip.precio, 0) AS DECIMAL(10,2)) as precio_unitario
+              i.presentacion,
+              i.cantidad_por_presentacion,
+              CAST(COALESCE(ip.precio, 0) AS DECIMAL(10,2)) as precio_presentacion,
+              CAST(COALESCE(ip.precio, 0) / COALESCE(NULLIF(i.cantidad_por_presentacion, 0), 1) AS DECIMAL(12,6)) as precio_unitario
             FROM detalle_reserva_insumos dri
             JOIN insumos i ON dri.insumo_id = i.id
             JOIN unidades u ON i.unidad_id = u.id

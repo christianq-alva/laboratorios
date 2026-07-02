@@ -32,7 +32,14 @@ export const createInsumoSchema = z.object({
             .max(100, 'La presentación no puede exceder 100 caracteres')
             .optional()
             .nullable()
-            .transform((val) => val === '' ? null : val)
+            .transform((val) => val === '' ? null : val),
+        cantidad_por_presentacion: z.number({
+            error: 'La cantidad por presentación debe ser un número'
+        })
+            .positive('La cantidad por presentación debe ser mayor a 0')
+            .max(99999999, 'La cantidad por presentación es demasiado grande')
+            .optional()
+            .default(1)
     })
 })
 
@@ -63,7 +70,14 @@ export const updateInsumoSchema = z.object({
             .max(100, 'La presentación no puede exceder 100 caracteres')
             .optional()
             .nullable()
-            .transform((val) => val === '' ? null : val)
+            .transform((val) => val === '' ? null : val),
+        cantidad_por_presentacion: z.number({
+            error: 'La cantidad por presentación debe ser un número'
+        })
+            .positive('La cantidad por presentación debe ser mayor a 0')
+            .max(99999999, 'La cantidad por presentación es demasiado grande')
+            .optional()
+            .default(1)
     })
 })
 

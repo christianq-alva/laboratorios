@@ -18,7 +18,8 @@ export const insumoService = {
       descripcion: data.descripcion || '',
       unidad_id: data.unidad_id,
       categoria: data.categoria,
-      presentacion: data.presentacion || ''
+      presentacion: data.presentacion || '',
+      cantidad_por_presentacion: data.cantidad_por_presentacion || 1
     })
     if (affectedRows === 0) throw new AppError('Insumo no encontrado', 404)
   },
@@ -95,9 +96,16 @@ export const insumoService = {
           const descripcion = row.DESCRIPCION ? row.DESCRIPCION.toString().trim() : ''
           const categoria = row.CATEGORIA ? row.CATEGORIA.toString().trim() : ''
           const presentacion = row.PRESENTACION ? row.PRESENTACION.toString().trim() : ''
+          const cantidad_por_presentacion = row.CANTIDAD_POR_PRESENTACION != null && row.CANTIDAD_POR_PRESENTACION.toString().trim() !== ''
+            ? parseFloat(row.CANTIDAD_POR_PRESENTACION.toString().trim())
+            : 1
           const unidad_medida = await Unidad.getById(row.UNIDAD_MEDIDA, connection)
           if (!categoriasValidas.includes(categoria)) {
             errores.push(`Fila ${rowNum}: Categoría inválida. Debe ser: ${categoriasValidas.join(', ')}`)
+            continue
+          }
+          if (isNaN(cantidad_por_presentacion) || cantidad_por_presentacion <= 0) {
+            errores.push(`Fila ${rowNum}: CANTIDAD_POR_PRESENTACION debe ser un número mayor a 0`)
             continue
           }
           // Validar LABORATORIO_CODIGO si se proporcionó
@@ -140,7 +148,7 @@ export const insumoService = {
               }
             }
           }
-          const { insumo_id, codigo } = await Insumo.create(nombre, descripcion || '', unidad_medida.id, categoria, presentacion || '', connection)
+          const { insumo_id, codigo } = await Insumo.create(nombre, descripcion || '', unidad_medida.id, categoria, presentacion || '', cantidad_por_presentacion, connection)
           if (laboratorio_id !== null) {
             labAsignaciones.push({ laboratorio_id, insumo_id })
           }
@@ -206,7 +214,7 @@ export const insumoService = {
     const headers = (headerRows[0] || []).map((h) => (h == null ? '' : h.toString().trim()))
     if (!headers.includes('CODIGO') || !headers.includes('PRECIO')) {
       throw new AppError(
-        'El archivo no tiene los encabezados esperados. Debe contener las columnas exactas: CODIGO y PRECIO (no modifiques los nombres del Excel exportado).',
+        'El archivo no tiene los encabezados esperados. Debe contener las columnas exactas: CODIGO y PRECIO (CANTIDAD_POR_PRESENTACION es opcional; no modifiques los nombres del Excel exportado).',
         400
       )
     }
@@ -218,10 +226,11 @@ export const insumoService = {
 
     const errores = []
     const round2 = (n) => Math.round(n * 100) / 100
+    const round4 = (n) => Math.round(n * 10000) / 10000
 
-    // Primera pasada: validar cada fila y detectar duplicados de CODIGO con precios distintos
-    const filasValidas = []   // { rowNum, codigo, precio }
-    const codigoBuckets = new Map() // codigo -> Set de precios redondeados a 2 decimales
+    // Primera pasada: validar cada fila y detectar duplicados de CODIGO con valores distintos
+    const filasValidas = []   // { rowNum, codigo, precio, cantidad_por_presentacion }
+    const codigoBuckets = new Map() // codigo -> Set de combinaciones precio|cantidad
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]
@@ -229,6 +238,7 @@ export const insumoService = {
 
       const codigoRaw = row.CODIGO
       const precioRaw = row.PRECIO
+      const cantidadRaw = row.CANTIDAD_POR_PRESENTACION
 
       if (codigoRaw == null || codigoRaw.toString().trim() === '') {
         errores.push(`Fila ${rowNum}: CODIGO es obligatorio`)
@@ -247,19 +257,30 @@ export const insumoService = {
         continue
       }
 
+      // CANTIDAD_POR_PRESENTACION es opcional: vacío = conservar el valor actual del insumo
+      let cantidad_por_presentacion = null
+      if (cantidadRaw != null && cantidadRaw.toString().trim() !== '') {
+        const cantidad = parseFloat(cantidadRaw.toString().trim())
+        if (isNaN(cantidad) || cantidad <= 0) {
+          errores.push(`Fila ${rowNum}: CANTIDAD_POR_PRESENTACION debe ser un número mayor a 0`)
+          continue
+        }
+        cantidad_por_presentacion = round4(cantidad)
+      }
+
       const precioRedondeado = round2(precio)
       if (!codigoBuckets.has(codigo)) codigoBuckets.set(codigo, new Set())
-      codigoBuckets.get(codigo).add(precioRedondeado)
+      codigoBuckets.get(codigo).add(`${precioRedondeado}|${cantidad_por_presentacion ?? ''}`)
 
-      filasValidas.push({ rowNum, codigo, precio: precioRedondeado })
+      filasValidas.push({ rowNum, codigo, precio: precioRedondeado, cantidad_por_presentacion })
     }
 
-    // Detectar códigos duplicados con precios distintos → marcar como error y excluir
+    // Detectar códigos duplicados con valores distintos → marcar como error y excluir
     const codigosConflictivos = new Set()
-    for (const [codigo, precios] of codigoBuckets.entries()) {
-      if (precios.size > 1) {
+    for (const [codigo, combos] of codigoBuckets.entries()) {
+      if (combos.size > 1) {
         codigosConflictivos.add(codigo)
-        errores.push(`CODIGO '${codigo}' aparece en varias filas con precios distintos. No se actualizará.`)
+        errores.push(`CODIGO '${codigo}' aparece en varias filas con valores distintos. No se actualizará.`)
       }
     }
 
@@ -296,14 +317,26 @@ export const insumoService = {
 
         const precioActual = await Insumo.getPrecioActual(insumo.id, connection)
         const precioActualRedondeado = precioActual != null ? round2(precioActual) : null
+        const precioCambia = precioActualRedondeado !== fila.precio
 
-        if (precioActualRedondeado === fila.precio) {
+        const cantidadActual = insumo.cantidad_por_presentacion != null
+          ? round4(parseFloat(insumo.cantidad_por_presentacion))
+          : 1
+        const cantidadCambia = fila.cantidad_por_presentacion != null
+          && fila.cantidad_por_presentacion !== cantidadActual
+
+        if (!precioCambia && !cantidadCambia) {
           omitidos++
-          omitidosDetalle.push(`Fila ${fila.rowNum}: ${fila.codigo} ya tiene el precio S/. ${fila.precio.toFixed(2)} (sin cambio)`)
+          omitidosDetalle.push(`Fila ${fila.rowNum}: ${fila.codigo} ya tiene el precio S/. ${fila.precio.toFixed(2)} y la misma presentación (sin cambio)`)
           continue
         }
 
-        await Insumo.setPrecio(insumo.id, fila.precio, user.userId, connection)
+        if (precioCambia) {
+          await Insumo.setPrecio(insumo.id, fila.precio, user.userId, connection)
+        }
+        if (cantidadCambia) {
+          await Insumo.setCantidadPorPresentacion(insumo.id, fila.cantidad_por_presentacion, connection)
+        }
         actualizados++
       }
 

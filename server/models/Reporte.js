@@ -186,7 +186,7 @@ export const Reporte = {
           l.nombre AS laboratorio,
           c.nombre AS ciclo,
           CAST(
-            COALESCE(SUM(dri.cantidad_usada * COALESCE(ip.precio, 0)) * r.num_grupos, 0)
+            COALESCE(SUM(dri.cantidad_usada * COALESCE(ip.precio, 0) / COALESCE(NULLIF(i.cantidad_por_presentacion, 0), 1)) * r.num_grupos, 0)
             AS DECIMAL(10,2)
           ) AS costo_total_insumos,
           COUNT(DISTINCT dri.id) AS num_insumos
@@ -196,6 +196,7 @@ export const Reporte = {
         JOIN laboratorios l ON r.laboratorio_id = l.id
         JOIN ciclos      c ON r.ciclo_id      = c.id
         LEFT JOIN detalle_reserva_insumos dri ON dri.reserva_id = r.id
+        LEFT JOIN insumos i ON i.id = dri.insumo_id
         LEFT JOIN insumos_precios ip
           ON ip.insumo_id = dri.insumo_id AND ip.vigente_hasta IS NULL
         WHERE 1=1
@@ -243,12 +244,13 @@ export const Reporte = {
           e.nombre AS escuela,
           COUNT(DISTINCT r.id) AS total_horarios,
           CAST(
-            COALESCE(SUM(dri.cantidad_usada * COALESCE(ip.precio, 0) * r.num_grupos), 0)
+            COALESCE(SUM(dri.cantidad_usada * COALESCE(ip.precio, 0) / COALESCE(NULLIF(i.cantidad_por_presentacion, 0), 1) * r.num_grupos), 0)
             AS DECIMAL(10,2)
           ) AS costo_total
         FROM reservas r
         JOIN escuelas e ON r.escuela_id = e.id
         LEFT JOIN detalle_reserva_insumos dri ON dri.reserva_id = r.id
+        LEFT JOIN insumos i ON i.id = dri.insumo_id
         LEFT JOIN insumos_precios ip
           ON ip.insumo_id = dri.insumo_id AND ip.vigente_hasta IS NULL
         WHERE 1=1

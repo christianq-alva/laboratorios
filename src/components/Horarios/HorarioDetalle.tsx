@@ -335,11 +335,14 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                         </Typography>
                       )
                     }
-                    // Cálculo en centavos para evitar errores de punto flotante
-                    const toCents = (precio: number) => Math.round(precio * 100)
+                    // El precio unitario derivado de la presentación puede tener fracciones de
+                    // céntimo (ej. S/ 10 / 300 uds): se multiplica con precisión completa y se
+                    // redondea a centavos solo el costo de cada línea
                     const calcCostoCents = (precio: number, cantidad: number, g: number) =>
-                      toCents(precio) * cantidad * g
+                      Math.round(precio * cantidad * g * 100)
                     const formatS = (cents: number) => `S/. ${(cents / 100).toFixed(2)}`
+                    const fmtPrecioUnit = (p: number) =>
+                      Math.round(p * 100) === p * 100 ? p.toFixed(2) : p.toFixed(4)
 
                     const hayPrecios = items.some(i => Number(i.precio_unitario) > 0)
                     const totalCentsGeneral = hayPrecios
@@ -433,7 +436,7 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                                       )}
                                       {catTienePrecios && (
                                         <Typography variant="caption" sx={{ color: 'text.secondary', flex: 1 }}>
-                                          {precio > 0 ? `S/. ${precio.toFixed(2)}` : '—'}
+                                          {precio > 0 ? `S/. ${fmtPrecioUnit(precio)}` : '—'}
                                         </Typography>
                                       )}
                                       {catTienePrecios && (

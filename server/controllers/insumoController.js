@@ -12,14 +12,15 @@ const categoriasValidas = ['Reactivos', 'Materiales', 'Material_Biologico', 'Far
 export const createInsumo = async (req, res, next) => {
   try {
     // Los datos ya están validados y transformados por el middleware de validación
-    const { nombre, descripcion, unidad_id, categoria, presentacion } = req.body
+    const { nombre, descripcion, unidad_id, categoria, presentacion, cantidad_por_presentacion } = req.body
 
     const { insumo_id, codigo } = await Insumo.create(
       nombre,
       descripcion || '',
       unidad_id,
       categoria,
-      presentacion || ''
+      presentacion || '',
+      cantidad_por_presentacion || 1
     )
 
     res.status(201).json({
@@ -35,8 +36,8 @@ export const createInsumo = async (req, res, next) => {
 export const updateInsumo = async (req, res, next) => {
   try {
     const { id: insumoId } = req.params
-    const { nombre, descripcion, unidad_id, categoria, presentacion } = req.body
-    await insumoService.actualizarInsumo(insumoId, { nombre, descripcion, unidad_id, categoria, presentacion })
+    const { nombre, descripcion, unidad_id, categoria, presentacion, cantidad_por_presentacion } = req.body
+    await insumoService.actualizarInsumo(insumoId, { nombre, descripcion, unidad_id, categoria, presentacion, cantidad_por_presentacion })
     res.status(200).json({
       success: true,
       message: 'Insumo actualizado exitosamente'
@@ -141,6 +142,7 @@ export const generarPlantillaImportacion = async (req, res, next) => {
         'UNIDAD_MEDIDA',
         'CATEGORIA',
         'PRESENTACION',
+        'CANTIDAD_POR_PRESENTACION',
         'LABORATORIO_CODIGO',
         'LOTE',
         'CANTIDAD',
@@ -149,9 +151,10 @@ export const generarPlantillaImportacion = async (req, res, next) => {
       [
         'Alcohol etílico 70%',
         'Alcohol para desinfección y limpieza',
-        '1',
+        '5',
         'Reactivos',
         'Frasco 1L',
+        '1000',
         'LAB-001',
         'L-2026-001',
         '10',
@@ -163,6 +166,7 @@ export const generarPlantillaImportacion = async (req, res, next) => {
         '2',
         'Materiales',
         'Caja x 100 unidades',
+        '100',
         'LAB-002',
         '',
         '50',
@@ -174,6 +178,7 @@ export const generarPlantillaImportacion = async (req, res, next) => {
         '3',
         'Material_Biologico',
         'Placa Petri',
+        '1',
         '',
         '',
         '',
@@ -188,6 +193,7 @@ export const generarPlantillaImportacion = async (req, res, next) => {
       { width: 15 }, // UNIDAD_MEDIDA
       { width: 18 }, // CATEGORIA
       { width: 20 }, // PRESENTACION
+      { width: 26 }, // CANTIDAD_POR_PRESENTACION
       { width: 20 }, // LABORATORIO_CODIGO
       { width: 15 }, // LOTE
       { width: 12 }, // CANTIDAD
@@ -206,6 +212,7 @@ export const generarPlantillaImportacion = async (req, res, next) => {
       ['COLUMNAS OPCIONALES:'],
       ['• DESCRIPCION: Descripción detallada del insumo'],
       ['• PRESENTACION: Formato de presentación (Ej.: Frasco 500ml, Caja x 100)'],
+      ['• CANTIDAD_POR_PRESENTACION: Contenido de la presentación expresado en la unidad del insumo (Ej.: 500 si es Frasco 500ml y la unidad es ml; 100 si es Caja x 100 unidades). Si se omite, se asume 1'],
       ['• LABORATORIO_CODIGO: Código del laboratorio al que se asignará el insumo (Ej.: LAB-001)'],
       ['• LOTE: Número o código de lote (Ej.: L-2026-001). Requiere CANTIDAD si se especifica'],
       ['• CANTIDAD: Cantidad de stock a registrar. Requiere LABORATORIO_CODIGO si se especifica'],
@@ -214,6 +221,7 @@ export const generarPlantillaImportacion = async (req, res, next) => {
       [''],
       ['NOTAS IMPORTANTES:'],
       ['• Los códigos de insumos se generan automáticamente'],
+      ['• El precio que se configure luego para el insumo corresponde a la presentación completa; el sistema calcula el costo unitario dividiéndolo entre CANTIDAD_POR_PRESENTACION'],
       ['• Las unidades deben ser válidas'],
       ['• Las categorías deben ser exactamente: Reactivos, Materiales, Material_Biologico o Farmacos'],
       ['• Las fechas deben estar en formato YYYY-MM-DD'],
@@ -278,6 +286,9 @@ export const previsualizarImportacionMasiva = async (req, res, next) => {
       const unidad_id = row.UNIDAD_MEDIDA ? parseInt(row.UNIDAD_MEDIDA) : null
       const categoria = row.CATEGORIA ? row.CATEGORIA.toString().trim() : ''
       const presentacion = row.PRESENTACION ? row.PRESENTACION.toString().trim() : ''
+      const cantidad_por_presentacion = row.CANTIDAD_POR_PRESENTACION != null && row.CANTIDAD_POR_PRESENTACION.toString().trim() !== ''
+        ? parseFloat(row.CANTIDAD_POR_PRESENTACION.toString().trim())
+        : 1
       const laboratorio_codigo = row.LABORATORIO_CODIGO ? row.LABORATORIO_CODIGO.toString().trim() : ''
       const lote = row.LOTE ? row.LOTE.toString().trim() : ''
       const cantidad = row.CANTIDAD ? parseFloat(row.CANTIDAD.toString()) : 0
@@ -315,6 +326,11 @@ export const previsualizarImportacionMasiva = async (req, res, next) => {
         erroresFila.push(`Categoría inválida. Debe ser: ${categoriasValidas.join(', ')}`)
       }
 
+      // Validar CANTIDAD_POR_PRESENTACION si se proporcionó
+      if (isNaN(cantidad_por_presentacion) || cantidad_por_presentacion <= 0) {
+        erroresFila.push('CANTIDAD_POR_PRESENTACION debe ser un número mayor a 0')
+      }
+
       // Validar LABORATORIO_CODIGO si se proporcionó
       if (laboratorio_codigo) {
         const lab = await Laboratorio.findByCodigo(laboratorio_codigo)
@@ -345,6 +361,7 @@ export const previsualizarImportacionMasiva = async (req, res, next) => {
         unidad_simbolo,
         categoria,
         presentacion,
+        cantidad_por_presentacion: isNaN(cantidad_por_presentacion) ? null : cantidad_por_presentacion,
         laboratorio_codigo,
         lote,
         cantidad: cantidad || null,

@@ -2,13 +2,13 @@ import { pool } from '../config/database.js'
 import { handleDBError } from '../utils/handleDBError.js'
 
 export const Insumo = {
-  create: async (nombre, descripcion, unidad_id, categoria, presentacion, connection) => {
+  create: async (nombre, descripcion, unidad_id, categoria, presentacion, cantidad_por_presentacion, connection) => {
     const conn = connection || pool
     try {
       const [insumoResult] = await conn.execute(`
-        INSERT INTO insumos (codigo, nombre, descripcion, unidad_id, categoria, presentacion)
-        VALUES ('PENDIENTE', ?, ?, ?, ?, ?)
-      `, [nombre, descripcion || '', unidad_id, categoria, presentacion || ''])
+        INSERT INTO insumos (codigo, nombre, descripcion, unidad_id, categoria, presentacion, cantidad_por_presentacion)
+        VALUES ('PENDIENTE', ?, ?, ?, ?, ?, ?)
+      `, [nombre, descripcion || '', unidad_id, categoria, presentacion || '', cantidad_por_presentacion || 1])
 
       const insumo_id = insumoResult.insertId
       const codigo = `INS-${insumo_id.toString().padStart(4, '0')}`
@@ -26,9 +26,9 @@ export const Insumo = {
     try {
       const [result] = await conn.execute(`
         UPDATE insumos
-        SET nombre = ?, descripcion = ?, unidad_id = ?, categoria = ?, presentacion = ?
+        SET nombre = ?, descripcion = ?, unidad_id = ?, categoria = ?, presentacion = ?, cantidad_por_presentacion = ?
         WHERE id = ?
-      `, [data.nombre, data.descripcion || '', data.unidad_id, data.categoria, data.presentacion, id])
+      `, [data.nombre, data.descripcion || '', data.unidad_id, data.categoria, data.presentacion, data.cantidad_por_presentacion || 1, id])
 
       return { affectedRows: result.affectedRows, changedRows: result.changedRows }
     } catch (error) {
@@ -60,7 +60,7 @@ export const Insumo = {
     const conn = connection || pool
     try {
       const [rows] = await conn.execute(
-        'SELECT id, codigo, nombre FROM insumos WHERE codigo = ? LIMIT 1',
+        'SELECT id, codigo, nombre, cantidad_por_presentacion FROM insumos WHERE codigo = ? LIMIT 1',
         [codigo]
       )
       return rows[0] || null
@@ -89,6 +89,7 @@ export const Insumo = {
     try {
       const [rows] = await conn.execute(`
         SELECT i.id, i.codigo, i.nombre, i.descripcion, i.categoria, i.presentacion, i.unidad_id,
+               i.cantidad_por_presentacion,
                u.simbolo as unidad_simbolo, u.nombre as unidad_nombre,
                ip.precio as precio_unitario
         FROM insumos i
@@ -97,6 +98,19 @@ export const Insumo = {
         ORDER BY i.nombre
       `)
       return rows
+    } catch (error) {
+      handleDBError(error, 'Insumo')
+    }
+  },
+
+  setCantidadPorPresentacion: async (insumo_id, cantidad_por_presentacion, connection) => {
+    const conn = connection || pool
+    try {
+      const [result] = await conn.execute(
+        'UPDATE insumos SET cantidad_por_presentacion = ? WHERE id = ?',
+        [cantidad_por_presentacion, insumo_id]
+      )
+      return { affectedRows: result.affectedRows }
     } catch (error) {
       handleDBError(error, 'Insumo')
     }

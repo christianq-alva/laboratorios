@@ -57,6 +57,7 @@ interface PreviewData {
   unidad_nombre: string
   categoria: string
   presentacion: string
+  cantidad_por_presentacion?: number | null
   laboratorio_codigo?: string
   lote?: string
   cantidad?: number | null
@@ -447,6 +448,9 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
                             {item.presentacion && (
                               <Typography variant="caption" color="text.secondary">
                                 {item.presentacion}
+                                {item.cantidad_por_presentacion != null && item.cantidad_por_presentacion !== 1
+                                  ? ` (contiene ${item.cantidad_por_presentacion} ${item.unidad_simbolo})`
+                                  : ''}
                               </Typography>
                             )}
                           </Box>

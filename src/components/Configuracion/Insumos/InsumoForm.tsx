@@ -41,7 +41,8 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
     descripcion: '',
     unidad_id: 0,
     categoria: 'Materiales' as 'Reactivos' | 'Materiales' | 'Material_Biologico' | 'Farmacos',
-    presentacion: ''
+    presentacion: '',
+    cantidad_por_presentacion: '1'
   })
   const [unidades, setUnidades] = useState<Unidad[]>([])
   const [loadingUnidades, setLoadingUnidades] = useState(false)
@@ -73,7 +74,10 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
           descripcion: insumo.descripcion || '',
           unidad_id: insumo.unidad_id || 0,
           categoria: insumo.categoria || 'Materiales',
-          presentacion: insumo.presentacion || ''
+          presentacion: insumo.presentacion || '',
+          cantidad_por_presentacion: insumo.cantidad_por_presentacion != null
+            ? String(Number(insumo.cantidad_por_presentacion))
+            : '1'
         })
       } else {
         setFormData({
@@ -81,7 +85,8 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
           descripcion: '',
           unidad_id: 0,
           categoria: 'Materiales',
-          presentacion: ''
+          presentacion: '',
+          cantidad_por_presentacion: '1'
         })
       }
       setError(null)
@@ -106,6 +111,11 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
       setError('La unidad de medida es requerida')
       return false
     }
+    const cantidadPresentacion = Number(formData.cantidad_por_presentacion)
+    if (!formData.cantidad_por_presentacion.trim() || isNaN(cantidadPresentacion) || cantidadPresentacion <= 0) {
+      setError('La cantidad por presentación debe ser un número mayor a 0')
+      return false
+    }
 
     setError(null)
     return true
@@ -121,7 +131,8 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
       descripcion: formData.descripcion.trim(),
       unidad_id: formData.unidad_id,
       categoria: formData.categoria,
-      presentacion: formData.presentacion.trim()
+      presentacion: formData.presentacion.trim(),
+      cantidad_por_presentacion: Number(formData.cantidad_por_presentacion)
     }
 
     let result
@@ -243,15 +254,28 @@ export const InsumoForm: React.FC<InsumoFormProps> = ({
             </Select>
           </FormControl>
 
-          <TextField
-            fullWidth
-            label="Presentación"
-            value={formData.presentacion}
-            onChange={(e) => handleInputChange('presentacion', e.target.value)}
-            disabled={loading}
-            sx={{ mb: 2 }}
-            placeholder="Ej.: Frasco 500ml"
-          />
+          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <TextField
+              fullWidth
+              label="Presentación"
+              value={formData.presentacion}
+              onChange={(e) => handleInputChange('presentacion', e.target.value)}
+              disabled={loading}
+              placeholder="Ej.: Frasco 500ml"
+            />
+            <TextField
+              fullWidth
+              label="Cantidad por presentación"
+              value={formData.cantidad_por_presentacion}
+              onChange={(e) => handleInputChange('cantidad_por_presentacion', e.target.value)}
+              required
+              disabled={loading}
+              type="number"
+              inputProps={{ min: 0, step: 'any' }}
+              placeholder="Ej.: 500"
+              helperText="Contenido en la unidad del insumo (Ej.: 500 si es Frasco 500ml y la unidad es ml)"
+            />
+          </Box>
 
           <TextField
             fullWidth
