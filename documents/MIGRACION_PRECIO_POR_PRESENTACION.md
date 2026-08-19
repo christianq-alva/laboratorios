@@ -50,5 +50,23 @@ ALTER TABLE insumos
 ## Backfill pendiente
 
 Los insumos existentes quedan con `cantidad_por_presentacion = 1`. Deben actualizarse con el
-contenido real de cada presentación (editando el insumo o, en fase posterior, vía el Excel de
-actualización masiva de precios con la columna `CANTIDAD_POR_PRESENTACION`).
+contenido real de cada presentación (editando el insumo o vía el Excel de actualización masiva
+de precios con la columna `CANTIDAD_POR_PRESENTACION`).
+
+## ⚠️ Advertencia al cambiar la unidad de un insumo
+
+El stock, los movimientos de inventario y las cantidades requeridas de horarios se registran
+como números sin unidad; la unidad del insumo (`unidad_id`) es solo la etiqueta con la que se
+interpretan. Si durante el backfill se cambia la unidad de un insumo (ej. Alcohol de `L` a `ml`),
+**todos sus registros históricos pasan a leerse en la unidad nueva sin re-escalarse**: un stock
+de 20 que significaba "20 L" pasará a mostrarse como "20 ml".
+
+Procedimiento recomendado al cambiar la unidad de un insumo con datos:
+1. Anotar el stock disponible actual por laboratorio y lote.
+2. Cambiar la unidad y la `cantidad_por_presentacion` del insumo.
+3. Registrar un movimiento de ajuste (entrada) por la diferencia de escala
+   (ej. stock 20 L → registrar entrada de 19 980 para que el stock lea 20 000 ml).
+4. Revisar las cantidades requeridas de horarios futuros de ese insumo.
+
+Los horarios pasados quedarán con cantidades en la escala antigua; sus costos históricos deben
+interpretarse con cautela.

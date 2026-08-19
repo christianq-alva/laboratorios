@@ -100,7 +100,7 @@ export const generarPlantillaReabastecimiento = async (req, res) => {
     }]
     wsPlantilla['D1'].c = [{
       a: 'Sistema',
-      t: 'Cantidad a abastecer (número entero positivo)'
+      t: 'Cantidad a abastecer en la unidad del insumo (ml, unidades, etc.), NO en presentaciones (frascos, cajas). Ver hoja de insumos disponibles'
     }]
     XLSX.utils.book_append_sheet(wb, wsPlantilla, 'Plantilla Reabastecimiento')
     // Hoja 2: Lista de insumos disponibles

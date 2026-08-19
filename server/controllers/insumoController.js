@@ -215,7 +215,7 @@ export const generarPlantillaImportacion = async (req, res, next) => {
       ['• CANTIDAD_POR_PRESENTACION: Contenido de la presentación expresado en la unidad del insumo (Ej.: 500 si es Frasco 500ml y la unidad es ml; 100 si es Caja x 100 unidades). Si se omite, se asume 1'],
       ['• LABORATORIO_CODIGO: Código del laboratorio al que se asignará el insumo (Ej.: LAB-001)'],
       ['• LOTE: Número o código de lote (Ej.: L-2026-001). Requiere CANTIDAD si se especifica'],
-      ['• CANTIDAD: Cantidad de stock a registrar. Requiere LABORATORIO_CODIGO si se especifica'],
+      ['• CANTIDAD: Cantidad de stock a registrar, expresada en la unidad del insumo (Ej.: 2000 ml, no 2 frascos). Requiere LABORATORIO_CODIGO si se especifica'],
       ['• FECHA_VENCIMIENTO: Fecha de vencimiento del lote en formato YYYY-MM-DD (Ej.: 2026-12-31)'],
       [''],
       [''],

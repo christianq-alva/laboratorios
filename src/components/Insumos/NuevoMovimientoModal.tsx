@@ -22,7 +22,8 @@ import {
   Alert,
   CircularProgress,
   Chip,
-  Tooltip
+  Tooltip,
+  InputAdornment
 } from '@mui/material'
 import {
   Close,
@@ -460,12 +461,19 @@ export const NuevoMovimientoModal: React.FC<NuevoMovimientoModalProps> = ({
                     </FormControl>
                   ) : ''}
                   <TextField
-                    sx={{ minWidth: 120 }}
+                    sx={{ minWidth: 140 }}
                     type="number"
                     label="Cantidad"
                     value={cantidadInput}
                     onChange={(e) => setCantidadInput(Number(e.target.value))}
                     inputProps={{ min: 0.01, step: 0.01 }}
+                    InputProps={{
+                      endAdornment: insumoSeleccionado > 0 ? (
+                        <InputAdornment position="end">
+                          {insumos.find(i => i.id === insumoSeleccionado)?.unidad_simbolo || ''}
+                        </InputAdornment>
+                      ) : undefined
+                    }}
                     required
                   />
 
