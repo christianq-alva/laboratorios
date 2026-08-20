@@ -38,6 +38,17 @@ export const getHorariosPorLaboratorioSchema = z.object({
   })
 })
 
+export const getHorasUsoLaboratorioSchema = z.object({
+  query: z.object({
+    laboratorio_id: entidadIdSchema('laboratorio'),
+    escuela_id: entidadIdSchema('escuela'),
+    ciclo_id: entidadIdSchema('ciclo'),
+    mes_inicio: mesSchema,
+    mes_fin: mesSchema,
+    granularidad: z.enum(['dia', 'semana', 'mes']).optional(),
+  })
+})
+
 
 /**
  * Schema para query de reporte requerido vs consumido

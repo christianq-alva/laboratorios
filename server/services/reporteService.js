@@ -98,6 +98,33 @@ export async function getCostoPorEscuela(params, user) {
   return { data, filtros: { laboratorio_id: laboratorio_id || null, mes_inicio: mes_inicio || null, mes_fin: mes_fin || null }, total_registros }
 }
 
+export async function getHorasUsoLaboratorio(params, user) {
+  const { laboratorio_id, escuela_id, ciclo_id, mes_inicio, mes_fin, granularidad } = params
+  const labFilter = tieneRestriccionLaboratorio(user)
+    ? buildLabFilter(user.laboratorio_ids)
+    : ''
+  const fecha_desde = mes_inicio ? firstDayOfMonth(mes_inicio) : null
+  const fecha_hasta = mes_fin ? lastDayOfMonth(mes_fin) : null
+  const gran = granularidad || 'mes'
+
+  const { data, total_registros } = await Reporte.getHorasUsoLaboratorio(
+    { laboratorio_id, escuela_id, ciclo_id, fecha_desde, fecha_hasta, granularidad: gran },
+    labFilter
+  )
+  return {
+    data,
+    filtros: {
+      laboratorio_id: laboratorio_id || null,
+      escuela_id: escuela_id || null,
+      ciclo_id: ciclo_id || null,
+      mes_inicio: mes_inicio || null,
+      mes_fin: mes_fin || null,
+      granularidad: gran,
+    },
+    total_registros,
+  }
+}
+
 export async function getHorariosPorLaboratorio(params, user) {
   const { laboratorio_id, escuela_id, mes_inicio, mes_fin } = params
   const labFilter = tieneRestriccionLaboratorio(user)

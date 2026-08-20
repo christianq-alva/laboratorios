@@ -95,6 +95,18 @@ export const reporteService = {
     if (filtros.mes_fin) params.append('mes_fin', filtros.mes_fin)
     const response = await api.get(`/reportes/horarios-por-laboratorio?${params.toString()}`)
     return response.data as ReporteResponse<HorariosPorLaboratorio[]>
+  },
+
+  getHorasUso: async (filtros: { laboratorio_id?: number; escuela_id?: number; ciclo_id?: number; mes_inicio?: string; mes_fin?: string; granularidad?: Granularidad }) => {
+    const params = new URLSearchParams()
+    if (filtros.laboratorio_id) params.append('laboratorio_id', filtros.laboratorio_id.toString())
+    if (filtros.escuela_id) params.append('escuela_id', filtros.escuela_id.toString())
+    if (filtros.ciclo_id) params.append('ciclo_id', filtros.ciclo_id.toString())
+    if (filtros.mes_inicio) params.append('mes_inicio', filtros.mes_inicio)
+    if (filtros.mes_fin) params.append('mes_fin', filtros.mes_fin)
+    if (filtros.granularidad) params.append('granularidad', filtros.granularidad)
+    const response = await api.get(`/reportes/horas-uso-laboratorio?${params.toString()}`)
+    return response.data as ReporteResponse<HorasUsoLaboratorio[]>
   }
 }
 
@@ -128,4 +140,14 @@ export interface HorariosPorLaboratorio {
   total_horarios: number
   horarios_cerrados: number
   horarios_programados: number
+}
+
+export type Granularidad = 'dia' | 'semana' | 'mes'
+
+export interface HorasUsoLaboratorio {
+  periodo: string
+  laboratorio_id: number
+  laboratorio: string
+  horas_uso: number | string
+  num_sesiones: number
 }

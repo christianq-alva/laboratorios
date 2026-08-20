@@ -280,6 +280,69 @@ export const Reporte = {
     }
   },
 
+  /**
+   * Horas de uso por laboratorio agrupadas por período (día/semana/mes).
+   * Horas = duración de cada reserva (fecha_fin - fecha_inicio). Cuenta reservas
+   * Programadas (P) y Cerradas (C) = ocupación real del laboratorio.
+   * @param {object} params - { laboratorio_id, escuela_id, ciclo_id, fecha_desde, fecha_hasta, granularidad }
+   * @param {string} labFilter - Fragmento SQL (buildLabFilter)
+   * @returns {{ data: object[], total_registros: number }}
+   */
+  getHorasUsoLaboratorio: async (params, labFilter = '') => {
+    const { laboratorio_id, escuela_id, ciclo_id, fecha_desde, fecha_hasta, granularidad } = params
+    // Expresión de período según granularidad (whitelist, no interpolación de input libre)
+    const periodoExpr = {
+      dia: 'DATE(r.fecha_inicio)',
+      semana: 'DATE_SUB(DATE(r.fecha_inicio), INTERVAL WEEKDAY(r.fecha_inicio) DAY)',
+      mes: "DATE_FORMAT(r.fecha_inicio, '%Y-%m-01')",
+    }[granularidad] || "DATE_FORMAT(r.fecha_inicio, '%Y-%m-01')"
+    try {
+      let query = `
+        SELECT
+          ${periodoExpr} AS periodo,
+          l.id   AS laboratorio_id,
+          l.nombre AS laboratorio,
+          CAST(SUM(TIMESTAMPDIFF(MINUTE, r.fecha_inicio, r.fecha_fin)) / 60 AS DECIMAL(10,2)) AS horas_uso,
+          COUNT(DISTINCT r.id) AS num_sesiones
+        FROM reservas r
+        JOIN laboratorios l ON r.laboratorio_id = l.id
+        WHERE r.fecha_inicio IS NOT NULL
+          AND r.fecha_fin IS NOT NULL
+          AND r.fecha_fin > r.fecha_inicio
+      `
+      const queryParams = []
+
+      if (laboratorio_id) {
+        query += ' AND r.laboratorio_id = ?'
+        queryParams.push(laboratorio_id)
+      }
+      if (escuela_id) {
+        query += ' AND r.escuela_id = ?'
+        queryParams.push(escuela_id)
+      }
+      if (ciclo_id) {
+        query += ' AND r.ciclo_id = ?'
+        queryParams.push(ciclo_id)
+      }
+      if (fecha_desde) {
+        query += ' AND DATE(r.fecha_inicio) >= ?'
+        queryParams.push(fecha_desde)
+      }
+      if (fecha_hasta) {
+        query += ' AND DATE(r.fecha_inicio) <= ?'
+        queryParams.push(fecha_hasta)
+      }
+      query += `${labFilter}
+        GROUP BY periodo, l.id, l.nombre
+        ORDER BY periodo ASC, horas_uso DESC
+      `
+      const [rows] = await pool.execute(query, queryParams)
+      return { data: rows, total_registros: rows.length }
+    } catch (error) {
+      handleDBError(error, 'Reporte')
+    }
+  },
+
   getHorariosPorLaboratorio: async (params, labFilter = '') => {
     const { laboratorio_id, escuela_id, fecha_desde, fecha_hasta } = params
     try {

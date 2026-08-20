@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Box,
   Typography,
@@ -28,8 +28,10 @@ import {
   FormControlLabel,
   Checkbox,
   LinearProgress,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material'
-import { Search, Assessment, AttachMoney, Science, Download, FilterList, Clear } from '@mui/icons-material'
+import { Search, Assessment, AttachMoney, Science, Download, FilterList, Clear, AccessTime } from '@mui/icons-material'
 import * as XLSX from 'xlsx'
 import {
   BarChart,
@@ -47,6 +49,8 @@ import {
   type HorarioCosto,
   type CostoPorEscuela,
   type HorariosPorLaboratorio,
+  type HorasUsoLaboratorio,
+  type Granularidad,
 } from '../services/reporteService'
 import { escuelaService } from '../services/escuelaService'
 import type { Escuela } from '../services/escuelaService'
@@ -55,6 +59,7 @@ import type { Laboratorio } from '../services/laboratorioService'
 import { cicloService } from '../services/cicloService'
 import type { Ciclo } from '../services/cicloService'
 import dayjs from 'dayjs'
+import 'dayjs/locale/es'
 
 const CHART_COLORS = [
   '#1565C0', '#2E7D32', '#F57C00', '#6A1B9A',
@@ -69,6 +74,15 @@ const formatHora = (f: string) => dayjs(f).format('HH:mm')
 
 const currentMonth = () => dayjs().format('YYYY-MM')
 const firstMonthOfYear = () => `${dayjs().year()}-01`
+
+const formatHoras = (h: number) => `${Number(h).toFixed(1)} h`
+
+const formatPeriodo = (periodo: string, g: Granularidad) => {
+  const d = dayjs(periodo)
+  if (g === 'dia') return d.format('DD/MM')
+  if (g === 'semana') return `${d.format('DD/MM')}–${d.add(6, 'day').format('DD/MM')}`
+  return d.locale('es').format('MMM YYYY')
+}
 
 export const Reportes: React.FC = () => {
   // ── Filtros ──
@@ -85,6 +99,9 @@ export const Reportes: React.FC = () => {
   const [horarios, setHorarios] = useState<HorarioCosto[]>([])
   const [costosPorEscuela, setCostosPorEscuela] = useState<CostoPorEscuela[]>([])
   const [horariosPorLab, setHorariosPorLab] = useState<HorariosPorLaboratorio[]>([])
+  const [horasData, setHorasData] = useState<HorasUsoLaboratorio[]>([])
+  const [granularidad, setGranularidad] = useState<Granularidad>('mes')
+  const [horasLoading, setHorasLoading] = useState(false)
 
   // ── UI state ──
   const [loading, setLoading] = useState(false)
@@ -228,9 +245,45 @@ export const Reportes: React.FC = () => {
     setLoading(false)
   }, [escuelaId, laboratorioId, mesInicio, mesFin])
 
+  const fetchHoras = useCallback(async () => {
+    setHorasLoading(true)
+    try {
+      const res = await reporteService.getHorasUso({
+        laboratorio_id: laboratorioId || undefined,
+        escuela_id: escuelaId || undefined,
+        ciclo_id: cicloId || undefined,
+        mes_inicio: mesInicio || undefined,
+        mes_fin: mesFin || undefined,
+        granularidad,
+      })
+      setHorasData(res.data ?? [])
+    } catch {
+      setHorasData([])
+    }
+    setHorasLoading(false)
+  }, [escuelaId, laboratorioId, cicloId, mesInicio, mesFin, granularidad])
+
+  const handleBuscar = useCallback(() => {
+    fetchData()
+    fetchHoras()
+  }, [fetchData, fetchHoras])
+
   useEffect(() => {
     fetchData()
+    fetchHoras()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Refresca solo las horas al cambiar la granularidad (sin volver a pulsar Buscar)
+  const didMountHoras = useRef(false)
+  useEffect(() => {
+    if (!didMountHoras.current) {
+      didMountHoras.current = true
+      return
+    }
+    fetchHoras()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [granularidad])
 
   // KPIs
   const totalHorarios = horarios.length
@@ -251,6 +304,70 @@ export const Reportes: React.FC = () => {
     Programados: Number(l.horarios_programados),
     Cerrados: Number(l.horarios_cerrados),
   }))
+
+  // ── Horas de uso: laboratorios presentes, datos pivotados por período y ranking ──
+  const labsEnHoras = Array.from(new Set(horasData.map((h) => h.laboratorio)))
+
+  const chartHoras = (() => {
+    const map = new Map<string, Record<string, string | number>>()
+    for (const h of horasData) {
+      if (!map.has(h.periodo)) map.set(h.periodo, { periodo: h.periodo })
+      map.get(h.periodo)![h.laboratorio] = Number(h.horas_uso)
+    }
+    return Array.from(map.values())
+      .sort((a, b) => String(a.periodo).localeCompare(String(b.periodo)))
+      .map((row): Record<string, string | number> => ({
+        ...row,
+        periodoLabel: formatPeriodo(String(row.periodo), granularidad),
+      }))
+  })()
+
+  const rankingHoras = (() => {
+    const map = new Map<string, number>()
+    for (const h of horasData) {
+      map.set(h.laboratorio, (map.get(h.laboratorio) ?? 0) + Number(h.horas_uso))
+    }
+    return Array.from(map.entries())
+      .map(([laboratorio, horas]) => ({ laboratorio, horas }))
+      .sort((a, b) => b.horas - a.horas)
+  })()
+
+  // KPIs de horas
+  const horasTotales = rankingHoras.reduce((s, r) => s + r.horas, 0)
+  const sesionesTotales = horasData.reduce((s, h) => s + Number(h.num_sesiones), 0)
+  const numPeriodos = chartHoras.length
+  const promedioHorasPeriodo = numPeriodos > 0 ? horasTotales / numPeriodos : 0
+  const labMasUsado = rankingHoras[0]?.laboratorio ?? '—'
+  const granLabel: Record<Granularidad, string> = { dia: 'día', semana: 'semana', mes: 'mes' }
+
+  const exportHoras = () => {
+    const headers = ['Período', 'Laboratorio', 'Horas de uso', 'N° sesiones']
+    const rows = chartHoras.flatMap((row) =>
+      labsEnHoras
+        .filter((lab) => row[lab] != null)
+        .map((lab) => {
+          const detalle = horasData.find((h) => h.periodo === row.periodo && h.laboratorio === lab)
+          return [row.periodoLabel, lab, Number(row[lab]), Number(detalle?.num_sesiones ?? 0)]
+        })
+    )
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['Reporte de Horas de Uso por Laboratorio'],
+      [`Granularidad: por ${granLabel[granularidad]}`],
+      [`Período: ${mesInicio} – ${mesFin}`],
+      [],
+      headers,
+      ...rows,
+    ])
+    ws['!cols'] = [24, 24, 14, 12].map((w) => ({ wch: w }))
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } },
+      { s: { r: 2, c: 0 }, e: { r: 2, c: 3 } },
+    ]
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Horas de Uso')
+    XLSX.writeFile(wb, `Horas_Uso_Laboratorio_${mesInicio}_${mesFin}.xlsx`)
+  }
 
   return (
     <Box sx={{ p: 3 }}>
@@ -373,7 +490,7 @@ export const Reportes: React.FC = () => {
               variant="contained"
               fullWidth
               startIcon={loading ? <CircularProgress size={15} color="inherit" /> : <Search />}
-              onClick={fetchData}
+              onClick={handleBuscar}
               disabled={loading}
               sx={{ height: 40 }}
             >
@@ -587,6 +704,118 @@ export const Reportes: React.FC = () => {
         </Grid>
 
       </Grid>
+
+      {/* ── Horas de Uso por Laboratorio ── */}
+      <Paper sx={{ p: 2.5, borderRadius: 2, mt: 3 }}>
+        {/* Encabezado + toggle de granularidad + export */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5, mb: 0.5 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <AccessTime fontSize="small" color="primary" />
+            Horas de Uso por Laboratorio
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={granularidad}
+              onChange={(_, val) => { if (val) setGranularidad(val as Granularidad) }}
+            >
+              <ToggleButton value="dia" sx={{ textTransform: 'none', px: 1.5 }}>Día</ToggleButton>
+              <ToggleButton value="semana" sx={{ textTransform: 'none', px: 1.5 }}>Semana</ToggleButton>
+              <ToggleButton value="mes" sx={{ textTransform: 'none', px: 1.5 }}>Mes</ToggleButton>
+            </ToggleButtonGroup>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<Download fontSize="small" />}
+              onClick={exportHoras}
+              disabled={horasLoading || horasData.length === 0}
+              sx={{ textTransform: 'none' }}
+            >
+              Exportar Excel
+            </Button>
+          </Box>
+        </Box>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+          Ocupación (reservas programadas y cerradas) · {mesInicio && mesFin ? `${mesInicio} → ${mesFin}` : 'Todos los períodos'}
+        </Typography>
+
+        {/* KPIs */}
+        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
+          <Typography variant="caption" color="text.secondary">
+            <Box component="span" sx={{ fontWeight: 700, color: 'primary.main' }}>{formatHoras(horasTotales)}</Box> totales
+          </Typography>
+          <Typography variant="caption" color="text.disabled">·</Typography>
+          <Typography variant="caption" color="text.secondary">
+            <Box component="span" sx={{ fontWeight: 700, color: 'text.primary' }}>{formatHoras(promedioHorasPeriodo)}</Box> prom/{granLabel[granularidad]}
+          </Typography>
+          <Typography variant="caption" color="text.disabled">·</Typography>
+          <Typography variant="caption" color="text.secondary">
+            <Box component="span" sx={{ fontWeight: 700, color: 'text.primary' }}>{sesionesTotales}</Box> sesiones
+          </Typography>
+          <Typography variant="caption" color="text.disabled">·</Typography>
+          <Typography variant="caption" color="text.secondary">
+            Más usado: <Box component="span" sx={{ fontWeight: 700, color: 'success.main' }}>{labMasUsado}</Box>
+          </Typography>
+        </Box>
+
+        {horasLoading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}><CircularProgress size={28} /></Box>
+        ) : horasData.length === 0 ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+            <Typography color="text.secondary" variant="body2">Sin datos de horas para los filtros seleccionados</Typography>
+          </Box>
+        ) : (
+          <Grid container spacing={3} alignItems="flex-start">
+            {/* Barras agrupadas por período */}
+            <Grid size={{ xs: 12, lg: 8 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                Horas por {granLabel[granularidad]} (por laboratorio)
+              </Typography>
+              <ResponsiveContainer width="100%" height={320}>
+                <BarChart data={chartHoras} margin={{ left: 0, right: 10, top: 4, bottom: 40 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="periodoLabel"
+                    tick={{ fontSize: 10 }}
+                    angle={-30}
+                    textAnchor="end"
+                    interval={0}
+                  />
+                  <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}h`} />
+                  <Tooltip formatter={(value: number, name: string) => [formatHoras(value), name]} />
+                  <Legend verticalAlign="top" wrapperStyle={{ fontSize: 11 }} />
+                  {labsEnHoras.map((lab, i) => (
+                    <Bar key={lab} dataKey={lab} fill={CHART_COLORS[i % CHART_COLORS.length]} radius={[3, 3, 0, 0]} />
+                  ))}
+                </BarChart>
+              </ResponsiveContainer>
+            </Grid>
+
+            {/* Ranking de horas totales por laboratorio */}
+            <Grid size={{ xs: 12, lg: 4 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                Ranking (horas totales)
+              </Typography>
+              <Box sx={{ overflowY: 'auto', maxHeight: 320 }}>
+                <ResponsiveContainer width="100%" height={Math.max(160, rankingHoras.length * 46)}>
+                  <BarChart layout="vertical" data={rankingHoras} margin={{ left: 4, right: 40, top: 4, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}h`} />
+                    <YAxis type="category" dataKey="laboratorio" width={100} tick={{ fontSize: 11 }} tickLine={false} />
+                    <Tooltip formatter={(value: number) => [formatHoras(value), 'Horas']} />
+                    <Bar dataKey="horas" radius={[0, 4, 4, 0]} barSize={24}>
+                      {rankingHoras.map((_, i) => (
+                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
+            </Grid>
+          </Grid>
+        )}
+      </Paper>
 
       {/* ── Diálogo Exportar Excel ── */}
       <Dialog open={exportOpen} onClose={() => !exportLoading && setExportOpen(false)} maxWidth="sm" fullWidth>

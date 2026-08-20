@@ -7,14 +7,16 @@ import {
   getStockVsRequeridoSchema,
   getHorariosConCostoSchema,
   getCostoPorEscuelaSchema,
-  getHorariosPorLaboratorioSchema
+  getHorariosPorLaboratorioSchema,
+  getHorasUsoLaboratorioSchema
 } from '../validations/index.js'
 import {
   getRequeridoVsConsumido,
   getStockVsRequerido,
   getHorariosConCosto,
   getCostoPorEscuela,
-  getHorariosPorLaboratorio
+  getHorariosPorLaboratorio,
+  getHorasUsoLaboratorio
 } from '../controllers/reporteController.js'
 
 const router = express.Router()
@@ -54,6 +56,13 @@ router.get('/horarios-por-laboratorio',
   authorize('read', 'Reporte'),
   validate(getHorariosPorLaboratorioSchema),
   getHorariosPorLaboratorio
+)
+
+router.get('/horas-uso-laboratorio',
+  authenticateToken,
+  authorize('read', 'Reporte'),
+  validate(getHorasUsoLaboratorioSchema),
+  getHorasUsoLaboratorio
 )
 
 export default router

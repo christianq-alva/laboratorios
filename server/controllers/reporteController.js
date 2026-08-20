@@ -18,6 +18,15 @@ export const getCostoPorEscuela = async (req, res, next) => {
   }
 }
 
+export const getHorasUsoLaboratorio = async (req, res, next) => {
+  try {
+    const payload = await reporteService.getHorasUsoLaboratorio(req.query, req.user)
+    res.status(200).json(payload)
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const getHorariosPorLaboratorio = async (req, res, next) => {
   try {
     const payload = await reporteService.getHorariosPorLaboratorio(req.query, req.user)
