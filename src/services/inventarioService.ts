@@ -21,7 +21,7 @@ export interface InsumoSaldo {
     description: string
     unidad_simbolo: string
     unidad_nombre: string
-    categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico' | 'Farmacos'
+    categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico' | 'Farmacos' | 'Insumos'
     presentacion: string
     total_lotes: number
     stock_disponible: number

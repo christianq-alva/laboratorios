@@ -42,6 +42,7 @@ export const CatalogoInsumosTable: React.FC<CatalogoInsumosTableProps> = ({
       case 'Materiales': return '#2196f3'
       case 'Material_Biologico': return '#4caf50'
       case 'Farmacos': return '#9c27b0'
+      case 'Insumos': return '#009688'
       default: return '#9e9e9e'
     }
   }

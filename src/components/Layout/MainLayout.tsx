@@ -37,7 +37,7 @@ interface MainLayoutProps {
 const menuItems = [
   { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['Administrador', 'Jefe de Laboratorio'] },
   { text: 'Horarios', icon: <Schedule />, path: '/horarios', roles: ['Administrador', 'Jefe de Laboratorio'] },
-  { text: 'Insumos', icon: <Inventory />, path: '/insumos', roles: ['Administrador', 'Jefe de Laboratorio'] },
+  { text: 'Suministros', icon: <Inventory />, path: '/insumos', roles: ['Administrador', 'Jefe de Laboratorio'] },
   { text: 'Equipos', icon: <Build />, path: '/equipos', roles: ['Administrador', 'Jefe de Laboratorio'] },
   { text: 'Incidencias', icon: <ReportProblem />, path: '/incidencias', roles: ['Administrador', 'Jefe de Laboratorio'] },
   { text: 'Comparación Insumos', icon: <CompareArrows />, path: '/comparacion-insumos', roles: ['Administrador', 'Jefe de Laboratorio'] },

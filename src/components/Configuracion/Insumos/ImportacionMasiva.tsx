@@ -202,6 +202,7 @@ export const ImportacionMasiva: React.FC<ImportacionMasivaProps> = ({ open, onCl
       case 'Materiales': return 'secondary'
       case 'Material_Biologico': return 'warning'
       case 'Farmacos': return 'secondary'
+      case 'Insumos': return 'info'
       default: return 'default'
     }
   }

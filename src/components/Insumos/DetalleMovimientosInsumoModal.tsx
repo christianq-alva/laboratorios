@@ -153,7 +153,9 @@ export const DetalleMovimientosInsumoModal: React.FC<DetalleMovimientosInsumoMod
                       size="small"
                       sx={{
                         bgcolor: insumo.categoria === 'Reactivos' ? '#ff9800' :
-                                insumo.categoria === 'Materiales' ? '#2196f3' : '#4caf50',
+                                insumo.categoria === 'Materiales' ? '#2196f3' :
+                                insumo.categoria === 'Farmacos' ? '#9c27b0' :
+                                insumo.categoria === 'Insumos' ? '#009688' : '#4caf50',
                         color: 'white'
                       }}
                     />

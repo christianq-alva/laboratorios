@@ -9,7 +9,7 @@ export interface Insumo {
   unidad_id: number
   unidad_simbolo?: string
   unidad_nombre?: string
-  categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico' | 'Farmacos'
+  categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico' | 'Farmacos' | 'Insumos'
   presentacion: string
   cantidad_por_presentacion?: number
   precio_unitario?: number | null
@@ -30,7 +30,7 @@ export const insumoService = {
     nombre: string
     descripcion: string
     unidad_id: number
-    categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico' | 'Farmacos'
+    categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico' | 'Farmacos' | 'Insumos'
     presentacion?: string
     cantidad_por_presentacion?: number
   }): Promise<ApiCreateUpdateResponse<{ id: number }>> => {
@@ -43,7 +43,7 @@ export const insumoService = {
     nombre: string
     descripcion: string
     unidad_id: number
-    categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico' | 'Farmacos'
+    categoria: 'Reactivos' | 'Materiales' | 'Material_Biologico' | 'Farmacos' | 'Insumos'
     presentacion?: string
     cantidad_por_presentacion?: number
   }): Promise<ApiCreateUpdateResponse<Insumo>> => {

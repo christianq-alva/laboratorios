@@ -177,6 +177,8 @@ export const ConfigurarInsumosModal: React.FC<ConfigurarInsumosModalProps> = ({
         return 'success'
       case 'Farmacos':
         return 'secondary'
+      case 'Insumos':
+        return 'info'
       default:
         return 'default'
     }

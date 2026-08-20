@@ -168,8 +168,10 @@ export const DetalleLotesModal: React.FC<DetalleLotesModalProps> = ({
                       label={insumo.categoria} 
                       size="small" 
                       sx={{ 
-                        bgcolor: insumo.categoria === 'Reactivos' ? '#ff9800' : 
-                                insumo.categoria === 'Materiales' ? '#2196f3' : '#4caf50',
+                        bgcolor: insumo.categoria === 'Reactivos' ? '#ff9800' :
+                                insumo.categoria === 'Materiales' ? '#2196f3' :
+                                insumo.categoria === 'Farmacos' ? '#9c27b0' :
+                                insumo.categoria === 'Insumos' ? '#009688' : '#4caf50',
                         color: 'white'
                       }}
                     />

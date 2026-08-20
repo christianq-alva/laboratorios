@@ -812,7 +812,7 @@ export const Configuracion: React.FC = () => {
             <Tab
               icon={<LibraryBooks />}
               iconPosition="start"
-              label="Catálogo de Insumos"
+              label="Catálogo de Suministros"
               id="config-tab-3"
               aria-controls="config-tabpanel-3"
             />
@@ -962,7 +962,7 @@ export const Configuracion: React.FC = () => {
               mb={3}
             >
               <Typography variant="h6" fontWeight={600}>
-                Catálogo de Insumos
+                Catálogo de Suministros
               </Typography>
 
               <Box display="flex" gap={2}>

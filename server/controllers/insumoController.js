@@ -6,7 +6,7 @@ import XLSX from 'xlsx'
 import { Unidad } from '../models/Unidad.js'
 import { AppError } from '../utils/errors.js'
 
-const categoriasValidas = ['Reactivos', 'Materiales', 'Material_Biologico', 'Farmacos']
+const categoriasValidas = ['Reactivos', 'Materiales', 'Material_Biologico', 'Farmacos', 'Insumos']
 
 // Crear insumo
 export const createInsumo = async (req, res, next) => {
@@ -207,7 +207,7 @@ export const generarPlantillaImportacion = async (req, res, next) => {
       ['COLUMNAS OBLIGATORIAS:'],
       ['• NOMBRE: Nombre del insumo (texto, máximo 255 caracteres)'],
       ['• UNIDAD_MEDIDA: ID de la unidad de medida'],
-      ['• CATEGORIA: Reactivos | Materiales | Material_Biologico | Farmacos'],
+      ['• CATEGORIA: Reactivos | Materiales | Material_Biologico | Farmacos | Insumos'],
       [''],
       ['COLUMNAS OPCIONALES:'],
       ['• DESCRIPCION: Descripción detallada del insumo'],
@@ -223,7 +223,7 @@ export const generarPlantillaImportacion = async (req, res, next) => {
       ['• Los códigos de insumos se generan automáticamente'],
       ['• El precio que se configure luego para el insumo corresponde a la presentación completa; el sistema calcula el costo unitario dividiéndolo entre CANTIDAD_POR_PRESENTACION'],
       ['• Las unidades deben ser válidas'],
-      ['• Las categorías deben ser exactamente: Reactivos, Materiales, Material_Biologico o Farmacos'],
+      ['• Las categorías deben ser exactamente: Reactivos, Materiales, Material_Biologico, Farmacos o Insumos'],
       ['• Las fechas deben estar en formato YYYY-MM-DD'],
       ['• Elimine esta hoja antes de importar el archivo']
     ]
