@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -21,6 +21,8 @@ import {
   ListItemText,
   Tooltip,
   Popover,
+  Autocomplete,
+  InputAdornment,
 } from '@mui/material'
 import {
   Close,
@@ -35,6 +37,7 @@ import {
   Warning,
   CheckCircle,
   Delete,
+  Search,
 } from '@mui/icons-material'
 import { horarioService } from '../../services/horarioService'
 import { laboratorioService } from '../../services/laboratorioService'
@@ -148,6 +151,14 @@ const COLOR_PALETTE = [
   { color: '#003366', name: 'Azul Noche' } // Azul noche
 ]
 
+// Normaliza texto para los buscadores: sin mayúsculas ni acentos
+const normalizarTexto = (texto: string) =>
+  texto
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+
 export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, onSuccess, horario }) => {
   const { execute } = useApi()
   // Estados del formulario
@@ -179,6 +190,31 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
   const [equiposDisponibles, setEquiposDisponibles] = useState<Equipo[]>([])
   const [equiposSeleccionados, setEquiposSeleccionados] = useState<EquipoSeleccionado[]>([])
   const [numGrupos, setNumGrupos] = useState(1)
+
+  // Buscadores de los listados largos
+  const [busquedaInsumo, setBusquedaInsumo] = useState('')
+  const [busquedaEquipo, setBusquedaEquipo] = useState('')
+
+  const insumosFiltrados = useMemo(() => {
+    const termino = normalizarTexto(busquedaInsumo)
+    if (!termino) return insumosDisponibles
+    return insumosDisponibles.filter(insumo =>
+      normalizarTexto(`${insumo.nombre} ${insumo.codigo} ${insumo.unidad_nombre ?? ''}`).includes(termino)
+    )
+  }, [insumosDisponibles, busquedaInsumo])
+
+  const equiposFiltrados = useMemo(() => {
+    const termino = normalizarTexto(busquedaEquipo)
+    if (!termino) return equiposDisponibles
+    return equiposDisponibles.filter(equipo =>
+      normalizarTexto(`${equipo.nombre} ${equipo.marca} ${equipo.modelo} ${equipo.codigo}`).includes(termino)
+    )
+  }, [equiposDisponibles, busquedaEquipo])
+
+  const docenteSeleccionado = useMemo(
+    () => docentes.find(d => d.id === formData.docente_id) ?? null,
+    [docentes, formData.docente_id]
+  )
 
   // Estados de carga y errores
   const [loading, setLoading] = useState(false)
@@ -343,6 +379,8 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     setNumGrupos(1)
     setConflictos([])
     setError(null)
+    setBusquedaInsumo('')
+    setBusquedaEquipo('')
 
     setLaboratorioChangeMessage(null)
   }
@@ -375,6 +413,10 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     const laboratorioAnterior = formData.laboratorio_id
 
     setFormData(prev => ({ ...prev, laboratorio_id }))
+
+    // Los buscadores no aplican al nuevo listado
+    setBusquedaInsumo('')
+    setBusquedaEquipo('')
 
     // Limpiar insumos y equipos seleccionados cuando se cambia el laboratorio
     if (laboratorioAnterior > 0 && laboratorioAnterior !== laboratorio_id) {
@@ -670,26 +712,45 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                     </Select>
                   </FormControl>
 
-                  {/* Docente */}
-                  <FormControl fullWidth>
-                    <InputLabel>Docente</InputLabel>
-                    <Select
-                      value={formData.docente_id}
-                      label="Docente"
-                      onChange={(e) => setFormData(prev => ({ ...prev, docente_id: e.target.value as number }))}
-                      disabled={loading}
-                    >
-                      <MenuItem value={0} disabled>Seleccionar docente</MenuItem>
-                      {docentes.map((docente) => (
-                        <MenuItem key={docente.id} value={docente.id}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Person fontSize="small" />
-                            {docente.nombre}
-                          </Box>
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  {/* Docente - con buscador */}
+                  <Autocomplete
+                    fullWidth
+                    options={docentes}
+                    value={docenteSeleccionado}
+                    onChange={(_, docente) => setFormData(prev => ({ ...prev, docente_id: docente?.id ?? 0 }))}
+                    getOptionLabel={(docente) => docente.nombre}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    filterOptions={(options, { inputValue }) => {
+                      const termino = normalizarTexto(inputValue)
+                      if (!termino) return options
+                      return options.filter(docente =>
+                        normalizarTexto(`${docente.nombre} ${docente.correo ?? ''} ${docente.escuela ?? ''}`).includes(termino)
+                      )
+                    }}
+                    disabled={loading}
+                    noOptionsText="Sin docentes que coincidan"
+                    renderOption={(props, docente) => {
+                      const { key, ...optionProps } = props
+                      return (
+                        <Box
+                          component="li"
+                          key={key}
+                          {...optionProps}
+                          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                        >
+                          <Person fontSize="small" />
+                          {docente.nombre}
+                        </Box>
+                      )
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Docente"
+                        placeholder="Escribe para buscar un docente"
+                      />
+                    )}
+                  />
 
                   {/* Fila de Escuela, Ciclo */}
                   <Box sx={{ display: 'flex', gap: 2 }}>
@@ -1214,14 +1275,40 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                     overflow: 'hidden'
                   }}>
                     <Box sx={{ p: 2, backgroundColor: '#f0f7ff', borderBottom: '1px solid #e0e0e0' }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                        Disponibles ({insumosDisponibles.length})
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'primary.main', mb: 1 }}>
+                        Disponibles ({insumosFiltrados.length}{busquedaInsumo ? ` de ${insumosDisponibles.length}` : ''})
                       </Typography>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        value={busquedaInsumo}
+                        onChange={(e) => setBusquedaInsumo(e.target.value)}
+                        placeholder="Buscar por nombre, código o unidad"
+                        sx={{ backgroundColor: 'white', borderRadius: 1 }}
+                        slotProps={{
+                          input: {
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <Search fontSize="small" />
+                              </InputAdornment>
+                            ),
+                            endAdornment: busquedaInsumo ? (
+                              <InputAdornment position="end">
+                                <Tooltip title="Limpiar búsqueda">
+                                  <IconButton size="small" onClick={() => setBusquedaInsumo('')}>
+                                    <Close fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              </InputAdornment>
+                            ) : null
+                          }
+                        }}
+                      />
                     </Box>
                     <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
-                      {insumosDisponibles.length > 0 ? (
+                      {insumosFiltrados.length > 0 ? (
                         <List dense>
-                          {insumosDisponibles.map((insumo) => {
+                          {insumosFiltrados.map((insumo) => {
                             const yaSeleccionado = insumosSeleccionados.some(i => i.insumo_id === insumo.id)
                             return (
                               <Box
@@ -1274,10 +1361,10 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                         <Box sx={{ p: 2, textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                           <Inventory sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
                           <Typography variant="body2" color="text.secondary">
-                            No hay insumos disponibles
+                            {busquedaInsumo ? 'Sin resultados para la búsqueda' : 'No hay insumos disponibles'}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            Contacta al administrador
+                            {busquedaInsumo ? 'Prueba con otro nombre o código' : 'Contacta al administrador'}
                           </Typography>
                         </Box>
                       )}
@@ -1423,18 +1510,44 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                       overflow: 'hidden',
                       display: 'flex',
                       flexDirection: 'column',
-                      minHeight: 250,
-                      maxHeight: 300
+                      minHeight: 300,
+                      maxHeight: 360
                     }}>
                       <Box sx={{ p: 2, backgroundColor: '#f0f7ff', borderBottom: '1px solid #e0e0e0' }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                          Disponibles ({equiposDisponibles.length})
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'primary.main', mb: 1 }}>
+                          Disponibles ({equiposFiltrados.length}{busquedaEquipo ? ` de ${equiposDisponibles.length}` : ''})
                         </Typography>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          value={busquedaEquipo}
+                          onChange={(e) => setBusquedaEquipo(e.target.value)}
+                          placeholder="Buscar por nombre, marca, modelo o código"
+                          sx={{ backgroundColor: 'white', borderRadius: 1 }}
+                          slotProps={{
+                            input: {
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <Search fontSize="small" />
+                                </InputAdornment>
+                              ),
+                              endAdornment: busquedaEquipo ? (
+                                <InputAdornment position="end">
+                                  <Tooltip title="Limpiar búsqueda">
+                                    <IconButton size="small" onClick={() => setBusquedaEquipo('')}>
+                                      <Close fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </InputAdornment>
+                              ) : null
+                            }
+                          }}
+                        />
                       </Box>
                       <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
-                        {equiposDisponibles.length > 0 ? (
+                        {equiposFiltrados.length > 0 ? (
                           <List dense>
-                            {equiposDisponibles.map((equipo) => {
+                            {equiposFiltrados.map((equipo) => {
                               const yaSeleccionado = equiposSeleccionados.some(e => e.equipo_id === equipo.id)
                               return (
                                 <ListItem
@@ -1478,8 +1591,15 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                           <Box sx={{ p: 3, textAlign: 'center' }}>
                             <Build sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
                             <Typography variant="body2" color="text.secondary">
-                              No hay equipos disponibles en este laboratorio
+                              {busquedaEquipo
+                                ? 'Sin resultados para la búsqueda'
+                                : 'No hay equipos disponibles en este laboratorio'}
                             </Typography>
+                            {busquedaEquipo && (
+                              <Typography variant="caption" color="text.secondary">
+                                Prueba con otro nombre, marca o código
+                              </Typography>
+                            )}
                           </Box>
                         )}
                       </Box>
