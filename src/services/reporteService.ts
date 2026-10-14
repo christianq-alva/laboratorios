@@ -125,12 +125,25 @@ export interface HorarioCosto {
   ciclo: string
   costo_total_insumos: number | string
   num_insumos: number
+  /** Depreciación congelada al guardar el horario (ya incluye num_grupos) */
+  costo_depreciacion_equipos: number | string
+  costo_depreciacion_materiales: number | string
+  num_equipos: number
+  num_materiales: number
 }
+
+/** Costo total de la práctica: insumos + depreciación de equipos y material */
+export const costoTotalPractica = (h: HorarioCosto): number =>
+  Number(h.costo_total_insumos ?? 0)
+  + Number(h.costo_depreciacion_equipos ?? 0)
+  + Number(h.costo_depreciacion_materiales ?? 0)
 
 export interface CostoPorEscuela {
   escuela_id: number
   escuela: string
   total_horarios: number
+  costo_insumos: number | string
+  costo_depreciacion: number | string
   costo_total: number | string
 }
 

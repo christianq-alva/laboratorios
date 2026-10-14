@@ -2,6 +2,7 @@ import { pool } from '../config/database.js'
 import { Equipo } from '../models/Equipo.js'
 import { Laboratorio } from '../models/Laboratorio.js'
 import { TipoEquipo } from '../models/TipoEquipo.js'
+import { DepreciacionCategoria } from '../models/DepreciacionCategoria.js'
 import { AppError } from '../utils/errors.js'
 
 const estadosValidos = ['Operativo', 'En Mantenimiento', 'Fuera de Servicio']
@@ -45,7 +46,9 @@ export const equipoService = {
         condicion: datos.condicion ?? 'Bueno',
         fecha_adquisicion: datos.fecha_adquisicion,
         tipo_equipo_id: datos.tipo_equipo_id,
-        laboratorio_id: datos.laboratorio_id
+        laboratorio_id: datos.laboratorio_id,
+        valor_adquisicion: datos.valor_adquisicion ?? null,
+        depreciacion_categoria_id: datos.depreciacion_categoria_id ?? null
       }, connection)
       await Equipo.registrarActividadEquipo({
         accion: 'crear',
@@ -93,7 +96,9 @@ export const equipoService = {
         condicion: datos.condicion || 'Bueno',
         fecha_adquisicion: datos.fecha_adquisicion,
         tipo_equipo_id: datos.tipo_equipo_id,
-        laboratorio_id: datos.laboratorio_id
+        laboratorio_id: datos.laboratorio_id,
+        valor_adquisicion: datos.valor_adquisicion ?? null,
+        depreciacion_categoria_id: datos.depreciacion_categoria_id ?? null
       }, connection)
       if (affectedRows === 0) {
         await connection.rollback()
@@ -174,6 +179,14 @@ export const equipoService = {
           const comentarios = row.COMENTARIOS ? row.COMENTARIOS.toString().trim() : ''
           const condicion = row.CONDICION ? row.CONDICION.toString().trim() : 'Bueno'
           const tipo_equipo_id = row.TIPO_EQUIPO_ID ? parseInt(row.TIPO_EQUIPO_ID) : null
+          const valorRaw = row.VALOR_ADQUISICION
+          const valor_adquisicion = valorRaw === undefined || valorRaw === null || valorRaw.toString().trim() === ''
+            ? null
+            : Number(valorRaw.toString().trim())
+          const depRaw = row.DEPRECIACION_CATEGORIA_ID
+          const depreciacion_categoria_id = depRaw === undefined || depRaw === null || depRaw.toString().trim() === ''
+            ? null
+            : parseInt(depRaw)
 
           if (!codigo) {
             errores.push(`Fila ${rowNum}: CODIGO es obligatorio`)
@@ -223,6 +236,14 @@ export const equipoService = {
             errores.push(`Fila ${rowNum}: TIPO_EQUIPO_ID es obligatorio y debe ser válido`)
             continue
           }
+          if (valor_adquisicion !== null && (!Number.isFinite(valor_adquisicion) || valor_adquisicion < 0)) {
+            errores.push(`Fila ${rowNum}: VALOR_ADQUISICION debe ser un número mayor o igual a 0`)
+            continue
+          }
+          if (depreciacion_categoria_id !== null && !Number.isInteger(depreciacion_categoria_id)) {
+            errores.push(`Fila ${rowNum}: DEPRECIACION_CATEGORIA_ID debe ser un número entero`)
+            continue
+          }
           if (!estadosValidos.includes(estado)) {
             errores.push(`Fila ${rowNum}: Estado inválido. Debe ser: ${estadosValidos.join(', ')}`)
             continue
@@ -245,7 +266,9 @@ export const equipoService = {
             condicion,
             fecha_adquisicion,
             tipo_equipo_id,
-            laboratorio_id
+            laboratorio_id,
+            valor_adquisicion,
+            depreciacion_categoria_id
           }
           const equipo_id = await Equipo.create(equipoData, connection)
           await Equipo.registrarActividadEquipo({
@@ -283,7 +306,8 @@ export const equipoService = {
   async getDatosPlantillaEquipos() {
     const laboratorios = await Laboratorio.getAll()
     const tipos_equipo = await TipoEquipo.getAll()
-    return { laboratorios, tipos_equipo }
+    const depreciacion_categorias = await DepreciacionCategoria.getActivas()
+    return { laboratorios, tipos_equipo, depreciacion_categorias }
   },
 
   async previsualizarImportacion(data, laboratorio_id) {
@@ -307,6 +331,14 @@ export const equipoService = {
       const comentarios = row.COMENTARIOS ? row.COMENTARIOS.toString().trim() : ''
       const condicion = row.CONDICION ? row.CONDICION.toString().trim() : 'Bueno'
       const tipo_equipo_id = row.TIPO_EQUIPO_ID ? parseInt(row.TIPO_EQUIPO_ID) : null
+      const valorRaw = row.VALOR_ADQUISICION
+      const valor_adquisicion = valorRaw === undefined || valorRaw === null || valorRaw.toString().trim() === ''
+        ? null
+        : Number(valorRaw.toString().trim())
+      const depRaw = row.DEPRECIACION_CATEGORIA_ID
+      const depreciacion_categoria_id = depRaw === undefined || depRaw === null || depRaw.toString().trim() === ''
+        ? null
+        : parseInt(depRaw)
       if (!codigo) erroresFila.push('CODIGO es obligatorio')
       if (!nombre) erroresFila.push('NOMBRE es obligatorio')
       if (row.FECHA_ULTIMO_MANTENIMIENTO) {
@@ -325,6 +357,12 @@ export const equipoService = {
       if (!condicionesValidas.includes(condicion)) erroresFila.push(`Condición inválida. Debe ser: ${condicionesValidas.join(', ')}`)
       if (!tipo_equipo_id) erroresFila.push('TIPO_EQUIPO_ID es obligatorio')
       else if (!tipos_equipo.some(te => te.id === tipo_equipo_id)) erroresFila.push(`Tipo de equipo inválido: ${tipo_equipo_id}`)
+      if (valor_adquisicion !== null && (!Number.isFinite(valor_adquisicion) || valor_adquisicion < 0)) {
+        erroresFila.push('VALOR_ADQUISICION debe ser un número mayor o igual a 0')
+      }
+      if (depreciacion_categoria_id !== null && !Number.isInteger(depreciacion_categoria_id)) {
+        erroresFila.push('DEPRECIACION_CATEGORIA_ID debe ser un número entero')
+      }
       previewData.push({
         fila: rowNum,
         codigo,
@@ -338,6 +376,8 @@ export const equipoService = {
         condicion,
         laboratorio_id,
         tipo_equipo_id,
+        valor_adquisicion,
+        depreciacion_categoria_id,
         errores: erroresFila
       })
     }

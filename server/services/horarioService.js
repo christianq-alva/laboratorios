@@ -5,8 +5,69 @@ import { Ciclo } from '../models/Ciclo.js'
 import { Docente } from '../models/Docente.js'
 import { Laboratorio } from '../models/Laboratorio.js'
 import { Inventario } from '../models/Inventario.js'
+import { Equipo } from '../models/Equipo.js'
+import { MaterialReutilizable } from '../models/MaterialReutilizable.js'
 import { convertirFechaParaMySQL } from '../utils/utils.js'
+import { calcularCostoDepreciacion } from '../utils/depreciacion.js'
 import { AppError } from '../utils/errors.js'
+
+/**
+ * Resuelve el valor y el porcentaje vigentes de cada equipo y los congela junto
+ * con el costo. A partir de aquí el horario conserva ese costo aunque después
+ * cambien los porcentajes o el valor del equipo.
+ */
+async function congelarDepreciacionEquipos(equipos, num_grupos, laboratorio_id, connection) {
+  if (!equipos || equipos.length === 0) return []
+  const ids = equipos.map(e => e.equipo_id)
+  const datos = await Equipo.getDatosDepreciacion(ids, connection)
+  const porId = new Map(datos.map(d => [Number(d.id), d]))
+
+  return equipos.map(equipo => {
+    const dato = porId.get(Number(equipo.equipo_id))
+    if (!dato) throw new AppError(`El equipo ${equipo.equipo_id} no existe`, 404)
+    if (Number(dato.laboratorio_id) !== Number(laboratorio_id)) {
+      throw new AppError(`El equipo "${dato.nombre}" no pertenece al laboratorio seleccionado`, 400)
+    }
+    const cantidad = equipo.cantidad ?? 1
+    return {
+      equipo_id: equipo.equipo_id,
+      cantidad,
+      valor_unitario: dato.valor_unitario ?? null,
+      porcentaje_depreciacion: dato.porcentaje ?? null,
+      costo_depreciacion: calcularCostoDepreciacion(dato.valor_unitario, dato.porcentaje, cantidad, num_grupos)
+    }
+  })
+}
+
+/** Igual que congelarDepreciacionEquipos, para el material reutilizable */
+async function congelarDepreciacionMateriales(materiales, num_grupos, laboratorio_id, connection) {
+  if (!materiales || materiales.length === 0) return []
+  const ids = materiales.map(m => m.material_id)
+  const datos = await MaterialReutilizable.getDatosDepreciacion(ids, connection)
+  const porId = new Map(datos.map(d => [Number(d.id), d]))
+
+  return materiales.map(material => {
+    const dato = porId.get(Number(material.material_id))
+    if (!dato) throw new AppError(`El material ${material.material_id} no existe`, 404)
+    if (Number(dato.laboratorio_id) !== Number(laboratorio_id)) {
+      throw new AppError(`El material "${dato.nombre}" no pertenece al laboratorio seleccionado`, 400)
+    }
+    const cantidad = material.cantidad ?? 1
+    if (dato.cantidad_total > 0 && cantidad > dato.cantidad_total) {
+      throw new AppError(
+        `Solo hay ${dato.cantidad_total} unidad(es) de "${dato.nombre}" en el laboratorio y se solicitaron ${cantidad}`,
+        400
+      )
+    }
+    return {
+      material_id: material.material_id,
+      cantidad,
+      valor_unitario: dato.valor_unitario ?? null,
+      porcentaje_depreciacion: dato.porcentaje ?? null,
+      costo_depreciacion: calcularCostoDepreciacion(dato.valor_unitario, dato.porcentaje, cantidad, num_grupos)
+    }
+  })
+}
 
 async function verificarCruceHorarios(laboratorio_id, docente_id, fecha_inicio, fecha_fin, reserva_id = null) {
   const fechaInicioMySQL = convertirFechaParaMySQL(fecha_inicio)
@@ -64,7 +125,7 @@ export const horarioService = {
     if (diffDays < 0) throw new AppError('La fecha de inicio debe ser anterior a la fecha de fin', 400)
   },
 
-  async crearReserva(datos, insumos, equipos, usuario_id, ip_address) {
+  async crearReserva(datos, insumos, equipos, usuario_id, ip_address, materiales = []) {
     const { laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos, color, num_grupos = 1 } = datos
     const escuelaInfo = await Escuela.getById(escuela_id)
     if (!escuelaInfo) throw new AppError('La escuela seleccionada no existe', 404)
@@ -93,7 +154,12 @@ export const horarioService = {
         await Horario.createHorarioInsumos(reserva_id, insumos, connection)
       }
       if (equipos && equipos.length > 0) {
-        await Horario.createHorarioEquipos(reserva_id, equipos, connection)
+        const equiposCongelados = await congelarDepreciacionEquipos(equipos, num_grupos, laboratorio_id, connection)
+        await Horario.createHorarioEquipos(reserva_id, equiposCongelados, connection)
+      }
+      if (materiales && materiales.length > 0) {
+        const materialesCongelados = await congelarDepreciacionMateriales(materiales, num_grupos, laboratorio_id, connection)
+        await Horario.createHorarioMateriales(reserva_id, materialesCongelados, connection)
       }
       const labInfo = await Laboratorio.getLaboratorioById(laboratorio_id)
       await Horario.registrarActividadHorario({
@@ -104,7 +170,7 @@ export const horarioService = {
         ip_address
       }, connection)
       await connection.commit()
-      return { reserva_id, insumos_procesados: insumos?.length || 0, equipos_procesados: equipos?.length || 0 }
+      return { reserva_id, insumos_procesados: insumos?.length || 0, equipos_procesados: equipos?.length || 0, materiales_procesados: materiales?.length || 0 }
     } catch (error) {
       await connection.rollback()
       throw error
@@ -113,7 +179,7 @@ export const horarioService = {
     }
   },
 
-  async actualizarReserva(horarioId, datos, insumos, equipos, usuario_id, ip_address) {
+  async actualizarReserva(horarioId, datos, insumos, equipos, usuario_id, ip_address, materiales = []) {
     const { laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos = 1, color = '#4ecdc4', num_grupos = 1 } = datos
     const escuelaInfo = await Escuela.getById(escuela_id)
     if (!escuelaInfo) throw new AppError('La escuela seleccionada no existe', 404)
@@ -140,6 +206,7 @@ export const horarioService = {
       await connection.beginTransaction()
       await Horario.deleteHorarioInsumos(horarioId, connection)
       await Horario.deleteHorarioEquipos(horarioId, connection)
+      await Horario.deleteHorarioMateriales(horarioId, connection)
       await Horario.updateHorario(
         laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion,
         fechaInicioMySQL, fechaFinMySQL, cantidad_alumnos, color, num_grupos, horarioId, connection
@@ -148,7 +215,12 @@ export const horarioService = {
         await Horario.createHorarioInsumos(horarioId, insumos, connection)
       }
       if (equipos && equipos.length > 0) {
-        await Horario.createHorarioEquipos(horarioId, equipos, connection)
+        const equiposCongelados = await congelarDepreciacionEquipos(equipos, num_grupos, laboratorio_id, connection)
+        await Horario.createHorarioEquipos(horarioId, equiposCongelados, connection)
+      }
+      if (materiales && materiales.length > 0) {
+        const materialesCongelados = await congelarDepreciacionMateriales(materiales, num_grupos, laboratorio_id, connection)
+        await Horario.createHorarioMateriales(horarioId, materialesCongelados, connection)
       }
       const labInfo = await Laboratorio.getLaboratorioById(laboratorio_id)
       await Horario.registrarActividadHorario({
@@ -159,7 +231,7 @@ export const horarioService = {
         ip_address
       }, connection)
       await connection.commit()
-      return { escuela: escuelaInfo.nombre, ciclo: cicloInfo.nombre, docente: docenteInfo.nombre, insumos_nuevos: insumos?.length || 0, equipos_nuevos: equipos?.length || 0 }
+      return { escuela: escuelaInfo.nombre, ciclo: cicloInfo.nombre, docente: docenteInfo.nombre, insumos_nuevos: insumos?.length || 0, equipos_nuevos: equipos?.length || 0, materiales_nuevos: materiales?.length || 0 }
     } catch (error) {
       await connection.rollback()
       throw error
@@ -179,6 +251,7 @@ export const horarioService = {
       await connection.beginTransaction()
       await Horario.deleteHorarioInsumos(horarioId, connection)
       await Horario.deleteHorarioEquipos(horarioId, connection)
+      await Horario.deleteHorarioMateriales(horarioId, connection)
       await Horario.deleteHorario(horarioId, connection)
       await Horario.registrarActividadHorario({
         accion: 'eliminar',
@@ -326,11 +399,13 @@ export const horarioService = {
     const cerradoConConsumo = horario.estado === 'C' && horario.tiene_consumo_insumos === 1
     const insumosConsumidos = cerradoConConsumo ? await Horario.getInsumosConsumidosByHorario(horarioId) : []
     const equipos = await Horario.getEquiposRequeridosByHorario(horarioId)
+    const materiales = await Horario.getMaterialesRequeridosByHorario(horarioId)
     return {
       ...horario,
       insumos: insumos || [],
       insumos_consumidos: insumosConsumidos || [],
-      equipos: equipos || []
+      equipos: equipos || [],
+      materiales: materiales || []
     }
   },
 

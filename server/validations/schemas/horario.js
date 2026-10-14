@@ -106,7 +106,22 @@ export const createHorarioSchema = z.object({
             z.object({
                 equipo_id: z.number()
                     .int('El ID de equipo debe ser un número entero')
-                    .positive('El ID de equipo debe ser mayor a 0')
+                    .positive('El ID de equipo debe ser mayor a 0'),
+                cantidad: z.number()
+                    .int('La cantidad de equipos debe ser un número entero')
+                    .positive('La cantidad de equipos debe ser mayor a 0')
+                    .default(1)
+            })
+        ).optional().default([]),
+        materiales: z.array(
+            z.object({
+                material_id: z.number()
+                    .int('El ID de material debe ser un número entero')
+                    .positive('El ID de material debe ser mayor a 0'),
+                cantidad: z.number()
+                    .int('La cantidad de material debe ser un número entero')
+                    .positive('La cantidad de material debe ser mayor a 0')
+                    .default(1)
             })
         ).optional().default([])
     }).refine((data) => {
@@ -177,7 +192,22 @@ export const updateHorarioSchema = z.object({
             z.object({
                 equipo_id: z.number()
                     .int('El ID de equipo debe ser un número entero')
-                    .positive('El ID de equipo debe ser mayor a 0')
+                    .positive('El ID de equipo debe ser mayor a 0'),
+                cantidad: z.number()
+                    .int('La cantidad de equipos debe ser un número entero')
+                    .positive('La cantidad de equipos debe ser mayor a 0')
+                    .default(1)
+            })
+        ).optional().default([]),
+        materiales: z.array(
+            z.object({
+                material_id: z.number()
+                    .int('El ID de material debe ser un número entero')
+                    .positive('El ID de material debe ser mayor a 0'),
+                cantidad: z.number()
+                    .int('La cantidad de material debe ser un número entero')
+                    .positive('La cantidad de material debe ser mayor a 0')
+                    .default(1)
             })
         ).optional().default([])
     }).refine((data) => {

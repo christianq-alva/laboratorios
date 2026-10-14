@@ -189,7 +189,19 @@ export const Reporte = {
             COALESCE(SUM(dri.cantidad_usada * COALESCE(ip.precio, 0) / COALESCE(NULLIF(i.cantidad_por_presentacion, 0), 1)) * r.num_grupos, 0)
             AS DECIMAL(10,2)
           ) AS costo_total_insumos,
-          COUNT(DISTINCT dri.id) AS num_insumos
+          COUNT(DISTINCT dri.id) AS num_insumos,
+          CAST(COALESCE((
+            SELECT SUM(dre.costo_depreciacion)
+            FROM detalle_reserva_equipos dre
+            WHERE dre.reserva_id = r.id
+          ), 0) AS DECIMAL(12,2)) AS costo_depreciacion_equipos,
+          CAST(COALESCE((
+            SELECT SUM(drm.costo_depreciacion)
+            FROM detalle_reserva_materiales drm
+            WHERE drm.reserva_id = r.id
+          ), 0) AS DECIMAL(12,2)) AS costo_depreciacion_materiales,
+          (SELECT COUNT(*) FROM detalle_reserva_equipos dre2 WHERE dre2.reserva_id = r.id) AS num_equipos,
+          (SELECT COUNT(*) FROM detalle_reserva_materiales drm2 WHERE drm2.reserva_id = r.id) AS num_materiales
         FROM reservas r
         JOIN escuelas    e ON r.escuela_id    = e.id
         JOIN docentes    d ON r.docente_id    = d.id
@@ -238,21 +250,41 @@ export const Reporte = {
   getCostoPorEscuela: async (params, labFilter = '') => {
     const { laboratorio_id, fecha_desde, fecha_hasta } = params
     try {
+      // Los costos se agregan por tablas derivadas (una fila por reserva) en lugar
+      // de unir los dos detalles al mismo GROUP BY: así el costo de insumos no se
+      // multiplica por la cantidad de equipos ni al revés.
       let query = `
         SELECT
           e.id   AS escuela_id,
           e.nombre AS escuela,
           COUNT(DISTINCT r.id) AS total_horarios,
+          CAST(COALESCE(SUM(ins.costo * r.num_grupos), 0) AS DECIMAL(12,2)) AS costo_insumos,
+          CAST(COALESCE(SUM(dep.costo), 0) AS DECIMAL(12,2)) AS costo_depreciacion,
           CAST(
-            COALESCE(SUM(dri.cantidad_usada * COALESCE(ip.precio, 0) / COALESCE(NULLIF(i.cantidad_por_presentacion, 0), 1) * r.num_grupos), 0)
-            AS DECIMAL(10,2)
+            COALESCE(SUM(ins.costo * r.num_grupos), 0) + COALESCE(SUM(dep.costo), 0)
+            AS DECIMAL(12,2)
           ) AS costo_total
         FROM reservas r
         JOIN escuelas e ON r.escuela_id = e.id
-        LEFT JOIN detalle_reserva_insumos dri ON dri.reserva_id = r.id
-        LEFT JOIN insumos i ON i.id = dri.insumo_id
-        LEFT JOIN insumos_precios ip
-          ON ip.insumo_id = dri.insumo_id AND ip.vigente_hasta IS NULL
+        LEFT JOIN (
+          SELECT
+            dri.reserva_id,
+            SUM(dri.cantidad_usada * COALESCE(ip.precio, 0) / COALESCE(NULLIF(i.cantidad_por_presentacion, 0), 1)) AS costo
+          FROM detalle_reserva_insumos dri
+          JOIN insumos i ON i.id = dri.insumo_id
+          LEFT JOIN insumos_precios ip
+            ON ip.insumo_id = dri.insumo_id AND ip.vigente_hasta IS NULL
+          GROUP BY dri.reserva_id
+        ) ins ON ins.reserva_id = r.id
+        LEFT JOIN (
+          SELECT reserva_id, SUM(costo_depreciacion) AS costo
+          FROM (
+            SELECT reserva_id, costo_depreciacion FROM detalle_reserva_equipos
+            UNION ALL
+            SELECT reserva_id, costo_depreciacion FROM detalle_reserva_materiales
+          ) d
+          GROUP BY reserva_id
+        ) dep ON dep.reserva_id = r.id
         WHERE 1=1
       `
       const queryParams = []

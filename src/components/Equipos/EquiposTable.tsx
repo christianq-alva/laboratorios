@@ -345,13 +345,14 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
               <TableCell sx={{ fontWeight: 600, width: '10%' }}>Fecha Adq.</TableCell>
               <TableCell sx={{ fontWeight: 600, width: '8%' }}>Último Mant.</TableCell>
               <TableCell sx={{ fontWeight: 600, width: '8%' }}>Próximo Mant.</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '9%' }} align="right">Depreciación</TableCell>
               <TableCell sx={{ fontWeight: 600, width: '3%' }} align="center">Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredEquipos.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={12} align="center" sx={{ py: 4 }}>
                   <Box sx={{ textAlign: 'center' }}>
                     <Build sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
                     <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -468,6 +469,36 @@ export const EquiposTable: React.FC<EquiposTableProps> = ({
                         No programado
                       </Typography>
                     )}
+                  </TableCell>
+                  <TableCell align="right">
+                    {(() => {
+                      const valor = Number(equipo.valor_adquisicion ?? 0)
+                      const porcentaje = Number(equipo.depreciacion_porcentaje ?? 0)
+                      if (!equipo.depreciacion_categoria_id || !(valor > 0) || !(porcentaje > 0)) {
+                        return (
+                          <Tooltip title="Configura el valor del equipo y su categoría de depreciación para cobrarla por práctica">
+                            <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                              Sin configurar
+                            </Typography>
+                          </Tooltip>
+                        )
+                      }
+                      const costo = valor * (porcentaje / 100)
+                      return (
+                        <Tooltip
+                          title={`${equipo.depreciacion_categoria_nombre} · ${parseFloat(porcentaje.toFixed(4))}% de S/ ${valor.toFixed(2)}`}
+                        >
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 700, color: 'success.main' }}>
+                              S/ {costo.toFixed(4)}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              por práctica
+                            </Typography>
+                          </Box>
+                        </Tooltip>
+                      )
+                    })()}
                   </TableCell>
                   <TableCell align="center">
                     <ActionMenu

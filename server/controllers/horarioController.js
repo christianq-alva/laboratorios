@@ -63,14 +63,16 @@ export const createHorario = async (req, res, next) => {
       color = '#4ecdc4',
       num_grupos = 1,
       insumos = [],
-      equipos = []
+      equipos = [],
+      materiales = []
     } = req.body
     const result = await horarioService.crearReserva(
       { laboratorio_id, docente_id, escuela_id, ciclo_id, descripcion, fecha_inicio, fecha_fin, cantidad_alumnos, color, num_grupos },
       insumos,
       equipos,
       req.user.userId,
-      req.ip || req.connection?.remoteAddress
+      req.ip || req.connection?.remoteAddress,
+      materiales
     )
     res.status(201).json({
       success: true,
@@ -78,7 +80,8 @@ export const createHorario = async (req, res, next) => {
       data: {
         reserva_id: result.reserva_id,
         insumos_procesados: result.insumos_procesados,
-        equipos_procesados: result.equipos_procesados
+        equipos_procesados: result.equipos_procesados,
+        materiales_procesados: result.materiales_procesados
       }
     })
   } catch (error) {
@@ -101,7 +104,8 @@ export const updateHorario = async (req, res, next) => {
       color = '#4ecdc4',
       num_grupos = 1,
       insumos = [],
-      equipos = []
+      equipos = [],
+      materiales = []
     } = req.body
     const result = await horarioService.actualizarReserva(
       horarioId,
@@ -109,7 +113,8 @@ export const updateHorario = async (req, res, next) => {
       insumos,
       equipos,
       req.user.userId,
-      req.ip || req.connection?.remoteAddress
+      req.ip || req.connection?.remoteAddress,
+      materiales
     )
     res.status(200).json({
       success: true,
@@ -120,7 +125,8 @@ export const updateHorario = async (req, res, next) => {
         docente: result.docente
       },
       insumos_nuevos: result.insumos_nuevos,
-      equipos_nuevos: result.equipos_nuevos
+      equipos_nuevos: result.equipos_nuevos,
+      materiales_nuevos: result.materiales_nuevos
     })
   } catch (error) {
     next(error)

@@ -10,7 +10,7 @@ import {
   Alert,
   Snackbar
 } from '@mui/material'
-import { Add, Category, Person, LibraryBooks, School, AccountBalance, FileUpload, FileDownload, Group, Straighten, PriceChange } from '@mui/icons-material'
+import { Add, Category, Person, LibraryBooks, School, AccountBalance, FileUpload, FileDownload, Group, Straighten, PriceChange, TrendingDown, Science } from '@mui/icons-material'
 import { TiposEquipoTable } from '../components/Configuracion/TipoEquipo/TiposEquipoTable'
 import { TipoEquipoForm } from '../components/Configuracion/TipoEquipo/TipoEquipoForm'
 import { EscuelasTable } from '../components/Configuracion/Escuela/EscuelasTable'
@@ -29,6 +29,10 @@ import { UsuariosTable } from '../components/Configuracion/Usuarios/UsuariosTabl
 import { UsuarioForm } from '../components/Configuracion/Usuarios/UsuarioForm'
 import { UnidadesTable } from '../components/Configuracion/Unidades/UnidadesTable'
 import { UnidadForm } from '../components/Configuracion/Unidades/UnidadForm'
+import { DepreciacionCategoriasTable } from '../components/Configuracion/Depreciacion/DepreciacionCategoriasTable'
+import { DepreciacionCategoriaForm } from '../components/Configuracion/Depreciacion/DepreciacionCategoriaForm'
+import { MaterialesReutilizablesTable } from '../components/Configuracion/MaterialReutilizable/MaterialesReutilizablesTable'
+import { MaterialReutilizableForm } from '../components/Configuracion/MaterialReutilizable/MaterialReutilizableForm'
 import { tipoEquipoService, type TipoEquipo } from '../services/tipoEquipoService'
 import { unidadService, type Unidad } from '../services/unidadService'
 import { escuelaService, type Escuela } from '../services/escuelaService'
@@ -36,6 +40,8 @@ import { docenteService, type Docente } from '../services/docenteService'
 import { insumoService, type Insumo } from '../services/insumoService'
 import { laboratorioService, type Laboratorio } from '../services/laboratorioService'
 import { usuarioService, type Usuario } from '../services/usuarioService'
+import { depreciacionCategoriaService, type DepreciacionCategoria } from '../services/depreciacionCategoriaService'
+import { materialReutilizableService, type MaterialReutilizable } from '../services/materialReutilizableService'
 import { useApi } from '../hooks/useApi'
 import { useAuth } from '../hooks/useAuth'
 import { DeleteDialog } from '../components/Common/DeleteDialog'
@@ -125,6 +131,22 @@ export const Configuracion: React.FC = () => {
   const [editingEscuela, setEditingEscuela] = useState<Escuela | null>(null)
   const [escuelaDeleteDialogOpen, setEscuelaDeleteDialogOpen] = useState(false)
   const [escuelaToDelete, setEscuelaToDelete] = useState<Escuela | null>(null)
+
+  // Estado para Categorías de Depreciación
+  const [depreciacionCategorias, setDepreciacionCategorias] = useState<DepreciacionCategoria[]>([])
+  const [loadingDepreciacion, setLoadingDepreciacion] = useState(false)
+  const [depreciacionFormOpen, setDepreciacionFormOpen] = useState(false)
+  const [editingDepreciacion, setEditingDepreciacion] = useState<DepreciacionCategoria | null>(null)
+  const [depreciacionDeleteDialogOpen, setDepreciacionDeleteDialogOpen] = useState(false)
+  const [depreciacionToDelete, setDepreciacionToDelete] = useState<DepreciacionCategoria | null>(null)
+
+  // Estado para Material Reutilizable
+  const [materiales, setMateriales] = useState<MaterialReutilizable[]>([])
+  const [loadingMateriales, setLoadingMateriales] = useState(false)
+  const [materialFormOpen, setMaterialFormOpen] = useState(false)
+  const [editingMaterial, setEditingMaterial] = useState<MaterialReutilizable | null>(null)
+  const [materialDeleteDialogOpen, setMaterialDeleteDialogOpen] = useState(false)
+  const [materialToDelete, setMaterialToDelete] = useState<MaterialReutilizable | null>(null)
 
   // Estado para Usuarios
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
@@ -268,6 +290,38 @@ export const Configuracion: React.FC = () => {
     setLoadingUsuarios(false)
   }
 
+  // Cargar categorías de depreciación
+  const loadDepreciacionCategorias = async () => {
+    setLoadingDepreciacion(true)
+    const result = await execute(() => depreciacionCategoriaService.getAllWithCount())
+    if (result.error) {
+      setSnackbar({
+        open: true,
+        message: result.error,
+        severity: 'error'
+      })
+    } else if (result.data) {
+      setDepreciacionCategorias(result.data.data)
+    }
+    setLoadingDepreciacion(false)
+  }
+
+  // Cargar material reutilizable
+  const loadMateriales = async () => {
+    setLoadingMateriales(true)
+    const result = await execute(() => materialReutilizableService.getAll())
+    if (result.error) {
+      setSnackbar({
+        open: true,
+        message: result.error,
+        severity: 'error'
+      })
+    } else if (result.data) {
+      setMateriales(result.data.data || [])
+    }
+    setLoadingMateriales(false)
+  }
+
   // Cargar datos al montar o cambiar de tab
   useEffect(() => {
     if (tabValue === 0) {
@@ -284,6 +338,10 @@ export const Configuracion: React.FC = () => {
       loadEscuelas()
     } else if (tabValue === 6) {
       loadUsuarios()
+    } else if (tabValue === 7) {
+      loadDepreciacionCategorias()
+    } else if (tabValue === 8) {
+      loadMateriales()
     }
   }, [tabValue])
 
@@ -339,6 +397,114 @@ export const Configuracion: React.FC = () => {
 
     setDeleteDialogOpen(false)
     setTipoToDelete(null)
+  }
+
+  // Handlers para Material Reutilizable
+  const handleOpenMaterialForm = () => {
+    setEditingMaterial(null)
+    setMaterialFormOpen(true)
+  }
+
+  const handleEditMaterial = (material: MaterialReutilizable) => {
+    setEditingMaterial(material)
+    setMaterialFormOpen(true)
+  }
+
+  const handleCloseMaterialForm = () => {
+    setMaterialFormOpen(false)
+    setEditingMaterial(null)
+  }
+
+  const handleMaterialFormSuccess = (message?: string) => {
+    loadMateriales()
+    setSnackbar({
+      open: true,
+      message: message || (editingMaterial ? 'Material actualizado exitosamente' : 'Material creado exitosamente'),
+      severity: 'success'
+    })
+  }
+
+  const handleDeleteMaterialClick = (material: MaterialReutilizable) => {
+    setMaterialToDelete(material)
+    setMaterialDeleteDialogOpen(true)
+  }
+
+  const handleDeleteMaterialConfirm = async () => {
+    if (!materialToDelete) return
+
+    const result = await execute(() => materialReutilizableService.delete(materialToDelete.id))
+
+    if (result.error) {
+      setSnackbar({
+        open: true,
+        message: result.error,
+        severity: 'error'
+      })
+    } else if (result.data) {
+      setSnackbar({
+        open: true,
+        message: result.data.message || 'Material eliminado exitosamente',
+        severity: 'success'
+      })
+      loadMateriales()
+    }
+
+    setMaterialDeleteDialogOpen(false)
+    setMaterialToDelete(null)
+  }
+
+  // Handlers para Categorías de Depreciación
+  const handleOpenDepreciacionForm = () => {
+    setEditingDepreciacion(null)
+    setDepreciacionFormOpen(true)
+  }
+
+  const handleEditDepreciacion = (categoria: DepreciacionCategoria) => {
+    setEditingDepreciacion(categoria)
+    setDepreciacionFormOpen(true)
+  }
+
+  const handleCloseDepreciacionForm = () => {
+    setDepreciacionFormOpen(false)
+    setEditingDepreciacion(null)
+  }
+
+  const handleDepreciacionFormSuccess = (message?: string) => {
+    loadDepreciacionCategorias()
+    setSnackbar({
+      open: true,
+      message: message || (editingDepreciacion ? 'Categoría actualizada exitosamente' : 'Categoría creada exitosamente'),
+      severity: 'success'
+    })
+  }
+
+  const handleDeleteDepreciacionClick = (categoria: DepreciacionCategoria) => {
+    setDepreciacionToDelete(categoria)
+    setDepreciacionDeleteDialogOpen(true)
+  }
+
+  const handleDeleteDepreciacionConfirm = async () => {
+    if (!depreciacionToDelete) return
+
+    const result = await execute(() => depreciacionCategoriaService.delete(depreciacionToDelete.id))
+
+    if (result.error) {
+      setSnackbar({
+        open: true,
+        message: result.error,
+        severity: 'error'
+      })
+    } else if (result.data) {
+      setSnackbar({
+        open: true,
+        message: result.data.message || 'Categoría eliminada exitosamente',
+        severity: 'success'
+      })
+      loadDepreciacionCategorias()
+    }
+
+    setDepreciacionDeleteDialogOpen(false)
+    setDepreciacionToDelete(null)
   }
 
   // Handlers para Unidades
@@ -837,6 +1003,20 @@ export const Configuracion: React.FC = () => {
               id="config-tab-6"
               aria-controls="config-tabpanel-6"
             />
+            <Tab
+              icon={<TrendingDown />}
+              iconPosition="start"
+              label="Depreciación"
+              id="config-tab-7"
+              aria-controls="config-tabpanel-7"
+            />
+            <Tab
+              icon={<Science />}
+              iconPosition="start"
+              label="Material Reutilizable"
+              id="config-tab-8"
+              aria-controls="config-tabpanel-8"
+            />
           </Tabs>
         </Box>
 
@@ -1145,7 +1325,111 @@ export const Configuracion: React.FC = () => {
             )}
           </Box>
         </TabPanel>
+
+        {/* Tab Panel: Depreciación */}
+        <TabPanel value={tabValue} index={7}>
+          <Box sx={{ px: 3 }}>
+            {/* Header con botón */}
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mb: 3
+            }}>
+              <Box>
+                <Typography variant="h6" fontWeight={600}>
+                  Categorías de Depreciación
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Porcentaje del valor del bien que se cobra en cada práctica. Se aplica a los
+                  equipos y materiales reutilizables que tengan la categoría asignada.
+                </Typography>
+              </Box>
+              {isAdmin && (
+                <Button
+                  variant="contained"
+                  startIcon={<Add />}
+                  onClick={handleOpenDepreciacionForm}
+                >
+                  Nueva Categoría
+                </Button>
+              )}
+            </Box>
+
+            {/* Tabla */}
+            {loadingDepreciacion ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <DepreciacionCategoriasTable
+                categorias={depreciacionCategorias}
+                onEdit={handleEditDepreciacion}
+                onDelete={handleDeleteDepreciacionClick}
+              />
+            )}
+          </Box>
+        </TabPanel>
+
+        {/* Tab Panel: Material Reutilizable */}
+        <TabPanel value={tabValue} index={8}>
+          <Box sx={{ px: 3 }}>
+            {/* Header con botón */}
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mb: 3
+            }}>
+              <Box>
+                <Typography variant="h6" fontWeight={600}>
+                  Material Reutilizable
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Cristalería y material afín: se usa en varias prácticas sin consumirse. Lleva una
+                  cantidad total por laboratorio y un valor unitario para cobrar su depreciación.
+                </Typography>
+              </Box>
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={handleOpenMaterialForm}
+              >
+                Nuevo Material
+              </Button>
+            </Box>
+
+            {/* Tabla */}
+            {loadingMateriales ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <MaterialesReutilizablesTable
+                materiales={materiales}
+                onEdit={handleEditMaterial}
+                onDelete={handleDeleteMaterialClick}
+              />
+            )}
+          </Box>
+        </TabPanel>
       </Paper>
+
+      {/* Formulario de Material Reutilizable */}
+      <MaterialReutilizableForm
+        open={materialFormOpen}
+        onClose={handleCloseMaterialForm}
+        onSuccess={handleMaterialFormSuccess}
+        material={editingMaterial}
+      />
+
+      {/* Formulario de Categoría de Depreciación */}
+      <DepreciacionCategoriaForm
+        open={depreciacionFormOpen}
+        onClose={handleCloseDepreciacionForm}
+        onSuccess={handleDepreciacionFormSuccess}
+        categoria={editingDepreciacion}
+      />
 
       {/* Formulario de Tipo de Equipo */}
       <TipoEquipoForm
@@ -1215,6 +1499,30 @@ export const Configuracion: React.FC = () => {
         open={importarPreciosOpen}
         onClose={handleImportarPreciosClose}
         onSuccess={handleImportarPreciosSuccess}
+      />
+
+      {/* Diálogo de confirmación de eliminación - Material Reutilizable */}
+      <DeleteDialog
+        open={materialDeleteDialogOpen}
+        onClose={() => setMaterialDeleteDialogOpen(false)}
+        onConfirm={handleDeleteMaterialConfirm}
+        itemName={materialToDelete?.nombre || ''}
+        itemType="el material reutilizable"
+        warningMessage="Si el material ya se usó en algún horario no podrá eliminarse; en ese caso desactívalo para que deje de ofrecerse sin perder el historial de costos."
+      />
+
+      {/* Diálogo de confirmación de eliminación - Categoría de Depreciación */}
+      <DeleteDialog
+        open={depreciacionDeleteDialogOpen}
+        onClose={() => setDepreciacionDeleteDialogOpen(false)}
+        onConfirm={handleDeleteDepreciacionConfirm}
+        itemName={depreciacionToDelete?.nombre || ''}
+        itemType="la categoría de depreciación"
+        warningMessage={
+          ((depreciacionToDelete?.count_equipos || 0) + (depreciacionToDelete?.count_materiales || 0)) > 0
+            ? `Esta categoría está asignada a ${depreciacionToDelete?.count_equipos || 0} equipo(s) y ${depreciacionToDelete?.count_materiales || 0} material(es) y no podrá ser eliminada. Puedes desactivarla en lugar de borrarla.`
+            : undefined
+        }
       />
 
       {/* Diálogo de confirmación de eliminación - Tipo de Equipo */}

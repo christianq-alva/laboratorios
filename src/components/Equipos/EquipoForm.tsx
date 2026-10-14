@@ -15,12 +15,19 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Paper
+  Paper,
+  InputAdornment,
+  FormHelperText
 } from '@mui/material'
-import { Close, Build } from '@mui/icons-material'
+import { Close, Build, TrendingDown } from '@mui/icons-material'
 import { equipoService, type Equipo } from '../../services/equipoService'
 import { tipoEquipoService, type TipoEquipo } from '../../services/tipoEquipoService'
 import { laboratorioService, type Laboratorio } from '../../services/laboratorioService'
+import {
+  depreciacionCategoriaService,
+  formatPorcentaje,
+  type DepreciacionCategoria
+} from '../../services/depreciacionCategoriaService'
 import { useApi } from '../../hooks/useApi'
 interface EquipoFormProps {
   open: boolean
@@ -45,16 +52,28 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
     condicion: 'Excelente' as 'Excelente' | 'Bueno' | 'Regular' | 'Malo',
     fecha_adquisicion: '',
     tipo_equipo_id: 0,
-    laboratorio_id: 0
+    laboratorio_id: 0,
+    valor_adquisicion: '',
+    depreciacion_categoria_id: 0
   })
 
   const [tiposEquipo, setTiposEquipo] = useState<TipoEquipo[]>([])
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([])
+  const [depreciacionCategorias, setDepreciacionCategorias] = useState<DepreciacionCategoria[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const isEditing = Boolean(equipo)
+
+  // Costo de depreciación por práctica de UNA unidad, con el valor y la categoría elegidos
+  const costoDepreciacionPreview = (() => {
+    const valor = Number(formData.valor_adquisicion)
+    if (formData.valor_adquisicion.trim() === '' || !Number.isFinite(valor) || valor <= 0) return null
+    const categoria = depreciacionCategorias.find(c => c.id === formData.depreciacion_categoria_id)
+    if (!categoria) return null
+    return valor * (Number(categoria.porcentaje) / 100)
+  })()
 
   // Cargar datos iniciales (tipos de equipo y laboratorios)
   useEffect(() => {
@@ -75,9 +94,10 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
   const loadInitialData = async () => {
 
     setLoadingData(true)
-    const [tiposResult, laboratoriosResult] = await Promise.all([
+    const [tiposResult, laboratoriosResult, categoriasResult] = await Promise.all([
       execute(() => tipoEquipoService.getActivos()),
-      execute(() => laboratorioService.getAll())
+      execute(() => laboratorioService.getAll()),
+      execute(() => depreciacionCategoriaService.getActivas())
     ])
     if (tiposResult.error) {
       setError(tiposResult.error)
@@ -90,6 +110,9 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
     } else if (laboratoriosResult.data) {
       const sortedLaboratorios = [...(laboratoriosResult.data.data || [])].sort((a, b) => a.nombre.localeCompare(b.nombre))
       setLaboratorios(sortedLaboratorios)
+    }
+    if (categoriasResult.data) {
+      setDepreciacionCategorias(categoriasResult.data.data || [])
     }
     setLoadingData(false)
   }
@@ -119,7 +142,11 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
       condicion: equipoData.condicion || 'Excelente',
       fecha_adquisicion: formatDateForInput(equipoData.fecha_adquisicion),
       tipo_equipo_id: equipoData.tipo_equipo_id || 0,
-      laboratorio_id: equipoData.laboratorio_id || 0
+      laboratorio_id: equipoData.laboratorio_id || 0,
+      valor_adquisicion: equipoData.valor_adquisicion === null || equipoData.valor_adquisicion === undefined
+        ? ''
+        : String(Number(equipoData.valor_adquisicion)),
+      depreciacion_categoria_id: equipoData.depreciacion_categoria_id || 0
     })
   }
 
@@ -138,7 +165,9 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
       condicion: 'Excelente',
       fecha_adquisicion: '',
       tipo_equipo_id: 0,
-      laboratorio_id: 0
+      laboratorio_id: 0,
+      valor_adquisicion: '',
+      depreciacion_categoria_id: 0
     })
     setError(null)
   }
@@ -165,6 +194,21 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
       }
     }
 
+    // Validar valor de adquisición (opcional, pero si viene debe ser válido)
+    if (formData.valor_adquisicion.trim() !== '') {
+      const valor = Number(formData.valor_adquisicion)
+      if (!Number.isFinite(valor) || valor < 0) {
+        setError('El valor de adquisición debe ser un número mayor o igual a 0')
+        setLoading(false)
+        return
+      }
+      if (Number(valor.toFixed(2)) !== valor) {
+        setError('El valor de adquisición no puede tener más de 2 decimales')
+        setLoading(false)
+        return
+      }
+    }
+
     // Preparar datos
     const equipoData = {
       ...formData,
@@ -179,7 +223,9 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
       fecha_ultimo_mantenimiento: formData.fecha_ultimo_mantenimiento && formData.fecha_ultimo_mantenimiento.trim() ? formData.fecha_ultimo_mantenimiento : undefined,
       fecha_proximo_mantenimiento: formData.fecha_proximo_mantenimiento && formData.fecha_proximo_mantenimiento.trim() ? formData.fecha_proximo_mantenimiento : undefined,
       tipo_equipo_id: formData.tipo_equipo_id > 0 ? formData.tipo_equipo_id : undefined,
-      laboratorio_id: formData.laboratorio_id > 0 ? formData.laboratorio_id : undefined
+      laboratorio_id: formData.laboratorio_id > 0 ? formData.laboratorio_id : undefined,
+      valor_adquisicion: formData.valor_adquisicion.trim() === '' ? null : Number(formData.valor_adquisicion),
+      depreciacion_categoria_id: formData.depreciacion_categoria_id > 0 ? formData.depreciacion_categoria_id : null
     }
 
     let result
@@ -384,6 +430,50 @@ export const EquipoForm: React.FC<EquipoFormProps> = ({ open, onClose, onSuccess
                       <MenuItem value="Regular">Regular</MenuItem>
                       <MenuItem value="Malo">Malo</MenuItem>
                     </Select>
+                  </FormControl>
+                </Box>
+
+                {/* Depreciación: valor del equipo y categoría (ambos opcionales) */}
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Valor del equipo (opcional)"
+                    value={formData.valor_adquisicion}
+                    onChange={(e) => setFormData(prev => ({ ...prev, valor_adquisicion: e.target.value }))}
+                    disabled={loading}
+                    slotProps={{
+                      htmlInput: { step: 0.01, min: 0 },
+                      input: {
+                        startAdornment: <InputAdornment position="start">S/</InputAdornment>
+                      }
+                    }}
+                    helperText="Base de cálculo de la depreciación por práctica"
+                  />
+
+                  <FormControl fullWidth>
+                    <InputLabel>Categoría de depreciación (opcional)</InputLabel>
+                    <Select
+                      value={formData.depreciacion_categoria_id}
+                      label="Categoría de depreciación (opcional)"
+                      onChange={(e) => setFormData(prev => ({ ...prev, depreciacion_categoria_id: e.target.value as number }))}
+                      disabled={loading}
+                    >
+                      <MenuItem value={0}>Sin categoría</MenuItem>
+                      {depreciacionCategorias.map((categoria) => (
+                        <MenuItem key={categoria.id} value={categoria.id}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <TrendingDown fontSize="small" />
+                            {categoria.nombre} ({formatPorcentaje(categoria.porcentaje)})
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    <FormHelperText>
+                      {costoDepreciacionPreview !== null
+                        ? `Costo por práctica: S/ ${costoDepreciacionPreview.toFixed(4)} por unidad`
+                        : 'Define valor y categoría para cobrar depreciación'}
+                    </FormHelperText>
                   </FormControl>
                 </Box>
 

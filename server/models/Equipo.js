@@ -7,8 +7,8 @@ export const Equipo = {
     const conn = connection || pool
     try {
       const [result] = await conn.execute(`
-        INSERT INTO equipos (codigo, nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios, condicion, fecha_adquisicion, tipo_equipo_id, laboratorio_id) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+        INSERT INTO equipos (codigo, nombre, descripcion, marca, modelo, numero_serie, estado, fecha_ultimo_mantenimiento, fecha_proximo_mantenimiento, comentarios, condicion, fecha_adquisicion, tipo_equipo_id, laboratorio_id, valor_adquisicion, depreciacion_categoria_id) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
         equipoData.codigo,
         equipoData.nombre,
         equipoData.descripcion,
@@ -22,7 +22,9 @@ export const Equipo = {
         equipoData.condicion,
         equipoData.fecha_adquisicion,
         equipoData.tipo_equipo_id,
-        equipoData.laboratorio_id])
+        equipoData.laboratorio_id,
+        equipoData.valor_adquisicion ?? null,
+        equipoData.depreciacion_categoria_id ?? null])
 
       const equipo_id = result.insertId
       return equipo_id
@@ -35,7 +37,7 @@ export const Equipo = {
     try {
       const [result] = await conn.execute(`
         UPDATE equipos 
-        SET codigo = ?, nombre = ?, descripcion = ?, marca = ?, modelo = ?, numero_serie = ?, estado = ?, fecha_ultimo_mantenimiento = ?, fecha_proximo_mantenimiento = ?, comentarios = ?, condicion = ?, fecha_adquisicion = ?, tipo_equipo_id = ?, laboratorio_id = ?
+        SET codigo = ?, nombre = ?, descripcion = ?, marca = ?, modelo = ?, numero_serie = ?, estado = ?, fecha_ultimo_mantenimiento = ?, fecha_proximo_mantenimiento = ?, comentarios = ?, condicion = ?, fecha_adquisicion = ?, tipo_equipo_id = ?, laboratorio_id = ?, valor_adquisicion = ?, depreciacion_categoria_id = ?
         WHERE id = ?`, [
         equipoData.codigo,
         equipoData.nombre,
@@ -51,6 +53,8 @@ export const Equipo = {
         equipoData.fecha_adquisicion,
         equipoData.tipo_equipo_id,
         equipoData.laboratorio_id,
+        equipoData.valor_adquisicion ?? null,
+        equipoData.depreciacion_categoria_id ?? null,
         id])
 
       return result.affectedRows
@@ -148,6 +152,28 @@ export const Equipo = {
     }
   },
 
+  /** Valor y porcentaje vigentes: insumos del cálculo que se congela en el horario */
+  getDatosDepreciacion: async (ids, connection) => {
+    if (!ids || ids.length === 0) return []
+    const conn = connection || pool
+    try {
+      const [rows] = await conn.execute(`
+        SELECT
+          e.id,
+          e.nombre,
+          e.laboratorio_id,
+          CAST(e.valor_adquisicion AS DECIMAL(12,2)) AS valor_unitario,
+          CAST(dc.porcentaje AS DECIMAL(7,4)) AS porcentaje
+        FROM equipos e
+        LEFT JOIN depreciacion_categorias dc ON e.depreciacion_categoria_id = dc.id
+        WHERE e.id IN (${ids.map(() => '?').join(',')})
+      `, ids)
+      return rows
+    } catch (error) {
+      handleDBError(error, 'Equipo')
+    }
+  },
+
   getAll: async (user_rol, user_laboratorio_ids, filters = {}) => {
     //Query base
     let query = `
@@ -167,11 +193,16 @@ export const Equipo = {
         e.fecha_adquisicion,
         e.tipo_equipo_id,
         e.laboratorio_id,
+        e.valor_adquisicion,
+        e.depreciacion_categoria_id,
         te.nombre as tipo_equipo_nombre,
-        lab.nombre as laboratorio_nombre
+        lab.nombre as laboratorio_nombre,
+        dc.nombre as depreciacion_categoria_nombre,
+        CAST(dc.porcentaje AS DECIMAL(7,4)) as depreciacion_porcentaje
       FROM equipos e
       LEFT JOIN tipos_equipo te ON e.tipo_equipo_id = te.id
       LEFT JOIN laboratorios lab ON e.laboratorio_id = lab.id
+      LEFT JOIN depreciacion_categorias dc ON e.depreciacion_categoria_id = dc.id
       WHERE 1=1
         `
     const params = []
@@ -226,11 +257,16 @@ export const Equipo = {
           e.fecha_adquisicion,
           e.tipo_equipo_id,
           e.laboratorio_id,
+          e.valor_adquisicion,
+          e.depreciacion_categoria_id,
           te.nombre as tipo_equipo_nombre,
-          lab.nombre as laboratorio_nombre
+          lab.nombre as laboratorio_nombre,
+          dc.nombre as depreciacion_categoria_nombre,
+          CAST(dc.porcentaje AS DECIMAL(7,4)) as depreciacion_porcentaje
         FROM equipos e
         LEFT JOIN tipos_equipo te ON e.tipo_equipo_id = te.id
         LEFT JOIN laboratorios lab ON e.laboratorio_id = lab.id
+        LEFT JOIN depreciacion_categorias dc ON e.depreciacion_categoria_id = dc.id
         WHERE e.laboratorio_id = ?
       `
       const params = [laboratorio_id]

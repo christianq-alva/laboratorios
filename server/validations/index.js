@@ -19,4 +19,6 @@ export * from './schemas/share.js'
 export * from './schemas/incidencia.js'
 export * from './schemas/reporte.js'
 export * from './schemas/unidad.js'
+export * from './schemas/depreciacionCategoria.js'
+export * from './schemas/materialReutilizable.js'
 

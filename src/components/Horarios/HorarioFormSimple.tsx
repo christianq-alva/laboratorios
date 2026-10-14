@@ -23,6 +23,10 @@ import {
   Popover,
   Autocomplete,
   InputAdornment,
+  Tabs,
+  Tab,
+  Divider,
+  Chip,
 } from '@mui/material'
 import {
   Close,
@@ -38,6 +42,9 @@ import {
   CheckCircle,
   Delete,
   Search,
+  Science,
+  TrendingDown,
+  Paid,
 } from '@mui/icons-material'
 import { horarioService } from '../../services/horarioService'
 import { laboratorioService } from '../../services/laboratorioService'
@@ -55,6 +62,10 @@ import { escuelaService, type Escuela } from '../../services/escuelaService'
 import { docenteService, type Docente } from '../../services/docenteService'
 import { useApi } from '../../hooks/useApi'
 import type { Insumo } from '../../services/insumoService'
+import {
+  materialReutilizableService,
+  type MaterialReutilizable
+} from '../../services/materialReutilizableService'
 
 interface HorarioFormProps {
   open: boolean
@@ -74,6 +85,35 @@ interface InsumoSeleccionado {
 interface EquipoSeleccionado {
   equipo_id: number
   nombre: string
+  cantidad: number
+  /** Valor y porcentaje vigentes: solo para previsualizar el costo antes de guardar */
+  valor_unitario: number
+  porcentaje: number
+}
+
+interface MaterialSeleccionado {
+  material_id: number
+  nombre: string
+  codigo: string
+  cantidad: number
+  cantidad_total: number
+  valor_unitario: number
+  porcentaje: number
+}
+
+/**
+ * Costo de depreciación por práctica de una línea.
+ * Replica calcularCostoDepreciacion del backend (server/utils/depreciacion.js),
+ * que es el que finalmente se congela al guardar.
+ */
+const costoDepreciacionLinea = (
+  valor_unitario: number,
+  porcentaje: number,
+  cantidad: number,
+  num_grupos: number
+): number => {
+  if (!(valor_unitario > 0) || !(porcentaje > 0) || !(cantidad > 0) || !(num_grupos > 0)) return 0
+  return valor_unitario * (porcentaje / 100) * cantidad * num_grupos
 }
 
 // Paleta de colores disponibles - 56 colores con buen contraste para texto blanco
@@ -191,9 +231,17 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
   const [equiposSeleccionados, setEquiposSeleccionados] = useState<EquipoSeleccionado[]>([])
   const [numGrupos, setNumGrupos] = useState(1)
 
+  // Material reutilizable (cristalería y afines)
+  const [materialesDisponibles, setMaterialesDisponibles] = useState<MaterialReutilizable[]>([])
+  const [materialesSeleccionados, setMaterialesSeleccionados] = useState<MaterialSeleccionado[]>([])
+
+  // Pestaña del panel derecho: 0 = Equipos, 1 = Material reutilizable
+  const [panelBienesTab, setPanelBienesTab] = useState(0)
+
   // Buscadores de los listados largos
   const [busquedaInsumo, setBusquedaInsumo] = useState('')
   const [busquedaEquipo, setBusquedaEquipo] = useState('')
+  const [busquedaMaterial, setBusquedaMaterial] = useState('')
 
   const insumosFiltrados = useMemo(() => {
     const termino = normalizarTexto(busquedaInsumo)
@@ -211,10 +259,64 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     )
   }, [equiposDisponibles, busquedaEquipo])
 
+  const materialesFiltrados = useMemo(() => {
+    const termino = normalizarTexto(busquedaMaterial)
+    if (!termino) return materialesDisponibles
+    return materialesDisponibles.filter(material =>
+      normalizarTexto(`${material.nombre} ${material.codigo} ${material.descripcion ?? ''}`).includes(termino)
+    )
+  }, [materialesDisponibles, busquedaMaterial])
+
   const docenteSeleccionado = useMemo(
     () => docentes.find(d => d.id === formData.docente_id) ?? null,
     [docentes, formData.docente_id]
   )
+
+  // Costo por práctica: insumos + depreciación de equipos y material reutilizable
+  const resumenCostos = useMemo(() => {
+    const grupos = Math.max(1, numGrupos)
+
+    const insumosCosto = insumosSeleccionados.reduce((acc, item) => {
+      const insumo = insumosDisponibles.find(i => i.id === item.insumo_id)
+      const precio = Number(insumo?.precio_unitario ?? 0)
+      if (!(precio > 0)) return acc
+      return acc + precio * item.cantidad * grupos
+    }, 0)
+
+    const equiposCosto = equiposSeleccionados.reduce(
+      (acc, e) => acc + costoDepreciacionLinea(e.valor_unitario, e.porcentaje, e.cantidad, grupos),
+      0
+    )
+
+    const materialesCosto = materialesSeleccionados.reduce(
+      (acc, m) => acc + costoDepreciacionLinea(m.valor_unitario, m.porcentaje, m.cantidad, grupos),
+      0
+    )
+
+    const equiposSinConfigurar = equiposSeleccionados.filter(
+      e => !(e.valor_unitario > 0 && e.porcentaje > 0)
+    ).length
+    const materialesSinConfigurar = materialesSeleccionados.filter(
+      m => !(m.valor_unitario > 0 && m.porcentaje > 0)
+    ).length
+
+    return {
+      grupos,
+      insumosCosto,
+      equiposCosto,
+      materialesCosto,
+      depreciacionCosto: equiposCosto + materialesCosto,
+      total: insumosCosto + equiposCosto + materialesCosto,
+      equiposSinConfigurar,
+      materialesSinConfigurar
+    }
+  }, [
+    numGrupos,
+    insumosSeleccionados,
+    insumosDisponibles,
+    equiposSeleccionados,
+    materialesSeleccionados
+  ])
 
   // Estados de carga y errores
   const [loading, setLoading] = useState(false)
@@ -335,7 +437,8 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     if (horarioData.laboratorio_id) {
       await Promise.all([
         loadInsumosByLaboratorio(horarioData.laboratorio_id),
-        loadEquiposByLaboratorio(horarioData.laboratorio_id)
+        loadEquiposByLaboratorio(horarioData.laboratorio_id),
+        loadMaterialesByLaboratorio(horarioData.laboratorio_id)
       ])
     }
 
@@ -349,10 +452,26 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       }))
     )
 
+    // Cargar material reutilizable con la depreciación congelada del horario
+    setMaterialesSeleccionados(
+      (horarioData.materiales ?? []).map(m => ({
+        material_id: m.id,
+        nombre: m.nombre,
+        codigo: m.codigo ?? '',
+        cantidad: Number(m.cantidad ?? 1),
+        cantidad_total: 0,
+        valor_unitario: Number(m.valor_unitario ?? 0),
+        porcentaje: Number(m.porcentaje_depreciacion ?? 0)
+      }))
+    )
+
     // Cargar equipos seleccionados
     setEquiposSeleccionados(
       (horarioData.equipos ?? []).map(e => ({
         equipo_id: e.id,
+        cantidad: Number(e.cantidad ?? 1),
+        valor_unitario: Number(e.valor_unitario ?? 0),
+        porcentaje: Number(e.porcentaje_depreciacion ?? 0),
         nombre: e.nombre
       }))
     )
@@ -376,11 +495,14 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     setEndBlockId('')
     setInsumosSeleccionados([])
     setEquiposSeleccionados([])
+    setMaterialesSeleccionados([])
+    setPanelBienesTab(0)
     setNumGrupos(1)
     setConflictos([])
     setError(null)
     setBusquedaInsumo('')
     setBusquedaEquipo('')
+    setBusquedaMaterial('')
 
     setLaboratorioChangeMessage(null)
   }
@@ -394,6 +516,18 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       setError(result.error)
     } else if (result.data) {
       setInsumosDisponibles(result.data.data)
+    }
+  }
+
+  // Cargar material reutilizable cuando se selecciona laboratorio
+  const loadMaterialesByLaboratorio = async (laboratorio_id: number) => {
+
+    setMaterialesDisponibles([])
+    const result = await execute(() => materialReutilizableService.getByLaboratorio(laboratorio_id))
+    if (result.error) {
+      setError(result.error)
+    } else if (result.data) {
+      setMaterialesDisponibles(result.data.data)
     }
   }
 
@@ -417,17 +551,20 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     // Los buscadores no aplican al nuevo listado
     setBusquedaInsumo('')
     setBusquedaEquipo('')
+    setBusquedaMaterial('')
 
     // Limpiar insumos y equipos seleccionados cuando se cambia el laboratorio
     if (laboratorioAnterior > 0 && laboratorioAnterior !== laboratorio_id) {
       const insumosAnteriores = insumosSeleccionados.length
       const equiposAnteriores = equiposSeleccionados.length
+      const materialesAnteriores = materialesSeleccionados.length
       setInsumosSeleccionados([])
       setEquiposSeleccionados([])
+      setMaterialesSeleccionados([])
 
       // Mostrar mensaje temporal si había insumos o equipos seleccionados
-      if (insumosAnteriores > 0 || equiposAnteriores > 0) {
-        setLaboratorioChangeMessage(`Se han limpiado ${insumosAnteriores} insumo(s) y ${equiposAnteriores} equipo(s) seleccionado(s) del laboratorio anterior`)
+      if (insumosAnteriores > 0 || equiposAnteriores > 0 || materialesAnteriores > 0) {
+        setLaboratorioChangeMessage(`Se han limpiado ${insumosAnteriores} insumo(s), ${equiposAnteriores} equipo(s) y ${materialesAnteriores} material(es) seleccionado(s) del laboratorio anterior`)
         setTimeout(() => setLaboratorioChangeMessage(null), 3000)
       }
     }
@@ -435,11 +572,13 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
     if (laboratorio_id > 0) {
       await Promise.all([
         loadInsumosByLaboratorio(laboratorio_id),
-        loadEquiposByLaboratorio(laboratorio_id)
+        loadEquiposByLaboratorio(laboratorio_id),
+        loadMaterialesByLaboratorio(laboratorio_id)
       ])
     } else {
       setInsumosDisponibles([])
       setEquiposDisponibles([])
+      setMaterialesDisponibles([])
     }
   }
 
@@ -531,6 +670,9 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       const nuevoEquipo: EquipoSeleccionado = {
         equipo_id: equipo.id,
         nombre: equipo.nombre,
+        cantidad: 1,
+        valor_unitario: Number(equipo.valor_adquisicion ?? 0),
+        porcentaje: Number(equipo.depreciacion_porcentaje ?? 0)
       }
       setEquiposSeleccionados(prev => [...prev, nuevoEquipo])
     }
@@ -538,6 +680,49 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
 
   const eliminarEquipo = (equipo_id: number) => {
     setEquiposSeleccionados(prev => prev.filter(e => e.equipo_id !== equipo_id))
+  }
+
+  const actualizarCantidadEquipo = (equipo_id: number, cantidad: number) => {
+    const entero = Math.floor(cantidad)
+    if (entero < 1) {
+      eliminarEquipo(equipo_id)
+      return
+    }
+    setEquiposSeleccionados(prev =>
+      prev.map(e => e.equipo_id === equipo_id ? { ...e, cantidad: entero } : e)
+    )
+  }
+
+  // Manejo de material reutilizable
+  const agregarMaterial = (material: MaterialReutilizable) => {
+    const yaSeleccionado = materialesSeleccionados.find(m => m.material_id === material.id)
+    if (!yaSeleccionado) {
+      const nuevoMaterial: MaterialSeleccionado = {
+        material_id: material.id,
+        nombre: material.nombre,
+        codigo: material.codigo,
+        cantidad: 1,
+        cantidad_total: Number(material.cantidad_total ?? 0),
+        valor_unitario: Number(material.valor_unitario ?? 0),
+        porcentaje: Number(material.depreciacion_porcentaje ?? 0)
+      }
+      setMaterialesSeleccionados(prev => [...prev, nuevoMaterial])
+    }
+  }
+
+  const eliminarMaterial = (material_id: number) => {
+    setMaterialesSeleccionados(prev => prev.filter(m => m.material_id !== material_id))
+  }
+
+  const actualizarCantidadMaterial = (material_id: number, cantidad: number) => {
+    const entero = Math.floor(cantidad)
+    if (entero < 1) {
+      eliminarMaterial(material_id)
+      return
+    }
+    setMaterialesSeleccionados(prev =>
+      prev.map(m => m.material_id === material_id ? { ...m, cantidad: entero } : m)
+    )
   }
 
   // Submit del formulario
@@ -573,6 +758,11 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
       })),
       equipos: equiposSeleccionados.map(e => ({
         equipo_id: e.equipo_id,
+        cantidad: e.cantidad
+      })),
+      materiales: materialesSeleccionados.map(m => ({
+        material_id: m.material_id,
+        cantidad: m.cantidad
       }))
     }
 
@@ -1228,6 +1418,99 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                   </Box>
                 )}
               </Paper>
+
+              {/* Costo por práctica: insumos + depreciación */}
+              <Paper sx={{
+                p: 2,
+                borderRadius: 1.5,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                border: '1px solid #e8e8e8'
+              }}>
+                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
+                  <Paid />
+                  Costo por Práctica
+                  {resumenCostos.grupos > 1 && (
+                    <Chip
+                      label={`${resumenCostos.grupos} grupos`}
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                      sx={{ fontWeight: 600 }}
+                    />
+                  )}
+                </Typography>
+
+                {!formData.laboratorio_id ? (
+                  <Typography variant="body2" color="text.secondary">
+                    Selecciona un laboratorio y agrega insumos, equipos o material para ver el costo.
+                  </Typography>
+                ) : (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Inventory fontSize="small" color="action" />
+                        <Typography variant="body2">
+                          Insumos ({insumosSeleccionados.length})
+                        </Typography>
+                      </Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        S/ {resumenCostos.insumosCosto.toFixed(2)}
+                      </Typography>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Build fontSize="small" color="action" />
+                        <Typography variant="body2">
+                          Depreciación de equipos ({equiposSeleccionados.length})
+                        </Typography>
+                      </Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        S/ {resumenCostos.equiposCosto.toFixed(2)}
+                      </Typography>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Science fontSize="small" color="action" />
+                        <Typography variant="body2">
+                          Depreciación de material ({materialesSeleccionados.length})
+                        </Typography>
+                      </Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        S/ {resumenCostos.materialesCosto.toFixed(2)}
+                      </Typography>
+                    </Box>
+
+                    <Divider sx={{ my: 0.5 }} />
+
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                        Total estimado
+                      </Typography>
+                      <Typography variant="h6" sx={{ fontWeight: 700, color: 'success.main' }}>
+                        S/ {resumenCostos.total.toFixed(2)}
+                      </Typography>
+                    </Box>
+
+                    {(resumenCostos.equiposSinConfigurar > 0 || resumenCostos.materialesSinConfigurar > 0) && (
+                      <Alert severity="info" icon={<TrendingDown fontSize="small" />} sx={{ mt: 1, py: 0 }}>
+                        <Typography variant="caption">
+                          {resumenCostos.equiposSinConfigurar > 0 && `${resumenCostos.equiposSinConfigurar} equipo(s)`}
+                          {resumenCostos.equiposSinConfigurar > 0 && resumenCostos.materialesSinConfigurar > 0 && ' y '}
+                          {resumenCostos.materialesSinConfigurar > 0 && `${resumenCostos.materialesSinConfigurar} material(es)`}
+                          {' '}sin valor o categoría de depreciación: no suman al costo.
+                        </Typography>
+                      </Alert>
+                    )}
+
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                      La depreciación se congela al guardar: este horario conservará estos montos
+                      aunque después cambien los porcentajes o el valor de los bienes.
+                    </Typography>
+                  </Box>
+                )}
+              </Paper>
             </Box>
 
             {/* Panel derecho - Gestión de Insumos */}
@@ -1474,17 +1757,31 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
               gap: 2,
               minHeight: 0,
             }}>
-              {/* Título de la sección */}
+              {/* Título de la sección con pestañas de bienes depreciables */}
               <Paper sx={{
-                p: 2,
                 borderRadius: 1.5,
                 background: 'linear-gradient(135deg, #f5f5f5 0%, #eeeeee 100%)',
-                border: '1px solid #e0e0e0'
+                border: '1px solid #e0e0e0',
+                overflow: 'hidden'
               }}>
-                <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'secondary.main' }}>
-                  <Build />
-                  Equipos (Opcional)
-                </Typography>
+                <Tabs
+                  value={panelBienesTab}
+                  onChange={(_, v) => setPanelBienesTab(v)}
+                  variant="fullWidth"
+                >
+                  <Tab
+                    icon={<Build fontSize="small" />}
+                    iconPosition="start"
+                    label={`Equipos${equiposSeleccionados.length > 0 ? ` (${equiposSeleccionados.length})` : ''}`}
+                    sx={{ minHeight: 56, textTransform: 'none' }}
+                  />
+                  <Tab
+                    icon={<Science fontSize="small" />}
+                    iconPosition="start"
+                    label={`Material${materialesSeleccionados.length > 0 ? ` (${materialesSeleccionados.length})` : ''}`}
+                    sx={{ minHeight: 56, textTransform: 'none' }}
+                  />
+                </Tabs>
               </Paper>
 
               {/* Contenido de equipos */}
@@ -1502,6 +1799,8 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                       </Alert>
                     )}
 
+                    {panelBienesTab === 0 && (
+                    <>
                     {/* Equipos disponibles */}
                     <Paper sx={{
                       flex: 1,
@@ -1644,21 +1943,55 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                                     </Typography>
                                   }
                                   secondary={
-                                    <Typography variant="caption" color="text.secondary">
-                                      Equipo reservado
-                                    </Typography>
+                                    equipo.valor_unitario > 0 && equipo.porcentaje > 0 ? (
+                                      <Typography variant="caption" sx={{ color: 'success.main', fontWeight: 600 }}>
+                                        Depreciación: S/ {costoDepreciacionLinea(
+                                          equipo.valor_unitario, equipo.porcentaje, equipo.cantidad, Math.max(1, numGrupos)
+                                        ).toFixed(4)}
+                                        {numGrupos > 1 ? ` (${numGrupos} grupos)` : ''}
+                                      </Typography>
+                                    ) : (
+                                      <Typography variant="caption" color="text.secondary">
+                                        Sin valor o categoría: no cobra depreciación
+                                      </Typography>
+                                    )
                                   }
                                 />
-                                <Tooltip title="Eliminar equipo">
-                                  <IconButton
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <Tooltip title="Quitar una unidad">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => actualizarCantidadEquipo(equipo.equipo_id, equipo.cantidad - 1)}
+                                    >
+                                      <Remove fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <TextField
                                     size="small"
-                                    onClick={() => eliminarEquipo(equipo.equipo_id)}
-                                    color="error"
-                                    sx={{ ml: 1 }}
-                                  >
-                                    <Delete />
-                                  </IconButton>
-                                </Tooltip>
+                                    type="number"
+                                    value={equipo.cantidad}
+                                    onChange={(e) => actualizarCantidadEquipo(equipo.equipo_id, parseInt(e.target.value, 10) || 0)}
+                                    sx={{ width: 64 }}
+                                    slotProps={{ htmlInput: { min: 1, step: 1, style: { textAlign: 'center' } } }}
+                                  />
+                                  <Tooltip title="Agregar una unidad">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => actualizarCantidadEquipo(equipo.equipo_id, equipo.cantidad + 1)}
+                                    >
+                                      <Add fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Eliminar equipo">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => eliminarEquipo(equipo.equipo_id)}
+                                      color="error"
+                                    >
+                                      <Delete fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Box>
                               </ListItem>
                             )
                           })}
@@ -1674,6 +2007,230 @@ export const HorarioFormSimple: React.FC<HorarioFormProps> = ({ open, onClose, o
                         </List>
                       </Box>
                     </Paper>
+                    </>
+                    )}
+
+                    {panelBienesTab === 1 && (
+                    <>
+                    {/* Material reutilizable disponible */}
+                    <Paper sx={{
+                      flex: 1,
+                      borderRadius: 1.5,
+                      border: '1px solid #e0e0e0',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      minHeight: 300,
+                      maxHeight: 360
+                    }}>
+                      <Box sx={{ p: 2, backgroundColor: '#f0f7ff', borderBottom: '1px solid #e0e0e0' }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'primary.main', mb: 1 }}>
+                          Disponibles ({materialesFiltrados.length}{busquedaMaterial ? ` de ${materialesDisponibles.length}` : ''})
+                        </Typography>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          value={busquedaMaterial}
+                          onChange={(e) => setBusquedaMaterial(e.target.value)}
+                          placeholder="Buscar por nombre, código o descripción"
+                          sx={{ backgroundColor: 'white', borderRadius: 1 }}
+                          slotProps={{
+                            input: {
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <Search fontSize="small" />
+                                </InputAdornment>
+                              ),
+                              endAdornment: busquedaMaterial ? (
+                                <InputAdornment position="end">
+                                  <Tooltip title="Limpiar búsqueda">
+                                    <IconButton size="small" onClick={() => setBusquedaMaterial('')}>
+                                      <Close fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </InputAdornment>
+                              ) : null
+                            }
+                          }}
+                        />
+                      </Box>
+                      <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
+                        {materialesFiltrados.length > 0 ? (
+                          <List dense>
+                            {materialesFiltrados.map((material) => {
+                              const yaSeleccionado = materialesSeleccionados.some(m => m.material_id === material.id)
+                              const valor = Number(material.valor_unitario ?? 0)
+                              const porcentaje = Number(material.depreciacion_porcentaje ?? 0)
+                              return (
+                                <ListItem
+                                  key={material.id}
+                                  sx={{
+                                    border: '1px solid #f0f0f0',
+                                    borderRadius: 1,
+                                    mb: 1,
+                                    backgroundColor: yaSeleccionado ? '#e8f5e8' : 'transparent',
+                                    '&:hover': {
+                                      backgroundColor: yaSeleccionado ? '#e8f5e8' : '#f5f5f5'
+                                    }
+                                  }}
+                                >
+                                  <ListItemText
+                                    primary={
+                                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                        {material.nombre}
+                                      </Typography>
+                                    }
+                                    secondary={
+                                      <Typography variant="caption" color="text.secondary">
+                                        {material.codigo} · {material.cantidad_total} u. en el lab
+                                        {valor > 0 && porcentaje > 0
+                                          ? ` · S/ ${(valor * porcentaje / 100).toFixed(4)} por u.`
+                                          : ' · sin depreciación configurada'}
+                                      </Typography>
+                                    }
+                                  />
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => agregarMaterial(material)}
+                                    disabled={yaSeleccionado}
+                                    color="primary"
+                                    sx={{ ml: 1 }}
+                                  >
+                                    <Add />
+                                  </IconButton>
+                                </ListItem>
+                              )
+                            })}
+                          </List>
+                        ) : (
+                          <Box sx={{ p: 3, textAlign: 'center' }}>
+                            <Science sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
+                            <Typography variant="body2" color="text.secondary">
+                              {busquedaMaterial
+                                ? 'Sin resultados para la búsqueda'
+                                : 'No hay material reutilizable en este laboratorio'}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {busquedaMaterial
+                                ? 'Prueba con otro nombre o código'
+                                : 'Regístralo en Configuración → Material Reutilizable'}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Paper>
+
+                    {/* Material reutilizable seleccionado */}
+                    <Paper sx={{
+                      flex: 1,
+                      borderRadius: 1.5,
+                      border: '1px solid #e0e0e0',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      minHeight: 200,
+                      maxHeight: 250
+                    }}>
+                      <Box sx={{ p: 2, backgroundColor: '#f0fff4', borderBottom: '1px solid #e0e0e0' }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'success.main' }}>
+                          Seleccionados ({materialesSeleccionados.length})
+                        </Typography>
+                      </Box>
+                      <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
+                        <List dense>
+                          {materialesSeleccionados.map((material) => {
+                            const excede = material.cantidad_total > 0 && material.cantidad > material.cantidad_total
+                            return (
+                              <ListItem
+                                key={material.material_id}
+                                sx={{
+                                  border: excede ? '1px solid #f44336' : '1px solid #e8f5e8',
+                                  borderRadius: 1,
+                                  mb: 1,
+                                  backgroundColor: excede ? '#fff5f5' : '#f9fff9',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center'
+                                }}
+                              >
+                                <ListItemText
+                                  primary={
+                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                      {material.nombre}
+                                    </Typography>
+                                  }
+                                  secondary={
+                                    excede ? (
+                                      <Typography variant="caption" color="error" sx={{ fontWeight: 600 }}>
+                                        Solo hay {material.cantidad_total} u. en el laboratorio
+                                      </Typography>
+                                    ) : material.valor_unitario > 0 && material.porcentaje > 0 ? (
+                                      <Typography variant="caption" sx={{ color: 'success.main', fontWeight: 600 }}>
+                                        Depreciación: S/ {costoDepreciacionLinea(
+                                          material.valor_unitario, material.porcentaje, material.cantidad, Math.max(1, numGrupos)
+                                        ).toFixed(4)}
+                                        {numGrupos > 1 ? ` (${numGrupos} grupos)` : ''}
+                                      </Typography>
+                                    ) : (
+                                      <Typography variant="caption" color="text.secondary">
+                                        Sin valor o categoría: no cobra depreciación
+                                      </Typography>
+                                    )
+                                  }
+                                />
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <Tooltip title="Quitar una unidad">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => actualizarCantidadMaterial(material.material_id, material.cantidad - 1)}
+                                    >
+                                      <Remove fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <TextField
+                                    size="small"
+                                    type="number"
+                                    value={material.cantidad}
+                                    onChange={(e) => actualizarCantidadMaterial(material.material_id, parseInt(e.target.value, 10) || 0)}
+                                    error={excede}
+                                    sx={{ width: 64 }}
+                                    slotProps={{ htmlInput: { min: 1, step: 1, style: { textAlign: 'center' } } }}
+                                  />
+                                  <Tooltip title="Agregar una unidad">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => actualizarCantidadMaterial(material.material_id, material.cantidad + 1)}
+                                    >
+                                      <Add fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Eliminar material">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => eliminarMaterial(material.material_id)}
+                                      color="error"
+                                    >
+                                      <Delete fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Box>
+                              </ListItem>
+                            )
+                          })}
+                          {materialesSeleccionados.length === 0 && (
+                            <ListItem>
+                              <ListItemText
+                                primary="Sin material seleccionado"
+                                secondary="La cristalería y el material afín que agregues aparecerán aquí"
+                                sx={{ textAlign: 'center', color: 'text.secondary' }}
+                              />
+                            </ListItem>
+                          )}
+                        </List>
+                      </Box>
+                    </Paper>
+                    </>
+                    )}
                   </>
                 )}
             </Box>

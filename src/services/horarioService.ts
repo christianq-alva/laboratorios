@@ -49,6 +49,7 @@ export interface HorarioFull extends HorarioSimple {
   insumos?: InsumoHorario[]
   insumos_consumidos?: InsumoConsumido[]
   equipos?: EquipoHorario[]
+  materiales?: MaterialHorario[]
   tiene_consumo_insumos?: number // TINYINT(1): 0 o 1
 }
 
@@ -75,13 +76,33 @@ export interface InsumoConsumido {
   cantidad_consumida: number
 }
 
-export interface EquipoHorario {
+/**
+ * Depreciación congelada al guardar el horario: valor_unitario, porcentaje y
+ * costo son los vigentes en ese momento y no cambian si después se edita la
+ * configuración del bien o de la categoría.
+ */
+export interface DepreciacionCongelada {
+  cantidad?: number
+  valor_unitario?: number | string | null
+  porcentaje_depreciacion?: number | string | null
+  costo_depreciacion?: number | string | null
+  depreciacion_categoria_nombre?: string | null
+}
+
+export interface EquipoHorario extends DepreciacionCongelada {
   id: number
   nombre: string
   marca?: string
   modelo?: string
   codigo?: string
   estado?: string
+}
+
+export interface MaterialHorario extends DepreciacionCongelada {
+  id: number
+  nombre: string
+  codigo?: string
+  descripcion?: string | null
 }
 
 export interface ActividadHorario {
@@ -119,6 +140,11 @@ export interface CreateHorarioData {
   }>
   equipos?: Array<{
     equipo_id: number
+    cantidad?: number
+  }>
+  materiales?: Array<{
+    material_id: number
+    cantidad?: number
   }>
 }
 

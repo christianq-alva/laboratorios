@@ -200,13 +200,44 @@ export const Horario = {
               e.marca,
               e.modelo,
               e.codigo,
-              e.estado
+              e.estado,
+              dre.cantidad,
+              CAST(dre.valor_unitario AS DECIMAL(12,2)) as valor_unitario,
+              CAST(dre.porcentaje_depreciacion AS DECIMAL(7,4)) as porcentaje_depreciacion,
+              CAST(dre.costo_depreciacion AS DECIMAL(12,4)) as costo_depreciacion,
+              dc.nombre as depreciacion_categoria_nombre
             FROM detalle_reserva_equipos dre
             JOIN equipos e ON dre.equipo_id = e.id
+            LEFT JOIN depreciacion_categorias dc ON e.depreciacion_categoria_id = dc.id
             WHERE dre.reserva_id = ?
             ORDER BY e.nombre
         `, [reserva_id])
         return equipos;
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
+    },
+
+    getMaterialesRequeridosByHorario: async (reserva_id) => {
+        try {
+        const [materiales] = await pool.execute(`
+            SELECT
+              drm.material_id as id,
+              m.nombre,
+              m.codigo,
+              m.descripcion,
+              drm.cantidad,
+              CAST(drm.valor_unitario AS DECIMAL(12,2)) as valor_unitario,
+              CAST(drm.porcentaje_depreciacion AS DECIMAL(7,4)) as porcentaje_depreciacion,
+              CAST(drm.costo_depreciacion AS DECIMAL(12,4)) as costo_depreciacion,
+              dc.nombre as depreciacion_categoria_nombre
+            FROM detalle_reserva_materiales drm
+            JOIN materiales_reutilizables m ON drm.material_id = m.id
+            LEFT JOIN depreciacion_categorias dc ON m.depreciacion_categoria_id = dc.id
+            WHERE drm.reserva_id = ?
+            ORDER BY m.nombre
+        `, [reserva_id])
+        return materiales;
         } catch (error) {
             handleDBError(error, 'Horario')
         }
@@ -412,15 +443,50 @@ export const Horario = {
         }
     },
 
+    /**
+     * Guarda los equipos del horario con la depreciación ya congelada.
+     * El servicio resuelve valor_unitario, porcentaje y costo antes de llamar:
+     * aquí solo se escriben los valores tal como quedarán en el histórico.
+     */
     createHorarioEquipos: async (reserva_id, equipos_requeridos, connection) => {
         try {
         for (const equipo of equipos_requeridos) {
 
             // Insertar en detalle_reserva_equipos
             await connection.execute(`
-            INSERT INTO detalle_reserva_equipos (reserva_id, equipo_id)
-            VALUES (?, ?)
-            `, [reserva_id, equipo.equipo_id])
+            INSERT INTO detalle_reserva_equipos
+              (reserva_id, equipo_id, cantidad, valor_unitario, porcentaje_depreciacion, costo_depreciacion)
+            VALUES (?, ?, ?, ?, ?, ?)
+            `, [
+                reserva_id,
+                equipo.equipo_id,
+                equipo.cantidad ?? 1,
+                equipo.valor_unitario ?? null,
+                equipo.porcentaje_depreciacion ?? null,
+                equipo.costo_depreciacion ?? null
+            ])
+        }
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
+    },
+
+    /** Igual que createHorarioEquipos, para el material reutilizable */
+    createHorarioMateriales: async (reserva_id, materiales_requeridos, connection) => {
+        try {
+        for (const material of materiales_requeridos) {
+            await connection.execute(`
+            INSERT INTO detalle_reserva_materiales
+              (reserva_id, material_id, cantidad, valor_unitario, porcentaje_depreciacion, costo_depreciacion)
+            VALUES (?, ?, ?, ?, ?, ?)
+            `, [
+                reserva_id,
+                material.material_id,
+                material.cantidad ?? 1,
+                material.valor_unitario ?? null,
+                material.porcentaje_depreciacion ?? null,
+                material.costo_depreciacion ?? null
+            ])
         }
         } catch (error) {
             handleDBError(error, 'Horario')
@@ -431,6 +497,17 @@ export const Horario = {
         await connection.execute(`
             DELETE 
             FROM detalle_reserva_insumos
+            WHERE reserva_id = ?`,
+            [reserva_id])
+        } catch (error) {
+            handleDBError(error, 'Horario')
+        }
+    },
+    deleteHorarioMateriales: async (reserva_id, connection) => {
+        try {
+        await connection.execute(`
+            DELETE
+            FROM detalle_reserva_materiales
             WHERE reserva_id = ?`,
             [reserva_id])
         } catch (error) {

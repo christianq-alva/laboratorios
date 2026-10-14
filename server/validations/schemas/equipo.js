@@ -14,6 +14,24 @@ const condicionesValidas = ['Excelente', 'Bueno', 'Regular', 'Malo']
 
 const tipoActividadValidos = ['crear', 'editar', 'eliminar']
 /**
+ * Valor del equipo: base de cálculo de la depreciación por práctica.
+ * Opcional — un equipo sin valor configurado simplemente no genera depreciación.
+ */
+const valorAdquisicionSchema = z.coerce.number({ error: 'El valor de adquisición debe ser un número' })
+    .min(0, 'El valor de adquisición no puede ser negativo')
+    .max(99999999.99, 'El valor de adquisición excede el máximo permitido')
+    .refine((val) => Number(val.toFixed(2)) === val, 'El valor de adquisición no puede tener más de 2 decimales')
+    .optional()
+    .nullable()
+
+/** Categoría de depreciación (Pequeño / Mediano / Grande). Opcional. */
+const depreciacionCategoriaIdSchema = z.coerce.number({ error: 'La categoría de depreciación debe ser un número' })
+    .int('El ID de la categoría de depreciación debe ser un número entero')
+    .positive('El ID de la categoría de depreciación debe ser mayor a 0')
+    .optional()
+    .nullable()
+
+/**
  * Schema para crear un equipo
  */
 export const createEquipoSchema = z.object({
@@ -80,7 +98,9 @@ export const createEquipoSchema = z.object({
             .positive('El ID de tipo de equipo debe ser mayor a 0'),
         laboratorio_id: z.number()
             .int('El ID de laboratorio debe ser un número entero')
-            .positive('El ID de laboratorio debe ser mayor a 0')
+            .positive('El ID de laboratorio debe ser mayor a 0'),
+        valor_adquisicion: valorAdquisicionSchema,
+        depreciacion_categoria_id: depreciacionCategoriaIdSchema
     }).refine((data) => {
         // Si ambas fechas de mantenimiento existen, la próxima debe ser >= a la última
         if (data.fecha_ultimo_mantenimiento && data.fecha_proximo_mantenimiento) {
@@ -167,7 +187,9 @@ export const updateEquipoSchema = z.object({
         laboratorio_id: z.number()
             .int('El ID de laboratorio debe ser un número entero')
             .positive('El ID de laboratorio debe ser mayor a 0')
-            .optional()
+            .optional(),
+        valor_adquisicion: valorAdquisicionSchema,
+        depreciacion_categoria_id: depreciacionCategoriaIdSchema
     }).refine((data) => {
         // Si ambas fechas de mantenimiento existen, la próxima debe ser >= a la última
         if (data.fecha_ultimo_mantenimiento && data.fecha_proximo_mantenimiento) {

@@ -52,7 +52,9 @@ export const createEquipo = async (req, res, next) => {
       condicion = 'Bueno',
       fecha_adquisicion,
       tipo_equipo_id,
-      laboratorio_id
+      laboratorio_id,
+      valor_adquisicion,
+      depreciacion_categoria_id
     } = req.body
     await equipoService.crearEquipo(
       {
@@ -69,7 +71,9 @@ export const createEquipo = async (req, res, next) => {
         condicion,
         fecha_adquisicion,
         tipo_equipo_id,
-        laboratorio_id
+        laboratorio_id,
+        valor_adquisicion: valor_adquisicion ?? null,
+        depreciacion_categoria_id: depreciacion_categoria_id ?? null
       },
       req.user.userId,
       req.ip || req.connection?.remoteAddress
@@ -100,7 +104,9 @@ export const updateEquipo = async (req, res, next) => {
       condicion,
       fecha_adquisicion,
       tipo_equipo_id,
-      laboratorio_id
+      laboratorio_id,
+      valor_adquisicion,
+      depreciacion_categoria_id
     } = req.body
     const result = await equipoService.actualizarEquipo(
       id,
@@ -118,7 +124,9 @@ export const updateEquipo = async (req, res, next) => {
         condicion,
         fecha_adquisicion,
         tipo_equipo_id,
-        laboratorio_id
+        laboratorio_id,
+        valor_adquisicion: valor_adquisicion ?? null,
+        depreciacion_categoria_id: depreciacion_categoria_id ?? null
       },
       req.user.userId,
       req.ip || req.connection?.remoteAddress
@@ -173,7 +181,7 @@ export const getActividadEquipos = async (req, res, next) => {
 
 export const generarPlantillaImportacionEquipos = async (req, res, next) => {
   try {
-    const { tipos_equipo } = await equipoService.getDatosPlantillaEquipos()
+    const { tipos_equipo, depreciacion_categorias } = await equipoService.getDatosPlantillaEquipos()
     const wb = XLSX.utils.book_new()
     const plantillaData = [
       [
@@ -189,7 +197,9 @@ export const generarPlantillaImportacionEquipos = async (req, res, next) => {
         'FECHA_PROXIMO_MANTENIMIENTO',
         'COMENTARIOS',
         'CONDICION',
-        'FECHA_ADQUISICION'
+        'FECHA_ADQUISICION',
+        'VALOR_ADQUISICION',
+        'DEPRECIACION_CATEGORIA_ID'
       ],
       [
         'EQP-0001',
@@ -204,7 +214,9 @@ export const generarPlantillaImportacionEquipos = async (req, res, next) => {
         '2024-07-15',
         'Requiere calibración semestral',
         'Excelente',
-        '2023-01-01'
+        '2023-01-01',
+        '18500.00',
+        ''
       ],
       [
         'EQP-0002',
@@ -219,14 +231,16 @@ export const generarPlantillaImportacionEquipos = async (req, res, next) => {
         '2024-09-20',
         'Limpiar lentes semanalmente',
         'Bueno',
-        '2024-01-01'
+        '2024-01-01',
+        '5000.00',
+        ''
       ]
     ]
     const wsPlantilla = XLSX.utils.aoa_to_sheet(plantillaData)
     wsPlantilla['!cols'] = [
       { width: 30 }, { width: 30 }, { width: 15 }, { width: 40 }, { width: 15 }, { width: 15 },
       { width: 20 }, { width: 15 }, { width: 25 }, { width: 25 }, { width: 35 }, { width: 12 },
-      { width: 15 }
+      { width: 15 }, { width: 18 }, { width: 26 }
     ]
     XLSX.utils.book_append_sheet(wb, wsPlantilla, 'Plantilla Equipos')
     const instruccionesData = [
@@ -245,10 +259,16 @@ export const generarPlantillaImportacionEquipos = async (req, res, next) => {
       ['• ESTADO: Operativo | En Mantenimiento | Fuera de Servicio'],
       ['• FECHA_ULTIMO_MANTENIMIENTO, FECHA_PROXIMO_MANTENIMIENTO (YYYY-MM-DD)'],
       ['• COMENTARIOS, CONDICION: Excelente | Bueno | Regular | Malo'],
+      ['• VALOR_ADQUISICION: Valor del equipo en soles, sin símbolo (Ej.: 5000.00). Base de la depreciación por práctica.'],
+      ['• DEPRECIACION_CATEGORIA_ID: ID de la categoría de depreciación. Déjalo vacío si el equipo no cobra depreciación.'],
       [''],
       ['TIPOS DE EQUIPOS DISPONIBLES:'],
       ['ID', 'NOMBRE'],
-      ...tipos_equipo.map(te => [te.id, te.nombre])
+      ...tipos_equipo.map(te => [te.id, te.nombre]),
+      [''],
+      ['CATEGORÍAS DE DEPRECIACIÓN DISPONIBLES:'],
+      ['ID', 'NOMBRE', 'PORCENTAJE POR PRÁCTICA'],
+      ...depreciacion_categorias.map(dc => [dc.id, dc.nombre, `${parseFloat(Number(dc.porcentaje).toFixed(4))}%`])
     ]
     const wsInstrucciones = XLSX.utils.aoa_to_sheet(instruccionesData)
     wsInstrucciones['!cols'] = [{ width: 80 }, { width: 15 }, { width: 30 }]

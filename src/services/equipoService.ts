@@ -19,6 +19,11 @@ export interface Equipo {
   tipo_equipo_nombre?: string
   laboratorio_id?: number
   laboratorio_nombre?: string
+  /** Valor del equipo: base de cálculo de la depreciación por práctica */
+  valor_adquisicion?: number | string | null
+  depreciacion_categoria_id?: number | null
+  depreciacion_categoria_nombre?: string | null
+  depreciacion_porcentaje?: number | string | null
 }
 
 export interface ActividadEquipo {

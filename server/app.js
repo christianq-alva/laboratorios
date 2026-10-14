@@ -21,6 +21,8 @@ import escuelaRoutes from './routes/escuelaRoutes.js'
 import cicloRoutes from './routes/cicloRoutes.js'
 import usuarioRoutes from './routes/usuarioRoutes.js'
 import rolRoutes from './routes/rolRoutes.js'
+import depreciacionCategoriaRoutes from './routes/depreciacionCategoriaRoutes.js'
+import materialReutilizableRoutes from './routes/materialReutilizableRoutes.js'
 
 const app = express()
 
@@ -86,6 +88,8 @@ app.use('/api/escuelas', escuelaRoutes)
 app.use('/api/ciclos', cicloRoutes)
 app.use('/api/usuarios', usuarioRoutes)
 app.use('/api/roles', rolRoutes)
+app.use('/api/depreciacion-categorias', depreciacionCategoriaRoutes)
+app.use('/api/materiales-reutilizables', materialReutilizableRoutes)
 
 // ============================================
 // SERVIR FRONTEND EN PRODUCCIÓN

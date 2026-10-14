@@ -26,7 +26,8 @@ import {
   CheckCircle,
   Refresh,
   Warning,
-  Lock
+  Lock,
+  Science
 } from '@mui/icons-material'
 import { horarioService, type HorarioFull } from '../../services/horarioService'
 import { RegistrarInsumosUsadosModal } from './RegistrarInsumosUsadosModal'
@@ -502,6 +503,14 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                                   {equipo.codigo}
                                 </Typography>
                               )}
+                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', display: 'block' }}>
+                                {Number(equipo.cantidad ?? 1)} u.
+                                {Number(equipo.costo_depreciacion ?? 0) > 0 && (
+                                  <Box component="span" sx={{ color: 'success.main', fontWeight: 700, ml: 0.5 }}>
+                                    {' · S/ '}{Number(equipo.costo_depreciacion).toFixed(2)}
+                                  </Box>
+                                )}
+                              </Typography>
                             </Box>
                           </Box>
                           {index < horario.equipos!.length - 1 && <Divider sx={{ my: 0.25 }} />}
@@ -509,6 +518,85 @@ export const HorarioDetalle: React.FC<HorarioDetalleProps> = ({
                       ))}
                     </Box>
                   )}
+
+                  {/* Material reutilizable con su depreciación congelada */}
+                  {horario.materiales && horario.materiales.length > 0 && (
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5, display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                        <Science color="primary" sx={{ fontSize: 16 }} />
+                        Material Reutilizable
+                        <Chip label={horario.materiales.length} size="small" color="primary" variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                        {horario.materiales.map((material, index) => (
+                          <React.Fragment key={material.id}>
+                            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75, py: 0.25 }}>
+                              <Science color="action" sx={{ fontSize: 14, mt: 0.25, flexShrink: 0 }} />
+                              <Box>
+                                <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', lineHeight: 1.3 }}>
+                                  {material.nombre}
+                                </Typography>
+                                {material.codigo && (
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', fontSize: '0.65rem', display: 'block' }}>
+                                    {material.codigo}
+                                  </Typography>
+                                )}
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', display: 'block' }}>
+                                  {Number(material.cantidad ?? 1)} u.
+                                  {Number(material.costo_depreciacion ?? 0) > 0 && (
+                                    <Box component="span" sx={{ color: 'success.main', fontWeight: 700, ml: 0.5 }}>
+                                      {' · S/ '}{Number(material.costo_depreciacion).toFixed(2)}
+                                    </Box>
+                                  )}
+                                </Typography>
+                              </Box>
+                            </Box>
+                            {index < horario.materiales!.length - 1 && <Divider sx={{ my: 0.25 }} />}
+                          </React.Fragment>
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+
+                  {/* Costo total de la práctica: insumos + depreciación congelada */}
+                  {(() => {
+                    const insumosCents = (horario.insumos ?? []).reduce((acc, i) => {
+                      const precio = Number(i.precio_unitario ?? 0)
+                      if (!(precio > 0)) return acc
+                      return acc + Math.round(precio * i.cantidad_usada * grupos * 100)
+                    }, 0)
+                    const depEquiposCents = (horario.equipos ?? []).reduce(
+                      (acc, e) => acc + Math.round(Number(e.costo_depreciacion ?? 0) * 100), 0
+                    )
+                    const depMaterialesCents = (horario.materiales ?? []).reduce(
+                      (acc, m) => acc + Math.round(Number(m.costo_depreciacion ?? 0) * 100), 0
+                    )
+                    const depCents = depEquiposCents + depMaterialesCents
+                    if (insumosCents === 0 && depCents === 0) return null
+                    const fmtTotal = (cents: number) => `S/. ${(cents / 100).toFixed(2)}`
+                    return (
+                      <Box sx={{ mt: 2, p: 1.5, borderRadius: 1, bgcolor: 'action.hover' }}>
+                        <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.75 }}>
+                          Costo de la Práctica{grupos > 1 ? ` (${grupos} grupos)` : ''}
+                        </Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography variant="caption" color="text.secondary">Insumos</Typography>
+                          <Typography variant="caption" sx={{ fontWeight: 600 }}>{fmtTotal(insumosCents)}</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography variant="caption" color="text.secondary">Depreciación</Typography>
+                          <Typography variant="caption" sx={{ fontWeight: 600 }}>{fmtTotal(depCents)}</Typography>
+                        </Box>
+                        <Divider sx={{ my: 0.5 }} />
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography variant="caption" sx={{ fontWeight: 700 }}>Total</Typography>
+                          <Typography variant="caption" sx={{ fontWeight: 700, color: 'success.main' }}>
+                            {fmtTotal(insumosCents + depCents)}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    )
+                  })()}
                 </Box>
               </Box>
             </Box>

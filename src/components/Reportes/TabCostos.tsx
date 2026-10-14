@@ -40,6 +40,7 @@ import {
 import dayjs from 'dayjs'
 import {
   reporteService,
+  costoTotalPractica,
   type HorarioCosto,
   type CostoPorEscuela,
 } from '../../services/reporteService'
@@ -157,11 +158,11 @@ export const TabCostos: React.FC<TabCostosProps> = ({ escuelas, laboratorios, ci
         const rows = res.data ?? []
 
         const wsData: (string | number)[][] = [
-          ['Reporte de Gasto de Insumos'],
+          ['Reporte de Costo por Práctica'],
           [`Escuela: ${esc.nombre}`],
           [`Período: ${exportMesInicio} – ${exportMesFin}`],
           [],
-          ['Escuela', 'Laboratorio', 'Fecha', 'Hora inicio', 'Hora fin', 'Descripción', 'Docente', 'Ciclo', 'Estado', 'N° Grupos', 'Alumnos', 'N° Insumos', 'Costo Total (S/.)'],
+          ['Escuela', 'Laboratorio', 'Fecha', 'Hora inicio', 'Hora fin', 'Descripción', 'Docente', 'Ciclo', 'Estado', 'N° Grupos', 'Alumnos', 'N° Insumos', 'Costo Insumos (S/.)', 'N° Equipos', 'N° Material', 'Depreciación (S/.)', 'Costo Total (S/.)'],
           ...rows.map((h) => [
             h.escuela,
             h.laboratorio,
@@ -175,22 +176,26 @@ export const TabCostos: React.FC<TabCostosProps> = ({ escuelas, laboratorios, ci
             h.num_grupos,
             h.cantidad_alumnos,
             h.num_insumos,
-            Number(h.costo_total_insumos),
+            Number(h.costo_total_insumos ?? 0),
+            h.num_equipos ?? 0,
+            h.num_materiales ?? 0,
+            Number(h.costo_depreciacion_equipos ?? 0) + Number(h.costo_depreciacion_materiales ?? 0),
+            costoTotalPractica(h),
           ]),
         ]
 
         const ws = XLSX.utils.aoa_to_sheet(wsData)
-        ws['!cols'] = [20, 20, 14, 12, 12, 40, 22, 16, 14, 10, 10, 12, 18].map((w) => ({ wch: w }))
+        ws['!cols'] = [20, 20, 14, 12, 12, 40, 22, 16, 14, 10, 10, 12, 18, 11, 11, 18, 18].map((w) => ({ wch: w }))
         ws['!merges'] = [
-          { s: { r: 0, c: 0 }, e: { r: 0, c: 12 } },
-          { s: { r: 1, c: 0 }, e: { r: 1, c: 12 } },
-          { s: { r: 2, c: 0 }, e: { r: 2, c: 12 } },
+          { s: { r: 0, c: 0 }, e: { r: 0, c: 16 } },
+          { s: { r: 1, c: 0 }, e: { r: 1, c: 16 } },
+          { s: { r: 2, c: 0 }, e: { r: 2, c: 16 } },
         ]
         const sheetName = esc.nombre.slice(0, 31).replace(/[\\/:*?[\]]/g, '_')
         XLSX.utils.book_append_sheet(wb, ws, sheetName)
       }
 
-      const fileName = `Reporte_Insumos_${exportMesInicio}_${exportMesFin}.xlsx`
+      const fileName = `Reporte_Costos_${exportMesInicio}_${exportMesFin}.xlsx`
       XLSX.writeFile(wb, fileName)
       setExportOpen(false)
     } catch {
@@ -201,12 +206,19 @@ export const TabCostos: React.FC<TabCostosProps> = ({ escuelas, laboratorios, ci
 
   // KPIs
   const totalHorarios = horarios.length
-  const costoTotal = horarios.reduce((s, h) => s + Number(h.costo_total_insumos), 0)
+  const costoInsumos = horarios.reduce((s, h) => s + Number(h.costo_total_insumos ?? 0), 0)
+  const costoDepreciacion = horarios.reduce(
+    (s, h) => s + Number(h.costo_depreciacion_equipos ?? 0) + Number(h.costo_depreciacion_materiales ?? 0),
+    0
+  )
+  const costoTotal = costoInsumos + costoDepreciacion
   const promedioCosto = totalHorarios > 0 ? costoTotal / totalHorarios : 0
   const paginatedHorarios = horarios.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
 
   const chartCostos = costosPorEscuela.map((e) => ({
     escuela: e.escuela,
+    costo_insumos: Number(e.costo_insumos ?? 0),
+    costo_depreciacion: Number(e.costo_depreciacion ?? 0),
     costo_total: Number(e.costo_total),
     total_horarios: Number(e.total_horarios),
   }))
@@ -267,6 +279,14 @@ export const TabCostos: React.FC<TabCostosProps> = ({ escuelas, laboratorios, ci
                 </Typography>
                 <Typography variant="caption" color="text.disabled">·</Typography>
                 <Typography variant="caption" color="text.secondary">
+                  <Box component="span" sx={{ fontWeight: 700, color: 'text.primary' }}>{formatS(costoInsumos)}</Box> insumos
+                </Typography>
+                <Typography variant="caption" color="text.disabled">+</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  <Box component="span" sx={{ fontWeight: 700, color: 'text.primary' }}>{formatS(costoDepreciacion)}</Box> depreciación
+                </Typography>
+                <Typography variant="caption" color="text.disabled">·</Typography>
+                <Typography variant="caption" color="text.secondary">
                   <Box component="span" sx={{ fontWeight: 700, color: 'primary.main' }}>{formatS(promedioCosto)}</Box> promedio/clase
                 </Typography>
               </Box>
@@ -280,19 +300,21 @@ export const TabCostos: React.FC<TabCostosProps> = ({ escuelas, laboratorios, ci
                     <TableCell sx={{ color: 'white', fontWeight: 600, width: 76 }}>H. inicio</TableCell>
                     <TableCell sx={{ color: 'white', fontWeight: 600, width: 72 }}>H. fin</TableCell>
                     <TableCell sx={{ color: 'white', fontWeight: 600, width: 170, maxWidth: 170 }}>Descripción</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 600, width: 130, textAlign: 'right' }}>Costo insumos</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, width: 110, textAlign: 'right' }}>Insumos</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, width: 110, textAlign: 'right' }}>Depreciación</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, width: 120, textAlign: 'right' }}>Total</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                      <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                         <CircularProgress size={28} />
                       </TableCell>
                     </TableRow>
                   ) : paginatedHorarios.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                      <TableCell colSpan={8} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                         No se encontraron horarios con los filtros seleccionados
                       </TableCell>
                     </TableRow>
@@ -308,9 +330,31 @@ export const TabCostos: React.FC<TabCostosProps> = ({ escuelas, laboratorios, ci
                         <Typography variant="body2" noWrap title={h.descripcion}>{h.descripcion}</Typography>
                         <Typography variant="caption" color="text.secondary" noWrap title={`${h.docente} · ${h.escuela}`}>{h.docente} · {h.escuela}</Typography>
                       </TableCell>
-                      <TableCell sx={{ whiteSpace: 'nowrap', width: 130, textAlign: 'right' }}>
+                      <TableCell sx={{ whiteSpace: 'nowrap', width: 110, textAlign: 'right' }}>
                         {Number(h.costo_total_insumos) > 0
-                          ? <Chip label={formatS(h.costo_total_insumos)} size="small" color="success" variant="outlined" sx={{ fontWeight: 700 }} />
+                          ? <Typography variant="body2">{formatS(h.costo_total_insumos)}</Typography>
+                          : <Typography variant="caption" color="text.secondary">—</Typography>
+                        }
+                      </TableCell>
+                      <TableCell sx={{ whiteSpace: 'nowrap', width: 110, textAlign: 'right' }}>
+                        {(() => {
+                          const dep = Number(h.costo_depreciacion_equipos ?? 0) + Number(h.costo_depreciacion_materiales ?? 0)
+                          if (!(dep > 0)) {
+                            return <Typography variant="caption" color="text.secondary">—</Typography>
+                          }
+                          return (
+                            <>
+                              <Typography variant="body2">{formatS(dep)}</Typography>
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                {h.num_equipos ?? 0} eq · {h.num_materiales ?? 0} mat
+                              </Typography>
+                            </>
+                          )
+                        })()}
+                      </TableCell>
+                      <TableCell sx={{ whiteSpace: 'nowrap', width: 120, textAlign: 'right' }}>
+                        {costoTotalPractica(h) > 0
+                          ? <Chip label={formatS(costoTotalPractica(h))} size="small" color="success" variant="outlined" sx={{ fontWeight: 700 }} />
                           : <Typography variant="caption" color="text.secondary">—</Typography>
                         }
                       </TableCell>
@@ -341,7 +385,7 @@ export const TabCostos: React.FC<TabCostosProps> = ({ escuelas, laboratorios, ci
               <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Costo por Escuela</Typography>
             </Box>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-              Desglose de todas las escuelas · {mesInicio && mesFin ? `${mesInicio} → ${mesFin}` : 'Todos los períodos'}
+              Insumos + depreciación · {mesInicio && mesFin ? `${mesInicio} → ${mesFin}` : 'Todos los períodos'}
             </Typography>
             {loading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', pt: 4 }}><CircularProgress size={24} /></Box>
@@ -358,7 +402,11 @@ export const TabCostos: React.FC<TabCostosProps> = ({ escuelas, laboratorios, ci
                     <YAxis type="category" dataKey="escuela" width={110} tick={{ fontSize: 11 }} tickLine={false} />
                     <Tooltip
                       formatter={(value: number) => [formatS(value), 'Costo total']}
-                      labelFormatter={(label) => `Escuela: ${label}`}
+                      labelFormatter={(label, payload) => {
+                        const row = payload?.[0]?.payload as { costo_insumos?: number; costo_depreciacion?: number } | undefined
+                        if (!row) return `Escuela: ${label}`
+                        return `${label} · insumos ${formatS(row.costo_insumos ?? 0)} + depreciación ${formatS(row.costo_depreciacion ?? 0)}`
+                      }}
                     />
                     <Bar dataKey="costo_total" radius={[0, 4, 4, 0]} barSize={28}>
                       {chartCostos.map((_, i) => (
